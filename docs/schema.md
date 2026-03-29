@@ -183,16 +183,17 @@ All tables have RLS enabled with permissive (allow-all) policies. These will be 
 ## Assumptions
 
 1. No auth system yet — RLS policies are wide open.
-2. `incident_trucks` is the central operational unit; all downstream data (crew, shifts, expenses) flows through it.
+2. `incident_trucks` is the central operational unit; crew, shifts flow through it.
 3. A crew member can only be assigned once per truck-on-incident (unique constraint).
 4. Shift hours are logged per person, not derived from start/end times.
-5. Expenses always belong to a truck assignment — no "incident-only" expenses without a truck context.
+5. Expenses require an `incident_id`; `incident_truck_id` is optional for overhead costs.
+6. `incident_truck_crew.is_active` + `released_at` track crew assignment lifecycle.
+7. `incident_trucks.status` tracks deployment lifecycle: assigned → active → demobed → completed.
 
 ## Known Limitations & Future Improvements
 
 1. **No `updated_at` columns** — should add with auto-update triggers when needed.
 2. **No soft deletes** — CASCADE deletes propagate; may want soft delete for audit trails.
 3. **No file storage bucket** — `receipt_url` exists but no storage bucket is configured yet.
-4. **Expense assumption** — requiring `incident_truck_id` means you can't log an expense for an incident without a truck. May need to make this nullable if overhead expenses arise.
-5. **No auth integration** — `user_id` fields are absent; will need to tie records to authenticated users.
-6. **No audit log** — for compliance, may want to track who created/modified records.
+4. **No auth integration** — `user_id` fields are absent; will need to tie records to authenticated users.
+5. **No audit log** — for compliance, may want to track who created/modified records.
