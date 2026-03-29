@@ -20,7 +20,7 @@ import Settings from "./pages/Settings";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Support from "./pages/Support";
-import { PlaceholderPage } from "./pages/Placeholder";
+import Time from "./pages/Time";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
