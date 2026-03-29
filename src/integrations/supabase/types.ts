@@ -14,7 +14,295 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      crew_members: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          phone: string | null
+          role: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          phone?: string | null
+          role: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          phone?: string | null
+          role?: string
+        }
+        Relationships: []
+      }
+      expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          date: string
+          description: string | null
+          id: string
+          incident_truck_id: string
+          receipt_url: string | null
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string
+          date: string
+          description?: string | null
+          id?: string
+          incident_truck_id: string
+          receipt_url?: string | null
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          date?: string
+          description?: string | null
+          id?: string
+          incident_truck_id?: string
+          receipt_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_incident_truck_id_fkey"
+            columns: ["incident_truck_id"]
+            isOneToOne: false
+            referencedRelation: "incident_trucks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      incident_truck_crew: {
+        Row: {
+          assigned_at: string
+          crew_member_id: string
+          id: string
+          incident_truck_id: string
+          role_on_assignment: string | null
+        }
+        Insert: {
+          assigned_at?: string
+          crew_member_id: string
+          id?: string
+          incident_truck_id: string
+          role_on_assignment?: string | null
+        }
+        Update: {
+          assigned_at?: string
+          crew_member_id?: string
+          id?: string
+          incident_truck_id?: string
+          role_on_assignment?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incident_truck_crew_crew_member_id_fkey"
+            columns: ["crew_member_id"]
+            isOneToOne: false
+            referencedRelation: "crew_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incident_truck_crew_incident_truck_id_fkey"
+            columns: ["incident_truck_id"]
+            isOneToOne: false
+            referencedRelation: "incident_trucks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      incident_trucks: {
+        Row: {
+          assigned_at: string
+          id: string
+          incident_id: string
+          truck_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          id?: string
+          incident_id: string
+          truck_id: string
+        }
+        Update: {
+          assigned_at?: string
+          id?: string
+          incident_id?: string
+          truck_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incident_trucks_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "incidents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incident_trucks_truck_id_fkey"
+            columns: ["truck_id"]
+            isOneToOne: false
+            referencedRelation: "trucks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      incidents: {
+        Row: {
+          acres: number | null
+          containment: number | null
+          created_at: string
+          id: string
+          location: string
+          name: string
+          notes: string | null
+          start_date: string
+          status: string
+          type: string
+        }
+        Insert: {
+          acres?: number | null
+          containment?: number | null
+          created_at?: string
+          id?: string
+          location: string
+          name: string
+          notes?: string | null
+          start_date: string
+          status?: string
+          type: string
+        }
+        Update: {
+          acres?: number | null
+          containment?: number | null
+          created_at?: string
+          id?: string
+          location?: string
+          name?: string
+          notes?: string | null
+          start_date?: string
+          status?: string
+          type?: string
+        }
+        Relationships: []
+      }
+      shift_crew: {
+        Row: {
+          crew_member_id: string
+          hours: number
+          id: string
+          notes: string | null
+          role_on_shift: string | null
+          shift_id: string
+        }
+        Insert: {
+          crew_member_id: string
+          hours: number
+          id?: string
+          notes?: string | null
+          role_on_shift?: string | null
+          shift_id: string
+        }
+        Update: {
+          crew_member_id?: string
+          hours?: number
+          id?: string
+          notes?: string | null
+          role_on_shift?: string | null
+          shift_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_crew_crew_member_id_fkey"
+            columns: ["crew_member_id"]
+            isOneToOne: false
+            referencedRelation: "crew_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_crew_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shifts: {
+        Row: {
+          created_at: string
+          date: string
+          end_time: string | null
+          id: string
+          incident_truck_id: string
+          notes: string | null
+          start_time: string | null
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          end_time?: string | null
+          id?: string
+          incident_truck_id: string
+          notes?: string | null
+          start_time?: string | null
+          type?: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          end_time?: string | null
+          id?: string
+          incident_truck_id?: string
+          notes?: string | null
+          start_time?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shifts_incident_truck_id_fkey"
+            columns: ["incident_truck_id"]
+            isOneToOne: false
+            referencedRelation: "incident_trucks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trucks: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
