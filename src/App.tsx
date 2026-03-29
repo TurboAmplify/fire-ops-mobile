@@ -20,6 +20,7 @@ import Settings from "./pages/Settings";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Support from "./pages/Support";
+import { PlaceholderPage } from "./pages/Placeholder";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,7 +52,7 @@ const App = () => (
             <Route path="/privacy" element={<ProtectedRoute><Privacy /></ProtectedRoute>} />
             <Route path="/terms" element={<ProtectedRoute><Terms /></ProtectedRoute>} />
             <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
-            <Route path="/time" element={<ProtectedRoute><TimePlaceholder /></ProtectedRoute>} />
+            <Route path="/time" element={<ProtectedRoute><PlaceholderPage title="Time" /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
@@ -59,16 +60,5 @@ const App = () => (
     </AuthProvider>
   </QueryClientProvider>
 );
-
-// Temporary — Time module placeholder until fully built
-function TimePlaceholder() {
-  return (
-    <ProtectedRoute>
-      <div className="flex min-h-screen flex-col bg-background">
-        <import_AppShell />
-      </div>
-    </ProtectedRoute>
-  );
-}
 
 export default App;
