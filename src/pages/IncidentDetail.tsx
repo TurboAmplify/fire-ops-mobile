@@ -1,14 +1,33 @@
 import { AppShell } from "@/components/AppShell";
 import { useParams, useNavigate } from "react-router-dom";
-import { getIncident, STATUS_LABELS, TYPE_LABELS } from "@/lib/incidents";
-import { ArrowLeft, MapPin, Calendar, Flame, TrendingUp } from "lucide-react";
+import { useIncident, useUpdateIncident } from "@/hooks/useIncidents";
+import { STATUS_LABELS, TYPE_LABELS } from "@/services/incidents";
+import type { IncidentStatus } from "@/services/incidents";
+import { ArrowLeft, MapPin, Calendar, Flame, TrendingUp, Loader2, Pencil } from "lucide-react";
+import { IncidentTruckList } from "@/components/incidents/IncidentTruckList";
+import { useState } from "react";
+import { toast } from "sonner";
+
+const statusOptions: IncidentStatus[] = ["active", "contained", "controlled", "out"];
 
 export default function IncidentDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const incident = getIncident(id || "");
+  const { data: incident, isLoading, error } = useIncident(id || "");
+  const updateMutation = useUpdateIncident();
+  const [editingStatus, setEditingStatus] = useState(false);
 
-  if (!incident) {
+  if (isLoading) {
+    return (
+      <AppShell title="">
+        <div className="flex justify-center py-20">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (error || !incident) {
     return (
       <AppShell title="Incident">
         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
@@ -26,6 +45,16 @@ export default function IncidentDetail() {
       ? "bg-destructive/15 text-destructive"
       : "bg-success/15 text-success";
 
+  const handleStatusChange = async (newStatus: IncidentStatus) => {
+    try {
+      await updateMutation.mutateAsync({ id: incident.id, updates: { status: newStatus } });
+      toast.success(`Status updated to ${STATUS_LABELS[newStatus]}`);
+      setEditingStatus(false);
+    } catch {
+      toast.error("Failed to update status");
+    }
+  };
+
   return (
     <AppShell
       title=""
@@ -41,19 +70,43 @@ export default function IncidentDetail() {
         <div>
           <div className="flex items-start justify-between">
             <h2 className="text-2xl font-extrabold">{incident.name}</h2>
-            <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase ${statusColor}`}>
-              {STATUS_LABELS[incident.status]}
-            </span>
+            <button
+              onClick={() => setEditingStatus(!editingStatus)}
+              className={`rounded-full px-3 py-1 text-xs font-bold uppercase ${statusColor} touch-target`}
+            >
+              {STATUS_LABELS[incident.status as IncidentStatus]}
+              <Pencil className="inline ml-1 h-3 w-3" />
+            </button>
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">{TYPE_LABELS[incident.type]}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{TYPE_LABELS[incident.type as keyof typeof TYPE_LABELS]}</p>
         </div>
+
+        {/* Status editor */}
+        {editingStatus && (
+          <div className="flex gap-2 flex-wrap">
+            {statusOptions.map((s) => (
+              <button
+                key={s}
+                onClick={() => handleStatusChange(s)}
+                disabled={updateMutation.isPending}
+                className={`rounded-full px-4 py-2 text-sm font-medium touch-target ${
+                  incident.status === s
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-secondary-foreground"
+                }`}
+              >
+                {STATUS_LABELS[s]}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Info cards */}
         <div className="grid grid-cols-2 gap-3">
           <InfoCard icon={MapPin} label="Location" value={incident.location} />
-          <InfoCard icon={Calendar} label="Start Date" value={incident.startDate} />
+          <InfoCard icon={Calendar} label="Start Date" value={incident.start_date} />
           {incident.acres != null && (
-            <InfoCard icon={Flame} label="Acres" value={incident.acres.toLocaleString()} />
+            <InfoCard icon={Flame} label="Acres" value={Number(incident.acres).toLocaleString()} />
           )}
           {incident.containment != null && (
             <InfoCard icon={TrendingUp} label="Containment" value={`${incident.containment}%`} />
@@ -73,13 +126,16 @@ export default function IncidentDetail() {
           </div>
         )}
 
-        {/* Notes placeholder */}
+        {/* Notes */}
         {incident.notes && (
           <div className="rounded-xl bg-card p-4">
             <p className="text-sm font-medium text-muted-foreground mb-1">Notes</p>
             <p className="text-sm">{incident.notes}</p>
           </div>
         )}
+
+        {/* Assigned Trucks */}
+        <IncidentTruckList incidentId={incident.id} />
       </div>
     </AppShell>
   );

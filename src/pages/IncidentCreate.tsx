@@ -1,28 +1,37 @@
 import { AppShell } from "@/components/AppShell";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { createIncident, TYPE_LABELS } from "@/lib/incidents";
-import type { IncidentType } from "@/lib/incidents";
+import { useCreateIncident } from "@/hooks/useIncidents";
+import { TYPE_LABELS } from "@/services/incidents";
+import type { IncidentType } from "@/services/incidents";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function IncidentCreate() {
   const navigate = useNavigate();
+  const createMutation = useCreateIncident();
   const [name, setName] = useState("");
   const [type, setType] = useState<IncidentType>("wildfire");
   const [location, setLocation] = useState("");
 
-  const canSubmit = name.trim() && location.trim();
+  const canSubmit = name.trim() && location.trim() && !createMutation.isPending;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
-    const incident = createIncident({
-      name: name.trim(),
-      type,
-      status: "active",
-      location: location.trim(),
-      startDate: new Date().toISOString().split("T")[0],
-    });
-    navigate(`/incidents/${incident.id}`);
+    try {
+      const incident = await createMutation.mutateAsync({
+        name: name.trim(),
+        type,
+        status: "active",
+        location: location.trim(),
+        start_date: new Date().toISOString().split("T")[0],
+      });
+      toast.success("Incident created");
+      navigate(`/incidents/${incident.id}`);
+    } catch {
+      toast.error("Failed to create incident");
+    }
   };
 
   return (
@@ -74,8 +83,9 @@ export default function IncidentCreate() {
         <button
           type="submit"
           disabled={!canSubmit}
-          className="w-full rounded-xl bg-primary py-4 text-base font-bold text-primary-foreground transition-transform active:scale-[0.98] disabled:opacity-40 touch-target"
+          className="w-full rounded-xl bg-primary py-4 text-base font-bold text-primary-foreground transition-transform active:scale-[0.98] disabled:opacity-40 touch-target flex items-center justify-center gap-2"
         >
+          {createMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
           Create Incident
         </button>
       </form>
