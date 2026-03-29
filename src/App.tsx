@@ -16,6 +16,10 @@ import ShiftDetail from "./pages/ShiftDetail";
 import Expenses from "./pages/Expenses";
 import ExpenseEdit from "./pages/ExpenseEdit";
 import ExpenseDetail from "./pages/ExpenseDetail";
+import Settings from "./pages/Settings";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
+import Support from "./pages/Support";
 import { PlaceholderPage } from "./pages/Placeholder";
 import NotFound from "./pages/NotFound";
 
@@ -44,9 +48,11 @@ const App = () => (
             <Route path="/expenses/new" element={<ProtectedRoute><ExpenseEdit /></ProtectedRoute>} />
             <Route path="/expenses/:id" element={<ProtectedRoute><ExpenseDetail /></ProtectedRoute>} />
             <Route path="/expenses/:id/edit" element={<ProtectedRoute><ExpenseEdit /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/privacy" element={<ProtectedRoute><Privacy /></ProtectedRoute>} />
+            <Route path="/terms" element={<ProtectedRoute><Terms /></ProtectedRoute>} />
+            <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
             <Route path="/time" element={<ProtectedRoute><PlaceholderPage title="Time" /></ProtectedRoute>} />
-            <Route path="/crew" element={<ProtectedRoute><PlaceholderPage title="Crew" /></ProtectedRoute>} />
-            <Route path="/fleet" element={<ProtectedRoute><PlaceholderPage title="Fleet" /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

@@ -1,13 +1,12 @@
-import { LayoutDashboard, Flame, Clock, DollarSign, Users, Truck } from "lucide-react";
+import { LayoutDashboard, Flame, DollarSign, Clock, Settings } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 const tabs = [
-  { label: "Dashboard", icon: LayoutDashboard, to: "/" },
+  { label: "Home", icon: LayoutDashboard, to: "/" },
   { label: "Incidents", icon: Flame, to: "/incidents" },
   { label: "Time", icon: Clock, to: "/time" },
   { label: "Expenses", icon: DollarSign, to: "/expenses" },
-  { label: "Crew", icon: Users, to: "/crew" },
-  { label: "Fleet", icon: Truck, to: "/fleet" },
+  { label: "Settings", icon: Settings, to: "/settings" },
 ];
 
 export function BottomNav() {

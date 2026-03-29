@@ -1,13 +1,13 @@
 import { AppShell } from "@/components/AppShell";
-import { Flame, Clock, Users, Truck } from "lucide-react";
+import { Flame, Clock, DollarSign, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useIncidents } from "@/hooks/useIncidents";
 
 const quickLinks = [
   { label: "Incidents", icon: Flame, to: "/incidents", color: "bg-primary text-primary-foreground" },
   { label: "Time", icon: Clock, to: "/time", color: "bg-secondary text-secondary-foreground" },
-  { label: "Crew", icon: Users, to: "/crew", color: "bg-secondary text-secondary-foreground" },
-  { label: "Fleet", icon: Truck, to: "/fleet", color: "bg-secondary text-secondary-foreground" },
+  { label: "Expenses", icon: DollarSign, to: "/expenses", color: "bg-secondary text-secondary-foreground" },
+  { label: "Settings", icon: Settings, to: "/settings", color: "bg-secondary text-secondary-foreground" },
 ];
 
 export default function Dashboard() {
