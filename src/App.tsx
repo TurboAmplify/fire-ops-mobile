@@ -3,6 +3,10 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/hooks/useAuth";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import Login from "./pages/Login";
+import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import Incidents from "./pages/Incidents";
 import IncidentCreate from "./pages/IncidentCreate";
@@ -19,28 +23,35 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/incidents" element={<Incidents />} />
-          <Route path="/incidents/new" element={<IncidentCreate />} />
-          <Route path="/incidents/:incidentId" element={<IncidentDetail />} />
-          <Route path="/incidents/:incidentId/trucks/:incidentTruckId/shifts/new" element={<ShiftCreate />} />
-          <Route path="/incidents/:incidentId/trucks/:incidentTruckId/shifts/:shiftId" element={<ShiftDetail />} />
-          <Route path="/expenses" element={<Expenses />} />
-          <Route path="/expenses/new" element={<ExpenseEdit />} />
-          <Route path="/expenses/:id" element={<ExpenseDetail />} />
-          <Route path="/expenses/:id/edit" element={<ExpenseEdit />} />
-          <Route path="/time" element={<PlaceholderPage title="Time" />} />
-          <Route path="/crew" element={<PlaceholderPage title="Crew" />} />
-          <Route path="/fleet" element={<PlaceholderPage title="Fleet" />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+
+            {/* Protected routes */}
+            <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/incidents" element={<ProtectedRoute><Incidents /></ProtectedRoute>} />
+            <Route path="/incidents/new" element={<ProtectedRoute><IncidentCreate /></ProtectedRoute>} />
+            <Route path="/incidents/:incidentId" element={<ProtectedRoute><IncidentDetail /></ProtectedRoute>} />
+            <Route path="/incidents/:incidentId/trucks/:incidentTruckId/shifts/new" element={<ProtectedRoute><ShiftCreate /></ProtectedRoute>} />
+            <Route path="/incidents/:incidentId/trucks/:incidentTruckId/shifts/:shiftId" element={<ProtectedRoute><ShiftDetail /></ProtectedRoute>} />
+            <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
+            <Route path="/expenses/new" element={<ProtectedRoute><ExpenseEdit /></ProtectedRoute>} />
+            <Route path="/expenses/:id" element={<ProtectedRoute><ExpenseDetail /></ProtectedRoute>} />
+            <Route path="/expenses/:id/edit" element={<ProtectedRoute><ExpenseEdit /></ProtectedRoute>} />
+            <Route path="/time" element={<ProtectedRoute><PlaceholderPage title="Time" /></ProtectedRoute>} />
+            <Route path="/crew" element={<ProtectedRoute><PlaceholderPage title="Crew" /></ProtectedRoute>} />
+            <Route path="/fleet" element={<ProtectedRoute><PlaceholderPage title="Fleet" /></ProtectedRoute>} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 
