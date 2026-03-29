@@ -1,7 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { Flame, Clock, Users, Truck } from "lucide-react";
 import { Link } from "react-router-dom";
-import { getIncidents } from "@/lib/incidents";
+import { useIncidents } from "@/hooks/useIncidents";
 
 const quickLinks = [
   { label: "Incidents", icon: Flame, to: "/incidents", color: "bg-primary text-primary-foreground" },
@@ -11,8 +11,8 @@ const quickLinks = [
 ];
 
 export default function Dashboard() {
-  const incidents = getIncidents();
-  const activeCount = incidents.filter((i) => i.status === "active").length;
+  const { data: incidents } = useIncidents();
+  const activeCount = incidents?.filter((i) => i.status === "active").length ?? 0;
 
   return (
     <AppShell title="FireOps HQ">
@@ -43,7 +43,10 @@ export default function Dashboard() {
             Recent Incidents
           </h2>
           <div className="space-y-2">
-            {incidents.slice(0, 3).map((inc) => (
+            {(!incidents || incidents.length === 0) && (
+              <p className="text-sm text-muted-foreground py-4 text-center">No incidents yet.</p>
+            )}
+            {incidents?.slice(0, 3).map((inc) => (
               <Link
                 key={inc.id}
                 to={`/incidents/${inc.id}`}
