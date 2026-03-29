@@ -35,7 +35,17 @@ export default function IncidentCreate() {
   };
 
   return (
-    <AppShell title="New Incident">
+    <AppShell
+      title="New Incident"
+      headerRight={
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-1 text-sm font-medium text-primary touch-target"
+        >
+          Cancel
+        </button>
+      }
+    >
       <form onSubmit={handleSubmit} className="space-y-5 p-4">
         <div className="space-y-2">
           <label className="text-sm font-medium text-muted-foreground">Incident Name</label>
