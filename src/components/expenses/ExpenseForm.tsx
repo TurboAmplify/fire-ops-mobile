@@ -175,6 +175,7 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
           <input
             type="file"
             accept="image/*"
+            capture="environment"
             onChange={handlePhoto}
             className="hidden"
           />
