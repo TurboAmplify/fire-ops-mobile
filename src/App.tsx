@@ -52,7 +52,7 @@ const App = () => (
             <Route path="/privacy" element={<ProtectedRoute><Privacy /></ProtectedRoute>} />
             <Route path="/terms" element={<ProtectedRoute><Terms /></ProtectedRoute>} />
             <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
-            <Route path="/time" element={<ProtectedRoute><PlaceholderPage title="Time" /></ProtectedRoute>} />
+            <Route path="/time" element={<ProtectedRoute><Time /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
