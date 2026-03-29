@@ -11,9 +11,10 @@ import { toast } from "sonner";
 const statusOptions: IncidentStatus[] = ["active", "contained", "controlled", "out"];
 
 export default function IncidentDetail() {
-  const { id } = useParams<{ id: string }>();
+  const { incidentId } = useParams<{ incidentId: string }>();
+  const id = incidentId || "";
   const navigate = useNavigate();
-  const { data: incident, isLoading, error } = useIncident(id || "");
+  const { data: incident, isLoading, error } = useIncident(id);
   const updateMutation = useUpdateIncident();
   const [editingStatus, setEditingStatus] = useState(false);
 
