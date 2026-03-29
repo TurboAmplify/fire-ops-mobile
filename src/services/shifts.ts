@@ -5,6 +5,24 @@ export type Shift = Tables<"shifts">;
 export type ShiftInsert = TablesInsert<"shifts">;
 export type ShiftCrew = Tables<"shift_crew">;
 
+export type ShiftWithRelations = Shift & {
+  incident_trucks: {
+    id: string;
+    incident_id: string;
+    trucks: { id: string; name: string };
+    incidents: { id: string; name: string };
+  };
+};
+
+export async function fetchAllShifts() {
+  const { data, error } = await supabase
+    .from("shifts")
+    .select("*, incident_trucks!inner(id, incident_id, trucks(id, name), incidents:incidents!incident_trucks_incident_id_fkey(id, name))")
+    .order("date", { ascending: false });
+  if (error) throw error;
+  return data as unknown as ShiftWithRelations[];
+}
+
 export type ShiftCrewEntry = {
   crew_member_id: string;
   hours: number;
