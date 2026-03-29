@@ -78,6 +78,7 @@ Central assignment: a truck deployed to an incident. This is the operational uni
 | id | uuid | No | gen_random_uuid() | PK |
 | incident_id | uuid FK → incidents | No | — | |
 | truck_id | uuid FK → trucks | No | — | |
+| status | text | No | 'assigned' | assigned, active, demobed, completed |
 | assigned_at | timestamptz | No | now() | |
 
 Unique constraint: (incident_id, truck_id)
@@ -95,6 +96,9 @@ Crew assigned to a specific truck on a specific incident.
 | crew_member_id | uuid FK → crew_members | No | — | |
 | role_on_assignment | text | Yes | — | Override role for this assignment |
 | assigned_at | timestamptz | No | now() | |
+| released_at | timestamptz | Yes | — | When crew member was released |
+| is_active | boolean | No | true | Whether currently assigned |
+| notes | text | Yes | — | |
 
 Unique constraint: (incident_truck_id, crew_member_id)
 
@@ -141,7 +145,8 @@ Costs linked to a truck assignment on an incident.
 | Field | Type | Nullable | Default | Notes |
 |-------|------|----------|---------|-------|
 | id | uuid | No | gen_random_uuid() | PK |
-| incident_truck_id | uuid FK → incident_trucks | No | — | |
+| incident_id | uuid FK → incidents | No | — | Required — every expense belongs to an incident |
+| incident_truck_id | uuid FK → incident_trucks | Yes | — | Optional — link to specific truck assignment |
 | category | text | No | — | fuel, ppe, food, lodging, equipment, other |
 | amount | numeric | No | — | |
 | description | text | Yes | — | |
@@ -164,6 +169,7 @@ Costs linked to a truck assignment on an incident.
 | idx_shift_crew_shift | shift_crew | shift_id |
 | idx_shift_crew_crew | shift_crew | crew_member_id |
 | idx_expenses_itid | expenses | incident_truck_id |
+| idx_expenses_incident | expenses | incident_id |
 | idx_expenses_date | expenses | date |
 
 ---
@@ -177,16 +183,17 @@ All tables have RLS enabled with permissive (allow-all) policies. These will be 
 ## Assumptions
 
 1. No auth system yet — RLS policies are wide open.
-2. `incident_trucks` is the central operational unit; all downstream data (crew, shifts, expenses) flows through it.
+2. `incident_trucks` is the central operational unit; crew, shifts flow through it.
 3. A crew member can only be assigned once per truck-on-incident (unique constraint).
 4. Shift hours are logged per person, not derived from start/end times.
-5. Expenses always belong to a truck assignment — no "incident-only" expenses without a truck context.
+5. Expenses require an `incident_id`; `incident_truck_id` is optional for overhead costs.
+6. `incident_truck_crew.is_active` + `released_at` track crew assignment lifecycle.
+7. `incident_trucks.status` tracks deployment lifecycle: assigned → active → demobed → completed.
 
 ## Known Limitations & Future Improvements
 
 1. **No `updated_at` columns** — should add with auto-update triggers when needed.
 2. **No soft deletes** — CASCADE deletes propagate; may want soft delete for audit trails.
 3. **No file storage bucket** — `receipt_url` exists but no storage bucket is configured yet.
-4. **Expense assumption** — requiring `incident_truck_id` means you can't log an expense for an incident without a truck. May need to make this nullable if overhead expenses arise.
-5. **No auth integration** — `user_id` fields are absent; will need to tie records to authenticated users.
-6. **No audit log** — for compliance, may want to track who created/modified records.
+4. **No auth integration** — `user_id` fields are absent; will need to tie records to authenticated users.
+5. **No audit log** — for compliance, may want to track who created/modified records.

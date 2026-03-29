@@ -49,7 +49,8 @@ export type Database = {
           date: string
           description: string | null
           id: string
-          incident_truck_id: string
+          incident_id: string
+          incident_truck_id: string | null
           receipt_url: string | null
         }
         Insert: {
@@ -59,7 +60,8 @@ export type Database = {
           date: string
           description?: string | null
           id?: string
-          incident_truck_id: string
+          incident_id: string
+          incident_truck_id?: string | null
           receipt_url?: string | null
         }
         Update: {
@@ -69,10 +71,18 @@ export type Database = {
           date?: string
           description?: string | null
           id?: string
-          incident_truck_id?: string
+          incident_id?: string
+          incident_truck_id?: string | null
           receipt_url?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "expenses_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "incidents"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "expenses_incident_truck_id_fkey"
             columns: ["incident_truck_id"]
@@ -88,6 +98,9 @@ export type Database = {
           crew_member_id: string
           id: string
           incident_truck_id: string
+          is_active: boolean
+          notes: string | null
+          released_at: string | null
           role_on_assignment: string | null
         }
         Insert: {
@@ -95,6 +108,9 @@ export type Database = {
           crew_member_id: string
           id?: string
           incident_truck_id: string
+          is_active?: boolean
+          notes?: string | null
+          released_at?: string | null
           role_on_assignment?: string | null
         }
         Update: {
@@ -102,6 +118,9 @@ export type Database = {
           crew_member_id?: string
           id?: string
           incident_truck_id?: string
+          is_active?: boolean
+          notes?: string | null
+          released_at?: string | null
           role_on_assignment?: string | null
         }
         Relationships: [
@@ -126,18 +145,21 @@ export type Database = {
           assigned_at: string
           id: string
           incident_id: string
+          status: string
           truck_id: string
         }
         Insert: {
           assigned_at?: string
           id?: string
           incident_id: string
+          status?: string
           truck_id: string
         }
         Update: {
           assigned_at?: string
           id?: string
           incident_id?: string
+          status?: string
           truck_id?: string
         }
         Relationships: [
