@@ -5,6 +5,7 @@ import { Truck, Plus, Loader2, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { TruckCrewSection } from "./TruckCrewSection";
+import { ShiftList } from "@/components/shifts/ShiftList";
 
 const truckStatuses: IncidentTruckStatus[] = ["assigned", "active", "demobed", "completed"];
 
@@ -132,6 +133,13 @@ export function IncidentTruckList({ incidentId }: Props) {
 
                 {/* Crew section */}
                 <TruckCrewSection incidentTruckId={it.id} />
+
+                {/* Shifts section */}
+                <ShiftList
+                  incidentTruckId={it.id}
+                  incidentId={incidentId}
+                  truckName={it.trucks.name}
+                />
               </div>
             )}
           </div>

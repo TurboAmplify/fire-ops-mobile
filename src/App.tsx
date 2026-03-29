@@ -7,6 +7,8 @@ import Dashboard from "./pages/Dashboard";
 import Incidents from "./pages/Incidents";
 import IncidentCreate from "./pages/IncidentCreate";
 import IncidentDetail from "./pages/IncidentDetail";
+import ShiftCreate from "./pages/ShiftCreate";
+import ShiftDetail from "./pages/ShiftDetail";
 import { PlaceholderPage } from "./pages/Placeholder";
 import NotFound from "./pages/NotFound";
 
@@ -22,7 +24,9 @@ const App = () => (
           <Route path="/" element={<Dashboard />} />
           <Route path="/incidents" element={<Incidents />} />
           <Route path="/incidents/new" element={<IncidentCreate />} />
-          <Route path="/incidents/:id" element={<IncidentDetail />} />
+          <Route path="/incidents/:incidentId" element={<IncidentDetail />} />
+          <Route path="/incidents/:incidentId/trucks/:incidentTruckId/shifts/new" element={<ShiftCreate />} />
+          <Route path="/incidents/:incidentId/trucks/:incidentTruckId/shifts/:shiftId" element={<ShiftDetail />} />
           <Route path="/time" element={<PlaceholderPage title="Time" />} />
           <Route path="/expenses" element={<PlaceholderPage title="Expenses" />} />
           <Route path="/crew" element={<PlaceholderPage title="Crew" />} />
