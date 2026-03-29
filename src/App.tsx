@@ -16,7 +16,10 @@ import ShiftDetail from "./pages/ShiftDetail";
 import Expenses from "./pages/Expenses";
 import ExpenseEdit from "./pages/ExpenseEdit";
 import ExpenseDetail from "./pages/ExpenseDetail";
-import { PlaceholderPage } from "./pages/Placeholder";
+import Settings from "./pages/Settings";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
+import Support from "./pages/Support";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,9 +47,11 @@ const App = () => (
             <Route path="/expenses/new" element={<ProtectedRoute><ExpenseEdit /></ProtectedRoute>} />
             <Route path="/expenses/:id" element={<ProtectedRoute><ExpenseDetail /></ProtectedRoute>} />
             <Route path="/expenses/:id/edit" element={<ProtectedRoute><ExpenseEdit /></ProtectedRoute>} />
-            <Route path="/time" element={<ProtectedRoute><PlaceholderPage title="Time" /></ProtectedRoute>} />
-            <Route path="/crew" element={<ProtectedRoute><PlaceholderPage title="Crew" /></ProtectedRoute>} />
-            <Route path="/fleet" element={<ProtectedRoute><PlaceholderPage title="Fleet" /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/privacy" element={<ProtectedRoute><Privacy /></ProtectedRoute>} />
+            <Route path="/terms" element={<ProtectedRoute><Terms /></ProtectedRoute>} />
+            <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
+            <Route path="/time" element={<ProtectedRoute><TimePlaceholder /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
@@ -54,5 +59,16 @@ const App = () => (
     </AuthProvider>
   </QueryClientProvider>
 );
+
+// Temporary — Time module placeholder until fully built
+function TimePlaceholder() {
+  return (
+    <ProtectedRoute>
+      <div className="flex min-h-screen flex-col bg-background">
+        <import_AppShell />
+      </div>
+    </ProtectedRoute>
+  );
+}
 
 export default App;
