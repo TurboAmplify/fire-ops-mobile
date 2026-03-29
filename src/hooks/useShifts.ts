@@ -3,8 +3,16 @@ import {
   fetchShifts,
   fetchShiftWithCrew,
   createShiftWithCrew,
+  fetchAllShifts,
 } from "@/services/shifts";
 import type { ShiftInsert, ShiftCrewEntry } from "@/services/shifts";
+
+export function useAllShifts() {
+  return useQuery({
+    queryKey: ["all-shifts"],
+    queryFn: fetchAllShifts,
+  });
+}
 
 export function useShifts(incidentTruckId: string) {
   return useQuery({
