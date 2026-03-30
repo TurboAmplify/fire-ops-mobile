@@ -8,6 +8,7 @@ import {
   fetchTruckPhotos,
   uploadTruckPhoto,
   deleteTruckPhoto,
+  updateTruckPhotoLabel,
   fetchTruckDocuments,
   uploadTruckDocument,
   deleteTruckDocument,
@@ -16,7 +17,11 @@ import {
   toggleChecklistItem,
   updateChecklistItemNotes,
   deleteChecklistItem,
+  resetChecklist,
   initializeDefaultChecklist,
+  fetchServiceLogs,
+  createServiceLog,
+  deleteServiceLog,
 } from "@/services/fleet";
 import type { TruckInsert, TruckUpdate } from "@/services/fleet";
 
