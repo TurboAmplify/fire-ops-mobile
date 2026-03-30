@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      agreements: {
+        Row: {
+          agreement_number: string | null
+          created_at: string
+          file_name: string
+          file_url: string
+          id: string
+          incident_id: string | null
+          incident_truck_id: string | null
+          parsed_data: Json | null
+        }
+        Insert: {
+          agreement_number?: string | null
+          created_at?: string
+          file_name: string
+          file_url: string
+          id?: string
+          incident_id?: string | null
+          incident_truck_id?: string | null
+          parsed_data?: Json | null
+        }
+        Update: {
+          agreement_number?: string | null
+          created_at?: string
+          file_name?: string
+          file_url?: string
+          id?: string
+          incident_id?: string | null
+          incident_truck_id?: string | null
+          parsed_data?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agreements_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "incidents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agreements_incident_truck_id_fkey"
+            columns: ["incident_truck_id"]
+            isOneToOne: false
+            referencedRelation: "incident_trucks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crew_members: {
         Row: {
           active: boolean
@@ -220,6 +268,50 @@ export type Database = {
           type?: string
         }
         Relationships: []
+      }
+      resource_orders: {
+        Row: {
+          agreement_number: string | null
+          created_at: string
+          file_name: string
+          file_url: string
+          id: string
+          incident_truck_id: string
+          parsed_at: string | null
+          parsed_data: Json | null
+          resource_order_number: string | null
+        }
+        Insert: {
+          agreement_number?: string | null
+          created_at?: string
+          file_name: string
+          file_url: string
+          id?: string
+          incident_truck_id: string
+          parsed_at?: string | null
+          parsed_data?: Json | null
+          resource_order_number?: string | null
+        }
+        Update: {
+          agreement_number?: string | null
+          created_at?: string
+          file_name?: string
+          file_url?: string
+          id?: string
+          incident_truck_id?: string
+          parsed_at?: string | null
+          parsed_data?: Json | null
+          resource_order_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resource_orders_incident_truck_id_fkey"
+            columns: ["incident_truck_id"]
+            isOneToOne: false
+            referencedRelation: "incident_trucks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       shift_crew: {
         Row: {
