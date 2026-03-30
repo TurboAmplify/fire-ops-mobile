@@ -644,6 +644,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_organization_with_owner: {
+        Args: { _name: string }
+        Returns: string
+      }
+      get_auth_email: { Args: never; Returns: string }
       get_org_from_incident_truck: { Args: { _it_id: string }; Returns: string }
       get_org_from_shift: { Args: { _shift_id: string }; Returns: string }
       get_user_crew_member_id: { Args: { _user_id: string }; Returns: string }

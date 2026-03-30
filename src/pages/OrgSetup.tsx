@@ -96,17 +96,9 @@ export default function OrgSetup() {
     if (!companyName.trim()) return;
     setSubmitting(true);
     try {
-      const { data: org, error: orgError } = await supabase
-        .from("organizations")
-        .insert({ name: companyName.trim() })
-        .select("id")
-        .single();
-      if (orgError) throw orgError;
-
-      const { error: memberError } = await supabase
-        .from("organization_members")
-        .insert({ organization_id: org.id, user_id: user.id, role: "owner" });
-      if (memberError) throw memberError;
+      const { error: rpcError } = await supabase
+        .rpc("create_organization_with_owner", { _name: companyName.trim() });
+      if (rpcError) throw rpcError;
 
       toast({ title: "Organization created", description: `${companyName.trim()} is ready.` });
       await refetch();
