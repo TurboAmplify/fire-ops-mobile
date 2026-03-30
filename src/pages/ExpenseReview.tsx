@@ -14,7 +14,24 @@ export default function ExpenseReview() {
   const { data: expenses, isLoading } = useExpenses();
   const updateMutation = useUpdateExpense();
   const { user } = useAuth();
+  const { membership } = useOrganization();
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
+  const isOwner = membership?.role === "owner";
+
+  // Guard: only owners can access the review queue
+  if (!isOwner) {
+    return (
+      <AppShell title="">
+        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+          <p className="font-semibold">Access restricted</p>
+          <p className="text-sm mt-1">Only organization owners can review expenses.</p>
+          <button onClick={() => navigate("/expenses")} className="mt-4 text-primary font-semibold touch-target">
+            Back to Expenses
+          </button>
+        </div>
+      </AppShell>
+    );
+  }
 
   const submitted = expenses?.filter((e) => e.status === "submitted") ?? [];
 
