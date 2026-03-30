@@ -179,3 +179,45 @@ export function useInitializeDefaultChecklist(truckId: string) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["truck-checklist", truckId] }),
   });
 }
+
+export function useResetChecklist(truckId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => resetChecklist(truckId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["truck-checklist", truckId] }),
+  });
+}
+
+export function useUpdateTruckPhotoLabel(truckId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, photoLabel }: { id: string; photoLabel: string }) =>
+      updateTruckPhotoLabel(id, photoLabel),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["truck-photos", truckId] }),
+  });
+}
+
+// Service Logs
+export function useServiceLogs(truckId: string) {
+  return useQuery({
+    queryKey: ["truck-service-logs", truckId],
+    queryFn: () => fetchServiceLogs(truckId),
+    enabled: !!truckId,
+  });
+}
+
+export function useCreateServiceLog(truckId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (log: Parameters<typeof createServiceLog>[0]) => createServiceLog(log),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["truck-service-logs", truckId] }),
+  });
+}
+
+export function useDeleteServiceLog(truckId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteServiceLog(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["truck-service-logs", truckId] }),
+  });
+}
