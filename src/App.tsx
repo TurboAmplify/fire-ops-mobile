@@ -10,6 +10,7 @@ import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import Incidents from "./pages/Incidents";
 import IncidentCreate from "./pages/IncidentCreate";
+import IncidentFromAgreement from "./pages/IncidentFromAgreement";
 import IncidentDetail from "./pages/IncidentDetail";
 import IncidentEdit from "./pages/IncidentEdit";
 import ShiftCreate from "./pages/ShiftCreate";
