@@ -127,6 +127,9 @@ export const DOC_TYPE_LABELS: Record<string, string> = {
   registration: "Registration",
   dot: "DOT / Licensing",
   insurance: "Insurance",
+  title: "Title",
+  inspection: "Inspection Certificate",
+  permit: "Permit",
   other: "Other",
 };
 
