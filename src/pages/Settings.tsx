@@ -38,6 +38,20 @@ export default function Settings() {
           </div>
         </div>
 
+        {/* Organization */}
+        <section className="space-y-1">
+          <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1 mb-2">
+            Organization
+          </h2>
+          <div className="rounded-xl bg-card overflow-hidden divide-y divide-border">
+            <LinkRow
+              icon={Building2}
+              label={membership?.organizationName ?? "Organization"}
+              onClick={() => navigate("/settings/organization")}
+            />
+          </div>
+        </section>
+
         {/* App info */}
         <section className="space-y-1">
           <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1 mb-2">
