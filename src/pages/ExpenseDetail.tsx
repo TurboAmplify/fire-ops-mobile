@@ -1,18 +1,28 @@
 import { AppShell } from "@/components/AppShell";
 import { useParams, useNavigate } from "react-router-dom";
-import { useExpense, useDeleteExpense } from "@/hooks/useExpenses";
-import { CATEGORY_LABELS, CATEGORY_ICONS } from "@/services/expenses";
-import type { ExpenseCategory } from "@/services/expenses";
-import { ArrowLeft, Pencil, Trash2, Loader2, ExternalLink } from "lucide-react";
+import { useExpense, useDeleteExpense, useUpdateExpense } from "@/hooks/useExpenses";
+import { CATEGORY_LABELS, CATEGORY_ICONS, FUEL_TYPE_LABELS, STATUS_LABELS } from "@/services/expenses";
+import type { ExpenseCategory, FuelType, ExpenseStatus } from "@/services/expenses";
+import { ExpenseStatusBadge } from "@/components/expenses/ExpenseStatusBadge";
+import { ArrowLeft, Pencil, Trash2, Loader2, ExternalLink, Send } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
+import { useOrganization } from "@/hooks/useOrganization";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function ExpenseDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: expense, isLoading, error } = useExpense(id || "");
   const deleteMutation = useDeleteExpense();
+  const updateMutation = useUpdateExpense();
+  const { membership } = useOrganization();
+  const { user } = useAuth();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [reviewNotes, setReviewNotes] = useState("");
+
+  const isOwner = membership?.role === "owner";
+  const status = expense?.status as ExpenseStatus;
 
   if (isLoading) {
     return (
@@ -47,6 +57,48 @@ export default function ExpenseDetail() {
     }
   };
 
+  const handleSubmit = async () => {
+    try {
+      await updateMutation.mutateAsync({
+        id: expense.id,
+        updates: { status: "submitted", submitted_at: new Date().toISOString() },
+      });
+      toast.success("Expense submitted for review");
+    } catch {
+      toast.error("Failed to submit");
+    }
+  };
+
+  const handleReview = async (decision: "approved" | "rejected") => {
+    try {
+      await updateMutation.mutateAsync({
+        id: expense.id,
+        updates: {
+          status: decision,
+          reviewed_by_user_id: user?.id ?? null,
+          reviewed_at: new Date().toISOString(),
+          review_notes: reviewNotes.trim() || null,
+        },
+      });
+      toast.success(decision === "approved" ? "Expense approved" : "Expense rejected");
+      navigate("/expenses");
+    } catch {
+      toast.error("Failed to update expense");
+    }
+  };
+
+  const handleMarkReimbursed = async () => {
+    try {
+      await updateMutation.mutateAsync({
+        id: expense.id,
+        updates: { status: "reimbursed" },
+      });
+      toast.success("Marked as reimbursed");
+    } catch {
+      toast.error("Failed to update");
+    }
+  };
+
   const cat = expense.category as ExpenseCategory;
 
   return (
@@ -66,7 +118,10 @@ export default function ExpenseDetail() {
             <span className="text-3xl">{CATEGORY_ICONS[cat] ?? "📦"}</span>
             <div>
               <p className="text-2xl font-extrabold">${Number(expense.amount).toFixed(2)}</p>
-              <p className="text-sm text-muted-foreground">{CATEGORY_LABELS[cat] ?? expense.category}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-muted-foreground">{CATEGORY_LABELS[cat] ?? expense.category}</p>
+                <ExpenseStatusBadge status={expense.status} />
+              </div>
             </div>
           </div>
         </div>
@@ -79,6 +134,14 @@ export default function ExpenseDetail() {
             <InfoRow label="Truck" value={expense.incident_trucks.trucks.name} />
           )}
           {expense.description && <InfoRow label="Description" value={expense.description} />}
+          {expense.vendor && <InfoRow label="Vendor" value={expense.vendor} />}
+          <InfoRow label="Type" value={expense.expense_type === "reimbursement" ? "Reimbursement" : "Company Expense"} />
+          {expense.fuel_type && (
+            <InfoRow label="Fuel Type" value={FUEL_TYPE_LABELS[expense.fuel_type as FuelType] ?? expense.fuel_type} />
+          )}
+          {expense.meal_attendees && <InfoRow label="Meal Attendees" value={expense.meal_attendees} />}
+          {expense.meal_purpose && <InfoRow label="Meal Purpose" value={expense.meal_purpose} />}
+          {expense.review_notes && <InfoRow label="Review Notes" value={expense.review_notes} />}
         </div>
 
         {/* Receipt */}
@@ -107,15 +170,74 @@ export default function ExpenseDetail() {
           </div>
         )}
 
+        {/* Submit button for drafts */}
+        {status === "draft" && (
+          <button
+            onClick={handleSubmit}
+            disabled={updateMutation.isPending}
+            className="w-full rounded-xl bg-primary py-4 text-base font-bold text-primary-foreground transition-transform active:scale-[0.98] touch-target flex items-center justify-center gap-2"
+          >
+            {updateMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+            <Send className="h-4 w-4" />
+            Submit for Review
+          </button>
+        )}
+
+        {/* Owner review actions */}
+        {isOwner && status === "submitted" && (
+          <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+            <p className="text-sm font-semibold text-primary">Review This Expense</p>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">Notes (optional)</label>
+              <input
+                type="text"
+                value={reviewNotes}
+                onChange={(e) => setReviewNotes(e.target.value)}
+                placeholder="e.g. Looks good, approved"
+                className="w-full rounded-xl border bg-card px-4 py-3 text-base outline-none focus:ring-2 focus:ring-ring touch-target"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => handleReview("approved")}
+                disabled={updateMutation.isPending}
+                className="rounded-xl bg-[hsl(var(--success))] py-3 text-sm font-bold text-[hsl(var(--success-foreground))] touch-target flex items-center justify-center gap-1"
+              >
+                ✓ Approve
+              </button>
+              <button
+                onClick={() => handleReview("rejected")}
+                disabled={updateMutation.isPending}
+                className="rounded-xl bg-destructive py-3 text-sm font-bold text-destructive-foreground touch-target flex items-center justify-center gap-1"
+              >
+                ✗ Reject
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Mark reimbursed for approved reimbursements */}
+        {isOwner && status === "approved" && expense.expense_type === "reimbursement" && (
+          <button
+            onClick={handleMarkReimbursed}
+            disabled={updateMutation.isPending}
+            className="w-full rounded-xl bg-[hsl(var(--success))] py-4 text-base font-bold text-[hsl(var(--success-foreground))] transition-transform active:scale-[0.98] touch-target flex items-center justify-center gap-2"
+          >
+            💰 Mark as Reimbursed
+          </button>
+        )}
+
         {/* Actions */}
         <div className="flex gap-3">
-          <button
-            onClick={() => navigate(`/expenses/${expense.id}/edit`)}
-            className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-secondary py-3 text-sm font-semibold text-secondary-foreground touch-target"
-          >
-            <Pencil className="h-4 w-4" />
-            Edit
-          </button>
+          {(status === "draft" || status === "rejected") && (
+            <button
+              onClick={() => navigate(`/expenses/${expense.id}/edit`)}
+              className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-secondary py-3 text-sm font-semibold text-secondary-foreground touch-target"
+            >
+              <Pencil className="h-4 w-4" />
+              Edit
+            </button>
+          )}
           <button
             onClick={() => setConfirmDelete(true)}
             className="flex items-center justify-center gap-2 rounded-xl bg-destructive/10 px-6 py-3 text-sm font-semibold text-destructive touch-target"
@@ -155,7 +277,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between rounded-xl bg-card p-3">
       <span className="text-sm text-muted-foreground">{label}</span>
-      <span className="text-sm font-semibold">{value}</span>
+      <span className="text-sm font-semibold text-right max-w-[60%]">{value}</span>
     </div>
   );
 }

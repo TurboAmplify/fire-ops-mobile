@@ -6,6 +6,9 @@ export type ExpenseInsert = TablesInsert<"expenses">;
 export type ExpenseUpdate = TablesUpdate<"expenses">;
 
 export type ExpenseCategory = "fuel" | "ppe" | "food" | "lodging" | "equipment" | "other";
+export type FuelType = "truck" | "pump" | "saw" | "burn";
+export type ExpenseType = "company" | "reimbursement";
+export type ExpenseStatus = "draft" | "submitted" | "approved" | "rejected" | "reimbursed";
 
 export const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   fuel: "Fuel",
@@ -23,6 +26,29 @@ export const CATEGORY_ICONS: Record<ExpenseCategory, string> = {
   lodging: "🏨",
   equipment: "🔧",
   other: "📦",
+};
+
+export const FUEL_TYPE_LABELS: Record<FuelType, string> = {
+  truck: "Truck",
+  pump: "Pump",
+  saw: "Saw",
+  burn: "Burn",
+};
+
+export const STATUS_LABELS: Record<ExpenseStatus, string> = {
+  draft: "Draft",
+  submitted: "Submitted",
+  approved: "Approved",
+  rejected: "Rejected",
+  reimbursed: "Reimbursed",
+};
+
+export const STATUS_COLORS: Record<ExpenseStatus, string> = {
+  draft: "bg-muted text-muted-foreground",
+  submitted: "bg-primary/10 text-primary",
+  approved: "bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]",
+  rejected: "bg-destructive/10 text-destructive",
+  reimbursed: "bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]",
 };
 
 export type ExpenseWithRelations = Expense & {
