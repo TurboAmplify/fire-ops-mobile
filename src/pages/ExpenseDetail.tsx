@@ -4,7 +4,8 @@ import { useExpense, useDeleteExpense, useUpdateExpense } from "@/hooks/useExpen
 import { CATEGORY_LABELS, CATEGORY_ICONS, FUEL_TYPE_LABELS, STATUS_LABELS } from "@/services/expenses";
 import type { ExpenseCategory, FuelType, ExpenseStatus } from "@/services/expenses";
 import { ExpenseStatusBadge } from "@/components/expenses/ExpenseStatusBadge";
-import { ArrowLeft, Pencil, Trash2, Loader2, ExternalLink, Send } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, Loader2, Send } from "lucide-react";
+import { ReceiptViewer } from "@/components/expenses/ReceiptViewer";
 import { toast } from "sonner";
 import { useState } from "react";
 import { useOrganization } from "@/hooks/useOrganization";
@@ -146,28 +147,7 @@ export default function ExpenseDetail() {
 
         {/* Receipt */}
         {expense.receipt_url && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-muted-foreground">Receipt</p>
-            <a
-              href={expense.receipt_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block rounded-xl overflow-hidden border"
-            >
-              <img
-                src={expense.receipt_url}
-                alt="Receipt"
-                className="w-full max-h-64 object-contain bg-secondary"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = "none";
-                }}
-              />
-              <div className="flex items-center gap-1 p-2 text-xs text-primary font-medium">
-                <ExternalLink className="h-3 w-3" />
-                View full receipt
-              </div>
-            </a>
-          </div>
+          <ReceiptViewer url={expense.receipt_url} />
         )}
 
         {/* Submit button for drafts */}
