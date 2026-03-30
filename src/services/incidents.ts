@@ -63,7 +63,6 @@ export async function updateIncident(id: string, updates: IncidentUpdate) {
 }
 
 export async function deleteIncident(id: string) {
-  // Check for dependent trucks first
   const { count } = await supabase
     .from("incident_trucks")
     .select("*", { count: "exact", head: true })
@@ -75,7 +74,6 @@ export async function deleteIncident(id: string) {
     );
   }
 
-  // Check for dependent expenses
   const { count: expenseCount } = await supabase
     .from("expenses")
     .select("*", { count: "exact", head: true })

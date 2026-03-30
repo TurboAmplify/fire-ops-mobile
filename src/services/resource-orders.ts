@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 export interface ResourceOrder {
   id: string;
   incident_truck_id: string;
+  organization_id: string | null;
   file_url: string;
   file_name: string;
   agreement_number: string | null;
@@ -22,9 +23,10 @@ export async function fetchResourceOrders(incidentTruckId: string): Promise<Reso
   return data as ResourceOrder[];
 }
 
-export async function uploadResourceOrderFile(file: File): Promise<string> {
+export async function uploadResourceOrderFile(file: File, organizationId?: string): Promise<string> {
   const ext = file.name.split(".").pop() || "pdf";
-  const path = `${crypto.randomUUID()}.${ext}`;
+  const prefix = organizationId ? `${organizationId}/` : "";
+  const path = `${prefix}${crypto.randomUUID()}.${ext}`;
   const { error } = await supabase.storage.from("resource-orders").upload(path, file);
   if (error) throw error;
   const { data } = supabase.storage.from("resource-orders").getPublicUrl(path);
@@ -33,6 +35,7 @@ export async function uploadResourceOrderFile(file: File): Promise<string> {
 
 export async function createResourceOrder(order: {
   incident_truck_id: string;
+  organization_id?: string | null;
   file_url: string;
   file_name: string;
 }): Promise<ResourceOrder> {

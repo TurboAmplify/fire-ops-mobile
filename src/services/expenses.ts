@@ -75,9 +75,10 @@ export async function deleteExpense(id: string) {
   if (error) throw error;
 }
 
-export async function uploadReceipt(file: File): Promise<string> {
+export async function uploadReceipt(file: File, organizationId?: string): Promise<string> {
   const ext = file.name.split(".").pop() || "jpg";
-  const path = `${crypto.randomUUID()}.${ext}`;
+  const prefix = organizationId ? `${organizationId}/` : "";
+  const path = `${prefix}${crypto.randomUUID()}.${ext}`;
   const { error } = await supabase.storage.from("receipts").upload(path, file);
   if (error) throw error;
   const { data } = supabase.storage.from("receipts").getPublicUrl(path);
