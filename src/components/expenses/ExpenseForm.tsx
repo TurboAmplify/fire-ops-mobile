@@ -2,6 +2,8 @@ import { useIncidents } from "@/hooks/useIncidents";
 import { useIncidentTrucks } from "@/hooks/useIncidentTrucks";
 import { CATEGORY_LABELS, uploadReceipt } from "@/services/expenses";
 import type { ExpenseCategory, ExpenseInsert, Expense } from "@/services/expenses";
+import type { ParsedReceipt } from "@/services/ai-parsing";
+import { ReceiptParseButton } from "./ReceiptParseButton";
 import { useState } from "react";
 import { Loader2, Camera } from "lucide-react";
 import { toast } from "sonner";
@@ -43,6 +45,16 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleApplyParsed = (parsed: ParsedReceipt) => {
+    if (parsed.amount != null) setAmount(String(parsed.amount));
+    if (parsed.date) setDate(parsed.date);
+    if (parsed.category && categories.includes(parsed.category as ExpenseCategory)) {
+      setCategory(parsed.category as ExpenseCategory);
+    }
+    if (parsed.description) setDescription(parsed.description);
+    toast.success("AI suggestions applied — review before saving");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -99,6 +111,37 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
           </select>
         </div>
       )}
+
+      {/* Receipt photo */}
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-muted-foreground">Receipt (optional)</label>
+        <label className="flex items-center justify-center gap-2 rounded-xl border border-dashed bg-card px-4 py-3 text-sm text-muted-foreground cursor-pointer active:bg-secondary transition-colors touch-target">
+          {uploading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Camera className="h-4 w-4" />
+          )}
+          <span>{uploading ? "Uploading..." : receiptUrl ? "Change photo" : "Take or attach photo"}</span>
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handlePhoto}
+            className="hidden"
+          />
+        </label>
+        {receiptUrl && (
+          <>
+            <img
+              src={receiptUrl}
+              alt="Receipt preview"
+              className="w-full max-h-40 object-contain rounded-lg bg-secondary"
+            />
+            {/* AI parse button */}
+            <ReceiptParseButton receiptUrl={receiptUrl} onApply={handleApplyParsed} />
+          </>
+        )}
+      </div>
 
       {/* Category */}
       <div className="space-y-2">
@@ -160,33 +203,6 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
           placeholder="e.g. Fuel fill at Shell station"
           className="w-full rounded-xl border bg-card px-4 py-3 text-base outline-none focus:ring-2 focus:ring-ring touch-target"
         />
-      </div>
-
-      {/* Receipt photo */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-muted-foreground">Receipt (optional)</label>
-        <label className="flex items-center justify-center gap-2 rounded-xl border border-dashed bg-card px-4 py-3 text-sm text-muted-foreground cursor-pointer active:bg-secondary transition-colors touch-target">
-          {uploading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Camera className="h-4 w-4" />
-          )}
-          <span>{uploading ? "Uploading..." : receiptUrl ? "Change photo" : "Take or attach photo"}</span>
-          <input
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={handlePhoto}
-            className="hidden"
-          />
-        </label>
-        {receiptUrl && (
-          <img
-            src={receiptUrl}
-            alt="Receipt preview"
-            className="w-full max-h-40 object-contain rounded-lg bg-secondary"
-          />
-        )}
       </div>
 
       {/* Submit */}
