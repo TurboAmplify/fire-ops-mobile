@@ -51,15 +51,23 @@ export const STATUS_COLORS: Record<ExpenseStatus, string> = {
   reimbursed: "bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]",
 };
 
+export type AttachmentScope = "company" | "incident" | "truck";
+
+export const SCOPE_LABELS: Record<AttachmentScope, string> = {
+  company: "Company / General",
+  incident: "Incident",
+  truck: "Incident + Truck",
+};
+
 export type ExpenseWithRelations = Expense & {
-  incidents: { id: string; name: string };
+  incidents: { id: string; name: string } | null;
   incident_trucks: { id: string; trucks: { id: string; name: string } } | null;
 };
 
 export async function fetchExpenses() {
   const { data, error } = await supabase
     .from("expenses")
-    .select("*, incidents(id, name), incident_trucks(id, trucks(id, name))")
+    .select("*, incidents:incident_id(id, name), incident_trucks:incident_truck_id(id, trucks(id, name))")
     .order("date", { ascending: false });
   if (error) throw error;
   return data as ExpenseWithRelations[];
@@ -68,7 +76,7 @@ export async function fetchExpenses() {
 export async function fetchExpense(id: string) {
   const { data, error } = await supabase
     .from("expenses")
-    .select("*, incidents(id, name), incident_trucks(id, trucks(id, name))")
+    .select("*, incidents:incident_id(id, name), incident_trucks:incident_truck_id(id, trucks(id, name))")
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;

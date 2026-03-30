@@ -152,7 +152,7 @@ export default function Expenses() {
                         <ExpenseStatusBadge status={exp.status} />
                       </div>
                       <p className="text-[11px] text-muted-foreground">
-                        {exp.incidents?.name}
+                        {exp.incidents?.name ?? "Company"}
                         {exp.incident_trucks?.trucks?.name && ` · ${exp.incident_trucks.trucks.name}`}
                         {exp.expense_type === "reimbursement" && " · Reimbursement"}
                       </p>
