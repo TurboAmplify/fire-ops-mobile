@@ -5,6 +5,7 @@ import { STATUS_LABELS, TYPE_LABELS } from "@/services/incidents";
 import type { IncidentStatus } from "@/services/incidents";
 import { ArrowLeft, MapPin, Calendar, Flame, TrendingUp, Loader2, Pencil, Trash2 } from "lucide-react";
 import { IncidentTruckList } from "@/components/incidents/IncidentTruckList";
+import { AgreementUpload } from "@/components/incidents/AgreementUpload";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -155,6 +156,9 @@ export default function IncidentDetail() {
             <p className="text-sm">{incident.notes}</p>
           </div>
         )}
+
+        {/* Incident-level Agreements */}
+        <AgreementUpload incidentId={incident.id} label="Incident Agreements" />
 
         {/* Assigned Trucks */}
         <IncidentTruckList incidentId={incident.id} />

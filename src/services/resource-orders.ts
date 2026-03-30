@@ -1,0 +1,70 @@
+import { supabase } from "@/integrations/supabase/client";
+
+export interface ResourceOrder {
+  id: string;
+  incident_truck_id: string;
+  file_url: string;
+  file_name: string;
+  agreement_number: string | null;
+  resource_order_number: string | null;
+  parsed_data: Record<string, any>;
+  parsed_at: string | null;
+  created_at: string;
+}
+
+export async function fetchResourceOrders(incidentTruckId: string): Promise<ResourceOrder[]> {
+  const { data, error } = await supabase
+    .from("resource_orders")
+    .select("*")
+    .eq("incident_truck_id", incidentTruckId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data as ResourceOrder[];
+}
+
+export async function uploadResourceOrderFile(file: File): Promise<string> {
+  const ext = file.name.split(".").pop() || "pdf";
+  const path = `${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage.from("resource-orders").upload(path, file);
+  if (error) throw error;
+  const { data } = supabase.storage.from("resource-orders").getPublicUrl(path);
+  return data.publicUrl;
+}
+
+export async function createResourceOrder(order: {
+  incident_truck_id: string;
+  file_url: string;
+  file_name: string;
+}): Promise<ResourceOrder> {
+  const { data, error } = await supabase
+    .from("resource_orders")
+    .insert(order)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as ResourceOrder;
+}
+
+export async function updateResourceOrderParsed(
+  id: string,
+  parsed: Record<string, any>
+): Promise<void> {
+  const { error } = await supabase
+    .from("resource_orders")
+    .update({
+      parsed_data: parsed,
+      agreement_number: parsed.agreement_number || null,
+      resource_order_number: parsed.resource_order_number || null,
+      parsed_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function parseResourceOrderAI(fileUrl: string, fileName: string): Promise<Record<string, any>> {
+  const { data, error } = await supabase.functions.invoke("parse-resource-order", {
+    body: { fileUrl, fileName },
+  });
+  if (error) throw error;
+  return data?.parsed || {};
+}

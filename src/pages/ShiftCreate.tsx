@@ -1,10 +1,11 @@
 import { AppShell } from "@/components/AppShell";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useIncidentTruckCrew } from "@/hooks/useIncidentTruckCrew";
+import { useResourceOrders } from "@/hooks/useResourceOrders";
 import { useCreateShift } from "@/hooks/useShifts";
 import { ShiftCrewEditor } from "@/components/shifts/ShiftCrewEditor";
 import type { ShiftCrewEntry } from "@/services/shifts";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, FileText } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -20,6 +21,7 @@ export default function ShiftCreate() {
   const truckName = (location.state as { truckName?: string })?.truckName ?? "Truck";
 
   const { data: activeCrew, isLoading: loadingCrew } = useIncidentTruckCrew(incidentTruckId || "");
+  const { data: resourceOrders } = useResourceOrders(incidentTruckId || "");
   const createMutation = useCreateShift(incidentTruckId || "");
 
   const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]);
@@ -29,6 +31,10 @@ export default function ShiftCreate() {
   const [notes, setNotes] = useState("");
   const [step, setStep] = useState<"details" | "crew">("details");
   const [crewEntries, setCrewEntries] = useState<ShiftCrewEntry[]>([]);
+
+  // Get the most recent parsed resource order
+  const latestRO = resourceOrders?.find((ro) => ro.parsed_at != null);
+  const roData = latestRO?.parsed_data || {};
 
   // When moving to crew step, prefill from active truck crew
   const goToCrew = () => {
@@ -55,6 +61,13 @@ export default function ShiftCreate() {
     } catch {
       return 12;
     }
+  };
+
+  // Auto-populate from resource order times if available
+  const applyROTimes = () => {
+    if (roData.shift_start_time) setStartTime(roData.shift_start_time);
+    if (roData.shift_end_time) setEndTime(roData.shift_end_time);
+    toast.success("Applied resource order times");
   };
 
   const handleSubmit = async () => {
@@ -99,6 +112,57 @@ export default function ShiftCreate() {
           <h2 className="text-xl font-extrabold">Log Shift</h2>
           <p className="text-sm text-muted-foreground">{truckName}</p>
         </div>
+
+        {/* Resource Order Info Banner */}
+        {latestRO && (
+          <div className="rounded-xl bg-primary/5 border border-primary/20 p-3 space-y-1">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
+              <FileText className="h-3.5 w-3.5" />
+              Resource Order Info
+            </div>
+            <div className="grid grid-cols-2 gap-1 text-xs">
+              {roData.agreement_number && (
+                <div>
+                  <span className="text-muted-foreground">Agreement: </span>
+                  <span className="font-bold">{roData.agreement_number}</span>
+                </div>
+              )}
+              {roData.resource_order_number && (
+                <div>
+                  <span className="text-muted-foreground">RO#: </span>
+                  <span className="font-bold">{roData.resource_order_number}</span>
+                </div>
+              )}
+              {roData.incident_name && (
+                <div>
+                  <span className="text-muted-foreground">Incident: </span>
+                  <span className="font-medium">{roData.incident_name}</span>
+                </div>
+              )}
+              {roData.resource_name && (
+                <div>
+                  <span className="text-muted-foreground">Resource: </span>
+                  <span className="font-medium">{roData.resource_name}</span>
+                </div>
+              )}
+              {roData.operational_period && (
+                <div>
+                  <span className="text-muted-foreground">Op Period: </span>
+                  <span className="font-medium">{roData.operational_period}</span>
+                </div>
+              )}
+            </div>
+            {(roData.shift_start_time || roData.shift_end_time) && (
+              <button
+                type="button"
+                onClick={applyROTimes}
+                className="mt-1 text-xs font-medium text-primary underline touch-target"
+              >
+                Apply RO shift times ({roData.shift_start_time} – {roData.shift_end_time})
+              </button>
+            )}
+          </div>
+        )}
 
         {step === "details" && (
           <div className="space-y-4">

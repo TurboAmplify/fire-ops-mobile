@@ -6,6 +6,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { TruckCrewSection } from "./TruckCrewSection";
 import { ShiftList } from "@/components/shifts/ShiftList";
+import { ResourceOrderSection } from "./ResourceOrderSection";
+import { AgreementUpload } from "./AgreementUpload";
 
 const truckStatuses: IncidentTruckStatus[] = ["assigned", "active", "demobed", "completed"];
 
@@ -109,7 +111,7 @@ export function IncidentTruckList({ incidentId }: Props) {
             </button>
 
             {isExpanded && (
-              <div className="border-t px-4 pb-4 pt-3 space-y-3">
+              <div className="border-t px-4 pb-4 pt-3 space-y-4">
                 {/* Status changer */}
                 <div className="space-y-1">
                   <p className="text-xs font-medium text-muted-foreground">Change Status</p>
@@ -130,6 +132,12 @@ export function IncidentTruckList({ incidentId }: Props) {
                     ))}
                   </div>
                 </div>
+
+                {/* Resource Orders */}
+                <ResourceOrderSection incidentTruckId={it.id} />
+
+                {/* Agreements for this truck */}
+                <AgreementUpload incidentTruckId={it.id} label="Truck Agreements" />
 
                 {/* Crew section */}
                 <TruckCrewSection incidentTruckId={it.id} />
