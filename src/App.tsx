@@ -22,6 +22,7 @@ import Crew from "./pages/Crew";
 import Expenses from "./pages/Expenses";
 import ExpenseEdit from "./pages/ExpenseEdit";
 import ExpenseDetail from "./pages/ExpenseDetail";
+import ExpenseReview from "./pages/ExpenseReview";
 import Settings from "./pages/Settings";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
