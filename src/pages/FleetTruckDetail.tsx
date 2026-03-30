@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { TruckPhotoSection } from "@/components/fleet/TruckPhotoSection";
 import { TruckDocumentSection } from "@/components/fleet/TruckDocumentSection";
 import { TruckChecklistSection } from "@/components/fleet/TruckChecklistSection";
+import { TruckServiceLogSection } from "@/components/fleet/TruckServiceLogSection";
 
 export default function FleetTruckDetail() {
   const { truckId } = useParams<{ truckId: string }>();
