@@ -58,6 +58,7 @@ export default function FleetTruckDetail() {
     { label: "Year", value: truck.year },
     { label: "Plate", value: truck.plate },
     { label: "VIN", value: truck.vin },
+    { label: "Mileage", value: truck.current_mileage ? `${truck.current_mileage.toLocaleString()} mi` : null },
     { label: "Water Capacity", value: truck.water_capacity },
     { label: "Pump Type", value: truck.pump_type },
     { label: "DOT Number", value: truck.dot_number },
