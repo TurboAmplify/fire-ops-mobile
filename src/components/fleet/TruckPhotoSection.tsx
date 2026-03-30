@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useTruckPhotos, useUploadTruckPhoto, useDeleteTruckPhoto, useUpdateTruckPhotoLabel } from "@/hooks/useFleet";
 import { useOrganization } from "@/hooks/useOrganization";
-import { Camera, Trash2, Loader2, Tag } from "lucide-react";
+import { Camera, Trash2, Loader2, Tag, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 
