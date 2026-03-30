@@ -68,10 +68,10 @@ export default function FleetTruckDetail() {
     <AppShell
       title={truck.name}
       headerRight={
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <Link
             to={`/fleet/${truckId}/edit`}
-            className="flex items-center gap-1 rounded-lg bg-secondary px-3 py-2 text-sm font-semibold text-secondary-foreground touch-target"
+            className="flex items-center gap-1.5 rounded-full bg-secondary px-3.5 h-9 text-sm font-semibold text-secondary-foreground active:bg-secondary/70"
           >
             <Pencil className="h-4 w-4" />
             Edit
@@ -79,7 +79,7 @@ export default function FleetTruckDetail() {
           <button
             onClick={handleDelete}
             disabled={deleteMutation.isPending}
-            className="rounded-lg bg-destructive/10 px-3 py-2 text-sm font-semibold text-destructive touch-target"
+            className="flex items-center justify-center h-9 w-9 rounded-full bg-destructive/10 text-destructive active:bg-destructive/20"
           >
             <Trash2 className="h-4 w-4" />
           </button>
