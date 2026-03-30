@@ -76,7 +76,7 @@ export async function fetchExpenses() {
 export async function fetchExpense(id: string) {
   const { data, error } = await supabase
     .from("expenses")
-    .select("*, incidents(id, name), incident_trucks(id, trucks(id, name))")
+    .select("*, incidents:incident_id(id, name), incident_trucks:incident_truck_id(id, trucks(id, name))")
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
