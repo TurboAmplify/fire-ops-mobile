@@ -145,7 +145,6 @@ export default function IncidentFromAgreement() {
                 <input
                   type="file"
                   accept="image/*,.pdf"
-                  capture="environment"
                   onChange={handleUpload}
                   className="hidden"
                 />
