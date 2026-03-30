@@ -188,16 +188,35 @@ export async function deleteTruckDocument(id: string) {
 export type TruckChecklistItem = Tables<"truck_checklist_items">;
 
 export const DEFAULT_CHECKLIST_ITEMS = [
-  "Tires inspected",
-  "Oil / fluids checked",
+  // Walk-around exterior
+  "Tires inspected (tread & pressure)",
+  "Lights / turn signals / strobes working",
+  "Mirrors clean & adjusted",
+  "Body / frame — no visible damage",
+  "License plate visible & current",
+  // Fluids & engine
+  "Oil level checked",
+  "Coolant level checked",
+  "Transmission fluid checked",
+  "Brake fluid checked",
+  "Windshield washer fluid filled",
+  // Fire equipment
   "Pump operational",
-  "Hoses inspected",
-  "Lights / sirens working",
-  "Radio tested",
-  "First aid kit stocked",
+  "Hoses inspected & connected",
+  "Nozzles accounted for",
+  "Water tank level checked",
+  "Foam / retardant supply checked",
+  // Safety
   "Fire extinguisher charged",
+  "First aid kit stocked",
+  "PPE gear on board",
+  "Radio tested",
+  "Sirens / PA working",
+  // Compliance
   "DOT card current",
   "Registration current",
+  "Insurance card on board",
+  "Driver log / ELD ready",
 ];
 
 export async function fetchTruckChecklist(truckId: string) {
