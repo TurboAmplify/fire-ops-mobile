@@ -33,38 +33,62 @@ export default function OrgSetup() {
     return <Navigate to="/" replace />;
   }
 
+  const [pendingInvite, setPendingInvite] = useState<{
+    id: string;
+    organization_id: string;
+    role: string;
+    organizations?: { name: string } | null;
+  } | null>(null);
+  const [checkingInvite, setCheckingInvite] = useState(true);
+
+  // Check for pending invites on mount
+  useState(() => {
+    if (!user) return;
+    (async () => {
+      try {
+        const { data: invite } = await supabase
+          .from("organization_invites")
+          .select("id, organization_id, role, organizations(name)")
+          .eq("email", user.email ?? "")
+          .eq("status", "pending")
+          .maybeSingle();
+        setPendingInvite(invite as any);
+      } catch {
+        // ignore
+      } finally {
+        setCheckingInvite(false);
+      }
+    })();
+  });
+
+  const handleAcceptInvite = async () => {
+    if (!pendingInvite || !user) return;
+    setSubmitting(true);
+    try {
+      await supabase.from("organization_members").insert({
+        organization_id: pendingInvite.organization_id,
+        user_id: user.id,
+        role: pendingInvite.role,
+      });
+      await supabase
+        .from("organization_invites")
+        .update({ status: "accepted" })
+        .eq("id", pendingInvite.id);
+      toast({ title: "Joined organization", description: "You've been added to your team." });
+      await refetch();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Something went wrong.", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!companyName.trim()) return;
 
     setSubmitting(true);
     try {
-      // Check for pending invite first
-      const { data: invite } = await supabase
-        .from("organization_invites")
-        .select("id, organization_id, role")
-        .eq("email", user.email ?? "")
-        .eq("status", "pending")
-        .maybeSingle();
-
-      if (invite) {
-        // Accept invite instead of creating a new org
-        await supabase.from("organization_members").insert({
-          organization_id: invite.organization_id,
-          user_id: user.id,
-          role: invite.role,
-        });
-        await supabase
-          .from("organization_invites")
-          .update({ status: "accepted" })
-          .eq("id", invite.id);
-
-        toast({ title: "Joined organization", description: "You've been added to your team." });
-        await refetch();
-        return;
-      }
-
-      // Create new org
       const { data: org, error: orgError } = await supabase
         .from("organizations")
         .insert({ name: companyName.trim() })
@@ -73,7 +97,6 @@ export default function OrgSetup() {
 
       if (orgError) throw orgError;
 
-      // Add user as owner
       const { error: memberError } = await supabase
         .from("organization_members")
         .insert({
