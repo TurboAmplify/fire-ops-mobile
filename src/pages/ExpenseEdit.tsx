@@ -18,7 +18,7 @@ export default function ExpenseEdit() {
   const handleSubmit = async (data: ExpenseInsert) => {
     try {
       if (isNew) {
-        await createMutation.mutateAsync(data);
+        await createMutation.mutateAsync({ ...data, status: "draft" });
         toast.success("Expense added");
       } else {
         const updates: ExpenseUpdate = { ...data };

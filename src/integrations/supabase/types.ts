@@ -120,11 +120,22 @@ export type Database = {
           created_at: string
           date: string
           description: string | null
+          expense_type: string
+          fuel_type: string | null
           id: string
           incident_id: string
           incident_truck_id: string | null
+          meal_attendees: string | null
+          meal_purpose: string | null
           organization_id: string | null
           receipt_url: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by_user_id: string | null
+          status: string
+          submitted_at: string | null
+          submitted_by_user_id: string | null
+          vendor: string | null
         }
         Insert: {
           amount: number
@@ -132,11 +143,22 @@ export type Database = {
           created_at?: string
           date: string
           description?: string | null
+          expense_type?: string
+          fuel_type?: string | null
           id?: string
           incident_id: string
           incident_truck_id?: string | null
+          meal_attendees?: string | null
+          meal_purpose?: string | null
           organization_id?: string | null
           receipt_url?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          status?: string
+          submitted_at?: string | null
+          submitted_by_user_id?: string | null
+          vendor?: string | null
         }
         Update: {
           amount?: number
@@ -144,11 +166,22 @@ export type Database = {
           created_at?: string
           date?: string
           description?: string | null
+          expense_type?: string
+          fuel_type?: string | null
           id?: string
           incident_id?: string
           incident_truck_id?: string | null
+          meal_attendees?: string | null
+          meal_purpose?: string | null
           organization_id?: string | null
           receipt_url?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          status?: string
+          submitted_at?: string | null
+          submitted_by_user_id?: string | null
+          vendor?: string | null
         }
         Relationships: [
           {

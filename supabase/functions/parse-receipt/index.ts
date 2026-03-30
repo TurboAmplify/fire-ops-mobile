@@ -32,23 +32,40 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: "You extract structured data from receipt images for expense tracking in a wildland firefighting operations app. Analyze the receipt carefully and extract all relevant fields.",
+            content: `You extract structured data from receipt images for expense tracking in a wildland firefighting operations app.
+
+CRITICAL RULES FOR DESCRIPTION:
+- Description must be a SHORT, TAX-FRIENDLY purpose statement (5-10 words max)
+- Describe the PURPOSE of the expense, NOT the items purchased
+- NEVER list individual items, line items, or products
+- NEVER include itemized details like "burger, fries, soda"
+
+GOOD descriptions:
+- "Crew meal during fire assignment"
+- "Fuel for crew truck during fire response"  
+- "Field equipment supplies for operations"
+- "Crew lodging during wildfire deployment"
+- "PPE replacement for fire crew"
+
+BAD descriptions (NEVER do this):
+- "Burger, fries, 2 sodas, extra ketchup"
+- "20 gallons diesel, windshield fluid"
+- "Hard hat, gloves, safety glasses"
+
+For category, use these mappings:
+- Gas stations, fuel, diesel → "fuel"
+- Restaurants, food, groceries, meals → "food"  
+- Hotels, motels, lodging → "lodging"
+- Safety gear, PPE, protective equipment → "ppe"
+- Tools, parts, hardware → "equipment"
+- Everything else → "other"`,
           },
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: `Analyze this receipt image and extract:
-- total amount (number, no currency symbol)
-- date (YYYY-MM-DD format)
-- category (one of: fuel, ppe, food, lodging, equipment, other)
-- description (short summary of what was purchased)
-- vendor name if visible
-- any truck or unit numbers visible
-- any incident references visible
-
-Be precise with the amount. If you can't read a field clearly, omit it.`,
+                text: `Analyze this receipt image and extract the data. Remember: description must be a short purpose statement, NOT an itemized list.`,
               },
               { type: "image_url", image_url: { url: imageUrl } },
             ],
@@ -70,10 +87,11 @@ Be precise with the amount. If you can't read a field clearly, omit it.`,
                     enum: ["fuel", "ppe", "food", "lodging", "equipment", "other"],
                     description: "Expense category",
                   },
-                  description: { type: "string", description: "Short description of the purchase" },
+                  description: {
+                    type: "string",
+                    description: "Short tax-friendly purpose statement (5-10 words). NEVER list items.",
+                  },
                   vendor: { type: "string", description: "Vendor/store name" },
-                  truck_reference: { type: "string", description: "Any truck or unit number visible" },
-                  incident_reference: { type: "string", description: "Any incident reference visible" },
                 },
               },
             },
