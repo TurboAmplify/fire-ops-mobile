@@ -123,6 +123,9 @@ export default function FleetTruckDetail() {
 
         {/* Documents */}
         <TruckDocumentSection truckId={truckId!} />
+
+        {/* Service & Maintenance */}
+        <TruckServiceLogSection truckId={truckId!} />
       </div>
     </AppShell>
   );
