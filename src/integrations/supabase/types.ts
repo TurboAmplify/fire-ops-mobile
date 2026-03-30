@@ -123,7 +123,7 @@ export type Database = {
           expense_type: string
           fuel_type: string | null
           id: string
-          incident_id: string
+          incident_id: string | null
           incident_truck_id: string | null
           meal_attendees: string | null
           meal_purpose: string | null
@@ -146,7 +146,7 @@ export type Database = {
           expense_type?: string
           fuel_type?: string | null
           id?: string
-          incident_id: string
+          incident_id?: string | null
           incident_truck_id?: string | null
           meal_attendees?: string | null
           meal_purpose?: string | null
@@ -169,7 +169,7 @@ export type Database = {
           expense_type?: string
           fuel_type?: string | null
           id?: string
-          incident_id?: string
+          incident_id?: string | null
           incident_truck_id?: string | null
           meal_attendees?: string | null
           meal_purpose?: string | null

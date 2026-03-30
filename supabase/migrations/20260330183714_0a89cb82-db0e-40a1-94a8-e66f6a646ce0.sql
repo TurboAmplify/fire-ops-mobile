@@ -1,0 +1,1 @@
+ALTER TABLE public.expenses ALTER COLUMN incident_id DROP NOT NULL;
