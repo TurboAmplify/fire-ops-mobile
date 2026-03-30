@@ -4,7 +4,8 @@ import { useExpense, useDeleteExpense, useUpdateExpense } from "@/hooks/useExpen
 import { CATEGORY_LABELS, CATEGORY_ICONS, FUEL_TYPE_LABELS, STATUS_LABELS } from "@/services/expenses";
 import type { ExpenseCategory, FuelType, ExpenseStatus } from "@/services/expenses";
 import { ExpenseStatusBadge } from "@/components/expenses/ExpenseStatusBadge";
-import { ArrowLeft, Pencil, Trash2, Loader2, ExternalLink, Send } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, Loader2, Send } from "lucide-react";
+import { ReceiptViewer } from "@/components/expenses/ReceiptViewer";
 import { toast } from "sonner";
 import { useState } from "react";
 import { useOrganization } from "@/hooks/useOrganization";
