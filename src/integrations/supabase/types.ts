@@ -604,30 +604,204 @@ export type Database = {
           },
         ]
       }
-      trucks: {
+      truck_checklist_items: {
         Row: {
           created_at: string
           id: string
-          name: string
+          is_complete: boolean
+          label: string
           notes: string | null
           organization_id: string | null
-          status: string
+          sort_order: number
+          truck_id: string
         }
         Insert: {
           created_at?: string
           id?: string
-          name: string
+          is_complete?: boolean
+          label: string
           notes?: string | null
           organization_id?: string | null
-          status?: string
+          sort_order?: number
+          truck_id: string
         }
         Update: {
           created_at?: string
           id?: string
+          is_complete?: boolean
+          label?: string
+          notes?: string | null
+          organization_id?: string | null
+          sort_order?: number
+          truck_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "truck_checklist_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "truck_checklist_items_truck_id_fkey"
+            columns: ["truck_id"]
+            isOneToOne: false
+            referencedRelation: "trucks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      truck_documents: {
+        Row: {
+          created_at: string
+          doc_type: string
+          expires_at: string | null
+          file_name: string
+          file_url: string
+          id: string
+          notes: string | null
+          organization_id: string | null
+          title: string | null
+          truck_id: string
+        }
+        Insert: {
+          created_at?: string
+          doc_type?: string
+          expires_at?: string | null
+          file_name: string
+          file_url: string
+          id?: string
+          notes?: string | null
+          organization_id?: string | null
+          title?: string | null
+          truck_id: string
+        }
+        Update: {
+          created_at?: string
+          doc_type?: string
+          expires_at?: string | null
+          file_name?: string
+          file_url?: string
+          id?: string
+          notes?: string | null
+          organization_id?: string | null
+          title?: string | null
+          truck_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "truck_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "truck_documents_truck_id_fkey"
+            columns: ["truck_id"]
+            isOneToOne: false
+            referencedRelation: "trucks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      truck_photos: {
+        Row: {
+          caption: string | null
+          created_at: string
+          file_name: string
+          file_url: string
+          id: string
+          organization_id: string | null
+          truck_id: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          file_name: string
+          file_url: string
+          id?: string
+          organization_id?: string | null
+          truck_id: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          file_name?: string
+          file_url?: string
+          id?: string
+          organization_id?: string | null
+          truck_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "truck_photos_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "truck_photos_truck_id_fkey"
+            columns: ["truck_id"]
+            isOneToOne: false
+            referencedRelation: "trucks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trucks: {
+        Row: {
+          created_at: string
+          dot_number: string | null
+          id: string
+          make: string | null
+          model: string | null
+          name: string
+          notes: string | null
+          organization_id: string | null
+          plate: string | null
+          pump_type: string | null
+          status: string
+          unit_type: string | null
+          vin: string | null
+          water_capacity: string | null
+          year: number | null
+        }
+        Insert: {
+          created_at?: string
+          dot_number?: string | null
+          id?: string
+          make?: string | null
+          model?: string | null
+          name: string
+          notes?: string | null
+          organization_id?: string | null
+          plate?: string | null
+          pump_type?: string | null
+          status?: string
+          unit_type?: string | null
+          vin?: string | null
+          water_capacity?: string | null
+          year?: number | null
+        }
+        Update: {
+          created_at?: string
+          dot_number?: string | null
+          id?: string
+          make?: string | null
+          model?: string | null
           name?: string
           notes?: string | null
           organization_id?: string | null
+          plate?: string | null
+          pump_type?: string | null
           status?: string
+          unit_type?: string | null
+          vin?: string | null
+          water_capacity?: string | null
+          year?: number | null
         }
         Relationships: [
           {
