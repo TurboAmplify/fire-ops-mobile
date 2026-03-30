@@ -1,7 +1,7 @@
 import { useIncidents } from "@/hooks/useIncidents";
 import { useIncidentTrucks } from "@/hooks/useIncidentTrucks";
-import { CATEGORY_LABELS, FUEL_TYPE_LABELS, uploadReceipt } from "@/services/expenses";
-import type { ExpenseCategory, ExpenseInsert, Expense, FuelType, ExpenseType } from "@/services/expenses";
+import { CATEGORY_LABELS, FUEL_TYPE_LABELS, SCOPE_LABELS, uploadReceipt } from "@/services/expenses";
+import type { ExpenseCategory, ExpenseInsert, Expense, FuelType, ExpenseType, AttachmentScope } from "@/services/expenses";
 import type { ParsedReceipt } from "@/services/ai-parsing";
 import { ReceiptParseButton } from "./ReceiptParseButton";
 import { FuelTypeModal } from "./FuelTypeModal";
@@ -12,6 +12,14 @@ import { toast } from "sonner";
 import { useOrganization } from "@/hooks/useOrganization";
 
 const categories: ExpenseCategory[] = ["fuel", "ppe", "food", "lodging", "equipment", "other"];
+const scopes: AttachmentScope[] = ["company", "incident", "truck"];
+
+function deriveScope(initial?: Partial<Expense>): AttachmentScope {
+  if (!initial) return "incident";
+  if (initial.incident_truck_id) return "truck";
+  if (initial.incident_id) return "incident";
+  return "company";
+}
 
 interface Props {
   initial?: Partial<Expense>;
@@ -22,6 +30,7 @@ interface Props {
 
 export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props) {
   const { membership } = useOrganization();
+  const [scope, setScope] = useState<AttachmentScope>(deriveScope(initial));
   const [incidentId, setIncidentId] = useState(initial?.incident_id ?? "");
   const [incidentTruckId, setIncidentTruckId] = useState(initial?.incident_truck_id ?? "");
   const [category, setCategory] = useState<ExpenseCategory>((initial?.category as ExpenseCategory) ?? "fuel");
@@ -45,7 +54,14 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
   const isMeal = category === "food";
   const isFuel = category === "fuel";
   const mealValid = !isMeal || mealAttendees.trim().length > 0;
-  const canSubmit = incidentId && amount && parseFloat(amount) > 0 && date && mealValid && !isPending && !uploading;
+
+  const needsIncident = scope === "incident" || scope === "truck";
+  const needsTruck = scope === "truck";
+
+  const incidentValid = !needsIncident || !!incidentId;
+  const truckValid = !needsTruck || !!incidentTruckId;
+
+  const canSubmit = amount && parseFloat(amount) > 0 && date && mealValid && incidentValid && truckValid && !isPending && !uploading;
 
   const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -70,10 +86,7 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
     if (parsed.category && categories.includes(parsed.category as ExpenseCategory)) {
       const detectedCategory = parsed.category as ExpenseCategory;
       setCategory(detectedCategory);
-      // Auto-trigger fuel modal
-      if (detectedCategory === "fuel") {
-        setShowFuelModal(true);
-      }
+      if (detectedCategory === "fuel") setShowFuelModal(true);
     }
     toast.success("AI suggestions applied — review before saving");
   };
@@ -82,8 +95,8 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
     e.preventDefault();
     if (!canSubmit) return;
     await onSubmit({
-      incident_id: incidentId,
-      incident_truck_id: incidentTruckId || null,
+      incident_id: needsIncident ? incidentId : null,
+      incident_truck_id: needsTruck ? incidentTruckId : null,
       category,
       amount: parseFloat(amount),
       description: description.trim() || null,
@@ -101,15 +114,8 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
     <>
       <FuelTypeModal
         open={showFuelModal}
-        onConfirm={(ft) => {
-          setFuelType(ft);
-          setShowFuelModal(false);
-        }}
-        onSkip={() => {
-          setCategory("other");
-          setFuelType("");
-          setShowFuelModal(false);
-        }}
+        onConfirm={(ft) => { setFuelType(ft); setShowFuelModal(false); }}
+        onSkip={() => { setCategory("other"); setFuelType(""); setShowFuelModal(false); }}
       />
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -134,40 +140,60 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
           </div>
         </div>
 
-        {/* Incident selector */}
+        {/* Attachment Scope */}
         <div className="space-y-2">
-          <label className="text-sm font-medium text-muted-foreground">Incident *</label>
-          <select
-            value={incidentId}
-            onChange={(e) => {
-              setIncidentId(e.target.value);
-              setIncidentTruckId("");
-            }}
-            className="w-full rounded-xl border bg-card px-4 py-3 text-base outline-none focus:ring-2 focus:ring-ring touch-target"
-          >
-            <option value="">Select incident...</option>
-            {incidents?.map((inc) => (
-              <option key={inc.id} value={inc.id}>
-                {inc.name}
-              </option>
+          <label className="text-sm font-medium text-muted-foreground">Attached To</label>
+          <div className="grid grid-cols-3 gap-2">
+            {scopes.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => {
+                  setScope(s);
+                  if (s === "company") { setIncidentId(""); setIncidentTruckId(""); }
+                  if (s === "incident") { setIncidentTruckId(""); }
+                }}
+                className={`rounded-xl px-2 py-2.5 text-xs font-medium transition-colors touch-target ${
+                  scope === s
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-secondary-foreground"
+                }`}
+              >
+                {SCOPE_LABELS[s]}
+              </button>
             ))}
-          </select>
+          </div>
         </div>
 
-        {/* Truck selector */}
-        {incidentId && (
+        {/* Incident selector */}
+        {needsIncident && (
           <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">Truck (optional)</label>
+            <label className="text-sm font-medium text-muted-foreground">Incident *</label>
+            <select
+              value={incidentId}
+              onChange={(e) => { setIncidentId(e.target.value); setIncidentTruckId(""); }}
+              className="w-full rounded-xl border bg-card px-4 py-3 text-base outline-none focus:ring-2 focus:ring-ring touch-target"
+            >
+              <option value="">Select incident...</option>
+              {incidents?.map((inc) => (
+                <option key={inc.id} value={inc.id}>{inc.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Truck selector */}
+        {needsTruck && incidentId && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">Truck *</label>
             <select
               value={incidentTruckId}
               onChange={(e) => setIncidentTruckId(e.target.value)}
               className="w-full rounded-xl border bg-card px-4 py-3 text-base outline-none focus:ring-2 focus:ring-ring touch-target"
             >
-              <option value="">No truck</option>
+              <option value="">Select truck...</option>
               {incidentTrucks?.map((it) => (
-                <option key={it.id} value={it.id}>
-                  {it.trucks.name}
-                </option>
+                <option key={it.id} value={it.id}>{it.trucks.name}</option>
               ))}
             </select>
           </div>
@@ -183,11 +209,7 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
           </label>
           {receiptUrl && (
             <>
-              <img
-                src={receiptUrl}
-                alt="Receipt preview"
-                className="w-full max-h-40 object-contain rounded-lg bg-secondary"
-              />
+              <img src={receiptUrl} alt="Receipt preview" className="w-full max-h-40 object-contain rounded-lg bg-secondary" />
               <ReceiptParseButton receiptUrl={receiptUrl} onApply={handleApplyParsed} />
             </>
           )}
@@ -224,11 +246,7 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
             <span className="text-sm text-primary font-medium">
               ⛽ Fuel type: {FUEL_TYPE_LABELS[fuelType as FuelType]}
             </span>
-            <button
-              type="button"
-              onClick={() => setShowFuelModal(true)}
-              className="text-xs text-primary font-semibold touch-target"
-            >
+            <button type="button" onClick={() => setShowFuelModal(true)} className="text-xs text-primary font-semibold touch-target">
               Change
             </button>
           </div>

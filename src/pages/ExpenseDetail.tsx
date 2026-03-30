@@ -138,9 +138,6 @@ export default function ExpenseDetail() {
               ? `${expense.incidents?.name} · ${expense.incident_trucks.trucks.name}`
               : expense.incidents?.name ?? "Company / General"
           } />
-          {expense.incident_trucks?.trucks?.name && (
-            <InfoRow label="Truck" value={expense.incident_trucks.trucks.name} />
-          )}
           {expense.description && <InfoRow label="Description" value={expense.description} />}
           {expense.vendor && <InfoRow label="Vendor" value={expense.vendor} />}
           <InfoRow label="Type" value={expense.expense_type === "reimbursement" ? "Reimbursement" : "Company Expense"} />

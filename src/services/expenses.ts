@@ -51,8 +51,16 @@ export const STATUS_COLORS: Record<ExpenseStatus, string> = {
   reimbursed: "bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]",
 };
 
+export type AttachmentScope = "company" | "incident" | "truck";
+
+export const SCOPE_LABELS: Record<AttachmentScope, string> = {
+  company: "Company / General",
+  incident: "Incident",
+  truck: "Incident + Truck",
+};
+
 export type ExpenseWithRelations = Expense & {
-  incidents: { id: string; name: string };
+  incidents: { id: string; name: string } | null;
   incident_trucks: { id: string; trucks: { id: string; name: string } } | null;
 };
 
