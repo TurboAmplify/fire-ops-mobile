@@ -56,9 +56,25 @@ export function TruckPhotoSection({ truckId }: TruckPhotoSectionProps) {
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
           Truck Photos
         </h3>
-        <label className="flex items-center gap-1 text-sm font-medium text-primary touch-target cursor-pointer">
-          <Camera className="h-4 w-4" />
-          Add Photo
+      </div>
+
+      {/* Prominent upload buttons */}
+      <div className="flex gap-2">
+        <label className="flex-1 flex items-center justify-center gap-2 rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 px-3 py-3 text-sm font-semibold text-primary cursor-pointer touch-target active:bg-primary/10">
+          <Camera className="h-5 w-5" />
+          Take Photo
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={handleUpload}
+            disabled={uploadMutation.isPending}
+          />
+        </label>
+        <label className="flex-1 flex items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/30 bg-secondary px-3 py-3 text-sm font-semibold text-secondary-foreground cursor-pointer touch-target active:bg-muted">
+          <ImageIcon className="h-5 w-5" />
+          From Library
           <input
             ref={inputRef}
             type="file"
