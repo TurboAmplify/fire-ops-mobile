@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/useAuth";
+import { useOrganization } from "@/hooks/useOrganization";
 import { useNavigate } from "react-router-dom";
 import {
   LogOut,
@@ -10,6 +11,7 @@ import {
   ChevronRight,
   Flame,
   Mail,
+  Building2,
 } from "lucide-react";
 
 export default function Settings() {
