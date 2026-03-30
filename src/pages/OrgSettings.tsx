@@ -146,7 +146,7 @@ export default function OrgSettings() {
   const isOwner = membership?.role === "owner";
 
   return (
-    <AppShell title="Organization" backTo="/settings">
+    <AppShell title="Organization">
       <div className="p-4 space-y-6">
         {/* Org header */}
         <div className="rounded-xl bg-card p-4 flex items-center gap-3">
