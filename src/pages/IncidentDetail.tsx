@@ -1,9 +1,9 @@
 import { AppShell } from "@/components/AppShell";
 import { useParams, useNavigate } from "react-router-dom";
-import { useIncident, useUpdateIncident } from "@/hooks/useIncidents";
+import { useIncident, useUpdateIncident, useDeleteIncident } from "@/hooks/useIncidents";
 import { STATUS_LABELS, TYPE_LABELS } from "@/services/incidents";
 import type { IncidentStatus } from "@/services/incidents";
-import { ArrowLeft, MapPin, Calendar, Flame, TrendingUp, Loader2, Pencil } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, Flame, TrendingUp, Loader2, Pencil, Trash2 } from "lucide-react";
 import { IncidentTruckList } from "@/components/incidents/IncidentTruckList";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -16,7 +16,9 @@ export default function IncidentDetail() {
   const navigate = useNavigate();
   const { data: incident, isLoading, error } = useIncident(id);
   const updateMutation = useUpdateIncident();
+  const deleteMutation = useDeleteIncident();
   const [editingStatus, setEditingStatus] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   if (isLoading) {
     return (
@@ -56,14 +58,34 @@ export default function IncidentDetail() {
     }
   };
 
+  const handleDelete = async () => {
+    try {
+      await deleteMutation.mutateAsync(incident.id);
+      toast.success("Incident deleted");
+      navigate("/incidents");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to delete incident");
+      setConfirmDelete(false);
+    }
+  };
+
   return (
     <AppShell
       title=""
       headerRight={
-        <button onClick={() => navigate("/incidents")} className="flex items-center gap-1 text-sm font-medium text-primary touch-target">
-          <ArrowLeft className="h-4 w-4" />
-          Back
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate(`/incidents/${id}/edit`)}
+            className="flex items-center gap-1 text-sm font-medium text-primary touch-target"
+          >
+            <Pencil className="h-4 w-4" />
+            Edit
+          </button>
+          <button onClick={() => navigate("/incidents")} className="flex items-center gap-1 text-sm font-medium text-primary touch-target">
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </button>
+        </div>
       }
     >
       <div className="p-4 space-y-5">
@@ -76,7 +98,6 @@ export default function IncidentDetail() {
               className={`rounded-full px-3 py-1 text-xs font-bold uppercase ${statusColor} touch-target`}
             >
               {STATUS_LABELS[incident.status as IncidentStatus]}
-              <Pencil className="inline ml-1 h-3 w-3" />
             </button>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">{TYPE_LABELS[incident.type as keyof typeof TYPE_LABELS]}</p>
@@ -137,6 +158,41 @@ export default function IncidentDetail() {
 
         {/* Assigned Trucks */}
         <IncidentTruckList incidentId={incident.id} />
+
+        {/* Delete zone */}
+        <div className="pt-4 border-t border-border">
+          {!confirmDelete ? (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="flex items-center gap-2 text-sm font-medium text-destructive touch-target"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete Incident
+            </button>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-destructive font-medium">
+                Are you sure? This cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleDelete}
+                  disabled={deleteMutation.isPending}
+                  className="flex-1 rounded-xl bg-destructive py-3 text-sm font-bold text-destructive-foreground touch-target flex items-center justify-center gap-2"
+                >
+                  {deleteMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Yes, Delete
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  className="flex-1 rounded-xl bg-secondary py-3 text-sm font-bold text-secondary-foreground touch-target"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </AppShell>
   );
