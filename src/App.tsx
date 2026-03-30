@@ -19,6 +19,10 @@ import IncidentEdit from "./pages/IncidentEdit";
 import ShiftCreate from "./pages/ShiftCreate";
 import ShiftDetail from "./pages/ShiftDetail";
 import Crew from "./pages/Crew";
+import Fleet from "./pages/Fleet";
+import FleetTruckCreate from "./pages/FleetTruckCreate";
+import FleetTruckDetail from "./pages/FleetTruckDetail";
+import FleetTruckEdit from "./pages/FleetTruckEdit";
 import Expenses from "./pages/Expenses";
 import ExpenseEdit from "./pages/ExpenseEdit";
 import ExpenseDetail from "./pages/ExpenseDetail";
@@ -56,6 +60,10 @@ const App = () => (
               <Route path="/incidents/:incidentId/trucks/:incidentTruckId/shifts/new" element={<ProtectedRoute><ShiftCreate /></ProtectedRoute>} />
               <Route path="/incidents/:incidentId/trucks/:incidentTruckId/shifts/:shiftId" element={<ProtectedRoute><ShiftDetail /></ProtectedRoute>} />
               <Route path="/crew" element={<ProtectedRoute><Crew /></ProtectedRoute>} />
+              <Route path="/fleet" element={<ProtectedRoute><Fleet /></ProtectedRoute>} />
+              <Route path="/fleet/new" element={<ProtectedRoute><FleetTruckCreate /></ProtectedRoute>} />
+              <Route path="/fleet/:truckId" element={<ProtectedRoute><FleetTruckDetail /></ProtectedRoute>} />
+              <Route path="/fleet/:truckId/edit" element={<ProtectedRoute><FleetTruckEdit /></ProtectedRoute>} />
               <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
               <Route path="/expenses/new" element={<ProtectedRoute><ExpenseEdit /></ProtectedRoute>} />
               <Route path="/expenses/review" element={<ProtectedRoute><ExpenseReview /></ProtectedRoute>} />

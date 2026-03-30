@@ -1,10 +1,10 @@
-import { LayoutDashboard, Flame, DollarSign, Users, Settings } from "lucide-react";
+import { LayoutDashboard, Flame, DollarSign, Truck, Settings } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 const tabs = [
   { label: "Home", icon: LayoutDashboard, to: "/" },
   { label: "Incidents", icon: Flame, to: "/incidents" },
-  { label: "Crew", icon: Users, to: "/crew" },
+  { label: "Fleet", icon: Truck, to: "/fleet" },
   { label: "Expenses", icon: DollarSign, to: "/expenses" },
   { label: "Settings", icon: Settings, to: "/settings" },
 ];
