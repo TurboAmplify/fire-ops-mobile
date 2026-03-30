@@ -27,6 +27,7 @@ export function TruckForm({ truck, onSubmit, isPending }: TruckFormProps) {
   const [waterCapacity, setWaterCapacity] = useState(truck?.water_capacity ?? "");
   const [pumpType, setPumpType] = useState(truck?.pump_type ?? "");
   const [dotNumber, setDotNumber] = useState(truck?.dot_number ?? "");
+  const [currentMileage, setCurrentMileage] = useState(truck?.current_mileage?.toString() ?? "");
   const [notes, setNotes] = useState(truck?.notes ?? "");
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,6 +44,7 @@ export function TruckForm({ truck, onSubmit, isPending }: TruckFormProps) {
       water_capacity: waterCapacity.trim() || null,
       pump_type: pumpType.trim() || null,
       dot_number: dotNumber.trim() || null,
+      current_mileage: currentMileage ? parseInt(currentMileage) : null,
       notes: notes.trim() || null,
       ...(truck ? {} : { organization_id: membership?.organizationId }),
     };
