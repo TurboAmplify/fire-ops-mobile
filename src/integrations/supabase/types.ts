@@ -612,6 +612,7 @@ export type Database = {
     }
     Functions: {
       get_org_from_incident_truck: { Args: { _it_id: string }; Returns: string }
+      get_org_from_shift: { Args: { _shift_id: string }; Returns: string }
       get_user_crew_member_id: { Args: { _user_id: string }; Returns: string }
       get_user_org_ids: { Args: { _user_id: string }; Returns: string[] }
       user_has_org_role: {
