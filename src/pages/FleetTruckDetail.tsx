@@ -88,10 +88,10 @@ export default function FleetTruckDetail() {
     >
       <div className="p-4 space-y-6">
         {/* Status & basic info */}
-        <div className="rounded-xl bg-card p-4 space-y-3">
+        <div className="rounded-2xl bg-card p-4 space-y-3 card-shadow">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold">{truck.name}</h2>
-            <span className={`rounded-full px-2.5 py-1 text-xs font-bold uppercase ${statusColors[status]}`}>
+            <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${statusColors[status]}`}>
               {TRUCK_STATUS_LABELS[status] ?? truck.status}
             </span>
           </div>
