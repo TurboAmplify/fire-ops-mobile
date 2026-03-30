@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/useAuth";
+import { useOrganization } from "@/hooks/useOrganization";
 import { useNavigate } from "react-router-dom";
 import {
   LogOut,
@@ -10,10 +11,12 @@ import {
   ChevronRight,
   Flame,
   Mail,
+  Building2,
 } from "lucide-react";
 
 export default function Settings() {
   const { user, signOut } = useAuth();
+  const { membership } = useOrganization();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -34,6 +37,20 @@ export default function Settings() {
             <p className="text-xs text-muted-foreground">Signed in</p>
           </div>
         </div>
+
+        {/* Organization */}
+        <section className="space-y-1">
+          <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1 mb-2">
+            Organization
+          </h2>
+          <div className="rounded-xl bg-card overflow-hidden divide-y divide-border">
+            <LinkRow
+              icon={Building2}
+              label={membership?.organizationName ?? "Organization"}
+              onClick={() => navigate("/settings/organization")}
+            />
+          </div>
+        </section>
 
         {/* App info */}
         <section className="space-y-1">
