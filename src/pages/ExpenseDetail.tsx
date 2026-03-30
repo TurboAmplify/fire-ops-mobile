@@ -133,7 +133,11 @@ export default function ExpenseDetail() {
         {/* Info */}
         <div className="space-y-2">
           <InfoRow label="Date" value={expense.date} />
-          <InfoRow label="Incident" value={expense.incidents?.name ?? "—"} />
+          <InfoRow label="Attached To" value={
+            expense.incident_trucks?.trucks?.name
+              ? `${expense.incidents?.name} · ${expense.incident_trucks.trucks.name}`
+              : expense.incidents?.name ?? "Company / General"
+          } />
           {expense.incident_trucks?.trucks?.name && (
             <InfoRow label="Truck" value={expense.incident_trucks.trucks.name} />
           )}
