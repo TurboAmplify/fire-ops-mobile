@@ -4,6 +4,7 @@ export interface Agreement {
   id: string;
   incident_id: string | null;
   incident_truck_id: string | null;
+  organization_id: string | null;
   file_url: string;
   file_name: string;
   agreement_number: string | null;
@@ -23,9 +24,10 @@ export async function fetchAgreements(params: {
   return data as Agreement[];
 }
 
-export async function uploadAgreementFile(file: File): Promise<string> {
+export async function uploadAgreementFile(file: File, organizationId?: string): Promise<string> {
   const ext = file.name.split(".").pop() || "pdf";
-  const path = `${crypto.randomUUID()}.${ext}`;
+  const prefix = organizationId ? `${organizationId}/` : "";
+  const path = `${prefix}${crypto.randomUUID()}.${ext}`;
   const { error } = await supabase.storage.from("agreements").upload(path, file);
   if (error) throw error;
   const { data } = supabase.storage.from("agreements").getPublicUrl(path);
@@ -35,6 +37,7 @@ export async function uploadAgreementFile(file: File): Promise<string> {
 export async function createAgreement(agreement: {
   incident_id?: string | null;
   incident_truck_id?: string | null;
+  organization_id?: string | null;
   file_url: string;
   file_name: string;
   agreement_number?: string | null;

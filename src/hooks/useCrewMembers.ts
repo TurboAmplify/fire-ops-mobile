@@ -6,6 +6,7 @@ import {
   updateCrewMember,
 } from "@/services/crew";
 import type { CrewMemberInsert, CrewMemberUpdate } from "@/services/crew";
+import { useOrganization } from "@/hooks/useOrganization";
 
 export function useCrewMembers() {
   return useQuery({
@@ -24,8 +25,13 @@ export function useCrewMember(id: string) {
 
 export function useCreateCrewMember() {
   const qc = useQueryClient();
+  const { membership } = useOrganization();
   return useMutation({
-    mutationFn: (data: CrewMemberInsert) => createCrewMember(data),
+    mutationFn: (data: CrewMemberInsert) =>
+      createCrewMember({
+        ...data,
+        organization_id: data.organization_id ?? membership?.organizationId ?? null,
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["crew_members"] });
     },

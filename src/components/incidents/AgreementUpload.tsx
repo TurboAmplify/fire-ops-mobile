@@ -3,6 +3,7 @@ import { useAgreements, useCreateAgreement } from "@/hooks/useAgreements";
 import { uploadAgreementFile } from "@/services/agreements";
 import { FileText, Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useOrganization } from "@/hooks/useOrganization";
 
 interface Props {
   incidentId?: string;
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export function AgreementUpload({ incidentId, incidentTruckId, label = "Agreements" }: Props) {
+  const { membership } = useOrganization();
   const queryParams = { incidentId, incidentTruckId };
   const { data: agreements, isLoading } = useAgreements(queryParams);
   const createMutation = useCreateAgreement(queryParams);
@@ -21,7 +23,7 @@ export function AgreementUpload({ incidentId, incidentTruckId, label = "Agreemen
     if (!file) return;
     setUploading(true);
     try {
-      const fileUrl = await uploadAgreementFile(file);
+      const fileUrl = await uploadAgreementFile(file, membership?.organizationId);
       await createMutation.mutateAsync({
         incident_id: incidentId || null,
         incident_truck_id: incidentTruckId || null,

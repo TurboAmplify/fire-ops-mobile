@@ -4,6 +4,7 @@ import {
   createResourceOrder,
   updateResourceOrderParsed,
 } from "@/services/resource-orders";
+import { useOrganization } from "@/hooks/useOrganization";
 
 export function useResourceOrders(incidentTruckId: string) {
   return useQuery({
@@ -15,9 +16,13 @@ export function useResourceOrders(incidentTruckId: string) {
 
 export function useCreateResourceOrder(incidentTruckId: string) {
   const qc = useQueryClient();
+  const { membership } = useOrganization();
   return useMutation({
     mutationFn: (data: { incident_truck_id: string; file_url: string; file_name: string }) =>
-      createResourceOrder(data),
+      createResourceOrder({
+        ...data,
+        organization_id: membership?.organizationId ?? null,
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["resource-orders", incidentTruckId] });
     },

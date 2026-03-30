@@ -7,6 +7,7 @@ import { ReceiptParseButton } from "./ReceiptParseButton";
 import { useState } from "react";
 import { Loader2, Camera } from "lucide-react";
 import { toast } from "sonner";
+import { useOrganization } from "@/hooks/useOrganization";
 
 const categories: ExpenseCategory[] = ["fuel", "ppe", "food", "lodging", "equipment", "other"];
 
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props) {
+  const { membership } = useOrganization();
   const [incidentId, setIncidentId] = useState(initial?.incident_id ?? "");
   const [incidentTruckId, setIncidentTruckId] = useState(initial?.incident_truck_id ?? "");
   const [category, setCategory] = useState<ExpenseCategory>((initial?.category as ExpenseCategory) ?? "fuel");
@@ -37,7 +39,7 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
     if (!file) return;
     setUploading(true);
     try {
-      const url = await uploadReceipt(file);
+      const url = await uploadReceipt(file, membership?.organizationId);
       setReceiptUrl(url);
       toast.success("Receipt uploaded");
     } catch {
