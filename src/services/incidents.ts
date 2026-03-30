@@ -61,3 +61,32 @@ export async function updateIncident(id: string, updates: IncidentUpdate) {
   if (error) throw error;
   return data;
 }
+
+export async function deleteIncident(id: string) {
+  // Check for dependent trucks first
+  const { count } = await supabase
+    .from("incident_trucks")
+    .select("*", { count: "exact", head: true })
+    .eq("incident_id", id);
+
+  if (count && count > 0) {
+    throw new Error(
+      `Cannot delete: this incident has ${count} assigned truck(s). Remove truck assignments first.`
+    );
+  }
+
+  // Check for dependent expenses
+  const { count: expenseCount } = await supabase
+    .from("expenses")
+    .select("*", { count: "exact", head: true })
+    .eq("incident_id", id);
+
+  if (expenseCount && expenseCount > 0) {
+    throw new Error(
+      `Cannot delete: this incident has ${expenseCount} expense(s). Remove expenses first.`
+    );
+  }
+
+  const { error } = await supabase.from("incidents").delete().eq("id", id);
+  if (error) throw error;
+}

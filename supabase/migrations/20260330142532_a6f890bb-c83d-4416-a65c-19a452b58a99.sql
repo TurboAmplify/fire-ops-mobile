@@ -1,0 +1,1 @@
+ALTER TABLE public.crew_members ADD COLUMN notes text;

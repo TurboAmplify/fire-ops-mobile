@@ -11,8 +11,10 @@ import Dashboard from "./pages/Dashboard";
 import Incidents from "./pages/Incidents";
 import IncidentCreate from "./pages/IncidentCreate";
 import IncidentDetail from "./pages/IncidentDetail";
+import IncidentEdit from "./pages/IncidentEdit";
 import ShiftCreate from "./pages/ShiftCreate";
 import ShiftDetail from "./pages/ShiftDetail";
+import Crew from "./pages/Crew";
 import Expenses from "./pages/Expenses";
 import ExpenseEdit from "./pages/ExpenseEdit";
 import ExpenseDetail from "./pages/ExpenseDetail";
@@ -42,8 +44,10 @@ const App = () => (
             <Route path="/incidents" element={<ProtectedRoute><Incidents /></ProtectedRoute>} />
             <Route path="/incidents/new" element={<ProtectedRoute><IncidentCreate /></ProtectedRoute>} />
             <Route path="/incidents/:incidentId" element={<ProtectedRoute><IncidentDetail /></ProtectedRoute>} />
+            <Route path="/incidents/:incidentId/edit" element={<ProtectedRoute><IncidentEdit /></ProtectedRoute>} />
             <Route path="/incidents/:incidentId/trucks/:incidentTruckId/shifts/new" element={<ProtectedRoute><ShiftCreate /></ProtectedRoute>} />
             <Route path="/incidents/:incidentId/trucks/:incidentTruckId/shifts/:shiftId" element={<ProtectedRoute><ShiftDetail /></ProtectedRoute>} />
+            <Route path="/crew" element={<ProtectedRoute><Crew /></ProtectedRoute>} />
             <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
             <Route path="/expenses/new" element={<ProtectedRoute><ExpenseEdit /></ProtectedRoute>} />
             <Route path="/expenses/:id" element={<ProtectedRoute><ExpenseDetail /></ProtectedRoute>} />

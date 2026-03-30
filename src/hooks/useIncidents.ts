@@ -4,6 +4,7 @@ import {
   fetchIncident,
   createIncident,
   updateIncident,
+  deleteIncident,
 } from "@/services/incidents";
 import type { IncidentInsert, IncidentUpdate } from "@/services/incidents";
 
@@ -40,6 +41,16 @@ export function useUpdateIncident() {
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ["incidents"] });
       qc.invalidateQueries({ queryKey: ["incidents", vars.id] });
+    },
+  });
+}
+
+export function useDeleteIncident() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteIncident(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["incidents"] });
     },
   });
 }
