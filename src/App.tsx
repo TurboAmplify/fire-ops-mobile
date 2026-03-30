@@ -9,6 +9,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import OrgSetup from "./pages/OrgSetup";
+import OrgSettings from "./pages/OrgSettings";
 import Dashboard from "./pages/Dashboard";
 import Incidents from "./pages/Incidents";
 import IncidentCreate from "./pages/IncidentCreate";
