@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { TruckPhotoSection } from "@/components/fleet/TruckPhotoSection";
 import { TruckDocumentSection } from "@/components/fleet/TruckDocumentSection";
 import { TruckChecklistSection } from "@/components/fleet/TruckChecklistSection";
+import { TruckServiceLogSection } from "@/components/fleet/TruckServiceLogSection";
 
 export default function FleetTruckDetail() {
   const { truckId } = useParams<{ truckId: string }>();
@@ -57,6 +58,7 @@ export default function FleetTruckDetail() {
     { label: "Year", value: truck.year },
     { label: "Plate", value: truck.plate },
     { label: "VIN", value: truck.vin },
+    { label: "Mileage", value: truck.current_mileage ? `${truck.current_mileage.toLocaleString()} mi` : null },
     { label: "Water Capacity", value: truck.water_capacity },
     { label: "Pump Type", value: truck.pump_type },
     { label: "DOT Number", value: truck.dot_number },
@@ -121,6 +123,9 @@ export default function FleetTruckDetail() {
 
         {/* Documents */}
         <TruckDocumentSection truckId={truckId!} />
+
+        {/* Service & Maintenance */}
+        <TruckServiceLogSection truckId={truckId!} />
       </div>
     </AppShell>
   );

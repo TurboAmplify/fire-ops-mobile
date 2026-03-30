@@ -127,6 +127,9 @@ export const DOC_TYPE_LABELS: Record<string, string> = {
   registration: "Registration",
   dot: "DOT / Licensing",
   insurance: "Insurance",
+  title: "Title",
+  inspection: "Inspection Certificate",
+  permit: "Permit",
   other: "Other",
 };
 
@@ -185,16 +188,35 @@ export async function deleteTruckDocument(id: string) {
 export type TruckChecklistItem = Tables<"truck_checklist_items">;
 
 export const DEFAULT_CHECKLIST_ITEMS = [
-  "Tires inspected",
-  "Oil / fluids checked",
+  // Walk-around exterior
+  "Tires inspected (tread & pressure)",
+  "Lights / turn signals / strobes working",
+  "Mirrors clean & adjusted",
+  "Body / frame — no visible damage",
+  "License plate visible & current",
+  // Fluids & engine
+  "Oil level checked",
+  "Coolant level checked",
+  "Transmission fluid checked",
+  "Brake fluid checked",
+  "Windshield washer fluid filled",
+  // Fire equipment
   "Pump operational",
-  "Hoses inspected",
-  "Lights / sirens working",
-  "Radio tested",
-  "First aid kit stocked",
+  "Hoses inspected & connected",
+  "Nozzles accounted for",
+  "Water tank level checked",
+  "Foam / retardant supply checked",
+  // Safety
   "Fire extinguisher charged",
+  "First aid kit stocked",
+  "PPE gear on board",
+  "Radio tested",
+  "Sirens / PA working",
+  // Compliance
   "DOT card current",
   "Registration current",
+  "Insurance card on board",
+  "Driver log / ELD ready",
 ];
 
 export async function fetchTruckChecklist(truckId: string) {
@@ -252,6 +274,14 @@ export async function deleteChecklistItem(id: string) {
   if (error) throw error;
 }
 
+export async function resetChecklist(truckId: string) {
+  const { error } = await supabase
+    .from("truck_checklist_items")
+    .update({ is_complete: false })
+    .eq("truck_id", truckId);
+  if (error) throw error;
+}
+
 export async function initializeDefaultChecklist(
   truckId: string,
   organizationId: string
@@ -263,5 +293,74 @@ export async function initializeDefaultChecklist(
     sort_order: i,
   }));
   const { error } = await supabase.from("truck_checklist_items").insert(items);
+  if (error) throw error;
+}
+
+// --- Service / Maintenance Logs ---
+
+export type TruckServiceLog = Tables<"truck_service_logs">;
+
+export const SERVICE_TYPE_LABELS: Record<string, string> = {
+  oil_change: "Oil Change",
+  tire_rotation: "Tire Rotation",
+  brake_service: "Brake Service",
+  pump_service: "Pump Service",
+  transmission: "Transmission Service",
+  coolant_flush: "Coolant Flush",
+  filter_replace: "Filter Replacement",
+  belt_hose: "Belt / Hose Replacement",
+  electrical: "Electrical Repair",
+  body_repair: "Body / Frame Repair",
+  inspection: "Annual Inspection",
+  dot_inspection: "DOT Inspection",
+  general_repair: "General Repair",
+  other: "Other",
+};
+
+export async function fetchServiceLogs(truckId: string) {
+  const { data, error } = await supabase
+    .from("truck_service_logs")
+    .select("*")
+    .eq("truck_id", truckId)
+    .order("performed_at", { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+export async function createServiceLog(log: {
+  truck_id: string;
+  organization_id: string;
+  service_type: string;
+  description?: string;
+  mileage?: number;
+  cost?: number;
+  performed_at: string;
+  performed_by?: string;
+  next_due_at?: string;
+  next_due_mileage?: number;
+  notes?: string;
+}) {
+  const { data, error } = await supabase
+    .from("truck_service_logs")
+    .insert(log)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteServiceLog(id: string) {
+  const { error } = await supabase
+    .from("truck_service_logs")
+    .delete()
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function updateTruckPhotoLabel(id: string, photoLabel: string) {
+  const { error } = await supabase
+    .from("truck_photos")
+    .update({ photo_label: photoLabel })
+    .eq("id", id);
   if (error) throw error;
 }

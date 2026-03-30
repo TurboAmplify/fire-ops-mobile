@@ -5,12 +5,12 @@ import {
   useToggleChecklistItem,
   useDeleteChecklistItem,
   useInitializeDefaultChecklist,
-  useUpdateChecklistItemNotes,
+  useResetChecklist,
 } from "@/hooks/useFleet";
 import { useOrganization } from "@/hooks/useOrganization";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Loader2, Plus, Trash2, ListChecks } from "lucide-react";
+import { Loader2, Plus, Trash2, ListChecks, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
 interface TruckChecklistSectionProps {
@@ -24,7 +24,7 @@ export function TruckChecklistSection({ truckId }: TruckChecklistSectionProps) {
   const toggleMutation = useToggleChecklistItem(truckId);
   const deleteMutation = useDeleteChecklistItem(truckId);
   const initMutation = useInitializeDefaultChecklist(truckId);
-  const notesMutation = useUpdateChecklistItemNotes(truckId);
+  const resetMutation = useResetChecklist(truckId);
   const [newLabel, setNewLabel] = useState("");
 
   const handleAdd = async (e: React.FormEvent) => {
@@ -54,22 +54,52 @@ export function TruckChecklistSection({ truckId }: TruckChecklistSectionProps) {
     if (!membership) return;
     try {
       await initMutation.mutateAsync(membership.organizationId);
-      toast.success("Default checklist loaded");
+      toast.success("Walk-around checklist loaded");
     } catch {
       toast.error("Failed to load defaults");
     }
   };
 
+  const handleReset = async () => {
+    try {
+      await resetMutation.mutateAsync();
+      toast.success("Checklist reset — ready for next walk-around");
+    } catch {
+      toast.error("Failed to reset");
+    }
+  };
+
   const completedCount = items?.filter((i) => i.is_complete).length ?? 0;
   const totalCount = items?.length ?? 0;
+  const allComplete = totalCount > 0 && completedCount === totalCount;
 
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-          Checklist {totalCount > 0 && `(${completedCount}/${totalCount})`}
+          Walk-Around Checklist {totalCount > 0 && `(${completedCount}/${totalCount})`}
         </h3>
+        {totalCount > 0 && (
+          <button
+            onClick={handleReset}
+            disabled={resetMutation.isPending}
+            className="flex items-center gap-1 text-xs font-medium text-muted-foreground touch-target"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            Reset
+          </button>
+        )}
       </div>
+
+      {/* Progress bar */}
+      {totalCount > 0 && (
+        <div className="h-2 rounded-full bg-secondary overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all ${allComplete ? "bg-success" : "bg-primary"}`}
+            style={{ width: `${(completedCount / totalCount) * 100}%` }}
+          />
+        </div>
+      )}
 
       {isLoading && (
         <div className="flex justify-center py-4">
@@ -86,7 +116,7 @@ export function TruckChecklistSection({ truckId }: TruckChecklistSectionProps) {
             className="inline-flex items-center gap-2 rounded-lg bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground touch-target"
           >
             <ListChecks className="h-4 w-4" />
-            {initMutation.isPending ? "Loading..." : "Load Default Checklist"}
+            {initMutation.isPending ? "Loading..." : "Load Walk-Around Checklist"}
           </button>
         </div>
       )}
@@ -116,6 +146,13 @@ export function TruckChecklistSection({ truckId }: TruckChecklistSectionProps) {
               </button>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* All complete banner */}
+      {allComplete && (
+        <div className="rounded-lg bg-success/10 p-3 text-center">
+          <p className="text-sm font-semibold text-success">✓ Walk-around complete — truck is ready</p>
         </div>
       )}
 

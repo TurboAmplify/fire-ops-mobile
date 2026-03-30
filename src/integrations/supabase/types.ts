@@ -714,6 +714,7 @@ export type Database = {
           file_url: string
           id: string
           organization_id: string | null
+          photo_label: string | null
           truck_id: string
         }
         Insert: {
@@ -723,6 +724,7 @@ export type Database = {
           file_url: string
           id?: string
           organization_id?: string | null
+          photo_label?: string | null
           truck_id: string
         }
         Update: {
@@ -732,6 +734,7 @@ export type Database = {
           file_url?: string
           id?: string
           organization_id?: string | null
+          photo_label?: string | null
           truck_id?: string
         }
         Relationships: [
@@ -751,9 +754,73 @@ export type Database = {
           },
         ]
       }
+      truck_service_logs: {
+        Row: {
+          cost: number | null
+          created_at: string
+          description: string | null
+          id: string
+          mileage: number | null
+          next_due_at: string | null
+          next_due_mileage: number | null
+          notes: string | null
+          organization_id: string | null
+          performed_at: string
+          performed_by: string | null
+          service_type: string
+          truck_id: string
+        }
+        Insert: {
+          cost?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          mileage?: number | null
+          next_due_at?: string | null
+          next_due_mileage?: number | null
+          notes?: string | null
+          organization_id?: string | null
+          performed_at?: string
+          performed_by?: string | null
+          service_type?: string
+          truck_id: string
+        }
+        Update: {
+          cost?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          mileage?: number | null
+          next_due_at?: string | null
+          next_due_mileage?: number | null
+          notes?: string | null
+          organization_id?: string | null
+          performed_at?: string
+          performed_by?: string | null
+          service_type?: string
+          truck_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "truck_service_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "truck_service_logs_truck_id_fkey"
+            columns: ["truck_id"]
+            isOneToOne: false
+            referencedRelation: "trucks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trucks: {
         Row: {
           created_at: string
+          current_mileage: number | null
           dot_number: string | null
           id: string
           make: string | null
@@ -771,6 +838,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          current_mileage?: number | null
           dot_number?: string | null
           id?: string
           make?: string | null
@@ -788,6 +856,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          current_mileage?: number | null
           dot_number?: string | null
           id?: string
           make?: string | null
