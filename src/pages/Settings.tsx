@@ -16,6 +16,7 @@ import {
 
 export default function Settings() {
   const { user, signOut } = useAuth();
+  const { membership } = useOrganization();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
