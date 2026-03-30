@@ -27,10 +27,13 @@ export default function Expenses() {
 
   const total = filtered.reduce((sum, e) => sum + Number(e.amount), 0);
 
-  // Count pending reviews for owners
+  // Count pending reviews for owners (from all org expenses, not filtered list)
   const pendingCount = isOwner
     ? expenses?.filter((e) => e.status === "submitted").length ?? 0
     : 0;
+
+  // crew_member can only create reimbursement requests
+  const isCrew = membership?.role === "crew_member";
 
   const handleSubmitExpense = async (id: string) => {
     try {
