@@ -6,6 +6,7 @@ import { CATEGORY_ICONS, CATEGORY_LABELS } from "@/services/expenses";
 import type { ExpenseCategory } from "@/services/expenses";
 import { ExpenseStatusBadge } from "@/components/expenses/ExpenseStatusBadge";
 import { useAuth } from "@/hooks/useAuth";
+import { useOrganization } from "@/hooks/useOrganization";
 import { toast } from "sonner";
 import { useState } from "react";
 

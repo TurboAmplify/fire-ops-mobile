@@ -11,9 +11,20 @@ import { useOrganization } from "@/hooks/useOrganization";
 import { useAuth } from "@/hooks/useAuth";
 
 export function useExpenses() {
+  const { membership } = useOrganization();
+  const { user } = useAuth();
+  const role = membership?.role;
+  const userId = user?.id;
+
   return useQuery({
-    queryKey: ["expenses"],
+    queryKey: ["expenses", role, userId],
     queryFn: fetchExpenses,
+    select: (data) => {
+      // Owner sees all org expenses; others see only their own
+      if (role === "owner") return data;
+      if (!userId) return [];
+      return data.filter((e) => e.submitted_by_user_id === userId);
+    },
   });
 }
 

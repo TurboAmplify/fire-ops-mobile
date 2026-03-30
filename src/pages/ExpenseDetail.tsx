@@ -211,23 +211,27 @@ export default function ExpenseDetail() {
         )}
 
         {/* Actions */}
-        <div className="flex gap-3">
-          {(status === "draft" || status === "rejected") && (
-            <button
-              onClick={() => navigate(`/expenses/${expense.id}/edit`)}
-              className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-secondary py-3 text-sm font-semibold text-secondary-foreground touch-target"
-            >
-              <Pencil className="h-4 w-4" />
-              Edit
-            </button>
-          )}
-          <button
-            onClick={() => setConfirmDelete(true)}
-            className="flex items-center justify-center gap-2 rounded-xl bg-destructive/10 px-6 py-3 text-sm font-semibold text-destructive touch-target"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
-        </div>
+        {(canEdit || canDelete) && (
+          <div className="flex gap-3">
+            {canEdit && (
+              <button
+                onClick={() => navigate(`/expenses/${expense.id}/edit`)}
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-secondary py-3 text-sm font-semibold text-secondary-foreground touch-target"
+              >
+                <Pencil className="h-4 w-4" />
+                Edit
+              </button>
+            )}
+            {canDelete && (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="flex items-center justify-center gap-2 rounded-xl bg-destructive/10 px-6 py-3 text-sm font-semibold text-destructive touch-target"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Delete confirmation */}
         {confirmDelete && (
