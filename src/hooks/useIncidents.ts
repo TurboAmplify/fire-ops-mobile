@@ -7,6 +7,7 @@ import {
   deleteIncident,
 } from "@/services/incidents";
 import type { IncidentInsert, IncidentUpdate } from "@/services/incidents";
+import { useOrganization } from "@/hooks/useOrganization";
 
 export function useIncidents() {
   return useQuery({
@@ -25,8 +26,13 @@ export function useIncident(id: string) {
 
 export function useCreateIncident() {
   const qc = useQueryClient();
+  const { membership } = useOrganization();
   return useMutation({
-    mutationFn: (data: IncidentInsert) => createIncident(data),
+    mutationFn: (data: IncidentInsert) =>
+      createIncident({
+        ...data,
+        organization_id: data.organization_id ?? membership?.organizationId ?? null,
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["incidents"] });
     },

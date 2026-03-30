@@ -7,6 +7,7 @@ import {
   deleteExpense,
 } from "@/services/expenses";
 import type { ExpenseInsert, ExpenseUpdate } from "@/services/expenses";
+import { useOrganization } from "@/hooks/useOrganization";
 
 export function useExpenses() {
   return useQuery({
@@ -25,8 +26,13 @@ export function useExpense(id: string) {
 
 export function useCreateExpense() {
   const qc = useQueryClient();
+  const { membership } = useOrganization();
   return useMutation({
-    mutationFn: (data: ExpenseInsert) => createExpense(data),
+    mutationFn: (data: ExpenseInsert) =>
+      createExpense({
+        ...data,
+        organization_id: data.organization_id ?? membership?.organizationId ?? null,
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["expenses"] });
     },
