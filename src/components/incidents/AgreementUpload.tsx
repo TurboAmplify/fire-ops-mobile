@@ -46,7 +46,7 @@ export function AgreementUpload({ incidentId, incidentTruckId, label = "Agreemen
         <label className="flex items-center gap-1 text-xs font-medium text-primary cursor-pointer touch-target">
           {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
           <span>{uploading ? "Uploading..." : "Upload"}</span>
-          <input type="file" accept="image/*,.pdf,.doc,.docx" capture="environment" onChange={handleUpload} className="hidden" disabled={uploading} />
+          <input type="file" accept="image/*,.pdf,.doc,.docx" onChange={handleUpload} className="hidden" disabled={uploading} />
         </label>
       </div>
 

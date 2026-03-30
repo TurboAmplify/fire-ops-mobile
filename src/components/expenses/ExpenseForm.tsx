@@ -205,7 +205,7 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
           <label className="flex items-center justify-center gap-2 rounded-xl border border-dashed bg-card px-4 py-3 text-sm text-muted-foreground cursor-pointer active:bg-secondary transition-colors touch-target">
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
             <span>{uploading ? "Uploading..." : receiptUrl ? "Change photo" : "Take or attach photo"}</span>
-            <input type="file" accept="image/*" capture="environment" onChange={handlePhoto} className="hidden" />
+            <input type="file" accept="image/*" onChange={handlePhoto} className="hidden" />
           </label>
           {receiptUrl && (
             <>
