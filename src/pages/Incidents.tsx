@@ -1,6 +1,6 @@
 import { AppShell } from "@/components/AppShell";
 import { Link } from "react-router-dom";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, FileUp } from "lucide-react";
 import { useIncidents } from "@/hooks/useIncidents";
 import { STATUS_LABELS } from "@/services/incidents";
 import { useState } from "react";
