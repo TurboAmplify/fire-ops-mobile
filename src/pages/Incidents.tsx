@@ -21,13 +21,22 @@ export default function Incidents() {
     <AppShell
       title="Incidents"
       headerRight={
-        <Link
-          to="/incidents/new"
-          className="flex items-center gap-1 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground touch-target"
-        >
-          <Plus className="h-4 w-4" />
-          New
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/incidents/from-agreement"
+            className="flex items-center gap-1 rounded-lg bg-secondary px-3 py-2 text-sm font-semibold text-secondary-foreground touch-target"
+          >
+            <FileUp className="h-4 w-4" />
+            Import
+          </Link>
+          <Link
+            to="/incidents/new"
+            className="flex items-center gap-1 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground touch-target"
+          >
+            <Plus className="h-4 w-4" />
+            New
+          </Link>
+        </div>
       }
     >
       <div className="p-4 space-y-4">
