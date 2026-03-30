@@ -23,6 +23,7 @@ export type Database = {
           id: string
           incident_id: string | null
           incident_truck_id: string | null
+          organization_id: string | null
           parsed_data: Json | null
         }
         Insert: {
@@ -33,6 +34,7 @@ export type Database = {
           id?: string
           incident_id?: string | null
           incident_truck_id?: string | null
+          organization_id?: string | null
           parsed_data?: Json | null
         }
         Update: {
@@ -43,6 +45,7 @@ export type Database = {
           id?: string
           incident_id?: string | null
           incident_truck_id?: string | null
+          organization_id?: string | null
           parsed_data?: Json | null
         }
         Relationships: [
@@ -60,6 +63,13 @@ export type Database = {
             referencedRelation: "incident_trucks"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "agreements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
         ]
       }
       crew_members: {
@@ -69,6 +79,7 @@ export type Database = {
           id: string
           name: string
           notes: string | null
+          organization_id: string | null
           phone: string | null
           role: string
         }
@@ -78,6 +89,7 @@ export type Database = {
           id?: string
           name: string
           notes?: string | null
+          organization_id?: string | null
           phone?: string | null
           role: string
         }
@@ -87,10 +99,19 @@ export type Database = {
           id?: string
           name?: string
           notes?: string | null
+          organization_id?: string | null
           phone?: string | null
           role?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "crew_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       expenses: {
         Row: {
@@ -102,6 +123,7 @@ export type Database = {
           id: string
           incident_id: string
           incident_truck_id: string | null
+          organization_id: string | null
           receipt_url: string | null
         }
         Insert: {
@@ -113,6 +135,7 @@ export type Database = {
           id?: string
           incident_id: string
           incident_truck_id?: string | null
+          organization_id?: string | null
           receipt_url?: string | null
         }
         Update: {
@@ -124,6 +147,7 @@ export type Database = {
           id?: string
           incident_id?: string
           incident_truck_id?: string | null
+          organization_id?: string | null
           receipt_url?: string | null
         }
         Relationships: [
@@ -139,6 +163,13 @@ export type Database = {
             columns: ["incident_truck_id"]
             isOneToOne: false
             referencedRelation: "incident_trucks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -239,6 +270,7 @@ export type Database = {
           location: string
           name: string
           notes: string | null
+          organization_id: string | null
           start_date: string
           status: string
           type: string
@@ -251,6 +283,7 @@ export type Database = {
           location: string
           name: string
           notes?: string | null
+          organization_id?: string | null
           start_date: string
           status?: string
           type: string
@@ -263,11 +296,143 @@ export type Database = {
           location?: string
           name?: string
           notes?: string | null
+          organization_id?: string | null
           start_date?: string
           status?: string
           type?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "incidents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_invites: {
+        Row: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          organization_id: string
+          role: string
+          status: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          organization_id: string
+          role: string
+          status?: string
+          token?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          organization_id?: string
+          role?: string
+          status?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_invites_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_members: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
         Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          crew_member_id: string | null
+          full_name: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          crew_member_id?: string | null
+          full_name?: string | null
+          id: string
+        }
+        Update: {
+          created_at?: string
+          crew_member_id?: string | null
+          full_name?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_crew_member_id_fkey"
+            columns: ["crew_member_id"]
+            isOneToOne: false
+            referencedRelation: "crew_members"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       resource_orders: {
         Row: {
@@ -277,6 +442,7 @@ export type Database = {
           file_url: string
           id: string
           incident_truck_id: string
+          organization_id: string | null
           parsed_at: string | null
           parsed_data: Json | null
           resource_order_number: string | null
@@ -288,6 +454,7 @@ export type Database = {
           file_url: string
           id?: string
           incident_truck_id: string
+          organization_id?: string | null
           parsed_at?: string | null
           parsed_data?: Json | null
           resource_order_number?: string | null
@@ -299,6 +466,7 @@ export type Database = {
           file_url?: string
           id?: string
           incident_truck_id?: string
+          organization_id?: string | null
           parsed_at?: string | null
           parsed_data?: Json | null
           resource_order_number?: string | null
@@ -309,6 +477,13 @@ export type Database = {
             columns: ["incident_truck_id"]
             isOneToOne: false
             referencedRelation: "incident_trucks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resource_orders_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -402,6 +577,7 @@ export type Database = {
           id: string
           name: string
           notes: string | null
+          organization_id: string | null
           status: string
         }
         Insert: {
@@ -409,6 +585,7 @@ export type Database = {
           id?: string
           name: string
           notes?: string | null
+          organization_id?: string | null
           status?: string
         }
         Update: {
@@ -416,16 +593,31 @@ export type Database = {
           id?: string
           name?: string
           notes?: string | null
+          organization_id?: string | null
           status?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "trucks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_org_from_incident_truck: { Args: { _it_id: string }; Returns: string }
+      get_user_crew_member_id: { Args: { _user_id: string }; Returns: string }
+      get_user_org_ids: { Args: { _user_id: string }; Returns: string[] }
+      user_has_org_role: {
+        Args: { _org_id: string; _role: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
