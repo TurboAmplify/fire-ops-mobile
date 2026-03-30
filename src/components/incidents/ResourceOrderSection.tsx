@@ -3,12 +3,14 @@ import { useResourceOrders, useCreateResourceOrder, useUpdateResourceOrderParsed
 import { uploadResourceOrderFile, parseResourceOrderAI } from "@/services/resource-orders";
 import { FileText, Upload, Loader2, ChevronDown, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { useOrganization } from "@/hooks/useOrganization";
 
 interface Props {
   incidentTruckId: string;
 }
 
 export function ResourceOrderSection({ incidentTruckId }: Props) {
+  const { membership } = useOrganization();
   const { data: orders, isLoading } = useResourceOrders(incidentTruckId);
   const createMutation = useCreateResourceOrder(incidentTruckId);
   const parseMutation = useUpdateResourceOrderParsed(incidentTruckId);
@@ -21,7 +23,7 @@ export function ResourceOrderSection({ incidentTruckId }: Props) {
     if (!file) return;
     setUploading(true);
     try {
-      const fileUrl = await uploadResourceOrderFile(file);
+      const fileUrl = await uploadResourceOrderFile(file, membership?.organizationId);
       const order = await createMutation.mutateAsync({
         incident_truck_id: incidentTruckId,
         file_url: fileUrl,

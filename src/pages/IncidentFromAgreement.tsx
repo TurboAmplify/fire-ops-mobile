@@ -10,11 +10,13 @@ import { useAvailableTrucks, useAssignTruck } from "@/hooks/useIncidentTrucks";
 import { useCreateAgreement } from "@/hooks/useAgreements";
 import { TYPE_LABELS } from "@/services/incidents";
 import type { IncidentType } from "@/services/incidents";
+import { useOrganization } from "@/hooks/useOrganization";
 
 type Step = "upload" | "parsing" | "review";
 
 export default function IncidentFromAgreement() {
   const navigate = useNavigate();
+  const { membership } = useOrganization();
   const [step, setStep] = useState<Step>("upload");
   const [fileInfo, setFileInfo] = useState<{ fileUrl: string; fileName: string } | null>(null);
   const [parsed, setParsed] = useState<ParsedAgreement>({});
@@ -30,7 +32,6 @@ export default function IncidentFromAgreement() {
 
   const createIncident = useCreateIncident();
   const { data: trucks } = useAvailableTrucks();
-  // We'll create the agreement after the incident is made
   const createAgreement = useCreateAgreement({});
   const [saving, setSaving] = useState(false);
 
@@ -44,11 +45,10 @@ export default function IncidentFromAgreement() {
     setStep("parsing");
     setParseError(null);
     try {
-      const info = await uploadAgreementForParsing(file);
+      const info = await uploadAgreementForParsing(file, membership?.organizationId);
       setFileInfo(info);
       const result = await parseAgreementAI(info.fileUrl, info.fileName);
       setParsed(result);
-      // Prefill form
       if (result.incident_name) setName(result.incident_name);
       if (result.incident_location) setLocation(result.incident_location);
       if (result.incident_type && result.incident_type in TYPE_LABELS) {
@@ -171,7 +171,6 @@ export default function IncidentFromAgreement() {
         {/* Step: Review */}
         {step === "review" && (
           <div className="space-y-5">
-            {/* Parsed source info */}
             {fileInfo && (
               <div className="flex items-center gap-2 rounded-xl bg-card p-3">
                 <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -184,7 +183,6 @@ export default function IncidentFromAgreement() {
               Review & Confirm
             </p>
 
-            {/* Incident Name */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-muted-foreground">Incident Name *</label>
               <input
@@ -195,7 +193,6 @@ export default function IncidentFromAgreement() {
               />
             </div>
 
-            {/* Type */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-muted-foreground">Type</label>
               <div className="grid grid-cols-2 gap-2">
@@ -216,7 +213,6 @@ export default function IncidentFromAgreement() {
               </div>
             </div>
 
-            {/* Location */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-muted-foreground">Location *</label>
               <input
@@ -227,7 +223,6 @@ export default function IncidentFromAgreement() {
               />
             </div>
 
-            {/* Start Date */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-muted-foreground">Start Date</label>
               <input
@@ -238,7 +233,6 @@ export default function IncidentFromAgreement() {
               />
             </div>
 
-            {/* Agreement Number */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-muted-foreground">Agreement Number</label>
               <input
@@ -249,7 +243,6 @@ export default function IncidentFromAgreement() {
               />
             </div>
 
-            {/* Truck assignment */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-muted-foreground">
                 Assign Truck
@@ -272,7 +265,6 @@ export default function IncidentFromAgreement() {
               </select>
             </div>
 
-            {/* Parsed extras */}
             {(parsed.resource_order_number || parsed.reporting_location || parsed.special_instructions) && (
               <div className="rounded-xl bg-card p-4 space-y-2">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -300,7 +292,6 @@ export default function IncidentFromAgreement() {
               </div>
             )}
 
-            {/* Save */}
             <button
               onClick={handleSave}
               disabled={saving || !name.trim() || !location.trim()}
