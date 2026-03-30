@@ -128,9 +128,15 @@ export function TruckForm({ truck, onSubmit, isPending }: TruckFormProps) {
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="dotNumber">DOT Number</Label>
-        <Input id="dotNumber" value={dotNumber} onChange={(e) => setDotNumber(e.target.value)} placeholder="DOT #" />
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-2">
+          <Label htmlFor="dotNumber">DOT Number</Label>
+          <Input id="dotNumber" value={dotNumber} onChange={(e) => setDotNumber(e.target.value)} placeholder="DOT #" />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="currentMileage">Current Mileage</Label>
+          <Input id="currentMileage" type="number" value={currentMileage} onChange={(e) => setCurrentMileage(e.target.value)} placeholder="Miles" />
+        </div>
       </div>
 
       <div className="space-y-2">
