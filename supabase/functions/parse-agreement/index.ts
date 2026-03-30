@@ -1,10 +1,35 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+/** Download a file and return a data URL the AI gateway accepts. */
+async function toDataUrl(fileUrl: string): Promise<{ url: string }> {
+  const res = await fetch(fileUrl);
+  if (!res.ok) throw new Error(`Failed to download file: ${res.status}`);
+
+  const contentType = res.headers.get("content-type") || "";
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  const b64 = base64Encode(bytes);
+
+  // Determine MIME from content-type header or file extension
+  let mime = contentType.split(";")[0].trim();
+  if (!mime || mime === "application/octet-stream") {
+    const lower = fileUrl.toLowerCase();
+    if (lower.includes(".pdf")) mime = "application/pdf";
+    else if (lower.includes(".png")) mime = "image/png";
+    else if (lower.includes(".jpg") || lower.includes(".jpeg")) mime = "image/jpeg";
+    else if (lower.includes(".webp")) mime = "image/webp";
+    else if (lower.includes(".gif")) mime = "image/gif";
+    else mime = "application/pdf"; // default for agreement docs
+  }
+
+  return { url: `data:${mime};base64,${b64}` };
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -20,6 +45,9 @@ serve(async (req) => {
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    // Convert file to data URL so PDFs and images both work
+    const dataUrl = await toDataUrl(fileUrl);
 
     const prompt = `You are a document parser for wildland firefighting agreements and contracts.
 Analyze the uploaded document and extract structured data to create an incident and truck assignment.
@@ -55,7 +83,7 @@ The document file name is: ${fileName}`;
             role: "user",
             content: [
               { type: "text", text: prompt },
-              { type: "image_url", image_url: { url: fileUrl } },
+              { type: "image_url", image_url: dataUrl },
             ],
           },
         ],
