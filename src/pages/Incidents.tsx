@@ -1,6 +1,6 @@
 import { AppShell } from "@/components/AppShell";
 import { Link } from "react-router-dom";
-import { Plus, Loader2, FileUp } from "lucide-react";
+import { Plus, Loader2, FileUp, Flame } from "lucide-react";
 import { useIncidents } from "@/hooks/useIncidents";
 import { STATUS_LABELS } from "@/services/incidents";
 import { useState } from "react";
@@ -21,17 +21,16 @@ export default function Incidents() {
     <AppShell
       title="Incidents"
       headerRight={
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <Link
             to="/incidents/from-agreement"
-            className="flex items-center gap-1 rounded-lg bg-secondary px-3 py-2 text-sm font-semibold text-secondary-foreground touch-target"
+            className="flex items-center justify-center h-9 w-9 rounded-full bg-secondary text-secondary-foreground active:bg-secondary/70"
           >
             <FileUp className="h-4 w-4" />
-            Import
           </Link>
           <Link
             to="/incidents/new"
-            className="flex items-center gap-1 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground touch-target"
+            className="flex items-center gap-1.5 rounded-full bg-primary px-3.5 h-9 text-sm font-semibold text-primary-foreground active:bg-primary/90"
           >
             <Plus className="h-4 w-4" />
             New
@@ -39,17 +38,17 @@ export default function Incidents() {
         </div>
       }
     >
-      <div className="p-4 space-y-4">
+      <div className="p-4 space-y-3">
         {/* Filter chips */}
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 no-scrollbar">
+        <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-4 px-4 no-scrollbar">
           {filters.map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors touch-target ${
+              className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-all duration-150 ${
                 filter === f
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary text-secondary-foreground"
+                  ? "bg-foreground text-background shadow-sm"
+                  : "bg-secondary text-muted-foreground active:bg-secondary/70"
               }`}
             >
               {f === "all" ? "All" : STATUS_LABELS[f]}
@@ -59,14 +58,14 @@ export default function Incidents() {
 
         {/* States */}
         {isLoading && (
-          <div className="flex justify-center py-12">
+          <div className="flex justify-center py-16">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         )}
 
         {error && (
-          <p className="py-12 text-center text-destructive">
-            Failed to load incidents. Pull down to retry.
+          <p className="py-16 text-center text-destructive text-sm">
+            Failed to load incidents.
           </p>
         )}
 
@@ -74,30 +73,33 @@ export default function Incidents() {
         {!isLoading && !error && (
           <div className="space-y-2">
             {filtered.length === 0 && (
-              <p className="py-12 text-center text-muted-foreground">No incidents found.</p>
+              <div className="py-16 text-center">
+                <Flame className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">No incidents found.</p>
+              </div>
             )}
             {filtered.map((inc) => (
               <Link
                 key={inc.id}
                 to={`/incidents/${inc.id}`}
-                className="block rounded-xl bg-card p-4 transition-transform active:scale-[0.98]"
+                className="block rounded-2xl bg-card p-4 card-shadow transition-all duration-150 active:scale-[0.98] active:shadow-none"
               >
                 <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <p className="font-semibold">{inc.name}</p>
-                    <p className="text-sm text-muted-foreground">{inc.location}</p>
+                  <div className="space-y-0.5 min-w-0 flex-1">
+                    <p className="font-semibold text-[15px]">{inc.name}</p>
+                    <p className="text-xs text-muted-foreground">{inc.location}</p>
                   </div>
                   <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-bold uppercase ${
+                    className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ml-3 shrink-0 ${
                       inc.status === "active"
-                        ? "bg-destructive/15 text-destructive"
-                        : "bg-success/15 text-success"
+                        ? "bg-destructive/12 text-destructive"
+                        : "bg-success/12 text-success"
                     }`}
                   >
                     {inc.status}
                   </span>
                 </div>
-                <div className="mt-3 flex gap-4 text-sm text-muted-foreground">
+                <div className="mt-2.5 flex gap-3 text-xs text-muted-foreground">
                   {inc.acres != null && <span>{Number(inc.acres).toLocaleString()} acres</span>}
                   {inc.containment != null && <span>{inc.containment}% contained</span>}
                   <span>Started {inc.start_date}</span>

@@ -68,90 +68,105 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-      <div className="w-full max-w-sm space-y-6">
-        {/* Logo */}
-        <div className="flex flex-col items-center gap-2">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary">
-            <Flame className="h-8 w-8 text-primary-foreground" />
+    <div className="flex min-h-screen flex-col bg-background">
+      {/* Top decorative gradient */}
+      <div className="relative h-48 overflow-hidden bg-gradient-to-br from-primary via-primary/90 to-primary/70">
+        <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10" />
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-0 translate-y-1/2">
+          <div className="flex h-20 w-20 items-center justify-center rounded-[22px] bg-card shadow-lg border-4 border-background">
+            <Flame className="h-10 w-10 text-primary" />
           </div>
-          <h1 className="text-2xl font-extrabold tracking-tight">FireOps HQ</h1>
-          <p className="text-sm text-muted-foreground">
-            {mode === "login" && "Sign in to your account"}
-            {mode === "signup" && "Create a new account"}
-            {mode === "forgot" && "Reset your password"}
-          </p>
         </div>
+      </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              required
-              autoComplete="email"
-            />
+      {/* Content */}
+      <div className="flex-1 px-6 pt-14 pb-8">
+        <div className="mx-auto w-full max-w-sm space-y-6">
+          <div className="text-center space-y-1">
+            <h1 className="text-2xl font-extrabold tracking-tight">FireOps HQ</h1>
+            <p className="text-sm text-muted-foreground">
+              {mode === "login" && "Sign in to your account"}
+              {mode === "signup" && "Create a new account"}
+              {mode === "forgot" && "Reset your password"}
+            </p>
           </div>
 
-          {mode !== "forgot" && (
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="email" className="text-xs font-medium text-muted-foreground">Email</Label>
               <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
                 required
-                minLength={6}
-                autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                autoComplete="email"
+                className="h-12 rounded-xl bg-secondary/60 border-0 text-[15px] placeholder:text-muted-foreground/50"
               />
             </div>
-          )}
 
-          <Button type="submit" className="w-full touch-target" disabled={loading}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {mode === "login" && "Sign In"}
-            {mode === "signup" && "Create Account"}
-            {mode === "forgot" && "Send Reset Link"}
-          </Button>
-        </form>
+            {mode !== "forgot" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="password" className="text-xs font-medium text-muted-foreground">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  minLength={6}
+                  autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                  className="h-12 rounded-xl bg-secondary/60 border-0 text-[15px] placeholder:text-muted-foreground/50"
+                />
+              </div>
+            )}
 
-        <div className="space-y-2 text-center text-sm">
-          {mode === "login" && (
-            <>
-              <button
-                onClick={() => setMode("forgot")}
-                className="text-primary underline-offset-2 hover:underline"
-              >
-                Forgot password?
-              </button>
-              <p className="text-muted-foreground">
-                No account?{" "}
+            <Button
+              type="submit"
+              className="w-full h-12 rounded-xl text-[15px] font-semibold shadow-md shadow-primary/20 touch-target"
+              disabled={loading}
+            >
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {mode === "login" && "Sign In"}
+              {mode === "signup" && "Create Account"}
+              {mode === "forgot" && "Send Reset Link"}
+            </Button>
+          </form>
+
+          <div className="space-y-3 text-center text-sm">
+            {mode === "login" && (
+              <>
                 <button
-                  onClick={() => setMode("signup")}
-                  className="text-primary font-semibold underline-offset-2 hover:underline"
+                  onClick={() => setMode("forgot")}
+                  className="text-muted-foreground active:text-foreground"
                 >
-                  Sign up
+                  Forgot password?
+                </button>
+                <p className="text-muted-foreground">
+                  No account?{" "}
+                  <button
+                    onClick={() => setMode("signup")}
+                    className="text-primary font-semibold"
+                  >
+                    Sign up
+                  </button>
+                </p>
+              </>
+            )}
+            {(mode === "signup" || mode === "forgot") && (
+              <p className="text-muted-foreground">
+                Back to{" "}
+                <button
+                  onClick={() => setMode("login")}
+                  className="text-primary font-semibold"
+                >
+                  Sign in
                 </button>
               </p>
-            </>
-          )}
-          {(mode === "signup" || mode === "forgot") && (
-            <p className="text-muted-foreground">
-              Back to{" "}
-              <button
-                onClick={() => setMode("login")}
-                className="text-primary font-semibold underline-offset-2 hover:underline"
-              >
-                Sign in
-              </button>
-            </p>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -22,24 +22,24 @@ export default function Fleet() {
       headerRight={
         <Link
           to="/fleet/new"
-          className="flex items-center gap-1 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground touch-target"
+          className="flex items-center gap-1.5 rounded-full bg-primary px-3.5 h-9 text-sm font-semibold text-primary-foreground active:bg-primary/90"
         >
           <Plus className="h-4 w-4" />
           Add Truck
         </Link>
       }
     >
-      <div className="p-4 space-y-4">
+      <div className="p-4 space-y-3">
         {/* Filter chips */}
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 no-scrollbar">
+        <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-4 px-4 no-scrollbar">
           {filters.map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors touch-target ${
+              className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-all duration-150 ${
                 filter === f
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary text-secondary-foreground"
+                  ? "bg-foreground text-background shadow-sm"
+                  : "bg-secondary text-muted-foreground active:bg-secondary/70"
               }`}
             >
               {f === "all" ? "All" : TRUCK_STATUS_LABELS[f]}
@@ -48,13 +48,13 @@ export default function Fleet() {
         </div>
 
         {isLoading && (
-          <div className="flex justify-center py-12">
+          <div className="flex justify-center py-16">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         )}
 
         {error && (
-          <p className="py-12 text-center text-destructive">
+          <p className="py-16 text-center text-destructive text-sm">
             Failed to load trucks.
           </p>
         )}
@@ -62,23 +62,33 @@ export default function Fleet() {
         {!isLoading && !error && (
           <div className="space-y-2">
             {filtered.length === 0 && (
-              <p className="py-12 text-center text-muted-foreground">
-                {filter === "all" ? "No trucks yet. Tap + to add one." : "No trucks match this filter."}
-              </p>
+              <div className="py-16 text-center">
+                <TruckIcon className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  {filter === "all" ? "No trucks yet" : "No trucks match this filter"}
+                </p>
+                {filter === "all" && (
+                  <Link to="/fleet/new" className="text-xs font-semibold text-primary mt-1 inline-block">
+                    Add your first truck
+                  </Link>
+                )}
+              </div>
             )}
             {filtered.map((truck) => (
               <Link
                 key={truck.id}
                 to={`/fleet/${truck.id}`}
-                className="block rounded-xl bg-card p-4 transition-transform active:scale-[0.98]"
+                className="block rounded-2xl bg-card p-4 card-shadow transition-all duration-150 active:scale-[0.98] active:shadow-none"
               >
                 <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <TruckIcon className="h-5 w-5 text-muted-foreground shrink-0" />
-                    <div>
-                      <p className="font-semibold">{truck.name}</p>
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent shrink-0">
+                      <TruckIcon className="h-5 w-5 text-accent-foreground" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-[15px]">{truck.name}</p>
                       {(truck.unit_type || truck.make) && (
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs text-muted-foreground mt-0.5">
                           {[truck.unit_type, truck.make, truck.model].filter(Boolean).join(" · ")}
                         </p>
                       )}
@@ -87,7 +97,7 @@ export default function Fleet() {
                   <StatusBadge status={truck.status as TruckStatus} />
                 </div>
                 {truck.notes && (
-                  <p className="mt-2 text-sm text-muted-foreground line-clamp-1">{truck.notes}</p>
+                  <p className="mt-2 text-xs text-muted-foreground line-clamp-1 pl-[52px]">{truck.notes}</p>
                 )}
               </Link>
             ))}
@@ -100,12 +110,12 @@ export default function Fleet() {
 
 function StatusBadge({ status }: { status: TruckStatus }) {
   const colors: Record<TruckStatus, string> = {
-    available: "bg-success/15 text-success",
-    deployed: "bg-primary/15 text-primary",
-    maintenance: "bg-warning/15 text-warning",
+    available: "bg-success/12 text-success",
+    deployed: "bg-primary/12 text-primary",
+    maintenance: "bg-warning/12 text-warning",
   };
   return (
-    <span className={`rounded-full px-2.5 py-1 text-xs font-bold uppercase ${colors[status]}`}>
+    <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide shrink-0 ${colors[status]}`}>
       {TRUCK_STATUS_LABELS[status]}
     </span>
   );
