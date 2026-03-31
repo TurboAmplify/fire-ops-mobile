@@ -2,7 +2,7 @@ import { AppShell } from "@/components/AppShell";
 import { Link } from "react-router-dom";
 import { Plus, Loader2, Send, DollarSign } from "lucide-react";
 import { useExpenses, useUpdateExpense } from "@/hooks/useExpenses";
-import { CATEGORY_LABELS, CATEGORY_ICONS } from "@/services/expenses";
+import { CATEGORY_LABELS, CATEGORY_ICON_MAP } from "@/services/expenses";
 import type { ExpenseCategory, ExpenseStatus } from "@/services/expenses";
 import { ExpenseStatusBadge } from "@/components/expenses/ExpenseStatusBadge";
 import { useOrganization } from "@/hooks/useOrganization";
