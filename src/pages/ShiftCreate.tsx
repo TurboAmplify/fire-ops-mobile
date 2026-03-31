@@ -4,12 +4,22 @@ import { useIncidentTruckCrew } from "@/hooks/useIncidentTruckCrew";
 import { useResourceOrders } from "@/hooks/useResourceOrders";
 import { useCreateShift } from "@/hooks/useShifts";
 import { ShiftCrewEditor } from "@/components/shifts/ShiftCrewEditor";
+import { OF297Header } from "@/components/shifts/OF297Header";
 import type { ShiftCrewEntry } from "@/services/shifts";
-import { ArrowLeft, Loader2, FileText } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useOrganization } from "@/hooks/useOrganization";
 
 type ShiftType = "day" | "night";
+
+/** Fetches truck info for OF-297 header via the incident truck's relation */
+function useTruckInfo(incidentTruckId: string) {
+  // We get truck data from the incident truck crew query which already joins trucks
+  // For the OF-297 header we need truck details - let's fetch from fleet
+  const { useFleetTrucks } = require("@/hooks/useFleet");
+  return useFleetTrucks?.() ?? { data: [] };
+}
 
 export default function ShiftCreate() {
   const { incidentId, incidentTruckId } = useParams<{
@@ -18,7 +28,18 @@ export default function ShiftCreate() {
   }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const truckName = (location.state as { truckName?: string })?.truckName ?? "Truck";
+  const locState = location.state as {
+    truckName?: string;
+    truckMake?: string;
+    truckModel?: string;
+    truckVin?: string;
+    truckPlate?: string;
+    truckUnitType?: string;
+    incidentName?: string;
+  } | undefined;
+
+  const truckName = locState?.truckName ?? "Truck";
+  const { membership } = useOrganization();
 
   const { data: activeCrew, isLoading: loadingCrew } = useIncidentTruckCrew(incidentTruckId || "");
   const { data: resourceOrders } = useResourceOrders(incidentTruckId || "");
@@ -29,24 +50,50 @@ export default function ShiftCreate() {
   const [startTime, setStartTime] = useState("06:00");
   const [endTime, setEndTime] = useState("18:00");
   const [notes, setNotes] = useState("");
+  const [miles, setMiles] = useState("");
+  const [isFirstLast, setIsFirstLast] = useState(false);
+  const [transportRetained, setTransportRetained] = useState(false);
   const [step, setStep] = useState<"details" | "crew">("details");
   const [crewEntries, setCrewEntries] = useState<ShiftCrewEntry[]>([]);
 
   // Get the most recent parsed resource order
   const latestRO = resourceOrders?.find((ro) => ro.parsed_at != null);
-  const roData = latestRO?.parsed_data || {};
+  const roData = (latestRO?.parsed_data || {}) as Record<string, any>;
+
+  // Build OF-297 header data from resource order + truck + location state
+  const of297Data = {
+    agreementNumber: roData.agreement_number || latestRO?.agreement_number,
+    contractorName: roData.contractor_name || membership?.organizationName,
+    resourceOrderNumber: roData.resource_order_number || latestRO?.resource_order_number,
+    incidentName: roData.incident_name || locState?.incidentName,
+    incidentNumber: roData.incident_number,
+    financialCode: roData.financial_code,
+    equipmentMakeModel: locState?.truckMake && locState?.truckModel
+      ? `${locState.truckMake} ${locState.truckModel}`
+      : locState?.truckMake || roData.equipment_make_model,
+    equipmentType: locState?.truckUnitType || roData.equipment_type,
+    vinNumber: locState?.truckVin || roData.vin_number,
+    licensePlate: locState?.truckPlate || roData.license_plate,
+  };
 
   // When moving to crew step, prefill from active truck crew
   const goToCrew = () => {
     if (!activeCrew) return;
     const active = activeCrew.filter((c) => c.is_active);
-    const defaultHours = computeDefaultHours();
     const entries: ShiftCrewEntry[] = active.map((c) => ({
       crew_member_id: c.crew_member_id,
-      hours: defaultHours,
+      hours: 0,
       role_on_shift: c.role_on_assignment || c.crew_members.role,
       notes: null,
+      operating_start: startTime,
+      operating_stop: endTime,
+      standby_start: null,
+      standby_stop: null,
     }));
+    // Auto-compute initial hours
+    entries.forEach((e) => {
+      e.hours = computeDefaultHours();
+    });
     setCrewEntries(entries);
     setStep("crew");
   };
@@ -63,13 +110,6 @@ export default function ShiftCreate() {
     }
   };
 
-  // Auto-populate from resource order times if available
-  const applyROTimes = () => {
-    if (roData.shift_start_time) setStartTime(roData.shift_start_time);
-    if (roData.shift_end_time) setEndTime(roData.shift_end_time);
-    toast.success("Applied resource order times");
-  };
-
   const handleSubmit = async () => {
     if (!incidentTruckId) return;
     const startIso = `${date}T${startTime}:00`;
@@ -84,6 +124,11 @@ export default function ShiftCreate() {
           start_time: startIso,
           end_time: endIso,
           notes: notes.trim() || null,
+          miles: miles ? parseFloat(miles) : null,
+          is_first_last: isFirstLast,
+          transport_retained: transportRetained,
+          incident_number: roData.incident_number || null,
+          financial_code: roData.financial_code || null,
         },
         crew: crewEntries,
       });
@@ -107,67 +152,19 @@ export default function ShiftCreate() {
         </button>
       }
     >
-      <div className="p-4 space-y-5">
+      <div className="p-4 space-y-4">
         <div>
           <h2 className="text-xl font-extrabold">Log Shift</h2>
           <p className="text-sm text-muted-foreground">{truckName}</p>
         </div>
 
-        {/* Resource Order Info Banner */}
-        {latestRO && (
-          <div className="rounded-xl bg-primary/5 border border-primary/20 p-3 space-y-1">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
-              <FileText className="h-3.5 w-3.5" />
-              Resource Order Info
-            </div>
-            <div className="grid grid-cols-2 gap-1 text-xs">
-              {roData.agreement_number && (
-                <div>
-                  <span className="text-muted-foreground">Agreement: </span>
-                  <span className="font-bold">{roData.agreement_number}</span>
-                </div>
-              )}
-              {roData.resource_order_number && (
-                <div>
-                  <span className="text-muted-foreground">RO#: </span>
-                  <span className="font-bold">{roData.resource_order_number}</span>
-                </div>
-              )}
-              {roData.incident_name && (
-                <div>
-                  <span className="text-muted-foreground">Incident: </span>
-                  <span className="font-medium">{roData.incident_name}</span>
-                </div>
-              )}
-              {roData.resource_name && (
-                <div>
-                  <span className="text-muted-foreground">Resource: </span>
-                  <span className="font-medium">{roData.resource_name}</span>
-                </div>
-              )}
-              {roData.operational_period && (
-                <div>
-                  <span className="text-muted-foreground">Op Period: </span>
-                  <span className="font-medium">{roData.operational_period}</span>
-                </div>
-              )}
-            </div>
-            {(roData.shift_start_time || roData.shift_end_time) && (
-              <button
-                type="button"
-                onClick={applyROTimes}
-                className="mt-1 text-xs font-medium text-primary underline touch-target"
-              >
-                Apply RO shift times ({roData.shift_start_time} – {roData.shift_end_time})
-              </button>
-            )}
-          </div>
-        )}
+        {/* OF-297 Header Info */}
+        <OF297Header {...of297Data} />
 
         {step === "details" && (
           <div className="space-y-4">
             {/* Date */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <label className="text-sm font-medium text-muted-foreground">Date</label>
               <input
                 type="date"
@@ -178,7 +175,7 @@ export default function ShiftCreate() {
             </div>
 
             {/* Type */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <label className="text-sm font-medium text-muted-foreground">Shift Type</label>
               <div className="grid grid-cols-2 gap-2">
                 {(["day", "night"] as ShiftType[]).map((t) => (
@@ -204,7 +201,7 @@ export default function ShiftCreate() {
 
             {/* Times */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <label className="text-sm font-medium text-muted-foreground">Start</label>
                 <input
                   type="time"
@@ -213,7 +210,7 @@ export default function ShiftCreate() {
                   className="w-full rounded-xl border bg-card px-4 py-3 text-base outline-none focus:ring-2 focus:ring-ring touch-target"
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <label className="text-sm font-medium text-muted-foreground">End</label>
                 <input
                   type="time"
@@ -224,14 +221,49 @@ export default function ShiftCreate() {
               </div>
             </div>
 
-            {/* Notes */}
+            {/* Miles */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-muted-foreground">Miles</label>
+              <input
+                type="number"
+                inputMode="decimal"
+                value={miles}
+                onChange={(e) => setMiles(e.target.value)}
+                placeholder="Optional"
+                className="w-full rounded-xl border bg-card px-4 py-3 text-base outline-none focus:ring-2 focus:ring-ring touch-target"
+              />
+            </div>
+
+            {/* OF-297 flags */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Notes (optional)</label>
+              <label className="flex items-center gap-3 touch-target">
+                <input
+                  type="checkbox"
+                  checked={isFirstLast}
+                  onChange={(e) => setIsFirstLast(e.target.checked)}
+                  className="h-5 w-5 rounded border-input accent-primary"
+                />
+                <span className="text-sm font-medium">First/Last Ticket (Mob/Demob)</span>
+              </label>
+              <label className="flex items-center gap-3 touch-target">
+                <input
+                  type="checkbox"
+                  checked={transportRetained}
+                  onChange={(e) => setTransportRetained(e.target.checked)}
+                  className="h-5 w-5 rounded border-input accent-primary"
+                />
+                <span className="text-sm font-medium">Transport Retained</span>
+              </label>
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-muted-foreground">Remarks (optional)</label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={2}
-                placeholder="Any shift notes..."
+                placeholder="Equipment breakdown, operating issues..."
                 className="w-full rounded-xl border bg-card px-4 py-3 text-base outline-none focus:ring-2 focus:ring-ring resize-none"
               />
             </div>
@@ -243,7 +275,7 @@ export default function ShiftCreate() {
               className="w-full rounded-xl bg-primary py-4 text-base font-bold text-primary-foreground transition-transform active:scale-[0.98] disabled:opacity-40 touch-target flex items-center justify-center gap-2"
             >
               {loadingCrew && <Loader2 className="h-4 w-4 animate-spin" />}
-              Next: Review Crew
+              Next: Crew Times
             </button>
           </div>
         )}
