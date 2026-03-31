@@ -2,7 +2,7 @@ import { AppShell } from "@/components/AppShell";
 import { Link } from "react-router-dom";
 import { Plus, Loader2, Send, DollarSign } from "lucide-react";
 import { useExpenses, useUpdateExpense } from "@/hooks/useExpenses";
-import { CATEGORY_LABELS, CATEGORY_ICONS } from "@/services/expenses";
+import { CATEGORY_LABELS, CATEGORY_ICON_MAP } from "@/services/expenses";
 import type { ExpenseCategory, ExpenseStatus } from "@/services/expenses";
 import { ExpenseStatusBadge } from "@/components/expenses/ExpenseStatusBadge";
 import { useOrganization } from "@/hooks/useOrganization";
@@ -64,7 +64,7 @@ export default function Expenses() {
             className="flex items-center justify-between rounded-2xl bg-accent p-3.5 active:bg-accent/80"
           >
             <span className="text-sm font-semibold text-accent-foreground">
-              📋 {pendingCount} expense{pendingCount > 1 ? "s" : ""} awaiting review
+              {pendingCount} expense{pendingCount > 1 ? "s" : ""} awaiting review
             </span>
             <span className="text-xs font-semibold text-primary">Review →</span>
           </Link>
@@ -97,7 +97,7 @@ export default function Expenses() {
                   : "bg-secondary text-muted-foreground active:bg-secondary/70"
               }`}
             >
-              {c === "all" ? "All" : `${CATEGORY_ICONS[c]} ${CATEGORY_LABELS[c]}`}
+              {c === "all" ? "All" : CATEGORY_LABELS[c]}
             </button>
           ))}
         </div>
@@ -145,9 +145,7 @@ export default function Expenses() {
                   className="flex items-center justify-between p-4 transition-all duration-150 active:bg-secondary/30"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className="text-xl shrink-0">
-                      {CATEGORY_ICONS[exp.category as ExpenseCategory] ?? "📦"}
-                    </span>
+                    {(() => { const Icon = CATEGORY_ICON_MAP[exp.category as ExpenseCategory] ?? CATEGORY_ICON_MAP.other; return <Icon className="h-5 w-5 text-muted-foreground shrink-0" strokeWidth={1.75} />; })()}
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="font-semibold text-sm truncate">

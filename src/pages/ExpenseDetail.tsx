@@ -1,7 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { useParams, useNavigate } from "react-router-dom";
 import { useExpense, useDeleteExpense, useUpdateExpense } from "@/hooks/useExpenses";
-import { CATEGORY_LABELS, CATEGORY_ICONS, FUEL_TYPE_LABELS, STATUS_LABELS } from "@/services/expenses";
+import { CATEGORY_LABELS, CATEGORY_ICON_MAP, FUEL_TYPE_LABELS, STATUS_LABELS } from "@/services/expenses";
 import type { ExpenseCategory, FuelType, ExpenseStatus } from "@/services/expenses";
 import { ExpenseStatusBadge } from "@/components/expenses/ExpenseStatusBadge";
 import { ArrowLeft, Pencil, Trash2, Loader2, Send } from "lucide-react";
@@ -119,7 +119,7 @@ export default function ExpenseDetail() {
         {/* Header */}
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-3xl">{CATEGORY_ICONS[cat] ?? "📦"}</span>
+            {(() => { const Icon = CATEGORY_ICON_MAP[cat] ?? CATEGORY_ICON_MAP.other; return <Icon className="h-7 w-7 text-muted-foreground" strokeWidth={1.75} />; })()}
             <div>
               <p className="text-2xl font-extrabold">${Number(expense.amount).toFixed(2)}</p>
               <div className="flex items-center gap-2">
@@ -207,7 +207,7 @@ export default function ExpenseDetail() {
             disabled={updateMutation.isPending}
             className="w-full rounded-xl bg-[hsl(var(--success))] py-4 text-base font-bold text-[hsl(var(--success-foreground))] transition-transform active:scale-[0.98] touch-target flex items-center justify-center gap-2"
           >
-            💰 Mark as Reimbursed
+            Mark as Reimbursed
           </button>
         )}
 

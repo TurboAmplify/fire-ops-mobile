@@ -19,13 +19,17 @@ export const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   other: "Other",
 };
 
-export const CATEGORY_ICONS: Record<ExpenseCategory, string> = {
-  fuel: "⛽",
-  ppe: "🦺",
-  food: "🍔",
-  lodging: "🏨",
-  equipment: "🔧",
-  other: "📦",
+// Icon mapping moved to component layer — see CategoryIcon component
+// Kept for backward compat as empty; consumers should use CategoryIcon instead
+import { Fuel, ShieldCheck, UtensilsCrossed, Hotel, Wrench, Package, type LucideIcon } from "lucide-react";
+
+export const CATEGORY_ICON_MAP: Record<ExpenseCategory, LucideIcon> = {
+  fuel: Fuel,
+  ppe: ShieldCheck,
+  food: UtensilsCrossed,
+  lodging: Hotel,
+  equipment: Wrench,
+  other: Package,
 };
 
 export const FUEL_TYPE_LABELS: Record<FuelType, string> = {
