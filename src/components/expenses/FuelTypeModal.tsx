@@ -1,13 +1,13 @@
 import { FUEL_TYPE_LABELS } from "@/services/expenses";
 import type { FuelType } from "@/services/expenses";
-import { Fuel } from "lucide-react";
+import { Fuel, Truck, Droplets, Disc, Flame, type LucideIcon } from "lucide-react";
 
 const fuelTypes: FuelType[] = ["truck", "pump", "saw", "burn"];
-const fuelIcons: Record<FuelType, string> = {
-  truck: "🚒",
-  pump: "⛽",
-  saw: "🪚",
-  burn: "🔥",
+const fuelIconMap: Record<FuelType, LucideIcon> = {
+  truck: Truck,
+  pump: Droplets,
+  saw: Disc,
+  burn: Flame,
 };
 
 interface Props {
