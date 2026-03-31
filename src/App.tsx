@@ -32,6 +32,7 @@ import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Support from "./pages/Support";
 import Time from "./pages/Time";
+import NeedsList from "./pages/NeedsList";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
