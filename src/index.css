@@ -6,80 +6,51 @@
 
 @layer base {
   :root {
-    --background: 220 16% 96%;
-    --foreground: 222 28% 12%;
+    /* Force dark by default — the app is dark-themed */
+    --background: 220 20% 7%;
+    --foreground: 220 15% 93%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222 28% 12%;
+    --card: 220 18% 10%;
+    --card-foreground: 220 15% 93%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 28% 12%;
+    --popover: 220 18% 10%;
+    --popover-foreground: 220 15% 93%;
 
-    --primary: 24 100% 50%;
+    --primary: 8 85% 52%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 14% 93%;
-    --secondary-foreground: 222 20% 18%;
+    --secondary: 220 14% 14%;
+    --secondary-foreground: 220 15% 85%;
 
-    --muted: 220 14% 93%;
-    --muted-foreground: 220 10% 50%;
+    --muted: 220 14% 14%;
+    --muted-foreground: 220 10% 52%;
 
-    --accent: 24 100% 96%;
-    --accent-foreground: 24 100% 38%;
+    --accent: 8 50% 14%;
+    --accent-foreground: 8 90% 68%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 62% 35%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 152 60% 42%;
+    --success: 152 55% 38%;
     --success-foreground: 0 0% 100%;
 
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 220 13% 90%;
-    --input: 220 13% 87%;
-    --ring: 24 100% 50%;
+    --border: 220 14% 16%;
+    --input: 220 14% 18%;
+    --ring: 8 85% 52%;
 
     --radius: 0.875rem;
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-
-  .dark {
-    --background: 225 18% 6%;
-    --foreground: 220 15% 95%;
-
-    --card: 225 18% 9%;
-    --card-foreground: 220 15% 95%;
-
-    --popover: 225 18% 9%;
-    --popover-foreground: 220 15% 95%;
-
-    --primary: 24 100% 53%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 225 14% 14%;
-    --secondary-foreground: 220 15% 90%;
-
-    --muted: 225 14% 14%;
-    --muted-foreground: 220 10% 55%;
-
-    --accent: 24 60% 12%;
-    --accent-foreground: 24 100% 65%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 225 14% 16%;
-    --input: 225 14% 18%;
-    --ring: 24 100% 53%;
+    --sidebar-background: 220 20% 8%;
+    --sidebar-foreground: 220 15% 85%;
+    --sidebar-primary: 8 85% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 14%;
+    --sidebar-accent-foreground: 220 15% 85%;
+    --sidebar-border: 220 14% 16%;
+    --sidebar-ring: 8 85% 52%;
   }
 }
 
@@ -96,7 +67,6 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Better default focus styles for accessibility */
   :focus-visible {
     outline: 2px solid hsl(var(--ring));
     outline-offset: 2px;
@@ -124,18 +94,21 @@
     display: none;
   }
 
-  /* Glass morphism for headers */
   .glass {
     backdrop-filter: saturate(180%) blur(20px);
     -webkit-backdrop-filter: saturate(180%) blur(20px);
   }
 
-  /* Premium card shadow */
   .card-shadow {
-    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+    box-shadow: 0 1px 4px 0 rgb(0 0 0 / 0.15), 0 1px 2px -1px rgb(0 0 0 / 0.1);
   }
 
   .card-shadow-md {
-    box-shadow: 0 2px 8px -2px rgb(0 0 0 / 0.08), 0 1px 3px -1px rgb(0 0 0 / 0.06);
+    box-shadow: 0 4px 12px -2px rgb(0 0 0 / 0.25), 0 2px 6px -1px rgb(0 0 0 / 0.15);
+  }
+
+  /* Fire gradient for branded headers */
+  .fire-gradient {
+    background: linear-gradient(135deg, hsl(8 85% 42%) 0%, hsl(20 90% 48%) 50%, hsl(8 85% 38%) 100%);
   }
 }

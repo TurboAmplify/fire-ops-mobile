@@ -11,7 +11,7 @@ const tabs = [
 
 export function BottomNav() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 glass border-t border-border/60 bg-card/80 safe-area-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 bg-background/95 glass safe-area-bottom">
       <div className="flex items-stretch justify-around">
         {tabs.map((tab) => (
           <NavLink
@@ -29,7 +29,7 @@ export function BottomNav() {
             {({ isActive }) => (
               <>
                 <div className={`flex items-center justify-center h-7 w-7 rounded-full transition-all duration-200 ${
-                  isActive ? "bg-primary/12" : ""
+                  isActive ? "bg-primary/15" : ""
                 }`}>
                   <tab.icon className={`h-[18px] w-[18px] transition-all duration-200 ${isActive ? "stroke-[2.5]" : "stroke-[1.75]"}`} />
                 </div>
