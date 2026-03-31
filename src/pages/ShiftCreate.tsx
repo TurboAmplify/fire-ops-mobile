@@ -13,14 +13,6 @@ import { useOrganization } from "@/hooks/useOrganization";
 
 type ShiftType = "day" | "night";
 
-/** Fetches truck info for OF-297 header via the incident truck's relation */
-function useTruckInfo(incidentTruckId: string) {
-  // We get truck data from the incident truck crew query which already joins trucks
-  // For the OF-297 header we need truck details - let's fetch from fleet
-  const { useFleetTrucks } = require("@/hooks/useFleet");
-  return useFleetTrucks?.() ?? { data: [] };
-}
-
 export default function ShiftCreate() {
   const { incidentId, incidentTruckId } = useParams<{
     incidentId: string;
