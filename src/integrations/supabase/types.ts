@@ -344,6 +344,70 @@ export type Database = {
           },
         ]
       }
+      needs_list_items: {
+        Row: {
+          category: string
+          created_at: string
+          created_by_user_id: string | null
+          crew_member_id: string | null
+          id: string
+          is_purchased: boolean
+          notes: string | null
+          organization_id: string
+          purchased_at: string | null
+          title: string
+          truck_id: string | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by_user_id?: string | null
+          crew_member_id?: string | null
+          id?: string
+          is_purchased?: boolean
+          notes?: string | null
+          organization_id: string
+          purchased_at?: string | null
+          title: string
+          truck_id?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by_user_id?: string | null
+          crew_member_id?: string | null
+          id?: string
+          is_purchased?: boolean
+          notes?: string | null
+          organization_id?: string
+          purchased_at?: string | null
+          title?: string
+          truck_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "needs_list_items_crew_member_id_fkey"
+            columns: ["crew_member_id"]
+            isOneToOne: false
+            referencedRelation: "crew_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "needs_list_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "needs_list_items_truck_id_fkey"
+            columns: ["truck_id"]
+            isOneToOne: false
+            referencedRelation: "trucks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_invites: {
         Row: {
           created_at: string
