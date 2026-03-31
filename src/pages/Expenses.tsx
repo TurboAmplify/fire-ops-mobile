@@ -64,7 +64,7 @@ export default function Expenses() {
             className="flex items-center justify-between rounded-2xl bg-accent p-3.5 active:bg-accent/80"
           >
             <span className="text-sm font-semibold text-accent-foreground">
-              📋 {pendingCount} expense{pendingCount > 1 ? "s" : ""} awaiting review
+              {pendingCount} expense{pendingCount > 1 ? "s" : ""} awaiting review
             </span>
             <span className="text-xs font-semibold text-primary">Review →</span>
           </Link>

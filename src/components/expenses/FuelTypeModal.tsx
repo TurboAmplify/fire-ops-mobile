@@ -37,7 +37,7 @@ export function FuelTypeModal({ open, onConfirm, onSkip }: Props) {
               onClick={() => onConfirm(ft)}
               className="flex items-center justify-center gap-2 rounded-xl bg-secondary py-3.5 text-sm font-semibold text-secondary-foreground transition-colors active:bg-primary active:text-primary-foreground touch-target"
             >
-              <span className="text-lg">{fuelIcons[ft]}</span>
+              {(() => { const Icon = fuelIconMap[ft]; return <Icon className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />; })()}
               {FUEL_TYPE_LABELS[ft]}
             </button>
           ))}

@@ -207,7 +207,7 @@ export default function ExpenseDetail() {
             disabled={updateMutation.isPending}
             className="w-full rounded-xl bg-[hsl(var(--success))] py-4 text-base font-bold text-[hsl(var(--success-foreground))] transition-transform active:scale-[0.98] touch-target flex items-center justify-center gap-2"
           >
-            💰 Mark as Reimbursed
+            Mark as Reimbursed
           </button>
         )}
 
