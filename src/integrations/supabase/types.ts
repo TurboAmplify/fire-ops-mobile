@@ -81,6 +81,7 @@ export type Database = {
           notes: string | null
           organization_id: string | null
           phone: string | null
+          profile_photo_url: string | null
           role: string
         }
         Insert: {
@@ -91,6 +92,7 @@ export type Database = {
           notes?: string | null
           organization_id?: string | null
           phone?: string | null
+          profile_photo_url?: string | null
           role: string
         }
         Update: {
@@ -101,6 +103,7 @@ export type Database = {
           notes?: string | null
           organization_id?: string | null
           phone?: string | null
+          profile_photo_url?: string | null
           role?: string
         }
         Relationships: [
@@ -892,6 +895,7 @@ export type Database = {
           name: string
           notes: string | null
           organization_id: string | null
+          photo_url: string | null
           plate: string | null
           pump_type: string | null
           status: string
@@ -910,6 +914,7 @@ export type Database = {
           name: string
           notes?: string | null
           organization_id?: string | null
+          photo_url?: string | null
           plate?: string | null
           pump_type?: string | null
           status?: string
@@ -928,6 +933,7 @@ export type Database = {
           name?: string
           notes?: string | null
           organization_id?: string | null
+          photo_url?: string | null
           plate?: string | null
           pump_type?: string | null
           status?: string

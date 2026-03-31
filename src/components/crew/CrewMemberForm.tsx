@@ -3,6 +3,7 @@ import { useCrewMember, useCreateCrewMember, useUpdateCrewMember } from "@/hooks
 import { Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
+import { CrewPhotoUpload } from "@/components/crew/CrewPhotoUpload";
 
 interface Props {
   memberId: string | null;
@@ -66,7 +67,7 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60" onClick={onClose}>
       <div
-        className="w-full max-w-lg rounded-t-2xl bg-background p-4 pb-8 safe-area-bottom animate-in slide-in-from-bottom"
+        className="w-full max-w-lg rounded-t-2xl bg-background p-4 pb-8 safe-area-bottom animate-in slide-in-from-bottom max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
@@ -82,6 +83,15 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Photo upload - only for existing members */}
+            {isEdit && memberId && existing && (
+              <CrewPhotoUpload
+                memberId={memberId}
+                photoUrl={(existing as any).profile_photo_url ?? null}
+                name={existing.name}
+              />
+            )}
+
             <div className="space-y-1">
               <label className="text-sm font-medium text-muted-foreground">Name *</label>
               <input type="text" value={name} onChange={(e) => setName(e.target.value)} className={inputClass} placeholder="John Smith" autoFocus />
