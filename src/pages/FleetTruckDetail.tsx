@@ -4,6 +4,7 @@ import { useTruck, useDeleteTruck } from "@/hooks/useFleet";
 import { TRUCK_STATUS_LABELS, type TruckStatus } from "@/services/fleet";
 import { Loader2, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { TruckHeroPhoto } from "@/components/fleet/TruckHeroPhoto";
 import { TruckPhotoSection } from "@/components/fleet/TruckPhotoSection";
 import { TruckDocumentSection } from "@/components/fleet/TruckDocumentSection";
 import { TruckChecklistSection } from "@/components/fleet/TruckChecklistSection";
@@ -87,6 +88,13 @@ export default function FleetTruckDetail() {
       }
     >
       <div className="p-4 space-y-6">
+        {/* Hero Photo */}
+        <TruckHeroPhoto
+          truckId={truckId!}
+          photoUrl={(truck as any).photo_url ?? null}
+          truckName={truck.name}
+        />
+
         {/* Status & basic info */}
         <div className="rounded-2xl bg-card p-4 space-y-3 card-shadow">
           <div className="flex items-center justify-between">
@@ -118,7 +126,7 @@ export default function FleetTruckDetail() {
         {/* Checklist */}
         <TruckChecklistSection truckId={truckId!} />
 
-        {/* Photos */}
+        {/* Additional Photos */}
         <TruckPhotoSection truckId={truckId!} />
 
         {/* Documents */}

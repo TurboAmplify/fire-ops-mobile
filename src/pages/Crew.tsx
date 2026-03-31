@@ -4,6 +4,10 @@ import { Plus, Loader2, Phone, User } from "lucide-react";
 import { useState } from "react";
 import { CrewMemberForm } from "@/components/crew/CrewMemberForm";
 
+function getInitials(name: string) {
+  return name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
+}
+
 export default function Crew() {
   const { data: members, isLoading, error } = useCrewMembers();
   const [showForm, setShowForm] = useState(false);
@@ -70,36 +74,56 @@ export default function Crew() {
             {filtered?.length === 0 && (
               <p className="py-12 text-center text-muted-foreground">No crew members found.</p>
             )}
-            {filtered?.map((m) => (
-              <button
-                key={m.id}
-                onClick={() => handleEdit(m.id)}
-                className="block w-full text-left rounded-xl bg-card p-4 transition-transform active:scale-[0.98]"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <p className="font-semibold">{m.name}</p>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <User className="h-3.5 w-3.5" />
-                      <span>{m.role}</span>
+            {filtered?.map((m) => {
+              const photoUrl = (m as any).profile_photo_url;
+              return (
+                <button
+                  key={m.id}
+                  onClick={() => handleEdit(m.id)}
+                  className="block w-full text-left rounded-xl bg-card p-4 transition-transform active:scale-[0.98]"
+                >
+                  <div className="flex items-center gap-3">
+                    {/* Avatar */}
+                    <div className="h-12 w-12 rounded-full overflow-hidden bg-accent shrink-0 border-2 border-primary/10">
+                      {photoUrl ? (
+                        <img src={photoUrl} alt={m.name} className="w-full h-full object-cover" loading="lazy" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <span className="text-sm font-bold text-accent-foreground">
+                            {getInitials(m.name)}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                    {m.phone && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Phone className="h-3.5 w-3.5" />
-                        <span>{m.phone}</span>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-0.5">
+                          <p className="font-semibold">{m.name}</p>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <User className="h-3.5 w-3.5" />
+                            <span>{m.role}</span>
+                          </div>
+                          {m.phone && (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Phone className="h-3.5 w-3.5" />
+                              <span>{m.phone}</span>
+                            </div>
+                          )}
+                        </div>
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs font-bold uppercase ${
+                            m.active ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {m.active ? "Active" : "Inactive"}
+                        </span>
                       </div>
-                    )}
+                    </div>
                   </div>
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-bold uppercase ${
-                      m.active ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {m.active ? "Active" : "Inactive"}
-                  </span>
-                </div>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
         )}
       </div>

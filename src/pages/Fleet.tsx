@@ -74,33 +74,50 @@ export default function Fleet() {
                 )}
               </div>
             )}
-            {filtered.map((truck) => (
-              <Link
-                key={truck.id}
-                to={`/fleet/${truck.id}`}
-                className="block rounded-2xl bg-card p-4 card-shadow transition-all duration-150 active:scale-[0.98] active:shadow-none"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent shrink-0">
-                      <TruckIcon className="h-5 w-5 text-accent-foreground" />
+            {filtered.map((truck) => {
+              const photoUrl = (truck as any).photo_url;
+              return (
+                <Link
+                  key={truck.id}
+                  to={`/fleet/${truck.id}`}
+                  className="block rounded-2xl bg-card card-shadow transition-all duration-150 active:scale-[0.98] active:shadow-none overflow-hidden"
+                >
+                  {photoUrl ? (
+                    <div className="aspect-[16/7] w-full overflow-hidden">
+                      <img
+                        src={photoUrl}
+                        alt={truck.name}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
                     </div>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-[15px]">{truck.name}</p>
-                      {(truck.unit_type || truck.make) && (
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {[truck.unit_type, truck.make, truck.model].filter(Boolean).join(" · ")}
-                        </p>
-                      )}
+                  ) : null}
+                  <div className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        {!photoUrl && (
+                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent shrink-0">
+                            <TruckIcon className="h-5 w-5 text-accent-foreground" />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="font-semibold text-[15px]">{truck.name}</p>
+                          {(truck.unit_type || truck.make) && (
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {[truck.unit_type, truck.make, truck.model].filter(Boolean).join(" · ")}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <StatusBadge status={truck.status as TruckStatus} />
                     </div>
+                    {truck.notes && (
+                      <p className="mt-2 text-xs text-muted-foreground line-clamp-1">{truck.notes}</p>
+                    )}
                   </div>
-                  <StatusBadge status={truck.status as TruckStatus} />
-                </div>
-                {truck.notes && (
-                  <p className="mt-2 text-xs text-muted-foreground line-clamp-1 pl-[52px]">{truck.notes}</p>
-                )}
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>
