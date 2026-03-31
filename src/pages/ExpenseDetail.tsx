@@ -1,7 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { useParams, useNavigate } from "react-router-dom";
 import { useExpense, useDeleteExpense, useUpdateExpense } from "@/hooks/useExpenses";
-import { CATEGORY_LABELS, CATEGORY_ICONS, FUEL_TYPE_LABELS, STATUS_LABELS } from "@/services/expenses";
+import { CATEGORY_LABELS, CATEGORY_ICON_MAP, FUEL_TYPE_LABELS, STATUS_LABELS } from "@/services/expenses";
 import type { ExpenseCategory, FuelType, ExpenseStatus } from "@/services/expenses";
 import { ExpenseStatusBadge } from "@/components/expenses/ExpenseStatusBadge";
 import { ArrowLeft, Pencil, Trash2, Loader2, Send } from "lucide-react";
