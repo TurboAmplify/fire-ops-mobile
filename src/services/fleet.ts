@@ -364,3 +364,39 @@ export async function updateTruckPhotoLabel(id: string, photoLabel: string) {
     .eq("id", id);
   if (error) throw error;
 }
+
+// --- Truck Hero Photo ---
+
+export async function updateTruckHeroPhoto(
+  truckId: string,
+  organizationId: string,
+  file: File
+) {
+  const ext = file.name.split(".").pop() ?? "jpg";
+  const path = `${organizationId}/${truckId}/hero_${Date.now()}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("truck-photos")
+    .upload(path, file);
+  if (uploadError) throw uploadError;
+
+  const { data: urlData } = supabase.storage
+    .from("truck-photos")
+    .getPublicUrl(path);
+
+  const { error } = await supabase
+    .from("trucks")
+    .update({ photo_url: urlData.publicUrl } as any)
+    .eq("id", truckId);
+  if (error) throw error;
+
+  return urlData.publicUrl;
+}
+
+export async function deleteTruckHeroPhoto(truckId: string) {
+  const { error } = await supabase
+    .from("trucks")
+    .update({ photo_url: null } as any)
+    .eq("id", truckId);
+  if (error) throw error;
+}

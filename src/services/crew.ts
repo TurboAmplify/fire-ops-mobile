@@ -44,3 +44,39 @@ export async function updateCrewMember(id: string, updates: CrewMemberUpdate) {
   if (error) throw error;
   return data;
 }
+
+// --- Crew Profile Photos ---
+
+export async function uploadCrewPhoto(
+  memberId: string,
+  organizationId: string,
+  file: File
+) {
+  const ext = file.name.split(".").pop() ?? "jpg";
+  const path = `${organizationId}/${memberId}/profile_${Date.now()}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("crew-photos")
+    .upload(path, file);
+  if (uploadError) throw uploadError;
+
+  const { data: urlData } = supabase.storage
+    .from("crew-photos")
+    .getPublicUrl(path);
+
+  const { error } = await supabase
+    .from("crew_members")
+    .update({ profile_photo_url: urlData.publicUrl } as any)
+    .eq("id", memberId);
+  if (error) throw error;
+
+  return urlData.publicUrl;
+}
+
+export async function deleteCrewPhoto(memberId: string) {
+  const { error } = await supabase
+    .from("crew_members")
+    .update({ profile_photo_url: null } as any)
+    .eq("id", memberId);
+  if (error) throw error;
+}
