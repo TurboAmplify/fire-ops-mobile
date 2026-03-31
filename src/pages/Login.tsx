@@ -2,11 +2,13 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
-import { Loader2, Flame } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import heroBg from "@/assets/hero-bg.jpg";
+import fireLogo from "@/assets/fire-logo.png";
 
 export default function Login() {
   const { user, loading: authLoading } = useAuth();
@@ -69,23 +71,25 @@ export default function Login() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      {/* Branded fire gradient header */}
-      <div className="relative fire-gradient px-6 pt-16 pb-14 text-center safe-area-top overflow-hidden">
-        <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/8" />
-        <div className="absolute -left-6 bottom-4 h-24 w-24 rounded-full bg-white/5" />
-        <div className="relative z-10 flex flex-col items-center gap-3">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/15 border border-white/20">
-            <Flame className="h-9 w-9 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-extrabold text-white tracking-tight">FireOps HQ</h1>
-            <p className="text-sm text-white/60 mt-0.5">Wildfire Operations Management</p>
-          </div>
+      {/* Cinematic hero header */}
+      <div className="relative overflow-hidden safe-area-top">
+        <img
+          src={heroBg}
+          alt=""
+          className="w-full h-56 object-cover"
+          width={1280}
+          height={640}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-black/30" />
+        <div className="absolute bottom-0 left-0 right-0 p-6 pb-8 flex flex-col items-center">
+          <img src={fireLogo} alt="FireOps HQ" className="h-16 w-16 mb-3" width={512} height={512} />
+          <h1 className="text-2xl font-extrabold text-white tracking-tight">FireOps HQ</h1>
+          <p className="text-sm text-white/50 mt-0.5">Wildfire Operations Management</p>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 -mt-5 rounded-t-3xl bg-background px-6 pt-8 pb-8">
+      {/* Form */}
+      <div className="flex-1 -mt-3 rounded-t-3xl bg-background px-6 pt-8 pb-8 relative z-10">
         <div className="mx-auto w-full max-w-sm space-y-6">
           <div className="text-center space-y-1">
             <h2 className="text-xl font-bold">
