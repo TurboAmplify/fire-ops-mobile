@@ -97,7 +97,7 @@ export default function Expenses() {
                   : "bg-secondary text-muted-foreground active:bg-secondary/70"
               }`}
             >
-              {c === "all" ? "All" : `${CATEGORY_ICONS[c]} ${CATEGORY_LABELS[c]}`}
+              {c === "all" ? "All" : CATEGORY_LABELS[c]}
             </button>
           ))}
         </div>
