@@ -119,7 +119,7 @@ export default function ExpenseDetail() {
         {/* Header */}
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-3xl">{CATEGORY_ICONS[cat] ?? "📦"}</span>
+            {(() => { const Icon = CATEGORY_ICON_MAP[cat] ?? CATEGORY_ICON_MAP.other; return <Icon className="h-7 w-7 text-muted-foreground" strokeWidth={1.75} />; })()}
             <div>
               <p className="text-2xl font-extrabold">${Number(expense.amount).toFixed(2)}</p>
               <div className="flex items-center gap-2">

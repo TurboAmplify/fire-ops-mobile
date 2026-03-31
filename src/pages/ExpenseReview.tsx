@@ -87,7 +87,7 @@ export default function ExpenseReview() {
                 {/* Summary row */}
                 <Link to={`/expenses/${exp.id}`} className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-3">
-                    <span className="text-xl">{CATEGORY_ICONS[cat] ?? "📦"}</span>
+                    {(() => { const Icon = CATEGORY_ICON_MAP[cat] ?? CATEGORY_ICON_MAP.other; return <Icon className="h-5 w-5 text-muted-foreground" strokeWidth={1.75} />; })()}
                     <div>
                       <p className="font-semibold text-sm">
                         {exp.description || CATEGORY_LABELS[cat] || exp.category}

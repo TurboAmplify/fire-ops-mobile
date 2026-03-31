@@ -145,9 +145,7 @@ export default function Expenses() {
                   className="flex items-center justify-between p-4 transition-all duration-150 active:bg-secondary/30"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className="text-xl shrink-0">
-                      {CATEGORY_ICONS[exp.category as ExpenseCategory] ?? "📦"}
-                    </span>
+                    {(() => { const Icon = CATEGORY_ICON_MAP[exp.category as ExpenseCategory] ?? CATEGORY_ICON_MAP.other; return <Icon className="h-5 w-5 text-muted-foreground shrink-0" strokeWidth={1.75} />; })()}
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="font-semibold text-sm truncate">
