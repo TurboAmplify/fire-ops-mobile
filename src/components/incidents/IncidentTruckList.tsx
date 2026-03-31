@@ -16,7 +16,7 @@ interface Props {
   incidentName?: string;
 }
 
-export function IncidentTruckList({ incidentId }: Props) {
+export function IncidentTruckList({ incidentId, incidentName }: Props) {
   const { data: incidentTrucks, isLoading } = useIncidentTrucks(incidentId);
   const { data: allTrucks } = useAvailableTrucks();
   const assignMutation = useAssignTruck(incidentId);
