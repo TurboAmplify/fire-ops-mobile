@@ -148,6 +148,12 @@ export function IncidentTruckList({ incidentId, incidentName }: Props) {
                   incidentTruckId={it.id}
                   incidentId={incidentId}
                   truckName={it.trucks.name}
+                  truckMake={it.trucks.make}
+                  truckModel={it.trucks.model}
+                  truckVin={it.trucks.vin}
+                  truckPlate={it.trucks.plate}
+                  truckUnitType={it.trucks.unit_type}
+                  incidentName={incidentName}
                 />
               </div>
             )}
