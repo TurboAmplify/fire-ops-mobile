@@ -1,7 +1,8 @@
 import { ReactNode } from "react";
 import { BottomNav } from "./BottomNav";
-import { ChevronLeft, Flame } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
+import fireLogo from "@/assets/fire-logo.png";
 
 interface AppShellProps {
   children: ReactNode;
@@ -22,30 +23,24 @@ export function AppShell({ children, title, headerRight, showBack }: AppShellPro
       {title && (
         <header className={`sticky top-0 z-40 safe-area-top ${
           isHome
-            ? "fire-gradient"
+            ? "bg-background/95 glass border-b border-border/40"
             : "glass border-b border-border/60 bg-card/80"
         }`}>
           <div className="flex items-center justify-between px-4 h-14">
-            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
               {isNested && (
                 <button
                   onClick={() => navigate(-1)}
-                  className={`flex items-center justify-center -ml-2 mr-1 h-9 w-9 rounded-full transition-colors ${
-                    isHome
-                      ? "text-white/90 active:bg-white/10"
-                      : "text-primary active:bg-primary/10"
-                  }`}
+                  className="flex items-center justify-center -ml-2 mr-0.5 h-9 w-9 rounded-full text-primary active:bg-primary/10 transition-colors"
                   aria-label="Go back"
                 >
                   <ChevronLeft className="h-5 w-5" />
                 </button>
               )}
               {isHome && (
-                <Flame className="h-5 w-5 text-white/90 mr-1 shrink-0" />
+                <img src={fireLogo} alt="" className="h-7 w-7 shrink-0" width={512} height={512} />
               )}
-              <h1 className={`text-[17px] font-bold tracking-tight truncate ${
-                isHome ? "text-white" : ""
-              }`}>{title}</h1>
+              <h1 className="text-[17px] font-bold tracking-tight truncate">{title}</h1>
             </div>
             {headerRight && <div className="flex items-center gap-1.5 shrink-0">{headerRight}</div>}
           </div>
