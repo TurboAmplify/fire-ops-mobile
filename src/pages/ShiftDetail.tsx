@@ -1,14 +1,19 @@
 import { AppShell } from "@/components/AppShell";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useShiftWithCrew } from "@/hooks/useShifts";
+import { useResourceOrders } from "@/hooks/useResourceOrders";
+import { OF297Header } from "@/components/shifts/OF297Header";
+import { useOrganization } from "@/hooks/useOrganization";
 import { ArrowLeft, Loader2, Sun, Moon } from "lucide-react";
 
 export default function ShiftDetail() {
-  const { shiftId } = useParams<{ shiftId: string }>();
+  const { incidentTruckId, shiftId } = useParams<{ incidentTruckId: string; shiftId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const truckName = (location.state as { truckName?: string })?.truckName ?? "Truck";
   const { data, isLoading, error } = useShiftWithCrew(shiftId || "");
+  const { data: resourceOrders } = useResourceOrders(incidentTruckId || "");
+  const { membership } = useOrganization();
 
   if (isLoading) {
     return (
@@ -34,7 +39,28 @@ export default function ShiftDetail() {
   }
 
   const { shift, crew } = data;
-  const totalHours = crew.reduce((sum, c) => sum + c.hours, 0);
+  const totalHours = crew.reduce((sum: number, c: any) => sum + c.hours, 0);
+
+  // Build OF-297 header from shift relations + resource order
+  const latestRO = resourceOrders?.find((ro) => ro.parsed_at != null);
+  const roData = (latestRO?.parsed_data || {}) as Record<string, any>;
+  const truckData = (shift as any).incident_trucks?.trucks;
+  const incidentData = (shift as any).incident_trucks?.incidents;
+
+  const of297Data = {
+    agreementNumber: roData.agreement_number || latestRO?.agreement_number,
+    contractorName: roData.contractor_name || membership?.organizationName,
+    resourceOrderNumber: roData.resource_order_number || latestRO?.resource_order_number,
+    incidentName: roData.incident_name || incidentData?.name,
+    incidentNumber: (shift as any).incident_number || roData.incident_number,
+    financialCode: (shift as any).financial_code || roData.financial_code,
+    equipmentMakeModel: truckData?.make && truckData?.model
+      ? `${truckData.make} ${truckData.model}`
+      : truckData?.make || roData.equipment_make_model,
+    equipmentType: truckData?.unit_type || roData.equipment_type,
+    vinNumber: truckData?.vin || roData.vin_number,
+    licensePlate: truckData?.plate || roData.license_plate,
+  };
 
   return (
     <AppShell
@@ -46,7 +72,7 @@ export default function ShiftDetail() {
         </button>
       }
     >
-      <div className="p-4 space-y-5">
+      <div className="p-4 space-y-4">
         {/* Header */}
         <div>
           <div className="flex items-center gap-2">
@@ -60,7 +86,10 @@ export default function ShiftDetail() {
           <p className="text-sm text-muted-foreground mt-1">{truckName} · {shift.date}</p>
         </div>
 
-        {/* Time info */}
+        {/* OF-297 Header */}
+        <OF297Header {...of297Data} />
+
+        {/* Time & Miles info */}
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-xl bg-card p-3">
             <p className="text-xs text-muted-foreground">Start</p>
@@ -72,10 +101,29 @@ export default function ShiftDetail() {
           </div>
         </div>
 
-        {/* Notes */}
+        {/* OF-297 flags */}
+        <div className="flex flex-wrap gap-2">
+          {(shift as any).miles != null && (
+            <span className="rounded-full bg-secondary px-3 py-1 text-xs font-medium">
+              {(shift as any).miles} mi
+            </span>
+          )}
+          {(shift as any).is_first_last && (
+            <span className="rounded-full bg-primary/15 text-primary px-3 py-1 text-xs font-bold">
+              First/Last Ticket
+            </span>
+          )}
+          {(shift as any).transport_retained && (
+            <span className="rounded-full bg-secondary px-3 py-1 text-xs font-medium">
+              Transport Retained
+            </span>
+          )}
+        </div>
+
+        {/* Notes/Remarks */}
         {shift.notes && (
           <div className="rounded-xl bg-card p-4">
-            <p className="text-xs text-muted-foreground mb-1">Notes</p>
+            <p className="text-xs text-muted-foreground mb-1">Remarks</p>
             <p className="text-sm">{shift.notes}</p>
           </div>
         )}
@@ -94,17 +142,38 @@ export default function ShiftDetail() {
           )}
 
           {crew.map((c: any) => (
-            <div key={c.id} className="flex items-center justify-between rounded-xl bg-card p-3">
-              <div>
-                <p className="text-sm font-semibold">{c.crew_members?.name ?? "Unknown"}</p>
-                <p className="text-[11px] text-muted-foreground">
-                  {c.role_on_shift || c.crew_members?.role || ""}
-                </p>
-                {c.notes && (
-                  <p className="text-[11px] text-muted-foreground italic mt-0.5">{c.notes}</p>
-                )}
+            <div key={c.id} className="rounded-xl bg-card p-3 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold">{c.crew_members?.name ?? "Unknown"}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {c.role_on_shift || c.crew_members?.role || ""}
+                  </p>
+                </div>
+                <span className="text-sm font-bold">{c.hours}h</span>
               </div>
-              <span className="text-sm font-bold">{c.hours}h</span>
+
+              {/* Time breakdown */}
+              {(c.operating_start || c.standby_start) && (
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  {c.operating_start && (
+                    <div>
+                      <span className="text-muted-foreground">Operating: </span>
+                      <span className="font-medium">{c.operating_start} - {c.operating_stop || "—"}</span>
+                    </div>
+                  )}
+                  {c.standby_start && (
+                    <div>
+                      <span className="text-muted-foreground">Standby: </span>
+                      <span className="font-medium">{c.standby_start} - {c.standby_stop || "—"}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {c.notes && (
+                <p className="text-[11px] text-muted-foreground italic">{c.notes}</p>
+              )}
             </div>
           ))}
         </div>

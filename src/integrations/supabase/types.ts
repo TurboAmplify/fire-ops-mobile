@@ -594,24 +594,36 @@ export type Database = {
           hours: number
           id: string
           notes: string | null
+          operating_start: string | null
+          operating_stop: string | null
           role_on_shift: string | null
           shift_id: string
+          standby_start: string | null
+          standby_stop: string | null
         }
         Insert: {
           crew_member_id: string
           hours: number
           id?: string
           notes?: string | null
+          operating_start?: string | null
+          operating_stop?: string | null
           role_on_shift?: string | null
           shift_id: string
+          standby_start?: string | null
+          standby_stop?: string | null
         }
         Update: {
           crew_member_id?: string
           hours?: number
           id?: string
           notes?: string | null
+          operating_start?: string | null
+          operating_stop?: string | null
           role_on_shift?: string | null
           shift_id?: string
+          standby_start?: string | null
+          standby_stop?: string | null
         }
         Relationships: [
           {
@@ -635,30 +647,45 @@ export type Database = {
           created_at: string
           date: string
           end_time: string | null
+          financial_code: string | null
           id: string
+          incident_number: string | null
           incident_truck_id: string
+          is_first_last: boolean | null
+          miles: number | null
           notes: string | null
           start_time: string | null
+          transport_retained: boolean | null
           type: string
         }
         Insert: {
           created_at?: string
           date: string
           end_time?: string | null
+          financial_code?: string | null
           id?: string
+          incident_number?: string | null
           incident_truck_id: string
+          is_first_last?: boolean | null
+          miles?: number | null
           notes?: string | null
           start_time?: string | null
+          transport_retained?: boolean | null
           type?: string
         }
         Update: {
           created_at?: string
           date?: string
           end_time?: string | null
+          financial_code?: string | null
           id?: string
+          incident_number?: string | null
           incident_truck_id?: string
+          is_first_last?: boolean | null
+          miles?: number | null
           notes?: string | null
           start_time?: string | null
+          transport_retained?: boolean | null
           type?: string
         }
         Relationships: [

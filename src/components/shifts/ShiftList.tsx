@@ -6,10 +6,36 @@ interface Props {
   incidentTruckId: string;
   incidentId: string;
   truckName: string;
+  truckMake?: string | null;
+  truckModel?: string | null;
+  truckVin?: string | null;
+  truckPlate?: string | null;
+  truckUnitType?: string | null;
+  incidentName?: string;
 }
 
-export function ShiftList({ incidentTruckId, incidentId, truckName }: Props) {
+export function ShiftList({
+  incidentTruckId,
+  incidentId,
+  truckName,
+  truckMake,
+  truckModel,
+  truckVin,
+  truckPlate,
+  truckUnitType,
+  incidentName,
+}: Props) {
   const { data: shifts, isLoading } = useShifts(incidentTruckId);
+
+  const linkState = {
+    truckName,
+    truckMake,
+    truckModel,
+    truckVin,
+    truckPlate,
+    truckUnitType,
+    incidentName,
+  };
 
   return (
     <div className="space-y-2">
@@ -20,7 +46,7 @@ export function ShiftList({ incidentTruckId, incidentId, truckName }: Props) {
         </div>
         <Link
           to={`/incidents/${incidentId}/trucks/${incidentTruckId}/shifts/new`}
-          state={{ truckName }}
+          state={linkState}
           className="flex items-center gap-1 text-xs font-medium text-primary touch-target"
         >
           <Plus className="h-3 w-3" />
@@ -38,7 +64,7 @@ export function ShiftList({ incidentTruckId, incidentId, truckName }: Props) {
         <Link
           key={shift.id}
           to={`/incidents/${incidentId}/trucks/${incidentTruckId}/shifts/${shift.id}`}
-          state={{ truckName }}
+          state={linkState}
           className="flex items-center justify-between rounded-lg bg-secondary p-2.5 active:scale-[0.98] transition-transform"
         >
           <div className="flex items-center gap-2">
@@ -54,7 +80,7 @@ export function ShiftList({ incidentTruckId, incidentId, truckName }: Props) {
           </div>
           {shift.start_time && shift.end_time && (
             <span className="text-[11px] text-muted-foreground">
-              {formatTime(shift.start_time)} – {formatTime(shift.end_time)}
+              {formatTime(shift.start_time)} - {formatTime(shift.end_time)}
             </span>
           )}
         </Link>
