@@ -12,6 +12,9 @@ import {
   Flame,
   Mail,
   Building2,
+  Users,
+  Truck,
+  ClipboardList,
 } from "lucide-react";
 
 export default function Settings() {
