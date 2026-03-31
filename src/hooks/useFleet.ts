@@ -223,3 +223,27 @@ export function useDeleteServiceLog(truckId: string) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["truck-service-logs", truckId] }),
   });
 }
+
+// Hero Photo
+export function useUpdateTruckHeroPhoto(truckId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, file }: { orgId: string; file: File }) =>
+      updateTruckHeroPhoto(truckId, orgId, file),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["trucks"] });
+      qc.invalidateQueries({ queryKey: ["trucks", truckId] });
+    },
+  });
+}
+
+export function useDeleteTruckHeroPhoto(truckId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => deleteTruckHeroPhoto(truckId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["trucks"] });
+      qc.invalidateQueries({ queryKey: ["trucks", truckId] });
+    },
+  });
+}
