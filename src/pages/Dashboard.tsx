@@ -1,34 +1,52 @@
 import { AppShell } from "@/components/AppShell";
-import { Flame, Clock, DollarSign, Truck, ChevronRight } from "lucide-react";
+import { Flame, Clock, DollarSign, Truck, ChevronRight, Shield, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useIncidents } from "@/hooks/useIncidents";
+import { useTrucks } from "@/hooks/useFleet";
+import { useCrewMembers } from "@/hooks/useCrewMembers";
 
 const quickLinks = [
-  { label: "Incidents", icon: Flame, to: "/incidents", desc: "Active fires" },
-  { label: "Fleet", icon: Truck, to: "/fleet", desc: "Trucks & equipment" },
-  { label: "Time", icon: Clock, to: "/time", desc: "Shift tracking" },
-  { label: "Expenses", icon: DollarSign, to: "/expenses", desc: "Receipts & costs" },
+  { label: "Incidents", icon: Flame, to: "/incidents", desc: "Active fires", color: "from-red-600/20 to-orange-600/10" },
+  { label: "Fleet", icon: Truck, to: "/fleet", desc: "Trucks & equipment", color: "from-blue-600/20 to-cyan-600/10" },
+  { label: "Time", icon: Clock, to: "/time", desc: "Shift tracking", color: "from-amber-600/20 to-yellow-600/10" },
+  { label: "Expenses", icon: DollarSign, to: "/expenses", desc: "Receipts & costs", color: "from-emerald-600/20 to-green-600/10" },
 ];
 
 export default function Dashboard() {
   const { data: incidents } = useIncidents();
+  const { data: trucks } = useTrucks();
+  const { data: crew } = useCrewMembers();
+
   const activeCount = incidents?.filter((i) => i.status === "active").length ?? 0;
+  const truckCount = trucks?.length ?? 0;
+  const crewCount = crew?.filter((c) => c.active).length ?? 0;
 
   return (
     <AppShell title="FireOps HQ">
       <div className="space-y-5 p-4">
-        {/* Hero status card */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-primary/85 p-5 text-primary-foreground">
-          <div className="relative z-10">
-            <p className="text-sm font-medium opacity-80">Active Incidents</p>
-            <p className="text-4xl font-extrabold tracking-tight mt-1">{activeCount}</p>
-            <p className="text-xs font-medium opacity-60 mt-2">
-              {activeCount === 0 ? "All clear — no active incidents" : `${activeCount} incident${activeCount > 1 ? "s" : ""} requiring attention`}
-            </p>
+        {/* Stats row */}
+        <div className="grid grid-cols-3 gap-2.5">
+          <div className="rounded-2xl bg-card p-4 card-shadow text-center">
+            <div className="flex items-center justify-center h-10 w-10 rounded-full bg-destructive/15 mx-auto mb-2">
+              <Flame className="h-5 w-5 text-destructive" />
+            </div>
+            <p className="text-2xl font-extrabold">{activeCount}</p>
+            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide mt-0.5">Active</p>
           </div>
-          {/* Decorative circle */}
-          <div className="absolute -right-6 -top-6 h-28 w-28 rounded-full bg-white/10" />
-          <div className="absolute -right-2 -bottom-8 h-20 w-20 rounded-full bg-white/5" />
+          <div className="rounded-2xl bg-card p-4 card-shadow text-center">
+            <div className="flex items-center justify-center h-10 w-10 rounded-full bg-primary/15 mx-auto mb-2">
+              <Truck className="h-5 w-5 text-primary" />
+            </div>
+            <p className="text-2xl font-extrabold">{truckCount}</p>
+            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide mt-0.5">Trucks</p>
+          </div>
+          <div className="rounded-2xl bg-card p-4 card-shadow text-center">
+            <div className="flex items-center justify-center h-10 w-10 rounded-full bg-success/15 mx-auto mb-2">
+              <Users className="h-5 w-5 text-success" />
+            </div>
+            <p className="text-2xl font-extrabold">{crewCount}</p>
+            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide mt-0.5">Crew</p>
+          </div>
         </div>
 
         {/* Quick actions */}
@@ -41,12 +59,13 @@ export default function Dashboard() {
               <Link
                 key={link.to}
                 to={link.to}
-                className="flex items-center gap-3 rounded-2xl bg-card p-3.5 card-shadow transition-all duration-150 active:scale-[0.97] active:shadow-none"
+                className="relative overflow-hidden flex items-center gap-3 rounded-2xl bg-card p-3.5 card-shadow transition-all duration-150 active:scale-[0.97] active:shadow-none"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent">
+                <div className={`absolute inset-0 bg-gradient-to-br ${link.color} opacity-50`} />
+                <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 border border-white/10">
                   <link.icon className="h-5 w-5 text-accent-foreground" />
                 </div>
-                <div className="min-w-0">
+                <div className="relative min-w-0">
                   <p className="text-sm font-semibold">{link.label}</p>
                   <p className="text-[11px] text-muted-foreground">{link.desc}</p>
                 </div>
@@ -70,7 +89,7 @@ export default function Dashboard() {
           <div className="space-y-2">
             {(!incidents || incidents.length === 0) && (
               <div className="rounded-2xl bg-card p-6 text-center card-shadow">
-                <Flame className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+                <Flame className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
                 <p className="text-sm text-muted-foreground">No incidents yet</p>
                 <Link to="/incidents/new" className="text-xs font-semibold text-primary mt-1 inline-block">
                   Create your first incident
@@ -90,8 +109,8 @@ export default function Dashboard() {
                 <span
                   className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${
                     inc.status === "active"
-                      ? "bg-destructive/12 text-destructive"
-                      : "bg-success/12 text-success"
+                      ? "bg-destructive/15 text-destructive"
+                      : "bg-success/15 text-success"
                   }`}
                 >
                   {inc.status}
