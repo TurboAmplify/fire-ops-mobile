@@ -22,6 +22,8 @@ import {
   fetchServiceLogs,
   createServiceLog,
   deleteServiceLog,
+  updateTruckHeroPhoto,
+  deleteTruckHeroPhoto,
 } from "@/services/fleet";
 import type { TruckInsert, TruckUpdate } from "@/services/fleet";
 
