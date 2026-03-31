@@ -13,6 +13,7 @@ const truckStatuses: IncidentTruckStatus[] = ["assigned", "active", "demobed", "
 
 interface Props {
   incidentId: string;
+  incidentName?: string;
 }
 
 export function IncidentTruckList({ incidentId }: Props) {
