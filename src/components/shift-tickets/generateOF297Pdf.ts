@@ -229,6 +229,20 @@ export async function generateOF297Pdf(ticket: ShiftTicket): Promise<void> {
   text("OPTIONAL FORM 297 (REV. 5/2024)", W - margin - 2, y, { size: 7 });
   text("USDA/USDI", W - margin - 2, y + 10, { size: 7 });
 
-  // Save
-  doc.save(`OF-297-${ticket.incident_name || "ShiftTicket"}-${ticket.id?.slice(0, 8)}.pdf`);
+  // Mobile-friendly download: use blob URL + anchor click (works on iOS Safari)
+  const fileName = `OF-297-${ticket.incident_name || "ShiftTicket"}-${ticket.id?.slice(0, 8)}.pdf`;
+  const pdfBlob = doc.output("blob");
+  const blobUrl = URL.createObjectURL(pdfBlob);
+  const link = document.createElement("a");
+  link.href = blobUrl;
+  link.download = fileName;
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+
+  // On iOS Safari, window.open is more reliable if <a> click doesn't trigger download
+  setTimeout(() => {
+    document.body.removeChild(link);
+    URL.revokeObjectURL(blobUrl);
+  }, 500);
 }
