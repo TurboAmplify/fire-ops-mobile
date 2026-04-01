@@ -289,6 +289,15 @@ export function ShiftTicketForm({
               <Plus className="h-3.5 w-3.5" /> Add Row
             </button>
           </div>
+
+          {/* Bulk time entry */}
+          {personnelEntries.length > 1 && (
+            <BulkTimeEntry
+              personnelEntries={personnelEntries}
+              setPersonnelEntries={setPersonnelEntries}
+            />
+          )}
+
           {/* Crew roster info */}
           {crewRoster && crewRoster.length > 0 && personnelEntries.length > 0 && (
             <p className="text-[10px] text-muted-foreground">
