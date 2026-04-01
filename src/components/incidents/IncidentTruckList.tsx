@@ -156,6 +156,19 @@ export function IncidentTruckList({ incidentId, incidentName }: Props) {
                   truckUnitType={it.trucks.unit_type}
                   incidentName={incidentName}
                 />
+
+                {/* OF-297 Shift Tickets */}
+                <ShiftTicketSection
+                  incidentTruckId={it.id}
+                  incidentId={incidentId}
+                  truckName={it.trucks.name}
+                  truckMake={it.trucks.make}
+                  truckModel={it.trucks.model}
+                  truckVin={it.trucks.vin}
+                  truckPlate={it.trucks.plate}
+                  truckUnitType={it.trucks.unit_type}
+                  incidentName={incidentName}
+                />
               </div>
             )}
           </div>
