@@ -14,7 +14,7 @@ interface ShiftTicketFormProps {
   incidentTruckId: string;
   organizationId: string;
   saving: boolean;
-  onSave: (data: Partial<ShiftTicket>) => void;
+  onSave: (data: Partial<ShiftTicket>) => void | Promise<void>;
   onExportPdf: (sigOverrides: { contractor_rep_signature_url: string | null; supervisor_signature_url: string | null }) => void;
   onBack: () => void;
   exportingPdf?: boolean;
@@ -118,13 +118,18 @@ export function ShiftTicketForm({
     }
     setRemarks(ticket.remarks || "");
     setContractorRepName(ticket.contractor_rep_name || "");
-    setContractorSigUrl(ticket.contractor_rep_signature_url || null);
+    setContractorSigUrl((current) => ticket.contractor_rep_signature_url || (current?.startsWith("blob:") ? current : null));
     setSupervisorName(ticket.supervisor_name || "");
     setSupervisorRO(ticket.supervisor_resource_order || "");
-    setSupervisorSigUrl(ticket.supervisor_signature_url || null);
+    setSupervisorSigUrl((current) => ticket.supervisor_signature_url || (current?.startsWith("blob:") ? current : null));
   }, [ticket]);
 
+  const getPersistedSignatureUrl = (url: string | null) => (url && !url.startsWith("blob:") ? url : null);
+
   const handleSave = () => {
+    const persistedContractorSigUrl = getPersistedSignatureUrl(contractorSigUrl);
+    const persistedSupervisorSigUrl = getPersistedSignatureUrl(supervisorSigUrl);
+
     onSave({
       incident_truck_id: incidentTruckId,
       organization_id: organizationId,
@@ -146,12 +151,12 @@ export function ShiftTicketForm({
       personnel_entries: personnelEntries as any,
       remarks: remarks || null,
       contractor_rep_name: contractorRepName || null,
-      contractor_rep_signature_url: contractorSigUrl,
-      contractor_rep_signed_at: contractorSigUrl ? new Date().toISOString() : null,
+      contractor_rep_signature_url: persistedContractorSigUrl,
+      contractor_rep_signed_at: persistedContractorSigUrl ? new Date().toISOString() : null,
       supervisor_name: supervisorName || null,
       supervisor_resource_order: supervisorRO || null,
-      supervisor_signature_url: supervisorSigUrl,
-      supervisor_signed_at: supervisorSigUrl ? new Date().toISOString() : null,
+      supervisor_signature_url: persistedSupervisorSigUrl,
+      supervisor_signed_at: persistedSupervisorSigUrl ? new Date().toISOString() : null,
       status: "draft",
     });
   };
@@ -173,8 +178,20 @@ export function ShiftTicketForm({
     setUploadingSig(true);
     try {
       const url = await uploadSignature(blob, ticket.id, sigType);
+      const sigUpdate: Partial<ShiftTicket> = sigType === "contractor"
+        ? {
+            contractor_rep_signature_url: url,
+            contractor_rep_signed_at: new Date().toISOString(),
+          }
+        : {
+            supervisor_signature_url: url,
+            supervisor_signed_at: new Date().toISOString(),
+          };
+
       if (sigType === "contractor") setContractorSigUrl(url);
       else setSupervisorSigUrl(url);
+
+      await Promise.resolve(onSave(sigUpdate));
       toast.success("Signature saved");
     } catch {
       toast.error("Failed to save signature");
@@ -189,6 +206,7 @@ export function ShiftTicketForm({
     const uploadPending = async () => {
       setUploadingSig(true);
       const sigUpdates: Partial<ShiftTicket> = {};
+
       for (const [sigType, blob] of Object.entries(pendingSigs)) {
         try {
           const url = await uploadSignature(blob, ticket.id!, sigType as "contractor" | "supervisor");
@@ -205,16 +223,23 @@ export function ShiftTicketForm({
           toast.error(`Failed to upload ${sigType} signature`);
         }
       }
+
       setPendingSigs({});
-      setUploadingSig(false);
-      // Persist the real storage URLs back to the DB
-      if (Object.keys(sigUpdates).length > 0) {
-        onSave({ ...sigUpdates, incident_truck_id: incidentTruckId, organization_id: organizationId } as any);
+
+      try {
+        if (Object.keys(sigUpdates).length > 0) {
+          await Promise.resolve(onSave(sigUpdates));
+        }
+        toast.success("Signatures uploaded");
+      } catch {
+        toast.error("Failed to attach uploaded signatures to this shift ticket");
+      } finally {
+        setUploadingSig(false);
       }
-      toast.success("Signatures uploaded");
     };
+
     uploadPending();
-  }, [ticket?.id, pendingSigs]);
+  }, [ticket?.id, pendingSigs, onSave]);
 
   const updateEquipment = (i: number, entry: EquipmentEntry) => {
     const next = [...equipmentEntries];
