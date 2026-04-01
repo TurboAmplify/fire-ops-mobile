@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
+import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 
 export type IncidentTruck = Tables<"incident_trucks">;
 export type IncidentTruckInsert = TablesInsert<"incident_trucks">;
@@ -38,13 +38,10 @@ export async function fetchAvailableTrucks() {
 }
 
 export async function assignTruckToIncident(incidentId: string, truckId: string) {
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from("incident_trucks")
-    .insert({ incident_id: incidentId, truck_id: truckId })
-    .select("*, trucks(*)")
-    .single();
+    .insert({ incident_id: incidentId, truck_id: truckId });
   if (error) throw error;
-  return data as IncidentTruckWithTruck;
 }
 
 export async function updateIncidentTruckStatus(id: string, status: IncidentTruckStatus) {
