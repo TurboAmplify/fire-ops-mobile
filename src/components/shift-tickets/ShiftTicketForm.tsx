@@ -15,7 +15,7 @@ interface ShiftTicketFormProps {
   organizationId: string;
   saving: boolean;
   onSave: (data: Partial<ShiftTicket>) => void;
-  onExportPdf: () => void;
+  onExportPdf: (sigOverrides: { contractor_rep_signature_url: string | null; supervisor_signature_url: string | null }) => void;
   onBack: () => void;
   exportingPdf?: boolean;
   warnings?: string[];
