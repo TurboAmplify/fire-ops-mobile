@@ -642,6 +642,130 @@ export type Database = {
           },
         ]
       }
+      shift_tickets: {
+        Row: {
+          agreement_number: string | null
+          contractor_name: string | null
+          contractor_rep_name: string | null
+          contractor_rep_signature_url: string | null
+          contractor_rep_signed_at: string | null
+          created_at: string
+          equipment_entries: Json
+          equipment_make_model: string | null
+          equipment_type: string | null
+          financial_code: string | null
+          first_last_type: string | null
+          id: string
+          incident_name: string | null
+          incident_number: string | null
+          incident_truck_id: string
+          is_first_last: boolean | null
+          license_id_number: string | null
+          miles: number | null
+          organization_id: string | null
+          personnel_entries: Json
+          remarks: string | null
+          resource_order_id: string | null
+          resource_order_number: string | null
+          serial_vin_number: string | null
+          status: string
+          supervisor_name: string | null
+          supervisor_resource_order: string | null
+          supervisor_signature_url: string | null
+          supervisor_signed_at: string | null
+          transport_retained: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          agreement_number?: string | null
+          contractor_name?: string | null
+          contractor_rep_name?: string | null
+          contractor_rep_signature_url?: string | null
+          contractor_rep_signed_at?: string | null
+          created_at?: string
+          equipment_entries?: Json
+          equipment_make_model?: string | null
+          equipment_type?: string | null
+          financial_code?: string | null
+          first_last_type?: string | null
+          id?: string
+          incident_name?: string | null
+          incident_number?: string | null
+          incident_truck_id: string
+          is_first_last?: boolean | null
+          license_id_number?: string | null
+          miles?: number | null
+          organization_id?: string | null
+          personnel_entries?: Json
+          remarks?: string | null
+          resource_order_id?: string | null
+          resource_order_number?: string | null
+          serial_vin_number?: string | null
+          status?: string
+          supervisor_name?: string | null
+          supervisor_resource_order?: string | null
+          supervisor_signature_url?: string | null
+          supervisor_signed_at?: string | null
+          transport_retained?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          agreement_number?: string | null
+          contractor_name?: string | null
+          contractor_rep_name?: string | null
+          contractor_rep_signature_url?: string | null
+          contractor_rep_signed_at?: string | null
+          created_at?: string
+          equipment_entries?: Json
+          equipment_make_model?: string | null
+          equipment_type?: string | null
+          financial_code?: string | null
+          first_last_type?: string | null
+          id?: string
+          incident_name?: string | null
+          incident_number?: string | null
+          incident_truck_id?: string
+          is_first_last?: boolean | null
+          license_id_number?: string | null
+          miles?: number | null
+          organization_id?: string | null
+          personnel_entries?: Json
+          remarks?: string | null
+          resource_order_id?: string | null
+          resource_order_number?: string | null
+          serial_vin_number?: string | null
+          status?: string
+          supervisor_name?: string | null
+          supervisor_resource_order?: string | null
+          supervisor_signature_url?: string | null
+          supervisor_signed_at?: string | null
+          transport_retained?: boolean | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_tickets_incident_truck_id_fkey"
+            columns: ["incident_truck_id"]
+            isOneToOne: false
+            referencedRelation: "incident_trucks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_tickets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_tickets_resource_order_id_fkey"
+            columns: ["resource_order_id"]
+            isOneToOne: false
+            referencedRelation: "resource_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shifts: {
         Row: {
           created_at: string
