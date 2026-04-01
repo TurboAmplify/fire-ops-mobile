@@ -120,7 +120,7 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
               </div>
             </div>
 
-            <div className="shrink-0 px-4 pb-4 safe-area-bottom">
+            <div className="shrink-0 px-4 pt-2 pb-6" style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom, 1.5rem))" }}>
               <button
                 type="submit"
                 disabled={!canSubmit}
