@@ -127,11 +127,13 @@ export default function ShiftTicketCreate() {
     }
   };
 
-  const handleExportPdf = async () => {
+  const handleExportPdf = async (sigOverrides: { contractor_rep_signature_url: string | null; supervisor_signature_url: string | null }) => {
     if (!ticket?.id) return;
     setExportingPdf(true);
     try {
-      await generateOF297Pdf(ticket as ShiftTicket);
+      // Merge current form signature URLs (which may be newer than DB state)
+      const ticketForPdf = { ...ticket, ...sigOverrides } as ShiftTicket;
+      await generateOF297Pdf(ticketForPdf);
       toast.success("PDF downloaded");
     } catch {
       toast.error("Failed to generate PDF");
