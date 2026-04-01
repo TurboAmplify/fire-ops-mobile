@@ -1,7 +1,17 @@
 import { useIncidentTruckCrew, useAvailableCrewMembers, useAssignCrew, useReleaseCrew } from "@/hooks/useIncidentTruckCrew";
-import { Users, Plus, UserMinus, Loader2 } from "lucide-react";
+import { Users, Plus, UserMinus, Loader2, AlertTriangle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Props {
   incidentTruckId: string;

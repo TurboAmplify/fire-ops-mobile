@@ -29,6 +29,31 @@ export async function fetchAvailableCrewMembers() {
 }
 
 export async function assignCrewToTruck(incidentTruckId: string, crewMemberId: string, roleOnAssignment?: string) {
+  // Check if a released row already exists (unique constraint on incident_truck_id + crew_member_id)
+  const { data: existing } = await supabase
+    .from("incident_truck_crew")
+    .select("id")
+    .eq("incident_truck_id", incidentTruckId)
+    .eq("crew_member_id", crewMemberId)
+    .eq("is_active", false)
+    .maybeSingle();
+
+  if (existing) {
+    // Reactivate the existing row
+    const { data, error } = await supabase
+      .from("incident_truck_crew")
+      .update({
+        is_active: true,
+        released_at: null,
+        role_on_assignment: roleOnAssignment || null,
+      })
+      .eq("id", existing.id)
+      .select("*, crew_members(*)")
+      .single();
+    if (error) throw error;
+    return data as IncidentTruckCrewWithMember;
+  }
+
   const { data, error } = await supabase
     .from("incident_truck_crew")
     .insert({
