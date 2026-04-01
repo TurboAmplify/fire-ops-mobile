@@ -102,7 +102,7 @@ export function TruckCrewSection({ incidentTruckId }: Props) {
             </p>
           </div>
           <button
-            onClick={() => handleRelease(c.id, c.crew_members.name)}
+            onClick={() => setReleaseTarget({ id: c.id, name: c.crew_members.name })}
             disabled={releaseMutation.isPending}
             className="rounded-lg p-2 text-destructive active:bg-destructive/10 touch-target"
             title="Release"
