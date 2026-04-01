@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, Plus, Loader2, FileText, Save, Download, AlertTriangle, Clock, Users } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Loader2, FileText, Save, Download, AlertTriangle, Clock, Users } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { SignatureCanvas } from "./SignatureCanvas";
@@ -42,6 +42,9 @@ const emptyPersonnelEntry = (): PersonnelEntry => ({
   total: 0,
   remarks: "",
 });
+
+const inputClass = "w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-ring touch-target";
+const labelClass = "text-[11px] font-medium text-muted-foreground";
 
 export function ShiftTicketForm({
   ticket,
@@ -88,6 +91,7 @@ export function ShiftTicketForm({
   // Signature modal
   const [sigModal, setSigModal] = useState<"contractor" | "supervisor" | null>(null);
   const [uploadingSig, setUploadingSig] = useState(false);
+  const [pendingSigs, setPendingSigs] = useState<Record<string, Blob>>({});
 
   // Populate from existing ticket
   useEffect(() => {
@@ -152,21 +156,17 @@ export function ShiftTicketForm({
     });
   };
 
-  // Store pending signature blobs when ticket hasn't been saved yet
-  const [pendingSigs, setPendingSigs] = useState<Record<string, Blob>>({});
-
   const handleSignatureSave = async (blob: Blob) => {
     if (!sigModal) return;
     const sigType = sigModal;
     setSigModal(null);
 
-    // If ticket not yet saved, store blob locally for preview + later upload
     if (!ticket?.id) {
       const localUrl = URL.createObjectURL(blob);
       if (sigType === "contractor") setContractorSigUrl(localUrl);
       else setSupervisorSigUrl(localUrl);
       setPendingSigs((prev) => ({ ...prev, [sigType]: blob }));
-      toast.success("Signature captured — save draft to upload");
+      toast.success("Signature captured -- save draft to upload");
       return;
     }
 
@@ -183,7 +183,7 @@ export function ShiftTicketForm({
     }
   };
 
-  // After ticket is created/saved and we have pending sigs, upload them
+  // Upload pending sigs once ticket has an ID
   useEffect(() => {
     if (!ticket?.id || Object.keys(pendingSigs).length === 0) return;
     const uploadPending = async () => {
@@ -209,74 +209,99 @@ export function ShiftTicketForm({
     next[i] = entry;
     setEquipmentEntries(next);
   };
-
-  const removeEquipment = (i: number) => {
-    setEquipmentEntries(equipmentEntries.filter((_, idx) => idx !== i));
-  };
+  const removeEquipment = (i: number) => setEquipmentEntries(equipmentEntries.filter((_, idx) => idx !== i));
 
   const updatePersonnel = (i: number, entry: PersonnelEntry) => {
     const next = [...personnelEntries];
     next[i] = entry;
     setPersonnelEntries(next);
   };
-
-  const removePersonnel = (i: number) => {
-    setPersonnelEntries(personnelEntries.filter((_, idx) => idx !== i));
-  };
-
-  const inputClass = "w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-ring touch-target";
-  const labelClass = "text-xs font-medium text-muted-foreground";
+  const removePersonnel = (i: number) => setPersonnelEntries(personnelEntries.filter((_, idx) => idx !== i));
 
   return (
-    <AppShell
-      title=""
-      headerRight={
-        <button onClick={onBack} className="flex items-center gap-1 text-sm font-medium text-primary touch-target">
-          <ArrowLeft className="h-4 w-4" /> Back
-        </button>
-      }
-    >
-      <div className="p-4 pb-32 space-y-5">
-        {/* Title */}
+    <AppShell title="Shift Ticket">
+      <div className="px-4 pt-3 pb-40 space-y-5 overflow-x-hidden">
+        {/* Title row */}
         <div className="flex items-center gap-2">
-          <FileText className="h-5 w-5 text-primary" />
-          <h2 className="text-lg font-extrabold">OF-297 Shift Ticket</h2>
+          <FileText className="h-5 w-5 text-primary shrink-0" />
+          <h2 className="text-base font-extrabold truncate">OF-297 Shift Ticket</h2>
+          {ticket?.status === "draft" && (
+            <span className="shrink-0 rounded-full bg-warning/20 text-warning px-2 py-0.5 text-[10px] font-bold">DRAFT</span>
+          )}
         </div>
-        {ticket?.status === "draft" && (
-          <span className="inline-block rounded-full bg-warning/20 text-warning px-2.5 py-0.5 text-xs font-bold">DRAFT</span>
-        )}
 
         {/* Warnings */}
         {warnings && warnings.length > 0 && (
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {warnings.map((w, i) => (
-              <div key={i} className="flex items-start gap-2 rounded-xl bg-warning/10 border border-warning/30 p-3">
-                <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
-                <p className="text-xs text-warning font-medium">{w}</p>
+              <div key={i} className="flex items-start gap-2 rounded-xl bg-warning/10 border border-warning/30 p-2.5">
+                <AlertTriangle className="h-3.5 w-3.5 text-warning shrink-0 mt-0.5" />
+                <p className="text-[11px] text-warning font-medium">{w}</p>
               </div>
             ))}
           </div>
         )}
 
-        {/* Header Fields */}
-        <section className="space-y-3">
+        {/* ── Header Fields ── */}
+        <section className="space-y-2">
           <h3 className="text-sm font-bold">Header Info</h3>
-          <div className="grid grid-cols-2 gap-2">
-            <div><label className={labelClass}>1. Agreement #</label><input value={agreementNumber} onChange={(e) => setAgreementNumber(e.target.value)} className={inputClass} /></div>
-            <div><label className={labelClass}>2. Contractor</label><input value={contractorName} onChange={(e) => setContractorName(e.target.value)} className={inputClass} /></div>
-            <div><label className={labelClass}>3. Resource Order #</label><input value={resourceOrderNumber} onChange={(e) => setResourceOrderNumber(e.target.value)} className={inputClass} /></div>
-            <div><label className={labelClass}>4. Incident Name</label><input value={incidentName} onChange={(e) => setIncidentName(e.target.value)} className={inputClass} /></div>
-            <div><label className={labelClass}>5. Incident #</label><input value={incidentNumber} onChange={(e) => setIncidentNumber(e.target.value)} className={inputClass} /></div>
-            <div><label className={labelClass}>6. Financial Code</label><input value={financialCode} onChange={(e) => setFinancialCode(e.target.value)} className={inputClass} /></div>
-            <div><label className={labelClass}>7. Equipment Make/Model</label><input value={equipmentMakeModel} onChange={(e) => setEquipmentMakeModel(e.target.value)} className={inputClass} /></div>
-            <div><label className={labelClass}>8. Equipment Type</label><input value={equipmentType} onChange={(e) => setEquipmentType(e.target.value)} className={inputClass} /></div>
-            <div><label className={labelClass}>9. Serial/VIN</label><input value={serialVin} onChange={(e) => setSerialVin(e.target.value)} className={inputClass} /></div>
-            <div><label className={labelClass}>10. License/ID</label><input value={licenseId} onChange={(e) => setLicenseId(e.target.value)} className={inputClass} /></div>
+          <div className="space-y-2">
+            <div>
+              <label className={labelClass}>1. Agreement / Contract #</label>
+              <input value={agreementNumber} onChange={(e) => setAgreementNumber(e.target.value)} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>2. Contractor Name</label>
+              <input value={contractorName} onChange={(e) => setContractorName(e.target.value)} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>3. Resource Order #</label>
+              <input value={resourceOrderNumber} onChange={(e) => setResourceOrderNumber(e.target.value)} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>4. Incident Name</label>
+              <input value={incidentName} onChange={(e) => setIncidentName(e.target.value)} className={inputClass} />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className={labelClass}>5. Incident #</label>
+                <input value={incidentNumber} onChange={(e) => setIncidentNumber(e.target.value)} className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>6. Financial Code</label>
+                <input value={financialCode} onChange={(e) => setFinancialCode(e.target.value)} className={inputClass} />
+              </div>
+            </div>
           </div>
         </section>
 
-        {/* Flags */}
-        <section className="space-y-3">
+        {/* ── Equipment Info ── */}
+        <section className="space-y-2">
+          <h3 className="text-sm font-bold">Equipment Info</h3>
+          <div className="space-y-2">
+            <div>
+              <label className={labelClass}>7. Equipment Make/Model</label>
+              <input value={equipmentMakeModel} onChange={(e) => setEquipmentMakeModel(e.target.value)} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>8. Equipment Type</label>
+              <input value={equipmentType} onChange={(e) => setEquipmentType(e.target.value)} className={inputClass} />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className={labelClass}>9. Serial/VIN</label>
+                <input value={serialVin} onChange={(e) => setSerialVin(e.target.value)} className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>10. License/ID</label>
+                <input value={licenseId} onChange={(e) => setLicenseId(e.target.value)} className={inputClass} />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Options ── */}
+        <section className="space-y-2">
           <h3 className="text-sm font-bold">Options</h3>
           <label className="flex items-center gap-3 touch-target">
             <input type="checkbox" checked={transportRetained} onChange={(e) => setTransportRetained(e.target.checked)} className="h-5 w-5 rounded border-input accent-primary" />
@@ -302,7 +327,7 @@ export function ShiftTicketForm({
           </div>
         </section>
 
-        {/* Equipment Entries */}
+        {/* ── Equipment Entries ── */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold">Equipment</h3>
@@ -316,7 +341,7 @@ export function ShiftTicketForm({
           ))}
         </section>
 
-        {/* Personnel Entries */}
+        {/* ── Personnel Entries ── */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold">Personnel</h3>
@@ -328,13 +353,9 @@ export function ShiftTicketForm({
 
           {/* Bulk time entry */}
           {personnelEntries.length > 1 && (
-            <BulkTimeEntry
-              personnelEntries={personnelEntries}
-              setPersonnelEntries={setPersonnelEntries}
-            />
+            <BulkTimeEntry personnelEntries={personnelEntries} setPersonnelEntries={setPersonnelEntries} />
           )}
 
-          {/* Crew roster info */}
           {crewRoster && crewRoster.length > 0 && personnelEntries.length > 0 && (
             <p className="text-[10px] text-muted-foreground">
               {crewRoster.length} crew member{crewRoster.length !== 1 ? "s" : ""} auto-loaded from truck assignment
@@ -345,7 +366,7 @@ export function ShiftTicketForm({
           ))}
         </section>
 
-        {/* Remarks */}
+        {/* ── Remarks ── */}
         <section className="space-y-2">
           <h3 className="text-sm font-bold">30. Remarks</h3>
           <textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} rows={3}
@@ -353,7 +374,7 @@ export function ShiftTicketForm({
             className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-ring resize-none" />
         </section>
 
-        {/* Signatures */}
+        {/* ── Signatures ── */}
         <section className="space-y-3">
           <h3 className="text-sm font-bold">Signatures</h3>
 
@@ -365,7 +386,7 @@ export function ShiftTicketForm({
             {contractorSigUrl ? (
               <div className="space-y-2">
                 <img src={contractorSigUrl} alt="Contractor signature" className="h-16 rounded border border-border bg-card" />
-                <button onClick={() => { setContractorSigUrl(null); }} className="text-xs text-destructive touch-target">Clear</button>
+                <button onClick={() => setContractorSigUrl(null)} className="text-xs text-destructive touch-target">Clear</button>
               </div>
             ) : (
               <button onClick={() => setSigModal("contractor")} disabled={uploadingSig}
@@ -378,15 +399,13 @@ export function ShiftTicketForm({
           {/* Supervisor */}
           <div className="rounded-xl border border-border bg-card p-3 space-y-2">
             <label className={labelClass}>33. Incident Supervisor (Name & RO#)</label>
-            <div className="grid grid-cols-2 gap-2">
-              <input value={supervisorName} onChange={(e) => setSupervisorName(e.target.value)} placeholder="Name" className={inputClass} />
-              <input value={supervisorRO} onChange={(e) => setSupervisorRO(e.target.value)} placeholder="RO #" className={inputClass} />
-            </div>
+            <input value={supervisorName} onChange={(e) => setSupervisorName(e.target.value)} placeholder="Name" className={inputClass} />
+            <input value={supervisorRO} onChange={(e) => setSupervisorRO(e.target.value)} placeholder="Resource Order #" className={inputClass} />
             <label className={labelClass}>34. Signature</label>
             {supervisorSigUrl ? (
               <div className="space-y-2">
                 <img src={supervisorSigUrl} alt="Supervisor signature" className="h-16 rounded border border-border bg-card" />
-                <button onClick={() => { setSupervisorSigUrl(null); }} className="text-xs text-destructive touch-target">Clear</button>
+                <button onClick={() => setSupervisorSigUrl(null)} className="text-xs text-destructive touch-target">Clear</button>
               </div>
             ) : (
               <button onClick={() => setSigModal("supervisor")} disabled={uploadingSig}
@@ -398,16 +417,16 @@ export function ShiftTicketForm({
         </section>
       </div>
 
-      {/* Bottom action bar */}
-      <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-background/95 glass safe-area-bottom p-4 flex gap-2 z-40">
+      {/* ── Bottom Action Bar (above BottomNav) ── */}
+      <div className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom))] left-0 right-0 border-t border-border bg-background/95 backdrop-blur-md p-3 flex gap-2 z-40">
         <button onClick={handleSave} disabled={saving}
-          className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-bold text-primary-foreground touch-target disabled:opacity-40 active:scale-[0.98]">
+          className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground touch-target disabled:opacity-40 active:scale-[0.98]">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           Save Draft
         </button>
         {ticket?.id && (
           <button onClick={onExportPdf} disabled={exportingPdf}
-            className="flex items-center justify-center gap-2 rounded-xl bg-secondary px-5 py-3.5 text-sm font-bold text-secondary-foreground touch-target disabled:opacity-40 active:scale-[0.98]">
+            className="flex items-center justify-center gap-2 rounded-xl bg-secondary px-5 py-3 text-sm font-bold text-secondary-foreground touch-target disabled:opacity-40 active:scale-[0.98]">
             {exportingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             PDF
           </button>
@@ -454,9 +473,10 @@ function BulkTimeEntry({
       };
     });
     setPersonnelEntries(updated);
+    toast.success(`Applied times to ${updated.length} crew members`);
   };
 
-  const inputClass = "w-full rounded-lg border border-input bg-background px-2 py-2 text-sm outline-none focus:ring-1 focus:ring-ring";
+  const bulkInput = "w-full rounded-lg border border-input bg-background px-2 py-2 text-sm outline-none focus:ring-1 focus:ring-ring";
 
   return (
     <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-3 space-y-2">
@@ -464,36 +484,36 @@ function BulkTimeEntry({
         <Users className="h-4 w-4 text-primary" />
         <span className="text-xs font-bold text-primary">Apply Time to All Crew</span>
       </div>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="space-y-2">
         <div>
           <label className="text-[10px] text-muted-foreground">Date</label>
-          <input type="date" value={bulkDate} onChange={(e) => setBulkDate(e.target.value)} className={inputClass} />
+          <input type="date" value={bulkDate} onChange={(e) => setBulkDate(e.target.value)} className={bulkInput} />
         </div>
-        <div />
-        <div>
-          <label className="text-[10px] text-muted-foreground">Operating Start</label>
-          <input type="time" value={bulkOpStart} onChange={(e) => setBulkOpStart(e.target.value)} className={inputClass} />
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-[10px] text-muted-foreground">Operating Start</label>
+            <input type="time" value={bulkOpStart} onChange={(e) => setBulkOpStart(e.target.value)} className={bulkInput} />
+          </div>
+          <div>
+            <label className="text-[10px] text-muted-foreground">Operating Stop</label>
+            <input type="time" value={bulkOpStop} onChange={(e) => setBulkOpStop(e.target.value)} className={bulkInput} />
+          </div>
         </div>
-        <div>
-          <label className="text-[10px] text-muted-foreground">Operating Stop</label>
-          <input type="time" value={bulkOpStop} onChange={(e) => setBulkOpStop(e.target.value)} className={inputClass} />
-        </div>
-        <div>
-          <label className="text-[10px] text-muted-foreground">Standby Start</label>
-          <input type="time" value={bulkSbStart} onChange={(e) => setBulkSbStart(e.target.value)} className={inputClass} />
-        </div>
-        <div>
-          <label className="text-[10px] text-muted-foreground">Standby Stop</label>
-          <input type="time" value={bulkSbStop} onChange={(e) => setBulkSbStop(e.target.value)} className={inputClass} />
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-[10px] text-muted-foreground">Standby Start</label>
+            <input type="time" value={bulkSbStart} onChange={(e) => setBulkSbStart(e.target.value)} className={bulkInput} />
+          </div>
+          <div>
+            <label className="text-[10px] text-muted-foreground">Standby Stop</label>
+            <input type="time" value={bulkSbStop} onChange={(e) => setBulkSbStop(e.target.value)} className={bulkInput} />
+          </div>
         </div>
       </div>
-      <button
-        type="button"
-        onClick={applyToAll}
-        className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-bold text-primary-foreground touch-target active:scale-[0.98]"
-      >
+      <button type="button" onClick={applyToAll}
+        className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-bold text-primary-foreground touch-target active:scale-[0.98]">
         <Clock className="h-4 w-4" />
-        Apply to All ({personnelEntries.length}) Crew Members
+        Apply to All ({personnelEntries.length})
       </button>
     </div>
   );
