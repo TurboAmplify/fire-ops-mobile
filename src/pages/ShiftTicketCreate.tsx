@@ -68,7 +68,7 @@ export default function ShiftTicketCreate() {
       : [];
 
     setTicket({
-      agreement_number: roData.agreement_number || latestRO?.agreement_number || "",
+      agreement_number: roData.agreement_number || roData.contract_number || latestRO?.agreement_number || "",
       contractor_name: roData.contractor_name || membership?.organizationName || "",
       resource_order_number: roData.resource_order_number || latestRO?.resource_order_number || "",
       incident_name: incident?.name || roData.incident_name || locState?.incidentName || "",

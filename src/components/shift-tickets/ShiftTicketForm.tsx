@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
-import { ArrowLeft, Plus, Loader2, FileText, Save, Download, AlertTriangle } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { ArrowLeft, Plus, Loader2, FileText, Save, Download, AlertTriangle, Clock, Users } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { SignatureCanvas } from "./SignatureCanvas";
 import { EquipmentEntryRow } from "./EquipmentEntryRow";
 import { PersonnelEntryRow } from "./PersonnelEntryRow";
-import { uploadSignature } from "@/services/shift-tickets";
+import { uploadSignature, computeHours } from "@/services/shift-tickets";
 import type { ShiftTicket, EquipmentEntry, PersonnelEntry } from "@/services/shift-tickets";
 import type { IncidentTruckCrewWithMember } from "@/services/incident-truck-crew";
 
@@ -289,6 +289,15 @@ export function ShiftTicketForm({
               <Plus className="h-3.5 w-3.5" /> Add Row
             </button>
           </div>
+
+          {/* Bulk time entry */}
+          {personnelEntries.length > 1 && (
+            <BulkTimeEntry
+              personnelEntries={personnelEntries}
+              setPersonnelEntries={setPersonnelEntries}
+            />
+          )}
+
           {/* Crew roster info */}
           {crewRoster && crewRoster.length > 0 && personnelEntries.length > 0 && (
             <p className="text-[10px] text-muted-foreground">
@@ -377,5 +386,79 @@ export function ShiftTicketForm({
         title={sigModal === "contractor" ? "Contractor Signature" : "Supervisor Signature"}
       />
     </AppShell>
+  );
+}
+
+/* ── Bulk Time Entry Component ── */
+function BulkTimeEntry({
+  personnelEntries,
+  setPersonnelEntries,
+}: {
+  personnelEntries: PersonnelEntry[];
+  setPersonnelEntries: React.Dispatch<React.SetStateAction<PersonnelEntry[]>>;
+}) {
+  const [bulkDate, setBulkDate] = useState(new Date().toISOString().split("T")[0]);
+  const [bulkOpStart, setBulkOpStart] = useState("");
+  const [bulkOpStop, setBulkOpStop] = useState("");
+  const [bulkSbStart, setBulkSbStart] = useState("");
+  const [bulkSbStop, setBulkSbStop] = useState("");
+
+  const applyToAll = () => {
+    const updated = personnelEntries.map((entry) => {
+      const opHours = computeHours(bulkOpStart, bulkOpStop);
+      const sbHours = computeHours(bulkSbStart, bulkSbStop);
+      return {
+        ...entry,
+        date: bulkDate || entry.date,
+        op_start: bulkOpStart || entry.op_start,
+        op_stop: bulkOpStop || entry.op_stop,
+        sb_start: bulkSbStart || entry.sb_start,
+        sb_stop: bulkSbStop || entry.sb_stop,
+        total: Math.round(((bulkOpStart && bulkOpStop ? opHours : computeHours(entry.op_start, entry.op_stop)) + (bulkSbStart && bulkSbStop ? sbHours : computeHours(entry.sb_start, entry.sb_stop))) * 10) / 10,
+      };
+    });
+    setPersonnelEntries(updated);
+  };
+
+  const inputClass = "w-full rounded-lg border border-input bg-background px-2 py-2 text-sm outline-none focus:ring-1 focus:ring-ring";
+
+  return (
+    <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-3 space-y-2">
+      <div className="flex items-center gap-2">
+        <Users className="h-4 w-4 text-primary" />
+        <span className="text-xs font-bold text-primary">Apply Time to All Crew</span>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="text-[10px] text-muted-foreground">Date</label>
+          <input type="date" value={bulkDate} onChange={(e) => setBulkDate(e.target.value)} className={inputClass} />
+        </div>
+        <div />
+        <div>
+          <label className="text-[10px] text-muted-foreground">Operating Start</label>
+          <input type="time" value={bulkOpStart} onChange={(e) => setBulkOpStart(e.target.value)} className={inputClass} />
+        </div>
+        <div>
+          <label className="text-[10px] text-muted-foreground">Operating Stop</label>
+          <input type="time" value={bulkOpStop} onChange={(e) => setBulkOpStop(e.target.value)} className={inputClass} />
+        </div>
+        <div>
+          <label className="text-[10px] text-muted-foreground">Standby Start</label>
+          <input type="time" value={bulkSbStart} onChange={(e) => setBulkSbStart(e.target.value)} className={inputClass} />
+        </div>
+        <div>
+          <label className="text-[10px] text-muted-foreground">Standby Stop</label>
+          <input type="time" value={bulkSbStop} onChange={(e) => setBulkSbStop(e.target.value)} className={inputClass} />
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={applyToAll}
+        className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-bold text-primary-foreground touch-target active:scale-[0.98]"
+      >
+        <Clock className="h-4 w-4" />
+        Apply to All ({personnelEntries.length}) Crew Members
+      </button>
+    </div>
   );
 }
