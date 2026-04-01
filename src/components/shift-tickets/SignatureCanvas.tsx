@@ -29,8 +29,10 @@ export function SignatureCanvas({ open, onClose, onSave, title }: SignatureCanva
     canvas.height = rect.height * dpr;
     const ctx = canvas.getContext("2d");
     if (ctx) {
-      ctx.scale(dpr, dpr);
-      ctx.strokeStyle = "#ffffff";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.fillStyle = "hsl(0 0% 100%)";
+      ctx.fillRect(0, 0, rect.width, rect.height);
+      ctx.strokeStyle = "hsl(222 47% 11%)";
       ctx.lineWidth = 2.5;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
@@ -75,8 +77,12 @@ export function SignatureCanvas({ open, onClose, onSave, title }: SignatureCanva
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    const dpr = window.devicePixelRatio || 1;
-    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "hsl(0 0% 100%)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
     setHasStroke(false);
   };
 

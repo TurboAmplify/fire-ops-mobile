@@ -1,3 +1,4 @@
+import { supabase } from "@/integrations/supabase/client";
 import type { ShiftTicket, EquipmentEntry, PersonnelEntry } from "@/services/shift-tickets";
 
 // Dynamically import jspdf to keep bundle small
@@ -6,25 +7,79 @@ async function getJsPdf() {
   return jsPDF;
 }
 
+function getSignatureStoragePath(url: string): string | null {
+  const marker = "/storage/v1/object/public/signatures/";
+  const markerIndex = url.indexOf(marker);
+  if (markerIndex === -1) return null;
+  return decodeURIComponent(url.slice(markerIndex + marker.length));
+}
+
+async function normalizeSignatureBlob(blob: Blob): Promise<string | null> {
+  const objectUrl = URL.createObjectURL(blob);
+
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("Signature image failed to load"));
+      img.src = objectUrl;
+    });
+
+    const canvas = document.createElement("canvas");
+    canvas.width = image.naturalWidth || image.width || 1;
+    canvas.height = image.naturalHeight || image.height || 1;
+    const ctx = canvas.getContext("2d");
+
+    if (!ctx) return null;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const pixels = imageData.data;
+
+    for (let i = 0; i < pixels.length; i += 4) {
+      if (pixels[i + 3] === 0) continue;
+      pixels[i] = 17;
+      pixels[i + 1] = 24;
+      pixels[i + 2] = 39;
+      pixels[i + 3] = Math.max(pixels[i + 3], 220);
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+    return canvas.toDataURL("image/png");
+  } catch (error) {
+    console.warn("Failed to normalize signature image:", error);
+    return null;
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 async function loadImageAsBase64(url: string): Promise<string | null> {
   if (!url) return null;
+
   try {
-    // For blob URLs, fetch directly; for remote URLs, try with no-cors fallback
-    const res = await fetch(url, { mode: "cors" });
-    if (!res.ok) {
-      console.warn("Signature fetch failed:", res.status, url);
-      return null;
+    let blob: Blob | null = null;
+    const storagePath = getSignatureStoragePath(url);
+
+    if (storagePath) {
+      const { data, error } = await supabase.storage.from("signatures").download(storagePath);
+      if (!error && data) {
+        blob = data;
+      }
     }
-    const blob = await res.blob();
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = () => {
-        console.warn("FileReader error for signature");
-        resolve(null);
-      };
-      reader.readAsDataURL(blob);
-    });
+
+    if (!blob) {
+      const res = await fetch(url, { mode: "cors" });
+      if (!res.ok) {
+        console.warn("Signature fetch failed:", res.status, url);
+        return null;
+      }
+      blob = await res.blob();
+    }
+
+    return await normalizeSignatureBlob(blob);
   } catch (err) {
     console.warn("Failed to load signature image:", err, url);
     return null;
