@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, Plus, Loader2, FileText, Save, Download } from "lucide-react";
+import { ArrowLeft, Plus, Loader2, FileText, Save, Download, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { SignatureCanvas } from "./SignatureCanvas";
@@ -7,6 +7,7 @@ import { EquipmentEntryRow } from "./EquipmentEntryRow";
 import { PersonnelEntryRow } from "./PersonnelEntryRow";
 import { uploadSignature } from "@/services/shift-tickets";
 import type { ShiftTicket, EquipmentEntry, PersonnelEntry } from "@/services/shift-tickets";
+import type { IncidentTruckCrewWithMember } from "@/services/incident-truck-crew";
 
 interface ShiftTicketFormProps {
   ticket: Partial<ShiftTicket> | null;
@@ -17,6 +18,8 @@ interface ShiftTicketFormProps {
   onExportPdf: () => void;
   onBack: () => void;
   exportingPdf?: boolean;
+  warnings?: string[];
+  crewRoster?: IncidentTruckCrewWithMember[];
 }
 
 const emptyEquipmentEntry = (): EquipmentEntry => ({
@@ -49,6 +52,8 @@ export function ShiftTicketForm({
   onExportPdf,
   onBack,
   exportingPdf,
+  warnings,
+  crewRoster,
 }: ShiftTicketFormProps) {
   // Header fields
   const [agreementNumber, setAgreementNumber] = useState("");
@@ -205,6 +210,18 @@ export function ShiftTicketForm({
           <span className="inline-block rounded-full bg-warning/20 text-warning px-2.5 py-0.5 text-xs font-bold">DRAFT</span>
         )}
 
+        {/* Warnings */}
+        {warnings && warnings.length > 0 && (
+          <div className="space-y-2">
+            {warnings.map((w, i) => (
+              <div key={i} className="flex items-start gap-2 rounded-xl bg-warning/10 border border-warning/30 p-3">
+                <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+                <p className="text-xs text-warning font-medium">{w}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Header Fields */}
         <section className="space-y-3">
           <h3 className="text-sm font-bold">Header Info</h3>
@@ -272,6 +289,12 @@ export function ShiftTicketForm({
               <Plus className="h-3.5 w-3.5" /> Add Row
             </button>
           </div>
+          {/* Crew roster info */}
+          {crewRoster && crewRoster.length > 0 && personnelEntries.length > 0 && (
+            <p className="text-[10px] text-muted-foreground">
+              {crewRoster.length} crew member{crewRoster.length !== 1 ? "s" : ""} auto-loaded from truck assignment
+            </p>
+          )}
           {personnelEntries.map((entry, i) => (
             <PersonnelEntryRow key={i} entry={entry} index={i} onChange={updatePersonnel} onRemove={removePersonnel} />
           ))}

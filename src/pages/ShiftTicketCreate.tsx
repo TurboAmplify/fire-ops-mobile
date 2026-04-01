@@ -1,12 +1,15 @@
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { ShiftTicketForm } from "@/components/shift-tickets/ShiftTicketForm";
 import { useCreateShiftTicket, useUpdateShiftTicket } from "@/hooks/useShiftTickets";
 import { useResourceOrders } from "@/hooks/useResourceOrders";
 import { useOrganization } from "@/hooks/useOrganization";
+import { useIncident } from "@/hooks/useIncidents";
+import { useIncidentTrucks } from "@/hooks/useIncidentTrucks";
+import { useIncidentTruckCrew } from "@/hooks/useIncidentTruckCrew";
 import { generateOF297Pdf } from "@/components/shift-tickets/generateOF297Pdf";
-import type { ShiftTicket } from "@/services/shift-tickets";
+import type { ShiftTicket, PersonnelEntry } from "@/services/shift-tickets";
 
 export default function ShiftTicketCreate() {
   const { incidentId, incidentTruckId } = useParams<{ incidentId: string; incidentTruckId: string }>();
@@ -16,37 +19,86 @@ export default function ShiftTicketCreate() {
   const { membership } = useOrganization();
   const orgId = membership?.organizationId || "";
 
+  // Fetch relational data
+  const { data: incident } = useIncident(incidentId || "");
+  const { data: incidentTrucks } = useIncidentTrucks(incidentId || "");
   const { data: resourceOrders } = useResourceOrders(incidentTruckId || "");
+  const { data: crewAssignments } = useIncidentTruckCrew(incidentTruckId || "");
+
+  // Find the truck record from incident_trucks join
+  const incidentTruck = useMemo(
+    () => incidentTrucks?.find((it) => it.id === incidentTruckId),
+    [incidentTrucks, incidentTruckId]
+  );
+  const truck = incidentTruck?.trucks;
+
+  // Active crew for this truck on this incident
+  const activeCrew = useMemo(
+    () => crewAssignments?.filter((c) => c.is_active) ?? [],
+    [crewAssignments]
+  );
+
   const createMutation = useCreateShiftTicket(incidentTruckId || "");
 
   const [ticket, setTicket] = useState<Partial<ShiftTicket> | null>(null);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [initialized, setInitialized] = useState(false);
 
-  // Build initial ticket from resource order data
+  // Build initial ticket from all relational data
   useEffect(() => {
-    if (ticket?.id) return; // Already created
+    if (ticket?.id || initialized) return; // Already created or initialized
+    // Wait for critical data to load
+    if (!incident && incidentId) return;
+
     const latestRO = resourceOrders?.find((ro) => ro.parsed_at != null);
     const roData = (latestRO?.parsed_data || {}) as Record<string, any>;
+
+    // Build personnel entries from assigned crew
+    const personnelEntries: PersonnelEntry[] = activeCrew.length > 0
+      ? activeCrew.map((c) => ({
+          date: new Date().toISOString().split("T")[0],
+          operator_name: c.crew_members?.name || "",
+          op_start: "",
+          op_stop: "",
+          sb_start: "",
+          sb_stop: "",
+          total: 0,
+          remarks: c.role_on_assignment || c.crew_members?.role || "",
+        }))
+      : [];
 
     setTicket({
       agreement_number: roData.agreement_number || latestRO?.agreement_number || "",
       contractor_name: roData.contractor_name || membership?.organizationName || "",
       resource_order_number: roData.resource_order_number || latestRO?.resource_order_number || "",
-      incident_name: roData.incident_name || locState?.incidentName || "",
+      incident_name: incident?.name || roData.incident_name || locState?.incidentName || "",
       incident_number: roData.incident_number || "",
       financial_code: roData.financial_code || "",
-      equipment_make_model: locState?.truckMake && locState?.truckModel
-        ? `${locState.truckMake} ${locState.truckModel}`
+      equipment_make_model: truck
+        ? `${truck.make || ""} ${truck.model || ""}`.trim()
         : roData.equipment_make_model || "",
-      equipment_type: locState?.truckUnitType || roData.equipment_type || "",
-      serial_vin_number: locState?.truckVin || roData.vin_number || "",
-      license_id_number: locState?.truckPlate || roData.license_plate || "",
+      equipment_type: truck?.unit_type || roData.equipment_type || "",
+      serial_vin_number: truck?.vin || roData.vin_number || "",
+      license_id_number: truck?.plate || roData.license_plate || "",
       resource_order_id: latestRO?.id || null,
       status: "draft",
+      ...(personnelEntries.length > 0 ? { personnel_entries: personnelEntries as any } : {}),
     });
-  }, [resourceOrders, membership, locState, ticket?.id]);
+    setInitialized(true);
+  }, [resourceOrders, membership, locState, ticket?.id, initialized, incident, truck, activeCrew, incidentId]);
 
   const updateMutation = useUpdateShiftTicket(ticket?.id || "", incidentTruckId || "");
+
+  // Warnings
+  const warnings: string[] = [];
+  if (initialized && activeCrew.length === 0) {
+    warnings.push("No crew currently assigned to this truck for this incident.");
+  }
+  if (initialized && (!resourceOrders || resourceOrders.length === 0)) {
+    warnings.push("No resource orders found for this truck assignment.");
+  } else if (initialized && !resourceOrders?.some((ro) => ro.parsed_at)) {
+    warnings.push("Resource Order missing linked incident data. Fields may need manual entry.");
+  }
 
   const handleSave = async (data: Partial<ShiftTicket>) => {
     try {
@@ -91,6 +143,8 @@ export default function ShiftTicketCreate() {
       onExportPdf={handleExportPdf}
       onBack={() => navigate(`/incidents/${incidentId}`)}
       exportingPdf={exportingPdf}
+      warnings={warnings}
+      crewRoster={activeCrew}
     />
   );
 }
