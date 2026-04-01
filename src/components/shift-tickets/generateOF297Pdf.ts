@@ -229,9 +229,23 @@ export async function generateOF297Pdf(ticket: ShiftTicket): Promise<void> {
   text("OPTIONAL FORM 297 (REV. 5/2024)", W - margin - 2, y, { size: 7 });
   text("USDA/USDI", W - margin - 2, y + 10, { size: 7 });
 
-  // Mobile-friendly download: use blob URL + anchor click (works on iOS Safari)
+  // Mobile-friendly download with share fallback
   const fileName = `OF-297-${ticket.incident_name || "ShiftTicket"}-${ticket.id?.slice(0, 8)}.pdf`;
   const pdfBlob = doc.output("blob");
+  const pdfFile = new File([pdfBlob], fileName, { type: "application/pdf" });
+
+  // Try native share (best mobile experience - saves to Files, sends via text/email)
+  if (navigator.share && navigator.canShare?.({ files: [pdfFile] })) {
+    try {
+      await navigator.share({ files: [pdfFile], title: fileName });
+      return;
+    } catch (shareErr: any) {
+      // User cancelled share or share failed — fall through to download
+      if (shareErr?.name === "AbortError") return;
+    }
+  }
+
+  // Fallback: blob URL anchor click
   const blobUrl = URL.createObjectURL(pdfBlob);
   const link = document.createElement("a");
   link.href = blobUrl;
@@ -240,7 +254,6 @@ export async function generateOF297Pdf(ticket: ShiftTicket): Promise<void> {
   document.body.appendChild(link);
   link.click();
 
-  // On iOS Safari, window.open is more reliable if <a> click doesn't trigger download
   setTimeout(() => {
     document.body.removeChild(link);
     URL.revokeObjectURL(blobUrl);

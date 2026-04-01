@@ -101,22 +101,29 @@ export default function ShiftTicketCreate() {
   }
 
   const handleSave = async (data: Partial<ShiftTicket>) => {
+    if (!orgId) {
+      toast.error("Organization not loaded yet. Please wait and try again.");
+      return;
+    }
     try {
+      // Strip empty-string org/truck ids from form data before merging
+      const { organization_id: _o, incident_truck_id: _t, ...cleanData } = data as any;
       if (ticket?.id) {
-        await updateMutation.mutateAsync(data);
-        setTicket((prev) => ({ ...prev, ...data }));
+        await updateMutation.mutateAsync(cleanData);
+        setTicket((prev) => ({ ...prev, ...cleanData }));
         toast.success("Shift ticket saved");
       } else {
         const created = await createMutation.mutateAsync({
-          ...data,
+          ...cleanData,
           incident_truck_id: incidentTruckId!,
           organization_id: orgId,
         } as any);
         setTicket(created);
         toast.success("Shift ticket created");
       }
-    } catch {
-      toast.error("Failed to save shift ticket");
+    } catch (err: any) {
+      console.error("Save shift ticket error:", err);
+      toast.error(err?.message || "Failed to save shift ticket");
     }
   };
 
