@@ -1,0 +1,234 @@
+import type { ShiftTicket, EquipmentEntry, PersonnelEntry } from "@/services/shift-tickets";
+
+// Dynamically import jspdf to keep bundle small
+async function getJsPdf() {
+  const { default: jsPDF } = await import("jspdf");
+  return jsPDF;
+}
+
+async function loadImageAsBase64(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+export async function generateOF297Pdf(ticket: ShiftTicket): Promise<void> {
+  const JsPDF = await getJsPdf();
+  const doc = new JsPDF({ orientation: "portrait", unit: "pt", format: "letter" });
+  const W = 612;
+  const margin = 36;
+  const cw = W - margin * 2;
+  let y = margin;
+
+  const drawLine = (x1: number, y1: number, x2: number, y2: number) => {
+    doc.setDrawColor(0);
+    doc.setLineWidth(0.5);
+    doc.line(x1, y1, x2, y2);
+  };
+
+  const text = (str: string, x: number, ty: number, opts?: { size?: number; bold?: boolean; maxWidth?: number }) => {
+    doc.setFontSize(opts?.size || 8);
+    doc.setFont("helvetica", opts?.bold ? "bold" : "normal");
+    doc.text(str || "", x, ty, { maxWidth: opts?.maxWidth });
+  };
+
+  // Title
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text("Emergency Equipment Shift Ticket", W / 2, y + 12, { align: "center" });
+  y += 24;
+  drawLine(margin, y, W - margin, y);
+
+  // Header fields - 3 columns per row
+  const col3 = cw / 3;
+  const headerRows = [
+    [
+      { label: "1. Agreement Number:", value: ticket.agreement_number },
+      { label: "2. Contractor/Agency Name:", value: ticket.contractor_name },
+      { label: "3. Resource Order Number:", value: ticket.resource_order_number },
+    ],
+    [
+      { label: "4. Incident Name:", value: ticket.incident_name },
+      { label: "5. Incident Number:", value: ticket.incident_number },
+      { label: "6. Financial Code:", value: ticket.financial_code },
+    ],
+  ];
+
+  for (const row of headerRows) {
+    const rowY = y;
+    row.forEach((cell, ci) => {
+      const cx = margin + ci * col3;
+      text(cell.label, cx + 2, rowY + 10, { size: 7 });
+      text(cell.value || "", cx + 2, rowY + 22, { size: 9, bold: true, maxWidth: col3 - 8 });
+      drawLine(cx, rowY, cx, rowY + 28);
+    });
+    drawLine(W - margin, rowY, W - margin, rowY + 28);
+    drawLine(margin, rowY + 28, W - margin, rowY + 28);
+    y += 28;
+  }
+
+  // Row 3 - 4 columns
+  const col4 = cw / 4;
+  const row3 = [
+    { label: "7. Equipment Make/Model:", value: ticket.equipment_make_model },
+    { label: "8. Equipment Type:", value: ticket.equipment_type },
+    { label: "9. Serial/VIN Number:", value: ticket.serial_vin_number },
+    { label: "10. License/ID Number:", value: ticket.license_id_number },
+  ];
+  const r3y = y;
+  row3.forEach((cell, ci) => {
+    const cx = margin + ci * col4;
+    text(cell.label, cx + 2, r3y + 10, { size: 7 });
+    text(cell.value || "", cx + 2, r3y + 22, { size: 9, bold: true, maxWidth: col4 - 8 });
+    drawLine(cx, r3y, cx, r3y + 28);
+  });
+  drawLine(W - margin, r3y, W - margin, r3y + 28);
+  drawLine(margin, r3y + 28, W - margin, r3y + 28);
+  y += 28;
+
+  // Instructions line
+  text("11. Use MILITARY TIME and/or real odometer reading.", margin + 2, y + 10, { size: 7 });
+  const trText = ticket.transport_retained ? "Yes" : "No";
+  text(`12. Transport Retained? ${trText}`, margin + cw / 2, y + 10, { size: 7 });
+  y += 16;
+  drawLine(margin, y, W - margin, y);
+
+  // Equipment section header
+  doc.setFillColor(230, 230, 230);
+  doc.rect(margin, y, cw, 14, "F");
+  drawLine(margin, y, W - margin, y);
+  text("Equipment", W / 2 - 20, y + 10, { size: 9, bold: true });
+  y += 14;
+
+  // First/Last and Miles row
+  const flText = ticket.is_first_last ? `Yes (${ticket.first_last_type || "Mobilization"})` : "No";
+  text(`13. First/Last Ticket: ${flText}`, margin + 2, y + 10, { size: 7 });
+  text(`14. Miles: ${ticket.miles ?? ""}`, margin + cw / 3, y + 10, { size: 7 });
+  y += 16;
+  drawLine(margin, y, W - margin, y);
+
+  // Equipment table header
+  const eqCols = [60, 55, 55, 45, 50, 55, cw - 320]; // date, start, stop, total, qty, type, remarks
+  const eqHeaders = ["15. Date", "16. Start", "17. Stop", "18. Total", "19. Qty", "20. Type", "21. Remarks"];
+  let cx = margin;
+  for (let i = 0; i < eqHeaders.length; i++) {
+    text(eqHeaders[i], cx + 2, y + 10, { size: 7, bold: true });
+    drawLine(cx, y, cx, y + 14);
+    cx += eqCols[i];
+  }
+  drawLine(W - margin, y, W - margin, y + 14);
+  drawLine(margin, y + 14, W - margin, y + 14);
+  y += 14;
+
+  // Equipment rows
+  const eqEntries = (ticket.equipment_entries || []) as EquipmentEntry[];
+  const eqRowCount = Math.max(eqEntries.length, 5);
+  for (let r = 0; r < eqRowCount; r++) {
+    const e = eqEntries[r];
+    cx = margin;
+    const vals = e ? [e.date, e.start, e.stop, e.total?.toString() || "", e.quantity, e.type, e.remarks] : ["", "", "", "", "", "", ""];
+    for (let i = 0; i < eqCols.length; i++) {
+      text(vals[i] || "", cx + 2, y + 10, { size: 7, maxWidth: eqCols[i] - 4 });
+      drawLine(cx, y, cx, y + 14);
+      cx += eqCols[i];
+    }
+    drawLine(W - margin, y, W - margin, y + 14);
+    drawLine(margin, y + 14, W - margin, y + 14);
+    y += 14;
+  }
+
+  // Personnel section
+  doc.setFillColor(230, 230, 230);
+  doc.rect(margin, y, cw, 14, "F");
+  drawLine(margin, y, W - margin, y);
+  text("Personnel", W / 2 - 20, y + 10, { size: 9, bold: true });
+  y += 14;
+
+  const pCols = [55, 100, 50, 50, 50, 50, 40, cw - 395];
+  const pHeaders = ["22. Date", "23. Operator Name", "24. Start", "25. Stop", "26. Start", "27. Stop", "28. Total", "29. Remarks"];
+  cx = margin;
+  for (let i = 0; i < pHeaders.length; i++) {
+    text(pHeaders[i], cx + 2, y + 10, { size: 6, bold: true });
+    drawLine(cx, y, cx, y + 14);
+    cx += pCols[i];
+  }
+  drawLine(W - margin, y, W - margin, y + 14);
+  drawLine(margin, y + 14, W - margin, y + 14);
+  y += 14;
+
+  const pEntries = (ticket.personnel_entries || []) as PersonnelEntry[];
+  const pRowCount = Math.max(pEntries.length, 5);
+  for (let r = 0; r < pRowCount; r++) {
+    const p = pEntries[r];
+    cx = margin;
+    const vals = p ? [p.date, p.operator_name, p.op_start, p.op_stop, p.sb_start, p.sb_stop, p.total?.toString() || "", p.remarks] : ["", "", "", "", "", "", "", ""];
+    for (let i = 0; i < pCols.length; i++) {
+      text(vals[i] || "", cx + 2, y + 10, { size: 7, maxWidth: pCols[i] - 4 });
+      drawLine(cx, y, cx, y + 14);
+      cx += pCols[i];
+    }
+    drawLine(W - margin, y, W - margin, y + 14);
+    drawLine(margin, y + 14, W - margin, y + 14);
+    y += 14;
+  }
+
+  // Remarks
+  drawLine(margin, y, W - margin, y);
+  text("30. Remarks - Equipment breakdown or operating issues:", margin + 2, y + 10, { size: 7, bold: true });
+  y += 14;
+  text(ticket.remarks || "", margin + 2, y + 10, { size: 8, maxWidth: cw - 8 });
+  y += 36;
+  drawLine(margin, y, W - margin, y);
+
+  // Signatures
+  const halfW = cw / 2;
+
+  // Contractor
+  text("31. Contractor/Agency Rep (Printed Name):", margin + 2, y + 10, { size: 7 });
+  text(ticket.contractor_rep_name || "", margin + 2, y + 22, { size: 9, bold: true });
+  drawLine(margin, y, margin + halfW, y);
+  drawLine(margin, y + 30, margin + halfW, y + 30);
+
+  text("32. Signature:", margin + halfW + 2, y + 10, { size: 7 });
+  if (ticket.contractor_rep_signature_url) {
+    const sigData = await loadImageAsBase64(ticket.contractor_rep_signature_url);
+    if (sigData) {
+      try { doc.addImage(sigData, "PNG", margin + halfW + 4, y + 12, 120, 16); } catch {}
+    }
+  }
+  drawLine(margin + halfW, y, W - margin, y);
+  drawLine(margin + halfW, y + 30, W - margin, y + 30);
+  y += 30;
+
+  // Supervisor
+  text("33. Incident Supervisor (Name & RO#):", margin + 2, y + 10, { size: 7 });
+  text(`${ticket.supervisor_name || ""} ${ticket.supervisor_resource_order || ""}`, margin + 2, y + 22, { size: 9, bold: true });
+  drawLine(margin, y + 30, margin + halfW, y + 30);
+
+  text("34. Signature:", margin + halfW + 2, y + 10, { size: 7 });
+  if (ticket.supervisor_signature_url) {
+    const sigData = await loadImageAsBase64(ticket.supervisor_signature_url);
+    if (sigData) {
+      try { doc.addImage(sigData, "PNG", margin + halfW + 4, y + 12, 120, 16); } catch {}
+    }
+  }
+  drawLine(margin + halfW, y + 30, W - margin, y + 30);
+  y += 30;
+
+  // Footer
+  y += 16;
+  text("OPTIONAL FORM 297 (REV. 5/2024)", W - margin - 2, y, { size: 7 });
+  text("USDA/USDI", W - margin - 2, y + 10, { size: 7 });
+
+  // Save
+  doc.save(`OF-297-${ticket.incident_name || "ShiftTicket"}-${ticket.id?.slice(0, 8)}.pdf`);
+}

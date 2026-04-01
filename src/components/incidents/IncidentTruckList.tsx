@@ -8,6 +8,7 @@ import { TruckCrewSection } from "./TruckCrewSection";
 import { ShiftList } from "@/components/shifts/ShiftList";
 import { ResourceOrderSection } from "./ResourceOrderSection";
 import { AgreementUpload } from "./AgreementUpload";
+import { ShiftTicketSection } from "@/components/shift-tickets/ShiftTicketSection";
 
 const truckStatuses: IncidentTruckStatus[] = ["assigned", "active", "demobed", "completed"];
 
@@ -145,6 +146,19 @@ export function IncidentTruckList({ incidentId, incidentName }: Props) {
 
                 {/* Shifts section */}
                 <ShiftList
+                  incidentTruckId={it.id}
+                  incidentId={incidentId}
+                  truckName={it.trucks.name}
+                  truckMake={it.trucks.make}
+                  truckModel={it.trucks.model}
+                  truckVin={it.trucks.vin}
+                  truckPlate={it.trucks.plate}
+                  truckUnitType={it.trucks.unit_type}
+                  incidentName={incidentName}
+                />
+
+                {/* OF-297 Shift Tickets */}
+                <ShiftTicketSection
                   incidentTruckId={it.id}
                   incidentId={incidentId}
                   truckName={it.trucks.name}

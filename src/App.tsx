@@ -18,6 +18,8 @@ import IncidentDetail from "./pages/IncidentDetail";
 import IncidentEdit from "./pages/IncidentEdit";
 import ShiftCreate from "./pages/ShiftCreate";
 import ShiftDetail from "./pages/ShiftDetail";
+import ShiftTicketCreate from "./pages/ShiftTicketCreate";
+import ShiftTicketEdit from "./pages/ShiftTicketEdit";
 import Crew from "./pages/Crew";
 import Fleet from "./pages/Fleet";
 import FleetTruckCreate from "./pages/FleetTruckCreate";
@@ -60,6 +62,8 @@ const App = () => (
               <Route path="/incidents/:incidentId/edit" element={<ProtectedRoute><IncidentEdit /></ProtectedRoute>} />
               <Route path="/incidents/:incidentId/trucks/:incidentTruckId/shifts/new" element={<ProtectedRoute><ShiftCreate /></ProtectedRoute>} />
               <Route path="/incidents/:incidentId/trucks/:incidentTruckId/shifts/:shiftId" element={<ProtectedRoute><ShiftDetail /></ProtectedRoute>} />
+              <Route path="/incidents/:incidentId/trucks/:incidentTruckId/shift-ticket/new" element={<ProtectedRoute><ShiftTicketCreate /></ProtectedRoute>} />
+              <Route path="/incidents/:incidentId/trucks/:incidentTruckId/shift-ticket/:ticketId" element={<ProtectedRoute><ShiftTicketEdit /></ProtectedRoute>} />
               <Route path="/crew" element={<ProtectedRoute><Crew /></ProtectedRoute>} />
               <Route path="/fleet" element={<ProtectedRoute><Fleet /></ProtectedRoute>} />
               <Route path="/fleet/new" element={<ProtectedRoute><FleetTruckCreate /></ProtectedRoute>} />

@@ -1,0 +1,119 @@
+import { supabase } from "@/integrations/supabase/client";
+
+export interface EquipmentEntry {
+  date: string;
+  start: string;
+  stop: string;
+  total: number;
+  quantity: string;
+  type: string;
+  remarks: string;
+}
+
+export interface PersonnelEntry {
+  date: string;
+  operator_name: string;
+  op_start: string;
+  op_stop: string;
+  sb_start: string;
+  sb_stop: string;
+  total: number;
+  remarks: string;
+}
+
+export interface ShiftTicket {
+  id: string;
+  incident_truck_id: string;
+  resource_order_id: string | null;
+  organization_id: string | null;
+  status: string;
+  agreement_number: string | null;
+  contractor_name: string | null;
+  resource_order_number: string | null;
+  incident_name: string | null;
+  incident_number: string | null;
+  financial_code: string | null;
+  equipment_make_model: string | null;
+  equipment_type: string | null;
+  serial_vin_number: string | null;
+  license_id_number: string | null;
+  transport_retained: boolean | null;
+  is_first_last: boolean | null;
+  first_last_type: string | null;
+  miles: number | null;
+  equipment_entries: EquipmentEntry[];
+  personnel_entries: PersonnelEntry[];
+  remarks: string | null;
+  contractor_rep_name: string | null;
+  contractor_rep_signature_url: string | null;
+  contractor_rep_signed_at: string | null;
+  supervisor_name: string | null;
+  supervisor_resource_order: string | null;
+  supervisor_signature_url: string | null;
+  supervisor_signed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function fetchShiftTickets(incidentTruckId: string): Promise<ShiftTicket[]> {
+  const { data, error } = await supabase
+    .from("shift_tickets")
+    .select("*")
+    .eq("incident_truck_id", incidentTruckId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as unknown as ShiftTicket[];
+}
+
+export async function fetchShiftTicket(id: string): Promise<ShiftTicket | null> {
+  const { data, error } = await supabase
+    .from("shift_tickets")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  return data as unknown as ShiftTicket | null;
+}
+
+export async function createShiftTicket(ticket: Partial<ShiftTicket> & { incident_truck_id: string; organization_id: string }): Promise<ShiftTicket> {
+  const { data, error } = await supabase
+    .from("shift_tickets")
+    .insert(ticket as any)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as unknown as ShiftTicket;
+}
+
+export async function updateShiftTicket(id: string, updates: Partial<ShiftTicket>): Promise<void> {
+  const { error } = await supabase
+    .from("shift_tickets")
+    .update({ ...updates, updated_at: new Date().toISOString() } as any)
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteShiftTicket(id: string): Promise<void> {
+  const { error } = await supabase
+    .from("shift_tickets")
+    .delete()
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function uploadSignature(file: Blob, ticketId: string, type: "contractor" | "supervisor"): Promise<string> {
+  const path = `${ticketId}/${type}-${Date.now()}.png`;
+  const { error } = await supabase.storage.from("signatures").upload(path, file, { contentType: "image/png" });
+  if (error) throw error;
+  const { data } = supabase.storage.from("signatures").getPublicUrl(path);
+  return data.publicUrl;
+}
+
+export function computeHours(start: string, stop: string): number {
+  if (!start || !stop) return 0;
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = stop.split(":").map(Number);
+  let diff = (eh * 60 + em) - (sh * 60 + sm);
+  if (diff < 0) diff += 24 * 60;
+  return Math.round((diff / 60) * 10) / 10;
+}
