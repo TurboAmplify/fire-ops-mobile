@@ -1,7 +1,17 @@
 import { useIncidentTruckCrew, useAvailableCrewMembers, useAssignCrew, useReleaseCrew } from "@/hooks/useIncidentTruckCrew";
-import { Users, Plus, UserMinus, Loader2 } from "lucide-react";
+import { Users, Plus, UserMinus, Loader2, AlertTriangle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Props {
   incidentTruckId: string;
@@ -13,7 +23,7 @@ export function TruckCrewSection({ incidentTruckId }: Props) {
   const assignMutation = useAssignCrew(incidentTruckId);
   const releaseMutation = useReleaseCrew(incidentTruckId);
   const [showAssign, setShowAssign] = useState(false);
-
+  const [releaseTarget, setReleaseTarget] = useState<{ id: string; name: string } | null>(null);
   const activeCrew = crew?.filter((c) => c.is_active) ?? [];
   const releasedCrew = crew?.filter((c) => !c.is_active) ?? [];
 
@@ -31,12 +41,15 @@ export function TruckCrewSection({ incidentTruckId }: Props) {
     }
   };
 
-  const handleRelease = async (assignmentId: string, name: string) => {
+  const confirmRelease = async () => {
+    if (!releaseTarget) return;
     try {
-      await releaseMutation.mutateAsync(assignmentId);
-      toast.success(`${name} released`);
+      await releaseMutation.mutateAsync(releaseTarget.id);
+      toast.success(`${releaseTarget.name} released`);
     } catch {
       toast.error("Failed to release crew member");
+    } finally {
+      setReleaseTarget(null);
     }
   };
 
@@ -89,7 +102,7 @@ export function TruckCrewSection({ incidentTruckId }: Props) {
             </p>
           </div>
           <button
-            onClick={() => handleRelease(c.id, c.crew_members.name)}
+            onClick={() => setReleaseTarget({ id: c.id, name: c.crew_members.name })}
             disabled={releaseMutation.isPending}
             className="rounded-lg p-2 text-destructive active:bg-destructive/10 touch-target"
             title="Release"
@@ -121,6 +134,27 @@ export function TruckCrewSection({ incidentTruckId }: Props) {
       {!isLoading && activeCrew.length === 0 && !showAssign && (
         <p className="text-xs text-muted-foreground">No crew assigned.</p>
       )}
+
+      {/* Release confirmation dialog */}
+      <AlertDialog open={!!releaseTarget} onOpenChange={(open) => !open && setReleaseTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Release {releaseTarget?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove them from the active crew on this truck. You can re-assign them later.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmRelease}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {releaseMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Release"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
