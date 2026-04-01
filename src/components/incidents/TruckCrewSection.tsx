@@ -18,8 +18,8 @@ export function TruckCrewSection({ incidentTruckId }: Props) {
   const releasedCrew = crew?.filter((c) => !c.is_active) ?? [];
 
   // Filter out crew already assigned to this truck
-  const assignedIds = new Set(crew?.map((c) => c.crew_member_id));
-  const available = allCrew?.filter((m) => !assignedIds.has(m.id)) ?? [];
+  const activeAssignedIds = new Set(activeCrew.map((c) => c.crew_member_id));
+  const available = allCrew?.filter((m) => !activeAssignedIds.has(m.id)) ?? [];
 
   const handleAssign = async (crewMemberId: string) => {
     try {
