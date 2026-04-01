@@ -46,8 +46,11 @@ serve(async (req) => {
 Analyze the uploaded document and extract structured data.
 
 Extract ALL of the following fields if present:
-- agreement_number: The agreement or contract number
+- agreement_number: The agreement, contract number, or "Contract Num" (e.g. 1202SB25T7700)
 - resource_order_number: The resource order number(s)
+- financial_code: The financial code or "PN" code (e.g. PN SL4V (1542))
+- contract_number: The contract number if separate from agreement number
+- clin: CLIN number if present
 - ordering_unit: The ordering unit/agency
 - reporting_location: Where to report
 - reporting_date: When to report
