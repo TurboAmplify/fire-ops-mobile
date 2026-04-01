@@ -152,20 +152,20 @@ export function ShiftTicketForm({
     });
   };
 
-  // Store pending signature blob when ticket hasn't been saved yet
-  const [pendingSig, setPendingSig] = useState<{ type: "contractor" | "supervisor"; blob: Blob } | null>(null);
+  // Store pending signature blobs when ticket hasn't been saved yet
+  const [pendingSigs, setPendingSigs] = useState<Record<string, Blob>>({});
 
   const handleSignatureSave = async (blob: Blob) => {
     if (!sigModal) return;
     const sigType = sigModal;
     setSigModal(null);
 
-    // If ticket not yet saved, store blob as local preview URL and save on next handleSave
+    // If ticket not yet saved, store blob locally for preview + later upload
     if (!ticket?.id) {
       const localUrl = URL.createObjectURL(blob);
       if (sigType === "contractor") setContractorSigUrl(localUrl);
       else setSupervisorSigUrl(localUrl);
-      setPendingSig({ type: sigType, blob });
+      setPendingSigs((prev) => ({ ...prev, [sigType]: blob }));
       toast.success("Signature captured — save draft to upload");
       return;
     }
@@ -182,6 +182,27 @@ export function ShiftTicketForm({
       setUploadingSig(false);
     }
   };
+
+  // After ticket is created/saved and we have pending sigs, upload them
+  useEffect(() => {
+    if (!ticket?.id || Object.keys(pendingSigs).length === 0) return;
+    const uploadPending = async () => {
+      setUploadingSig(true);
+      for (const [sigType, blob] of Object.entries(pendingSigs)) {
+        try {
+          const url = await uploadSignature(blob, ticket.id!, sigType as "contractor" | "supervisor");
+          if (sigType === "contractor") setContractorSigUrl(url);
+          else setSupervisorSigUrl(url);
+        } catch {
+          toast.error(`Failed to upload ${sigType} signature`);
+        }
+      }
+      setPendingSigs({});
+      setUploadingSig(false);
+      toast.success("Signatures uploaded");
+    };
+    uploadPending();
+  }, [ticket?.id, pendingSigs]);
 
   const updateEquipment = (i: number, entry: EquipmentEntry) => {
     const next = [...equipmentEntries];
