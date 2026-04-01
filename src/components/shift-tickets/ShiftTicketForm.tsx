@@ -368,7 +368,7 @@ export function ShiftTicketForm({
                 <button onClick={() => { setSupervisorSigUrl(null); }} className="text-xs text-destructive touch-target">Clear</button>
               </div>
             ) : (
-              <button onClick={() => setSigModal("supervisor")} disabled={!ticket?.id || uploadingSig}
+              <button onClick={() => setSigModal("supervisor")} disabled={uploadingSig}
                 className="w-full rounded-xl border-2 border-dashed border-border py-6 text-sm text-muted-foreground touch-target disabled:opacity-40">
                 Tap to sign
               </button>
