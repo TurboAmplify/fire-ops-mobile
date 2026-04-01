@@ -183,22 +183,34 @@ export function ShiftTicketForm({
     }
   };
 
-  // Upload pending sigs once ticket has an ID
+  // Upload pending sigs once ticket has an ID, then persist URLs to DB
   useEffect(() => {
     if (!ticket?.id || Object.keys(pendingSigs).length === 0) return;
     const uploadPending = async () => {
       setUploadingSig(true);
+      const sigUpdates: Partial<ShiftTicket> = {};
       for (const [sigType, blob] of Object.entries(pendingSigs)) {
         try {
           const url = await uploadSignature(blob, ticket.id!, sigType as "contractor" | "supervisor");
-          if (sigType === "contractor") setContractorSigUrl(url);
-          else setSupervisorSigUrl(url);
+          if (sigType === "contractor") {
+            setContractorSigUrl(url);
+            sigUpdates.contractor_rep_signature_url = url;
+            sigUpdates.contractor_rep_signed_at = new Date().toISOString();
+          } else {
+            setSupervisorSigUrl(url);
+            sigUpdates.supervisor_signature_url = url;
+            sigUpdates.supervisor_signed_at = new Date().toISOString();
+          }
         } catch {
           toast.error(`Failed to upload ${sigType} signature`);
         }
       }
       setPendingSigs({});
       setUploadingSig(false);
+      // Persist the real storage URLs back to the DB
+      if (Object.keys(sigUpdates).length > 0) {
+        onSave({ ...sigUpdates, incident_truck_id: incidentTruckId, organization_id: organizationId } as any);
+      }
       toast.success("Signatures uploaded");
     };
     uploadPending();
