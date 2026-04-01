@@ -134,6 +134,27 @@ export function TruckCrewSection({ incidentTruckId }: Props) {
       {!isLoading && activeCrew.length === 0 && !showAssign && (
         <p className="text-xs text-muted-foreground">No crew assigned.</p>
       )}
+
+      {/* Release confirmation dialog */}
+      <AlertDialog open={!!releaseTarget} onOpenChange={(open) => !open && setReleaseTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Release {releaseTarget?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove them from the active crew on this truck. You can re-assign them later.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmRelease}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {releaseMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Release"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
