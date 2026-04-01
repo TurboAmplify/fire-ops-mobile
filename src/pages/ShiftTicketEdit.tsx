@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -7,6 +7,7 @@ import { ShiftTicketForm } from "@/components/shift-tickets/ShiftTicketForm";
 import { useShiftTicket, useUpdateShiftTicket } from "@/hooks/useShiftTickets";
 import { generateOF297Pdf } from "@/components/shift-tickets/generateOF297Pdf";
 import { useOrganization } from "@/hooks/useOrganization";
+import { useIncidentTruckCrew } from "@/hooks/useIncidentTruckCrew";
 import type { ShiftTicket } from "@/services/shift-tickets";
 
 export default function ShiftTicketEdit() {
@@ -19,7 +20,13 @@ export default function ShiftTicketEdit() {
   const { membership } = useOrganization();
   const { data: ticket, isLoading } = useShiftTicket(ticketId || "");
   const updateMutation = useUpdateShiftTicket(ticketId || "", incidentTruckId || "");
+  const { data: crewAssignments } = useIncidentTruckCrew(incidentTruckId || "");
   const [exportingPdf, setExportingPdf] = useState(false);
+
+  const activeCrew = useMemo(
+    () => crewAssignments?.filter((c) => c.is_active) ?? [],
+    [crewAssignments]
+  );
 
   const handleSave = async (data: Partial<ShiftTicket>) => {
     try {
@@ -63,6 +70,7 @@ export default function ShiftTicketEdit() {
       onExportPdf={handleExportPdf}
       onBack={() => navigate(`/incidents/${incidentId}`)}
       exportingPdf={exportingPdf}
+      crewRoster={activeCrew}
     />
   );
 }
