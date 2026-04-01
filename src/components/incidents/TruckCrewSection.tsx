@@ -41,12 +41,15 @@ export function TruckCrewSection({ incidentTruckId }: Props) {
     }
   };
 
-  const handleRelease = async (assignmentId: string, name: string) => {
+  const confirmRelease = async () => {
+    if (!releaseTarget) return;
     try {
-      await releaseMutation.mutateAsync(assignmentId);
-      toast.success(`${name} released`);
+      await releaseMutation.mutateAsync(releaseTarget.id);
+      toast.success(`${releaseTarget.name} released`);
     } catch {
       toast.error("Failed to release crew member");
+    } finally {
+      setReleaseTarget(null);
     }
   };
 
