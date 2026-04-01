@@ -152,19 +152,34 @@ export function ShiftTicketForm({
     });
   };
 
+  // Store pending signature blob when ticket hasn't been saved yet
+  const [pendingSig, setPendingSig] = useState<{ type: "contractor" | "supervisor"; blob: Blob } | null>(null);
+
   const handleSignatureSave = async (blob: Blob) => {
-    if (!ticket?.id || !sigModal) return;
+    if (!sigModal) return;
+    const sigType = sigModal;
+    setSigModal(null);
+
+    // If ticket not yet saved, store blob as local preview URL and save on next handleSave
+    if (!ticket?.id) {
+      const localUrl = URL.createObjectURL(blob);
+      if (sigType === "contractor") setContractorSigUrl(localUrl);
+      else setSupervisorSigUrl(localUrl);
+      setPendingSig({ type: sigType, blob });
+      toast.success("Signature captured — save draft to upload");
+      return;
+    }
+
     setUploadingSig(true);
     try {
-      const url = await uploadSignature(blob, ticket.id, sigModal);
-      if (sigModal === "contractor") setContractorSigUrl(url);
+      const url = await uploadSignature(blob, ticket.id, sigType);
+      if (sigType === "contractor") setContractorSigUrl(url);
       else setSupervisorSigUrl(url);
       toast.success("Signature saved");
     } catch {
       toast.error("Failed to save signature");
     } finally {
       setUploadingSig(false);
-      setSigModal(null);
     }
   };
 
