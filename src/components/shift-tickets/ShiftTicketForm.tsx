@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { ArrowLeft, Plus, Loader2, FileText, Save, Download, AlertTriangle } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { ArrowLeft, Plus, Loader2, FileText, Save, Download, AlertTriangle, Clock, Users } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { SignatureCanvas } from "./SignatureCanvas";
