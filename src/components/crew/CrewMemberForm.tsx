@@ -68,7 +68,7 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60" onClick={onClose}>
       <div
         className="w-full max-w-lg rounded-t-2xl bg-background animate-in slide-in-from-bottom flex flex-col"
-        style={{ maxHeight: "calc(100dvh - 3rem)" }}
+        style={{ maxHeight: "85dvh" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-4 pb-2 shrink-0">
