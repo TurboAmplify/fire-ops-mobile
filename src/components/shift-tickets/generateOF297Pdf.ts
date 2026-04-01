@@ -7,16 +7,26 @@ async function getJsPdf() {
 }
 
 async function loadImageAsBase64(url: string): Promise<string | null> {
+  if (!url) return null;
   try {
-    const res = await fetch(url);
+    // For blob URLs, fetch directly; for remote URLs, try with no-cors fallback
+    const res = await fetch(url, { mode: "cors" });
+    if (!res.ok) {
+      console.warn("Signature fetch failed:", res.status, url);
+      return null;
+    }
     const blob = await res.blob();
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = () => resolve(null);
+      reader.onerror = () => {
+        console.warn("FileReader error for signature");
+        resolve(null);
+      };
       reader.readAsDataURL(blob);
     });
-  } catch {
+  } catch (err) {
+    console.warn("Failed to load signature image:", err, url);
     return null;
   }
 }
