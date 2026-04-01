@@ -23,7 +23,7 @@ export function TruckCrewSection({ incidentTruckId }: Props) {
   const assignMutation = useAssignCrew(incidentTruckId);
   const releaseMutation = useReleaseCrew(incidentTruckId);
   const [showAssign, setShowAssign] = useState(false);
-
+  const [releaseTarget, setReleaseTarget] = useState<{ id: string; name: string } | null>(null);
   const activeCrew = crew?.filter((c) => c.is_active) ?? [];
   const releasedCrew = crew?.filter((c) => !c.is_active) ?? [];
 
