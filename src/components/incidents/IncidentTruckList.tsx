@@ -8,6 +8,7 @@ import { TruckCrewSection } from "./TruckCrewSection";
 import { ShiftList } from "@/components/shifts/ShiftList";
 import { ResourceOrderSection } from "./ResourceOrderSection";
 import { AgreementUpload } from "./AgreementUpload";
+import { ShiftTicketSection } from "@/components/shift-tickets/ShiftTicketSection";
 
 const truckStatuses: IncidentTruckStatus[] = ["assigned", "active", "demobed", "completed"];
 
