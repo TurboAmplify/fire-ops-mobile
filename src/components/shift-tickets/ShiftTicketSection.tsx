@@ -104,7 +104,9 @@ export function ShiftTicketSection({
         // Build human-readable label: Incident Name - Truck Name - Date
         const nameParts: string[] = [];
         if (t.incident_name) nameParts.push(t.incident_name);
-        if (truckName) nameParts.push(truckName);
+        // Prefer unit type (DL31, DL62) over truck name for the label
+        const unitLabel = truckUnitType || (t as any).equipment_type || truckName;
+        if (unitLabel) nameParts.push(unitLabel);
         if (dateDisplay) nameParts.push(dateDisplay);
         const label = nameParts.length > 0 ? nameParts.join(" - ") : "OF-297 Shift Ticket";
         return (
