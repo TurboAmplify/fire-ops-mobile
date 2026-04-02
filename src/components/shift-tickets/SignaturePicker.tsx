@@ -51,12 +51,23 @@ export function SignaturePicker({ open, onClose, onSave, title, defaultName = ""
       document.head.appendChild(link);
     }
 
-    // Wait for fonts to load
+    // Wait for fonts to actually load
+    setFontsLoaded(false);
     const loadFonts = async () => {
       try {
+        // Wait for the stylesheet to be parsed and fonts to begin loading
+        await document.fonts.ready;
+        // Then explicitly load each font and wait
         await Promise.all(
-          FONT_OPTIONS.map((f) => document.fonts.load(`32px "${f.family}"`))
+          FONT_OPTIONS.map((f) =>
+            document.fonts.load(`32px "${f.family}"`).then(() => {
+              // Verify the font is actually available by checking document.fonts
+              return document.fonts.load(`700 32px "${f.family}"`);
+            })
+          )
         );
+        // Extra delay to ensure browser has committed font data for canvas use
+        await new Promise((r) => setTimeout(r, 300));
       } catch {
         // Fonts may not load (offline), that's okay — draw mode still works
       }
