@@ -8,6 +8,7 @@ import { useOrganization } from "@/hooks/useOrganization";
 import { useIncident } from "@/hooks/useIncidents";
 import { useIncidentTrucks } from "@/hooks/useIncidentTrucks";
 import { useIncidentTruckCrew } from "@/hooks/useIncidentTruckCrew";
+import { useAgreements } from "@/hooks/useAgreements";
 import { generateOF297Pdf } from "@/components/shift-tickets/generateOF297Pdf";
 import type { ShiftTicket, PersonnelEntry } from "@/services/shift-tickets";
 
@@ -24,6 +25,7 @@ export default function ShiftTicketCreate() {
   const { data: incidentTrucks } = useIncidentTrucks(incidentId || "");
   const { data: resourceOrders } = useResourceOrders(incidentTruckId || "");
   const { data: crewAssignments } = useIncidentTruckCrew(incidentTruckId || "");
+  const { data: agreements } = useAgreements({ incidentId, incidentTruckId });
 
   // Find the truck record from incident_trucks join
   const incidentTruck = useMemo(
@@ -53,6 +55,10 @@ export default function ShiftTicketCreate() {
     const latestRO = resourceOrders?.find((ro) => ro.parsed_at != null);
     const roData = (latestRO?.parsed_data || {}) as Record<string, any>;
 
+    // Pull agreement data (from agreements table and its parsed data)
+    const latestAgreement = agreements?.find((a) => a.agreement_number) || agreements?.[0];
+    const agreementParsed = (latestAgreement?.parsed_data || {}) as Record<string, any>;
+
     // Build personnel entries from assigned crew
     const personnelEntries: PersonnelEntry[] = activeCrew.length > 0
       ? activeCrew.map((c) => ({
@@ -80,12 +86,12 @@ export default function ShiftTicketCreate() {
     })();
 
     setTicket({
-      agreement_number: roData.agreement_number || roData.contract_number || latestRO?.agreement_number || "",
-      contractor_name: roData.contractor_name || membership?.organizationName || "",
+      agreement_number: latestAgreement?.agreement_number || agreementParsed.agreement_number || roData.agreement_number || roData.contract_number || latestRO?.agreement_number || "",
+      contractor_name: agreementParsed.contractor_name || roData.contractor_name || membership?.organizationName || "",
       resource_order_number: roData.resource_order_number || latestRO?.resource_order_number || "",
       incident_name: incident?.name || roData.incident_name || locState?.incidentName || "",
       incident_number: roData.incident_number || "",
-      financial_code: roData.financial_code || "",
+      financial_code: agreementParsed.financial_code || roData.financial_code || "",
       equipment_make_model: equipmentMakeModel,
       equipment_type: truck?.unit_type || roData.equipment_type || "",
       serial_vin_number: truck?.vin || roData.vin_number || "",
@@ -95,7 +101,7 @@ export default function ShiftTicketCreate() {
       ...(personnelEntries.length > 0 ? { personnel_entries: personnelEntries as any } : {}),
     });
     setInitialized(true);
-  }, [resourceOrders, membership, locState, ticket?.id, initialized, incident, truck, activeCrew, incidentId]);
+  }, [resourceOrders, membership, locState, ticket?.id, initialized, incident, truck, activeCrew, incidentId, agreements]);
 
   const updateMutation = useUpdateShiftTicket(ticket?.id || "", incidentTruckId || "");
 
