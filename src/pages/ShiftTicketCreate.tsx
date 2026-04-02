@@ -67,6 +67,18 @@ export default function ShiftTicketCreate() {
         }))
       : [];
 
+    // Build equipment make/model with all available truck info
+    const equipmentMakeModel = (() => {
+      if (!truck) return roData.equipment_make_model || "";
+      const parts: string[] = [];
+      if (truck.year) parts.push(String(truck.year));
+      if (truck.make) parts.push(truck.make);
+      if (truck.model) parts.push(truck.model);
+      // If we have year but no make/model, use truck name as identifier
+      if (parts.length <= 1 && truck.name) parts.push(truck.name);
+      return parts.join(" ").trim() || roData.equipment_make_model || "";
+    })();
+
     setTicket({
       agreement_number: roData.agreement_number || roData.contract_number || latestRO?.agreement_number || "",
       contractor_name: roData.contractor_name || membership?.organizationName || "",
@@ -74,9 +86,7 @@ export default function ShiftTicketCreate() {
       incident_name: incident?.name || roData.incident_name || locState?.incidentName || "",
       incident_number: roData.incident_number || "",
       financial_code: roData.financial_code || "",
-      equipment_make_model: truck
-        ? `${truck.make || ""} ${truck.model || ""}`.trim()
-        : roData.equipment_make_model || "",
+      equipment_make_model: equipmentMakeModel,
       equipment_type: truck?.unit_type || roData.equipment_type || "",
       serial_vin_number: truck?.vin || roData.vin_number || "",
       license_id_number: truck?.plate || roData.license_plate || "",
