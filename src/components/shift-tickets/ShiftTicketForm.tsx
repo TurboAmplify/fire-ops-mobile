@@ -391,7 +391,7 @@ export function ShiftTicketForm({
         {/* ── Personnel Entries ── */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold">Personnel</h3>
+            <h3 className="text-sm font-bold">Crew</h3>
             <button onClick={() => setPersonnelEntries([...personnelEntries, emptyPersonnelEntry()])}
               className="flex items-center gap-1 text-xs font-bold text-primary touch-target">
               <Plus className="h-3.5 w-3.5" /> Add Row
