@@ -17,6 +17,7 @@ import {
 interface Props {
   incidentTruckId: string;
   incidentId: string;
+  organizationId?: string;
   truckName?: string | null;
   truckMake?: string | null;
   truckModel?: string | null;
@@ -29,6 +30,7 @@ interface Props {
 export function ShiftTicketSection({
   incidentTruckId,
   incidentId,
+  organizationId,
   truckName,
   truckMake,
   truckModel,
@@ -40,6 +42,7 @@ export function ShiftTicketSection({
   const navigate = useNavigate();
   const { data: tickets, isLoading } = useShiftTickets(incidentTruckId);
   const deleteMutation = useDeleteShiftTicket(incidentTruckId);
+  const duplicateMutation = useDuplicateShiftTicket(incidentTruckId);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string } | null>(null);
 
   const navState = { truckName, truckMake, truckModel, truckVin, truckPlate, truckUnitType, incidentName };
