@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/useAuth";
 import { useOrganization } from "@/hooks/useOrganization";
+import { useTheme } from "@/hooks/useTheme";
 import { useNavigate } from "react-router-dom";
 import {
   LogOut,
@@ -15,6 +16,8 @@ import {
   Users,
   Truck,
   ClipboardList,
+  Sun,
+  Moon,
 } from "lucide-react";
 
 export default function Settings() {
