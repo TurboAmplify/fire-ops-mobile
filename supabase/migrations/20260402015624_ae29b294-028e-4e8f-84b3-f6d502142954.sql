@@ -1,0 +1,2 @@
+ALTER TABLE public.trucks DROP CONSTRAINT trucks_status_check;
+ALTER TABLE public.trucks ADD CONSTRAINT trucks_status_check CHECK (status = ANY (ARRAY['available'::text, 'deployed'::text, 'maintenance'::text, 'needs_attention'::text]));
