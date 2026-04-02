@@ -105,6 +105,12 @@ export function ShiftTicketForm({
   const [uploadingSig, setUploadingSig] = useState(false);
   const [pendingSigs, setPendingSigs] = useState<Record<string, Blob>>({});
 
+  // Collapsible personnel
+  const [expandedPersonnelIndex, setExpandedPersonnelIndex] = useState<number | null>(null);
+
+  // Supervisor preview
+  const [showSupervisorPreview, setShowSupervisorPreview] = useState(false);
+
   // Populate from existing ticket
   useEffect(() => {
     if (!ticket) return;
