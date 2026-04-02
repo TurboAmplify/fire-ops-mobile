@@ -1,23 +1,34 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { AppShell } from "@/components/AppShell";
 import { useTruck, useDeleteTruck } from "@/hooks/useFleet";
-import { TRUCK_STATUS_LABELS, type TruckStatus } from "@/services/fleet";
 import { Loader2, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { TruckHeroPhoto } from "@/components/fleet/TruckHeroPhoto";
+import { TruckInfoSection } from "@/components/fleet/TruckInfoSection";
 import { TruckPhotoSection } from "@/components/fleet/TruckPhotoSection";
 import { TruckDocumentSection } from "@/components/fleet/TruckDocumentSection";
 import { TruckChecklistSection } from "@/components/fleet/TruckChecklistSection";
 import { TruckServiceLogSection } from "@/components/fleet/TruckServiceLogSection";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useState } from "react";
 
 export default function FleetTruckDetail() {
   const { truckId } = useParams<{ truckId: string }>();
   const navigate = useNavigate();
   const { data: truck, isLoading } = useTruck(truckId!);
   const deleteMutation = useDeleteTruck();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const handleDelete = async () => {
-    if (!confirm("Delete this truck? This cannot be undone.")) return;
     try {
       await deleteMutation.mutateAsync(truckId!);
       toast.success("Truck deleted");
@@ -25,6 +36,7 @@ export default function FleetTruckDetail() {
     } catch (err: any) {
       toast.error(err?.message ?? "Failed to delete truck");
     }
+    setShowDeleteDialog(false);
   };
 
   if (isLoading) {
@@ -45,26 +57,6 @@ export default function FleetTruckDetail() {
     );
   }
 
-  const status = truck.status as TruckStatus;
-  const statusColors: Record<TruckStatus, string> = {
-    available: "bg-success/15 text-success",
-    deployed: "bg-primary/15 text-primary",
-    maintenance: "bg-warning/15 text-warning",
-  };
-
-  const details = [
-    { label: "Unit Type", value: truck.unit_type },
-    { label: "Make", value: truck.make },
-    { label: "Model", value: truck.model },
-    { label: "Year", value: truck.year },
-    { label: "Plate", value: truck.plate },
-    { label: "VIN", value: truck.vin },
-    { label: "Mileage", value: truck.current_mileage ? `${truck.current_mileage.toLocaleString()} mi` : null },
-    { label: "Water Capacity", value: truck.water_capacity },
-    { label: "Pump Type", value: truck.pump_type },
-    { label: "DOT Number", value: truck.dot_number },
-  ].filter((d) => d.value);
-
   return (
     <AppShell
       title={truck.name}
@@ -78,7 +70,7 @@ export default function FleetTruckDetail() {
             Edit
           </Link>
           <button
-            onClick={handleDelete}
+            onClick={() => setShowDeleteDialog(true)}
             disabled={deleteMutation.isPending}
             className="flex items-center justify-center h-9 w-9 rounded-full bg-destructive/10 text-destructive active:bg-destructive/20"
           >
@@ -95,33 +87,8 @@ export default function FleetTruckDetail() {
           truckName={truck.name}
         />
 
-        {/* Status & basic info */}
-        <div className="rounded-2xl bg-card p-4 space-y-3 card-shadow">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold">{truck.name}</h2>
-            <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${statusColors[status]}`}>
-              {TRUCK_STATUS_LABELS[status] ?? truck.status}
-            </span>
-          </div>
-
-          {details.length > 0 && (
-            <div className="grid grid-cols-2 gap-2">
-              {details.map((d) => (
-                <div key={d.label}>
-                  <p className="text-xs text-muted-foreground">{d.label}</p>
-                  <p className="text-sm font-medium">{String(d.value)}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {truck.notes && (
-            <div>
-              <p className="text-xs text-muted-foreground">Notes</p>
-              <p className="text-sm">{truck.notes}</p>
-            </div>
-          )}
-        </div>
+        {/* Collapsible Info Section */}
+        <TruckInfoSection truck={truck} />
 
         {/* Checklist */}
         <TruckChecklistSection truckId={truckId!} />
@@ -135,6 +102,24 @@ export default function FleetTruckDetail() {
         {/* Service & Maintenance */}
         <TruckServiceLogSection truckId={truckId!} />
       </div>
+
+      {/* Delete truck confirmation */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Truck</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{truck.name}&quot;? This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppShell>
   );
 }
