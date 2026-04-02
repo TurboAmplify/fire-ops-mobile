@@ -6,7 +6,54 @@
 
 @layer base {
   :root {
-    /* Force dark by default — the app is dark-themed */
+    /* Light theme */
+    --background: 0 0% 98%;
+    --foreground: 220 15% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 15% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 15% 15%;
+
+    --primary: 8 85% 52%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 14% 92%;
+    --secondary-foreground: 220 15% 25%;
+
+    --muted: 220 14% 92%;
+    --muted-foreground: 220 10% 42%;
+
+    --accent: 8 50% 95%;
+    --accent-foreground: 8 85% 45%;
+
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 152 55% 38%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 220 14% 86%;
+    --input: 220 14% 82%;
+    --ring: 8 85% 52%;
+
+    --radius: 0.875rem;
+
+    --sidebar-background: 0 0% 97%;
+    --sidebar-foreground: 220 15% 25%;
+    --sidebar-primary: 8 85% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 92%;
+    --sidebar-accent-foreground: 220 15% 25%;
+    --sidebar-border: 220 14% 86%;
+    --sidebar-ring: 8 85% 52%;
+  }
+
+  .dark {
     --background: 220 20% 7%;
     --foreground: 220 15% 93%;
 
@@ -40,8 +87,6 @@
     --border: 220 14% 16%;
     --input: 220 14% 18%;
     --ring: 8 85% 52%;
-
-    --radius: 0.875rem;
 
     --sidebar-background: 220 20% 8%;
     --sidebar-foreground: 220 15% 85%;
