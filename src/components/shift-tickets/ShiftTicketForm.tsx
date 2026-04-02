@@ -508,17 +508,18 @@ function BulkTimeEntry({
   personnelEntries: PersonnelEntry[];
   setPersonnelEntries: React.Dispatch<React.SetStateAction<PersonnelEntry[]>>;
 }) {
-  const [bulkDate, setBulkDate] = useState(new Date().toISOString().split("T")[0]);
-  const [bulkOpStart, setBulkOpStart] = useState("");
-  const [bulkOpStop, setBulkOpStop] = useState("");
-  const [bulkSbStart, setBulkSbStart] = useState("");
-  const [bulkSbStop, setBulkSbStop] = useState("");
-  const [bulkActivity, setBulkActivity] = useState<"travel" | "work">("work");
-  const [bulkWorkContext, setBulkWorkContext] = useState("");
-  const [bulkLodging, setBulkLodging] = useState(false);
-  const [bulkPerDiemB, setBulkPerDiemB] = useState(false);
-  const [bulkPerDiemL, setBulkPerDiemL] = useState(false);
-  const [bulkPerDiemD, setBulkPerDiemD] = useState(false);
+  const firstEntry = personnelEntries[0];
+  const [bulkDate, setBulkDate] = useState(firstEntry?.date || new Date().toISOString().split("T")[0]);
+  const [bulkOpStart, setBulkOpStart] = useState(firstEntry?.op_start || "");
+  const [bulkOpStop, setBulkOpStop] = useState(firstEntry?.op_stop || "");
+  const [bulkSbStart, setBulkSbStart] = useState(firstEntry?.sb_start || "");
+  const [bulkSbStop, setBulkSbStop] = useState(firstEntry?.sb_stop || "");
+  const [bulkActivity, setBulkActivity] = useState<"travel" | "work">(firstEntry?.activity_type || "work");
+  const [bulkWorkContext, setBulkWorkContext] = useState(firstEntry?.work_context || "");
+  const [bulkLodging, setBulkLodging] = useState(firstEntry?.lodging || false);
+  const [bulkPerDiemB, setBulkPerDiemB] = useState(firstEntry?.per_diem_b || false);
+  const [bulkPerDiemL, setBulkPerDiemL] = useState(firstEntry?.per_diem_l || false);
+  const [bulkPerDiemD, setBulkPerDiemD] = useState(firstEntry?.per_diem_d || false);
 
   const applyToAll = () => {
     const updated = personnelEntries.map((entry) => {

@@ -36,7 +36,7 @@ export function PersonnelEntryRow({ entry, index, onChange, onRemove }: Props) {
   return (
     <div className="rounded-xl border border-border bg-card p-3 space-y-2">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-bold text-muted-foreground">Personnel Row {index + 1}</span>
+        <span className="text-xs font-bold text-muted-foreground">Crew Row {index + 1}</span>
         <button onClick={() => onRemove(index)} className="text-xs text-destructive touch-target">Remove</button>
       </div>
       <div className="grid grid-cols-2 gap-2">
