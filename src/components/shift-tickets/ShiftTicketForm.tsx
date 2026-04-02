@@ -40,7 +40,12 @@ const emptyPersonnelEntry = (): PersonnelEntry => ({
   sb_start: "",
   sb_stop: "",
   total: 0,
-  remarks: "",
+  remarks: "Work",
+  activity_type: "work",
+  lodging: false,
+  per_diem_b: false,
+  per_diem_l: false,
+  per_diem_d: false,
 });
 
 const inputClass = "w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-ring touch-target";
