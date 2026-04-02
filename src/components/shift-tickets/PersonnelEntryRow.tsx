@@ -1,4 +1,5 @@
 import { computeHours, buildRemarksString, type PersonnelEntry } from "@/services/shift-tickets";
+import { MilitaryTimeInput } from "./MilitaryTimeInput";
 
 interface Props {
   entry: PersonnelEntry;
@@ -30,6 +31,7 @@ export function PersonnelEntryRow({ entry, index, onChange, onRemove }: Props) {
   };
 
   const activityType = entry.activity_type || "work";
+  const timeInputClass = "w-full rounded-lg border border-input bg-background px-2 py-2 text-sm outline-none focus:ring-1 focus:ring-ring";
 
   return (
     <div className="rounded-xl border border-border bg-card p-3 space-y-2">
@@ -41,36 +43,32 @@ export function PersonnelEntryRow({ entry, index, onChange, onRemove }: Props) {
         <div>
           <label className="text-[10px] text-muted-foreground">22. Date</label>
           <input type="date" value={entry.date} onChange={(e) => update("date", e.target.value)}
-            className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm outline-none focus:ring-1 focus:ring-ring" />
+            className={timeInputClass} />
         </div>
         <div>
           <label className="text-[10px] text-muted-foreground">23. Operator Name</label>
           <input type="text" value={entry.operator_name} onChange={(e) => update("operator_name", e.target.value)}
-            className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm outline-none focus:ring-1 focus:ring-ring" />
+            className={timeInputClass} />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="text-[10px] text-muted-foreground">24. Start (Operating) - 24h</label>
-          <input type="time" step="60" value={entry.op_start} onChange={(e) => update("op_start", e.target.value)}
-            className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm outline-none focus:ring-1 focus:ring-ring military-time" />
+          <label className="text-[10px] text-muted-foreground">24. Op Start (24h)</label>
+          <MilitaryTimeInput value={entry.op_start} onChange={(v) => update("op_start", v)} className={timeInputClass} />
         </div>
         <div>
-          <label className="text-[10px] text-muted-foreground">25. Stop (Operating) - 24h</label>
-          <input type="time" step="60" value={entry.op_stop} onChange={(e) => update("op_stop", e.target.value)}
-            className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm outline-none focus:ring-1 focus:ring-ring military-time" />
+          <label className="text-[10px] text-muted-foreground">25. Op Stop (24h)</label>
+          <MilitaryTimeInput value={entry.op_stop} onChange={(v) => update("op_stop", v)} className={timeInputClass} />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="text-[10px] text-muted-foreground">26. Start (Standby) - 24h</label>
-          <input type="time" step="60" value={entry.sb_start} onChange={(e) => update("sb_start", e.target.value)}
-            className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm outline-none focus:ring-1 focus:ring-ring military-time" />
+          <label className="text-[10px] text-muted-foreground">26. SB Start (24h)</label>
+          <MilitaryTimeInput value={entry.sb_start} onChange={(v) => update("sb_start", v)} className={timeInputClass} />
         </div>
         <div>
-          <label className="text-[10px] text-muted-foreground">27. Stop (Standby) - 24h</label>
-          <input type="time" step="60" value={entry.sb_stop} onChange={(e) => update("sb_stop", e.target.value)}
-            className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm outline-none focus:ring-1 focus:ring-ring military-time" />
+          <label className="text-[10px] text-muted-foreground">27. SB Stop (24h)</label>
+          <MilitaryTimeInput value={entry.sb_stop} onChange={(v) => update("sb_stop", v)} className={timeInputClass} />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2">
