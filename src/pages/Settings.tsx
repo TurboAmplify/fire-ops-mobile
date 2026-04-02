@@ -74,6 +74,29 @@ export default function Settings() {
           </div>
         </section>
 
+        {/* Appearance */}
+        <section className="space-y-2">
+          <h2 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
+            Appearance
+          </h2>
+          <div className="rounded-2xl bg-card overflow-hidden divide-y divide-border/60 card-shadow">
+            <button
+              onClick={toggleTheme}
+              className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors active:bg-secondary/50 touch-target"
+            >
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent shrink-0">
+                {theme === "dark" ? (
+                  <Moon className="h-4 w-4 text-accent-foreground" />
+                ) : (
+                  <Sun className="h-4 w-4 text-accent-foreground" />
+                )}
+              </div>
+              <span className="flex-1 text-sm">Theme</span>
+              <span className="text-sm text-muted-foreground capitalize">{theme}</span>
+            </button>
+          </div>
+        </section>
+
         {/* App info */}
         <section className="space-y-2">
           <h2 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
