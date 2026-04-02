@@ -61,6 +61,8 @@ export function ShiftTicketForm({
   saving,
   onSave,
   onExportPdf,
+  onDuplicate,
+  duplicating,
   onBack,
   exportingPdf,
   warnings,
