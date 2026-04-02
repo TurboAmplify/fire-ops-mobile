@@ -69,7 +69,12 @@ export default function ShiftTicketCreate() {
           sb_start: "",
           sb_stop: "",
           total: 0,
-          remarks: c.role_on_assignment || c.crew_members?.role || "",
+          remarks: "Work",
+          activity_type: "work" as const,
+          lodging: false,
+          per_diem_b: false,
+          per_diem_l: false,
+          per_diem_d: false,
         }))
       : [];
 
