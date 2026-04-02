@@ -5,7 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { SignatureCanvas } from "./SignatureCanvas";
 import { EquipmentEntryRow } from "./EquipmentEntryRow";
 import { PersonnelEntryRow } from "./PersonnelEntryRow";
-import { uploadSignature, computeHours } from "@/services/shift-tickets";
+import { uploadSignature, computeHours, buildRemarksString } from "@/services/shift-tickets";
 import type { ShiftTicket, EquipmentEntry, PersonnelEntry } from "@/services/shift-tickets";
 import type { IncidentTruckCrewWithMember } from "@/services/incident-truck-crew";
 
