@@ -17,3 +17,11 @@ export async function parseReceiptAI(imageUrl: string): Promise<ParsedReceipt> {
   if (error) throw error;
   return data?.parsed || {};
 }
+
+export async function parseBatchReceiptsAI(imageUrl: string): Promise<ParsedReceipt[]> {
+  const { data, error } = await supabase.functions.invoke("parse-batch-receipts", {
+    body: { imageUrl },
+  });
+  if (error) throw error;
+  return Array.isArray(data?.receipts) ? data.receipts : [];
+}

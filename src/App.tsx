@@ -75,6 +75,7 @@ const App = () => (
               <Route path="/expenses/review" element={<ProtectedRoute><ExpenseReview /></ProtectedRoute>} />
               <Route path="/expenses/:id" element={<ProtectedRoute><ExpenseDetail /></ProtectedRoute>} />
               <Route path="/expenses/:id/edit" element={<ProtectedRoute><ExpenseEdit /></ProtectedRoute>} />
+              <Route path="/expenses/batch-scan" element={<ProtectedRoute><BatchReceiptScan /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="/settings/organization" element={<ProtectedRoute><OrgSettings /></ProtectedRoute>} />
               <Route path="/privacy" element={<ProtectedRoute><Privacy /></ProtectedRoute>} />

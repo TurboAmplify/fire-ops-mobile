@@ -47,13 +47,22 @@ export default function Expenses() {
     <AppShell
       title="Expenses"
       headerRight={
-        <Link
-          to="/expenses/new"
-          className="flex items-center gap-1.5 rounded-full bg-primary px-3.5 h-9 text-sm font-semibold text-primary-foreground active:bg-primary/90"
-        >
-          <Plus className="h-4 w-4" />
-          New
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/expenses/batch-scan"
+            className="flex items-center gap-1.5 rounded-full bg-secondary px-3.5 h-9 text-sm font-semibold text-secondary-foreground active:bg-secondary/70"
+          >
+            <ScanLine className="h-4 w-4" />
+            Scan
+          </Link>
+          <Link
+            to="/expenses/new"
+            className="flex items-center gap-1.5 rounded-full bg-primary px-3.5 h-9 text-sm font-semibold text-primary-foreground active:bg-primary/90"
+          >
+            <Plus className="h-4 w-4" />
+            New
+          </Link>
+        </div>
       }
     >
       <div className="p-4 space-y-3">
