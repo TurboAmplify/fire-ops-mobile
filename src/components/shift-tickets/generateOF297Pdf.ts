@@ -227,16 +227,45 @@ export async function generateOF297Pdf(ticket: ShiftTicket): Promise<void> {
   const pRowCount = Math.max(pEntries.length, 5);
   for (let r = 0; r < pRowCount; r++) {
     const p = pEntries[r];
+    // Build multi-line remarks: line1=activity, line2=lodging or per diem, line3=per diem if lodging
+    let remarkLines: string[] = [];
+    if (p) {
+      if (p.activity_type === "travel") {
+        remarkLines.push("Travel/Check-In");
+      } else {
+        const ctx = p.work_context?.trim();
+        remarkLines.push(ctx ? `Work - ${ctx}` : "Work");
+      }
+      const meals: string[] = [];
+      if (p.per_diem_b) meals.push("B");
+      if (p.per_diem_l) meals.push("L");
+      if (p.per_diem_d) meals.push("D");
+      const perDiemStr = meals.length > 0 ? `Per Diem (${meals.join(", ")})` : "";
+      if (p.lodging) {
+        remarkLines.push("Lodging");
+        if (perDiemStr) remarkLines.push(perDiemStr);
+      } else if (perDiemStr) {
+        remarkLines.push(perDiemStr);
+      }
+    }
+
+    // Calculate row height based on remark lines
+    const rowH = Math.max(14, remarkLines.length * 9 + 4);
     cx = margin;
-    const vals = p ? [p.date, p.operator_name, p.op_start, p.op_stop, p.sb_start, p.sb_stop, p.total?.toString() || "", p.remarks] : ["", "", "", "", "", "", "", ""];
-    for (let i = 0; i < pCols.length; i++) {
+    const vals = p ? [p.date, p.operator_name, p.op_start, p.op_stop, p.sb_start, p.sb_stop, p.total?.toString() || ""] : ["", "", "", "", "", "", ""];
+    for (let i = 0; i < pCols.length - 1; i++) {
       text(vals[i] || "", cx + 2, y + 10, { size: 7, maxWidth: pCols[i] - 4 });
-      drawLine(cx, y, cx, y + 14);
+      drawLine(cx, y, cx, y + rowH);
       cx += pCols[i];
     }
-    drawLine(W - margin, y, W - margin, y + 14);
-    drawLine(margin, y + 14, W - margin, y + 14);
-    y += 14;
+    // Remarks column - multi-line
+    remarkLines.forEach((line, li) => {
+      text(line, cx + 2, y + 9 + li * 9, { size: 6, maxWidth: pCols[pCols.length - 1] - 4 });
+    });
+    drawLine(cx, y, cx, y + rowH);
+    drawLine(W - margin, y, W - margin, y + rowH);
+    drawLine(margin, y + rowH, W - margin, y + rowH);
+    y += rowH;
   }
 
   // Remarks
