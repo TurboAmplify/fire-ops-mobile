@@ -1,6 +1,18 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Plus, Loader2 } from "lucide-react";
-import { useShiftTickets } from "@/hooks/useShiftTickets";
+import { FileText, Plus, Loader2, Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { useShiftTickets, useDeleteShiftTicket } from "@/hooks/useShiftTickets";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Props {
   incidentTruckId: string;
@@ -27,8 +39,22 @@ export function ShiftTicketSection({
 }: Props) {
   const navigate = useNavigate();
   const { data: tickets, isLoading } = useShiftTickets(incidentTruckId);
+  const deleteMutation = useDeleteShiftTicket(incidentTruckId);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string } | null>(null);
 
   const navState = { truckName, truckMake, truckModel, truckVin, truckPlate, truckUnitType, incidentName };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
+      toast.success("Shift ticket deleted");
+    } catch {
+      toast.error("Failed to delete shift ticket");
+    } finally {
+      setDeleteTarget(null);
+    }
+  };
 
   return (
     <div className="space-y-2">
@@ -52,23 +78,61 @@ export function ShiftTicketSection({
         <p className="text-xs text-muted-foreground py-2 text-center">No shift tickets yet.</p>
       )}
 
-      {tickets?.map((t) => (
-        <button
-          key={t.id}
-          onClick={() => navigate(`/incidents/${incidentId}/trucks/${incidentTruckId}/shift-ticket/${t.id}`)}
-          className="flex w-full items-center gap-3 rounded-lg bg-secondary p-3 text-left transition-transform active:scale-[0.98] touch-target"
-        >
-          <FileText className="h-4 w-4 text-primary" />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium truncate">
-              {t.agreement_number || "OF-297"} {t.incident_name ? `- ${t.incident_name}` : ""}
-            </p>
-            <p className="text-[10px] text-muted-foreground">
-              {t.status === "draft" ? "Draft" : "Final"} | {new Date(t.updated_at).toLocaleDateString()}
-            </p>
+      {tickets?.map((t) => {
+        const label = `${t.agreement_number || "OF-297"}${t.incident_name ? ` - ${t.incident_name}` : ""}`;
+        return (
+          <div
+            key={t.id}
+            className="flex w-full items-center gap-3 rounded-lg bg-secondary p-3"
+          >
+            <FileText className="h-4 w-4 text-primary shrink-0" />
+            <button
+              onClick={() => navigate(`/incidents/${incidentId}/trucks/${incidentTruckId}/shift-ticket/${t.id}`)}
+              className="min-w-0 flex-1 text-left touch-target"
+            >
+              <p className="text-sm font-medium truncate">{label}</p>
+              <p className="text-[10px] text-muted-foreground">
+                {t.status === "draft" ? "Draft" : "Final"} | {new Date(t.updated_at).toLocaleDateString()}
+              </p>
+            </button>
+            <button
+              onClick={() => navigate(`/incidents/${incidentId}/trucks/${incidentTruckId}/shift-ticket/${t.id}`)}
+              className="rounded-lg p-2 text-muted-foreground active:bg-accent touch-target"
+              aria-label="Edit shift ticket"
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setDeleteTarget({ id: t.id, label })}
+              className="rounded-lg p-2 text-destructive active:bg-destructive/10 touch-target"
+              aria-label="Delete shift ticket"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
           </div>
-        </button>
-      ))}
+        );
+      })}
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Shift Ticket?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete "{deleteTarget?.label}". This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
