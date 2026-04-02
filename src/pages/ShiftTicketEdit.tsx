@@ -24,6 +24,7 @@ export default function ShiftTicketEdit() {
   const { data: crewAssignments } = useIncidentTruckCrew(incidentTruckId || "");
   const { data: incidentTrucks } = useIncidentTrucks(incidentId || "");
   const [exportingPdf, setExportingPdf] = useState(false);
+  const duplicateMutation = useDuplicateShiftTicket(incidentTruckId || "");
 
   // Get latest truck data for license plate and company name flow-through
   const incidentTruck = useMemo(
