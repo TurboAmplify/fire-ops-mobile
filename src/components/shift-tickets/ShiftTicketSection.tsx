@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Plus, Loader2, Pencil, Trash2 } from "lucide-react";
+import { FileText, Plus, Loader2, Pencil, Trash2, Copy } from "lucide-react";
 import { toast } from "sonner";
-import { useShiftTickets, useDeleteShiftTicket } from "@/hooks/useShiftTickets";
+import { useShiftTickets, useDeleteShiftTicket, useDuplicateShiftTicket } from "@/hooks/useShiftTickets";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,6 +17,7 @@ import {
 interface Props {
   incidentTruckId: string;
   incidentId: string;
+  organizationId?: string;
   truckName?: string | null;
   truckMake?: string | null;
   truckModel?: string | null;
@@ -29,6 +30,7 @@ interface Props {
 export function ShiftTicketSection({
   incidentTruckId,
   incidentId,
+  organizationId,
   truckName,
   truckMake,
   truckModel,
@@ -40,6 +42,7 @@ export function ShiftTicketSection({
   const navigate = useNavigate();
   const { data: tickets, isLoading } = useShiftTickets(incidentTruckId);
   const deleteMutation = useDeleteShiftTicket(incidentTruckId);
+  const duplicateMutation = useDuplicateShiftTicket(incidentTruckId);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string } | null>(null);
 
   const navState = { truckName, truckMake, truckModel, truckVin, truckPlate, truckUnitType, incidentName };
@@ -53,6 +56,20 @@ export function ShiftTicketSection({
       toast.error("Failed to delete shift ticket");
     } finally {
       setDeleteTarget(null);
+    }
+  };
+
+  const handleDuplicate = async (ticket: any) => {
+    if (!organizationId) {
+      toast.error("Organization not loaded");
+      return;
+    }
+    try {
+      const newTicket = await duplicateMutation.mutateAsync({ ticket, organizationId });
+      toast.success("Shift ticket duplicated (dates advanced +1 day)");
+      navigate(`/incidents/${incidentId}/trucks/${incidentTruckId}/shift-ticket/${newTicket.id}`);
+    } catch {
+      toast.error("Failed to duplicate shift ticket");
     }
   };
 
@@ -101,6 +118,14 @@ export function ShiftTicketSection({
               aria-label="Edit shift ticket"
             >
               <Pencil className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => handleDuplicate(t)}
+              className="rounded-lg p-2 text-muted-foreground active:bg-accent touch-target"
+              aria-label="Duplicate shift ticket"
+              disabled={duplicateMutation.isPending}
+            >
+              <Copy className="h-4 w-4" />
             </button>
             <button
               onClick={() => setDeleteTarget({ id: t.id, label })}

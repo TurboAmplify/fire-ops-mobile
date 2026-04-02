@@ -88,6 +88,48 @@ export async function fetchShiftTickets(incidentTruckId: string): Promise<ShiftT
   return (data ?? []) as unknown as ShiftTicket[];
 }
 
+export async function duplicateShiftTicket(
+  sourceTicket: ShiftTicket,
+  organizationId: string
+): Promise<ShiftTicket> {
+  // Advance all dates by 1 day
+  const advanceDate = (dateStr: string) => {
+    if (!dateStr) return dateStr;
+    const d = new Date(dateStr + "T00:00:00");
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().split("T")[0];
+  };
+
+  const newEquipment = (sourceTicket.equipment_entries as EquipmentEntry[]).map((e) => ({
+    ...e,
+    date: advanceDate(e.date),
+  }));
+  const newPersonnel = (sourceTicket.personnel_entries as PersonnelEntry[]).map((p) => ({
+    ...p,
+    date: advanceDate(p.date),
+  }));
+
+  const { id, created_at, updated_at, contractor_rep_signature_url, contractor_rep_signed_at, supervisor_signature_url, supervisor_signed_at, ...rest } = sourceTicket;
+
+  const { data, error } = await supabase
+    .from("shift_tickets")
+    .insert({
+      ...rest,
+      organization_id: organizationId,
+      equipment_entries: newEquipment as any,
+      personnel_entries: newPersonnel as any,
+      status: "draft",
+      contractor_rep_signature_url: null,
+      contractor_rep_signed_at: null,
+      supervisor_signature_url: null,
+      supervisor_signed_at: null,
+    } as any)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as unknown as ShiftTicket;
+}
+
 export async function fetchShiftTicket(id: string): Promise<ShiftTicket | null> {
   const { data, error } = await supabase
     .from("shift_tickets")

@@ -227,16 +227,45 @@ export async function generateOF297Pdf(ticket: ShiftTicket): Promise<void> {
   const pRowCount = Math.max(pEntries.length, 5);
   for (let r = 0; r < pRowCount; r++) {
     const p = pEntries[r];
+    // Build multi-line remarks: line1=activity, line2=lodging or per diem, line3=per diem if lodging
+    let remarkLines: string[] = [];
+    if (p) {
+      if (p.activity_type === "travel") {
+        remarkLines.push("Travel/Check-In");
+      } else {
+        const ctx = p.work_context?.trim();
+        remarkLines.push(ctx ? `Work - ${ctx}` : "Work");
+      }
+      const meals: string[] = [];
+      if (p.per_diem_b) meals.push("B");
+      if (p.per_diem_l) meals.push("L");
+      if (p.per_diem_d) meals.push("D");
+      const perDiemStr = meals.length > 0 ? `Per Diem (${meals.join(", ")})` : "";
+      if (p.lodging) {
+        remarkLines.push("Lodging");
+        if (perDiemStr) remarkLines.push(perDiemStr);
+      } else if (perDiemStr) {
+        remarkLines.push(perDiemStr);
+      }
+    }
+
+    // Calculate row height based on remark lines
+    const rowH = Math.max(14, remarkLines.length * 9 + 4);
     cx = margin;
-    const vals = p ? [p.date, p.operator_name, p.op_start, p.op_stop, p.sb_start, p.sb_stop, p.total?.toString() || "", p.remarks] : ["", "", "", "", "", "", "", ""];
-    for (let i = 0; i < pCols.length; i++) {
+    const vals = p ? [p.date, p.operator_name, p.op_start, p.op_stop, p.sb_start, p.sb_stop, p.total?.toString() || ""] : ["", "", "", "", "", "", ""];
+    for (let i = 0; i < pCols.length - 1; i++) {
       text(vals[i] || "", cx + 2, y + 10, { size: 7, maxWidth: pCols[i] - 4 });
-      drawLine(cx, y, cx, y + 14);
+      drawLine(cx, y, cx, y + rowH);
       cx += pCols[i];
     }
-    drawLine(W - margin, y, W - margin, y + 14);
-    drawLine(margin, y + 14, W - margin, y + 14);
-    y += 14;
+    // Remarks column - multi-line
+    remarkLines.forEach((line, li) => {
+      text(line, cx + 2, y + 9 + li * 9, { size: 6, maxWidth: pCols[pCols.length - 1] - 4 });
+    });
+    drawLine(cx, y, cx, y + rowH);
+    drawLine(W - margin, y, W - margin, y + rowH);
+    drawLine(margin, y + rowH, W - margin, y + rowH);
+    y += rowH;
   }
 
   // Remarks
@@ -247,40 +276,42 @@ export async function generateOF297Pdf(ticket: ShiftTicket): Promise<void> {
   y += 36;
   drawLine(margin, y, W - margin, y);
 
-  // Signatures
+  // Signatures - name and signature ABOVE the line
   const halfW = cw / 2;
+  const sigBlockH = 40;
 
-  // Contractor
-  text("31. Contractor/Agency Rep (Printed Name):", margin + 2, y + 10, { size: 7 });
-  text(ticket.contractor_rep_name || "", margin + 2, y + 22, { size: 9, bold: true });
-  drawLine(margin, y, margin + halfW, y);
-  drawLine(margin, y + 30, margin + halfW, y + 30);
+  // Load signatures in parallel
+  const [contractorSigData, supervisorSigData] = await Promise.all([
+    ticket.contractor_rep_signature_url ? loadImageAsBase64(ticket.contractor_rep_signature_url) : Promise.resolve(null),
+    ticket.supervisor_signature_url ? loadImageAsBase64(ticket.supervisor_signature_url) : Promise.resolve(null),
+  ]);
 
-  text("32. Signature:", margin + halfW + 2, y + 10, { size: 7 });
-  if (ticket.contractor_rep_signature_url) {
-    const sigData = await loadImageAsBase64(ticket.contractor_rep_signature_url);
-    if (sigData) {
-      try { doc.addImage(sigData, "JPEG", margin + halfW + 4, y + 12, 120, 16); } catch (e) { console.warn("Failed to add contractor sig to PDF:", e); }
-    }
+  // Contractor - printed name above line
+  text(ticket.contractor_rep_name || "", margin + 4, y + sigBlockH - 14, { size: 9, bold: true });
+  drawLine(margin, y + sigBlockH, margin + halfW, y + sigBlockH);
+  text("31. Contractor/Agency Rep (Printed Name):", margin + 2, y + sigBlockH + 10, { size: 7 });
+
+  // Contractor signature above line
+  if (contractorSigData) {
+    try { doc.addImage(contractorSigData, "JPEG", margin + halfW + 8, y + sigBlockH - 22, 140, 20); } catch (e) { console.warn("Contractor sig:", e); }
   }
-  drawLine(margin + halfW, y, W - margin, y);
-  drawLine(margin + halfW, y + 30, W - margin, y + 30);
-  y += 30;
+  drawLine(margin + halfW, y + sigBlockH, W - margin, y + sigBlockH);
+  text("32. Signature:", margin + halfW + 2, y + sigBlockH + 10, { size: 7 });
+  y += sigBlockH + 16;
 
-  // Supervisor
-  text("33. Incident Supervisor (Name & RO#):", margin + 2, y + 10, { size: 7 });
-  text(`${ticket.supervisor_name || ""} ${ticket.supervisor_resource_order || ""}`, margin + 2, y + 22, { size: 9, bold: true });
-  drawLine(margin, y + 30, margin + halfW, y + 30);
+  // Supervisor - printed name above line
+  const supText = `${ticket.supervisor_name || ""} ${ticket.supervisor_resource_order || ""}`.trim();
+  text(supText, margin + 4, y + sigBlockH - 14, { size: 9, bold: true });
+  drawLine(margin, y + sigBlockH, margin + halfW, y + sigBlockH);
+  text("33. Incident Supervisor (Name & RO#):", margin + 2, y + sigBlockH + 10, { size: 7 });
 
-  text("34. Signature:", margin + halfW + 2, y + 10, { size: 7 });
-  if (ticket.supervisor_signature_url) {
-    const sigData = await loadImageAsBase64(ticket.supervisor_signature_url);
-    if (sigData) {
-      try { doc.addImage(sigData, "JPEG", margin + halfW + 4, y + 12, 120, 16); } catch (e) { console.warn("Failed to add supervisor sig to PDF:", e); }
-    }
+  // Supervisor signature above line
+  if (supervisorSigData) {
+    try { doc.addImage(supervisorSigData, "JPEG", margin + halfW + 8, y + sigBlockH - 22, 140, 20); } catch (e) { console.warn("Supervisor sig:", e); }
   }
-  drawLine(margin + halfW, y + 30, W - margin, y + 30);
-  y += 30;
+  drawLine(margin + halfW, y + sigBlockH, W - margin, y + sigBlockH);
+  text("34. Signature:", margin + halfW + 2, y + sigBlockH + 10, { size: 7 });
+  y += sigBlockH + 16;
 
   // Footer
   y += 16;

@@ -10,6 +10,7 @@ import { ShiftList } from "@/components/shifts/ShiftList";
 import { ResourceOrderSection } from "./ResourceOrderSection";
 import { AgreementUpload } from "./AgreementUpload";
 import { ShiftTicketSection } from "@/components/shift-tickets/ShiftTicketSection";
+import { useOrganization } from "@/hooks/useOrganization";
 
 const truckStatuses: IncidentTruckStatus[] = ["assigned", "active", "demobed", "completed"];
 
@@ -19,6 +20,7 @@ interface Props {
 }
 
 export function IncidentTruckList({ incidentId, incidentName }: Props) {
+  const { membership } = useOrganization();
   const { data: incidentTrucks, isLoading } = useIncidentTrucks(incidentId);
   const { data: allTrucks } = useAvailableTrucks();
   const assignMutation = useAssignTruck(incidentId);
@@ -165,6 +167,7 @@ export function IncidentTruckList({ incidentId, incidentName }: Props) {
                 <ShiftTicketSection
                   incidentTruckId={it.id}
                   incidentId={incidentId}
+                  organizationId={membership?.organizationId}
                   truckName={it.trucks.name}
                   truckMake={it.trucks.make}
                   truckModel={it.trucks.model}

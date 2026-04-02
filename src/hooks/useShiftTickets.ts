@@ -5,6 +5,7 @@ import {
   createShiftTicket,
   updateShiftTicket,
   deleteShiftTicket,
+  duplicateShiftTicket,
 } from "@/services/shift-tickets";
 import type { ShiftTicket } from "@/services/shift-tickets";
 
@@ -49,6 +50,17 @@ export function useDeleteShiftTicket(incidentTruckId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => deleteShiftTicket(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["shift-tickets", incidentTruckId] });
+    },
+  });
+}
+
+export function useDuplicateShiftTicket(incidentTruckId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ticket, organizationId }: { ticket: ShiftTicket; organizationId: string }) =>
+      duplicateShiftTicket(ticket, organizationId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["shift-tickets", incidentTruckId] });
     },
