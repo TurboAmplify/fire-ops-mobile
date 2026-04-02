@@ -8,6 +8,7 @@ import { useOrganization } from "@/hooks/useOrganization";
 import { useIncident } from "@/hooks/useIncidents";
 import { useIncidentTrucks } from "@/hooks/useIncidentTrucks";
 import { useIncidentTruckCrew } from "@/hooks/useIncidentTruckCrew";
+import { useAgreements } from "@/hooks/useAgreements";
 import { generateOF297Pdf } from "@/components/shift-tickets/generateOF297Pdf";
 import type { ShiftTicket, PersonnelEntry } from "@/services/shift-tickets";
 
