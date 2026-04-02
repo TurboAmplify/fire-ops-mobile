@@ -29,7 +29,7 @@ export default function Dashboard() {
             width={1280}
             height={640}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-black/40" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
           {/* Command bar accent */}
           <div className="absolute top-0 left-0 right-0 h-1 fire-gradient" />
           <div className="absolute bottom-0 left-0 right-0 p-4 pb-5">
