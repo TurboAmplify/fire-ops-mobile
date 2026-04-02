@@ -96,12 +96,17 @@ export function ShiftTicketSection({
       )}
 
       {tickets?.map((t) => {
-        const label = `${t.agreement_number || "OF-297"}${t.incident_name ? ` - ${t.incident_name}` : ""}`;
         // Extract the shift date from equipment or personnel entries
         const entries = (t.equipment_entries as any[]) || [];
         const pEntries = (t.personnel_entries as any[]) || [];
         const shiftDate = entries[0]?.date || pEntries[0]?.date || null;
         const dateDisplay = shiftDate || new Date(t.updated_at).toLocaleDateString();
+        // Build human-readable label: Incident Name - Truck Name - Date
+        const nameParts: string[] = [];
+        if (t.incident_name) nameParts.push(t.incident_name);
+        if (truckName) nameParts.push(truckName);
+        if (dateDisplay) nameParts.push(dateDisplay);
+        const label = nameParts.length > 0 ? nameParts.join(" - ") : "OF-297 Shift Ticket";
         return (
           <div
             key={t.id}
