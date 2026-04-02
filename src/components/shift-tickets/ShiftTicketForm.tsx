@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Loader2, FileText, Save, Download, AlertTriangle, Clock, Users } from "lucide-react";
+import { Plus, Loader2, FileText, Save, Download, AlertTriangle, Clock, Users, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { SignatureCanvas } from "./SignatureCanvas";
@@ -17,6 +17,8 @@ interface ShiftTicketFormProps {
   saving: boolean;
   onSave: (data: Partial<ShiftTicket>) => void | Promise<void>;
   onExportPdf: (sigOverrides: { contractor_rep_signature_url: string | null; supervisor_signature_url: string | null }) => void;
+  onDuplicate?: () => void;
+  duplicating?: boolean;
   onBack: () => void;
   exportingPdf?: boolean;
   warnings?: string[];
@@ -59,6 +61,8 @@ export function ShiftTicketForm({
   saving,
   onSave,
   onExportPdf,
+  onDuplicate,
+  duplicating,
   onBack,
   exportingPdf,
   warnings,
@@ -468,11 +472,20 @@ export function ShiftTicketForm({
           Save Draft
         </button>
         {ticket?.id && (
-          <button onClick={() => onExportPdf({ contractor_rep_signature_url: contractorSigUrl, supervisor_signature_url: supervisorSigUrl })} disabled={exportingPdf}
-            className="flex items-center justify-center gap-2 rounded-xl bg-secondary px-5 py-3 text-sm font-bold text-secondary-foreground touch-target disabled:opacity-40 active:scale-[0.98]">
-            {exportingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-            PDF
-          </button>
+          <>
+            <button onClick={() => onExportPdf({ contractor_rep_signature_url: contractorSigUrl, supervisor_signature_url: supervisorSigUrl })} disabled={exportingPdf}
+              className="flex items-center justify-center gap-2 rounded-xl bg-secondary px-4 py-3 text-sm font-bold text-secondary-foreground touch-target disabled:opacity-40 active:scale-[0.98]">
+              {exportingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              PDF
+            </button>
+            {onDuplicate && (
+              <button onClick={onDuplicate} disabled={duplicating}
+                className="flex items-center justify-center gap-2 rounded-xl bg-secondary px-4 py-3 text-sm font-bold text-secondary-foreground touch-target disabled:opacity-40 active:scale-[0.98]">
+                {duplicating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />}
+                Dup
+              </button>
+            )}
+          </>
         )}
       </div>
 

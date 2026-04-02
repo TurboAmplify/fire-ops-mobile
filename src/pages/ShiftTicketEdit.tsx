@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { ShiftTicketForm } from "@/components/shift-tickets/ShiftTicketForm";
-import { useShiftTicket, useUpdateShiftTicket } from "@/hooks/useShiftTickets";
+import { useShiftTicket, useUpdateShiftTicket, useDuplicateShiftTicket } from "@/hooks/useShiftTickets";
 import { generateOF297Pdf } from "@/components/shift-tickets/generateOF297Pdf";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useIncidentTruckCrew } from "@/hooks/useIncidentTruckCrew";
@@ -24,6 +24,7 @@ export default function ShiftTicketEdit() {
   const { data: crewAssignments } = useIncidentTruckCrew(incidentTruckId || "");
   const { data: incidentTrucks } = useIncidentTrucks(incidentId || "");
   const [exportingPdf, setExportingPdf] = useState(false);
+  const duplicateMutation = useDuplicateShiftTicket(incidentTruckId || "");
 
   // Get latest truck data for license plate and company name flow-through
   const incidentTruck = useMemo(
@@ -60,6 +61,17 @@ export default function ShiftTicketEdit() {
     }
   };
 
+  const handleDuplicate = async () => {
+    if (!ticket || !membership?.organizationId) return;
+    try {
+      const newTicket = await duplicateMutation.mutateAsync({ ticket: ticket as ShiftTicket, organizationId: membership.organizationId });
+      toast.success("Shift ticket duplicated (dates +1 day)");
+      navigate(`/incidents/${incidentId}/trucks/${incidentTruckId}/shift-ticket/${newTicket.id}`);
+    } catch {
+      toast.error("Failed to duplicate");
+    }
+  };
+
   // Merge latest truck + org data into the ticket for display
   const mergedTicket = useMemo(() => {
     if (!ticket) return null;
@@ -88,6 +100,8 @@ export default function ShiftTicketEdit() {
       saving={updateMutation.isPending}
       onSave={handleSave}
       onExportPdf={handleExportPdf}
+      onDuplicate={handleDuplicate}
+      duplicating={duplicateMutation.isPending}
       onBack={() => navigate(`/incidents/${incidentId}`)}
       exportingPdf={exportingPdf}
       crewRoster={activeCrew}
