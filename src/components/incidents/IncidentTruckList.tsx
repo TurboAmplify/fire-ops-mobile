@@ -167,6 +167,7 @@ export function IncidentTruckList({ incidentId, incidentName }: Props) {
                 <ShiftTicketSection
                   incidentTruckId={it.id}
                   incidentId={incidentId}
+                  organizationId={membership?.organizationId}
                   truckName={it.trucks.name}
                   truckMake={it.trucks.make}
                   truckModel={it.trucks.model}
