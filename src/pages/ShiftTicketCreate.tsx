@@ -49,8 +49,10 @@ export default function ShiftTicketCreate() {
   // Build initial ticket from all relational data
   useEffect(() => {
     if (ticket?.id || initialized) return; // Already created or initialized
-    // Wait for critical data to load
+    // Wait for critical data to load before initializing
     if (!incident && incidentId) return;
+    if (!resourceOrders && incidentTruckId) return;
+    if (!incidentTrucks && incidentId) return;
 
     const latestRO = resourceOrders?.find((ro) => ro.parsed_at != null);
     const roData = (latestRO?.parsed_data || {}) as Record<string, any>;
