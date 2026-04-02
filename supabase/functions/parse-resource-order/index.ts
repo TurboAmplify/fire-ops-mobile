@@ -45,10 +45,20 @@ serve(async (req) => {
     const prompt = `You are a document parser for wildland firefighting resource orders. 
 Analyze the uploaded document and extract structured data.
 
+IMPORTANT: Carefully examine the ENTIRE document including headers, footers, stamps, and fine print at the bottom. 
+Contract numbers, agreement numbers, and financial codes are often found at the BOTTOM of resource orders, 
+sometimes in small print, stamps, or handwritten notes.
+
+Look for these common label patterns:
+- "Contract Num" or "Contract #" or "Agreement #" — this is the agreement_number
+- "PN" followed by codes like "SL4V (1542)" — this is the financial_code
+- "CLIN" — CLIN number
+- Any alphanumeric code that looks like a contract (e.g. 1202SB25T7700)
+
 Extract ALL of the following fields if present:
-- agreement_number: The agreement, contract number, or "Contract Num" (e.g. 1202SB25T7700)
+- agreement_number: The agreement, contract number, or "Contract Num" (e.g. 1202SB25T7700). CHECK THE BOTTOM OF THE DOCUMENT.
 - resource_order_number: The resource order number(s)
-- financial_code: The financial code or "PN" code (e.g. PN SL4V (1542))
+- financial_code: The financial code or "PN" code (e.g. PN SL4V (1542)). Often near bottom or in stamps.
 - contract_number: The contract number if separate from agreement number
 - clin: CLIN number if present
 - ordering_unit: The ordering unit/agency
@@ -74,7 +84,7 @@ The document file name is: ${fileName}`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-2.5-pro",
         messages: [
           { role: "system", content: "You extract structured data from firefighting resource order documents. Return data using the provided tool." },
           {
