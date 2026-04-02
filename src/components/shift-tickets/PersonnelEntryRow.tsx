@@ -95,7 +95,16 @@ export function PersonnelEntryRow({ entry, index, onChange, onRemove }: Props) {
           </button>
         </div>
 
-        {/* Lodging */}
+        {/* Work context input */}
+        {activityType === "work" && (
+          <div>
+            <label className="text-[10px] text-muted-foreground">Work Context (e.g. IA2 - Johnson Hill Fire)</label>
+            <input type="text" value={entry.work_context || ""} onChange={(e) => update("work_context", e.target.value)}
+              placeholder="IA2 - Fire Name"
+              className={timeInputClass} />
+          </div>
+        )}
+
         <label className="flex items-center gap-2 touch-target">
           <input type="checkbox" checked={entry.lodging || false} onChange={(e) => update("lodging", e.target.checked)}
             className="h-5 w-5 rounded border-input accent-primary" />
