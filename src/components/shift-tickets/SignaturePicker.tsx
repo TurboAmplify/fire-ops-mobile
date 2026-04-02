@@ -1,14 +1,16 @@
+import "@fontsource/dancing-script/700.css";
+import "@fontsource/great-vibes/400.css";
+import "@fontsource/satisfy/400.css";
+import "@fontsource/pacifico/400.css";
 import { useRef, useState, useEffect, useCallback } from "react";
 import { X, RotateCcw, Check, PenLine } from "lucide-react";
 
 const FONT_OPTIONS = [
-  { family: "Dancing Script", label: "Script" },
-  { family: "Great Vibes", label: "Elegant" },
-  { family: "Satisfy", label: "Casual" },
-  { family: "Pacifico", label: "Bold" },
-];
-
-const GOOGLE_FONTS_URL = `https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Great+Vibes&family=Satisfy&family=Pacifico&display=swap`;
+  { family: "Dancing Script", label: "Script", weight: 700 },
+  { family: "Great Vibes", label: "Elegant", weight: 400 },
+  { family: "Satisfy", label: "Casual", weight: 400 },
+  { family: "Pacifico", label: "Bold", weight: 400 },
+] as const;
 
 export interface SignatureMetadata {
   method: "typed" | "drawn";
@@ -35,45 +37,40 @@ export function SignaturePicker({ open, onClose, onSave, title, defaultName = ""
   const [drawing, setDrawing] = useState(false);
   const [hasStroke, setHasStroke] = useState(false);
 
-  // Load Google Fonts
+  // Load bundled fonts
   useEffect(() => {
     if (!open) return;
+
+    let cancelled = false;
     setMode("type");
     setName(defaultName);
     setSelectedFont(null);
     setHasStroke(false);
-
-    const existing = document.querySelector(`link[href="${GOOGLE_FONTS_URL}"]`);
-    if (!existing) {
-      const link = document.createElement("link");
-      link.rel = "stylesheet";
-      link.href = GOOGLE_FONTS_URL;
-      document.head.appendChild(link);
-    }
-
-    // Wait for fonts to actually load
     setFontsLoaded(false);
+
     const loadFonts = async () => {
       try {
-        // Wait for the stylesheet to be parsed and fonts to begin loading
         await document.fonts.ready;
-        // Then explicitly load each font and wait
         await Promise.all(
-          FONT_OPTIONS.map((f) =>
-            document.fonts.load(`32px "${f.family}"`).then(() => {
-              // Verify the font is actually available by checking document.fonts
-              return document.fonts.load(`700 32px "${f.family}"`);
-            })
-          )
+          FONT_OPTIONS.map(async (font) => {
+            await document.fonts.load(`${font.weight} 32px "${font.family}"`, defaultName || "Signature");
+            await document.fonts.load(`${font.weight} 32px "${font.family}"`, "Signature");
+          })
         );
-        // Extra delay to ensure browser has committed font data for canvas use
-        await new Promise((r) => setTimeout(r, 300));
       } catch {
-        // Fonts may not load (offline), that's okay — draw mode still works
+        // If font loading fails, draw mode still works
       }
-      setFontsLoaded(true);
+
+      if (!cancelled) {
+        setFontsLoaded(true);
+      }
     };
-    loadFonts();
+
+    void loadFonts();
+
+    return () => {
+      cancelled = true;
+    };
   }, [open, defaultName]);
 
   // Render typed signature previews
@@ -94,7 +91,7 @@ export function SignaturePicker({ open, onClose, onSave, title, defaultName = ""
         ctx.fillStyle = "hsl(0 0% 100%)";
         ctx.fillRect(0, 0, rect.width, rect.height);
         ctx.fillStyle = "hsl(222 47% 11%)";
-        ctx.font = `32px "${font.family}", cursive`;
+        ctx.font = `${font.weight} 32px "${font.family}", cursive`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(name.trim(), rect.width / 2, rect.height / 2);
