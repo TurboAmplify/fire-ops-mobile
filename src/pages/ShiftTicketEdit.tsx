@@ -60,16 +60,6 @@ export default function ShiftTicketEdit() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <AppShell title="Shift Ticket">
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
-      </AppShell>
-    );
-  }
-
   // Merge latest truck + org data into the ticket for display
   const mergedTicket = useMemo(() => {
     if (!ticket) return null;
@@ -79,6 +69,16 @@ export default function ShiftTicketEdit() {
     if (truck?.vin && !merged.serial_vin_number) merged.serial_vin_number = truck.vin;
     return merged;
   }, [ticket, truck, membership]);
+
+  if (isLoading) {
+    return (
+      <AppShell title="Shift Ticket">
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <ShiftTicketForm
