@@ -1,0 +1,1 @@
+UPDATE shift_tickets SET equipment_make_model = '2017 DL31', serial_vin_number = '1GDM7D1G2HV518413' WHERE id = 'b8f017a4-606e-4e88-baaa-72a1cd231bb0';
