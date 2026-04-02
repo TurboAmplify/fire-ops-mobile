@@ -44,7 +44,7 @@ export function TruckHeroPhoto({ truckId, photoUrl, truckName }: Props) {
   return (
     <div className="space-y-3">
       {/* Hero image area */}
-      <div className="relative rounded-2xl overflow-hidden bg-secondary aspect-[16/10]">
+      <div className="relative rounded-2xl overflow-hidden bg-secondary aspect-[16/7] max-h-40">
         {photoUrl ? (
           <img
             src={photoUrl}
