@@ -260,7 +260,7 @@ export async function generateOF297Pdf(ticket: ShiftTicket): Promise<void> {
   if (ticket.contractor_rep_signature_url) {
     const sigData = await loadImageAsBase64(ticket.contractor_rep_signature_url);
     if (sigData) {
-      try { doc.addImage(sigData, "PNG", margin + halfW + 4, y + 12, 120, 16); } catch {}
+      try { doc.addImage(sigData, "JPEG", margin + halfW + 4, y + 12, 120, 16); } catch (e) { console.warn("Failed to add contractor sig to PDF:", e); }
     }
   }
   drawLine(margin + halfW, y, W - margin, y);
