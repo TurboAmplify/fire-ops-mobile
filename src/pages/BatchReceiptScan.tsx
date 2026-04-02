@@ -138,7 +138,7 @@ export default function BatchReceiptScan() {
   };
 
   return (
-    <AppShell title="Batch Scan" backTo="/expenses">
+    <AppShell title="Batch Scan" showBack>
       <div className="p-4 space-y-4 pb-32">
         {/* Capture phase */}
         {phase === "capture" && (
