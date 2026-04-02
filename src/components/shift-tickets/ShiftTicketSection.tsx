@@ -72,6 +72,8 @@ export function ShiftTicketSection({
       toast.error("Failed to duplicate shift ticket");
     }
   };
+
+  return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">OF-297 Shift Tickets</p>
