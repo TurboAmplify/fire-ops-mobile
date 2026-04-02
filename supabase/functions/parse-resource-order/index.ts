@@ -84,7 +84,7 @@ The document file name is: ${fileName}`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-2.5-pro",
         messages: [
           { role: "system", content: "You extract structured data from firefighting resource order documents. Return data using the provided tool." },
           {
