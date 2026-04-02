@@ -115,6 +115,9 @@ export function IncidentTruckList({ incidentId, incidentName }: Props) {
 
             {isExpanded && (
               <div className="border-t px-4 pb-4 pt-3 space-y-4">
+                {/* Truck Info (collapsible) */}
+                <TruckInfoSection truck={it.trucks} />
+
                 {/* Status changer */}
                 <div className="space-y-1">
                   <p className="text-xs font-medium text-muted-foreground">Change Status</p>
