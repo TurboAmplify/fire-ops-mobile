@@ -2,6 +2,7 @@ import type { ShiftCrewEntry } from "@/services/shifts";
 import { useIncidentTruckCrew } from "@/hooks/useIncidentTruckCrew";
 import { X, Plus } from "lucide-react";
 import { useState } from "react";
+import { MilitaryTimeInput } from "@/components/shift-tickets/MilitaryTimeInput";
 
 interface Props {
   entries: ShiftCrewEntry[];
