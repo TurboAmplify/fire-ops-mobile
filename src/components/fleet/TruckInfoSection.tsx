@@ -14,7 +14,7 @@ interface TruckInfoSectionProps {
 }
 
 export function TruckInfoSection({ truck }: TruckInfoSectionProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(true);
   const t = truck as any;
   const status = truck.status as TruckStatus;
 
