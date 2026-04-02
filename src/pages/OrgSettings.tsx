@@ -34,6 +34,9 @@ import {
   Flame,
   Wrench,
   User,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react";
 
 const ROLE_LABELS: Record<string, string> = {
