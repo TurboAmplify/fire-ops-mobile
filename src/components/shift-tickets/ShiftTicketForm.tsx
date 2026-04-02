@@ -172,7 +172,7 @@ export function ShiftTicketForm({
     });
   };
 
-  const handleSignatureSave = async (blob: Blob) => {
+  const handleSignatureSave = async (blob: Blob, metadata: SignatureMetadata) => {
     if (!sigModal) return;
     const sigType = sigModal;
     setSigModal(null);
@@ -201,6 +201,17 @@ export function ShiftTicketForm({
 
       if (sigType === "contractor") setContractorSigUrl(url);
       else setSupervisorSigUrl(url);
+
+      // Audit log
+      await insertSignatureAuditLog({
+        shift_ticket_id: ticket.id,
+        organization_id: organizationId || null,
+        signer_type: sigType,
+        signer_name: sigType === "contractor" ? contractorRepName : supervisorName,
+        signature_url: url,
+        method: metadata.method,
+        font_used: metadata.font || null,
+      });
 
       await Promise.resolve(onSave(sigUpdate));
       toast.success("Signature saved");
