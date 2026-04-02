@@ -173,23 +173,19 @@ export function ShiftCrewEditor({ entries, onChange, incidentTruckId }: Props) {
             {/* Standby times */}
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
-                <label className="text-[10px] font-medium text-muted-foreground">Standby Start - 24h</label>
-                <input
-                  type="time"
-                  step="60"
+                <label className="text-[10px] font-medium text-muted-foreground">SB Start (24h)</label>
+                <MilitaryTimeInput
                   value={entry.standby_start || ""}
-                  onChange={(e) => updateEntry(i, "standby_start", e.target.value || null)}
-                  className="w-full rounded-lg border bg-secondary px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring touch-target military-time"
+                  onChange={(v) => updateEntry(i, "standby_start", v || null)}
+                  className="w-full rounded-lg border bg-secondary px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring touch-target"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-medium text-muted-foreground">Standby Stop - 24h</label>
-                <input
-                  type="time"
-                  step="60"
+                <label className="text-[10px] font-medium text-muted-foreground">SB Stop (24h)</label>
+                <MilitaryTimeInput
                   value={entry.standby_stop || ""}
-                  onChange={(e) => updateEntry(i, "standby_stop", e.target.value || null)}
-                  className="w-full rounded-lg border bg-secondary px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring touch-target military-time"
+                  onChange={(v) => updateEntry(i, "standby_stop", v || null)}
+                  className="w-full rounded-lg border bg-secondary px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring touch-target"
                 />
               </div>
             </div>
