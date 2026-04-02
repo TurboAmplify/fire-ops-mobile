@@ -1037,60 +1037,96 @@ export type Database = {
       }
       trucks: {
         Row: {
+          bed_length: string | null
           created_at: string
           current_mileage: number | null
           dot_number: string | null
+          engine_type: string | null
+          fuel_capacity: number | null
+          fuel_type: string | null
+          gvwr: number | null
           id: string
+          insurance_expiry: string | null
+          last_oil_change_date: string | null
+          last_oil_change_mileage: number | null
           make: string | null
           model: string | null
           name: string
+          next_oil_change_mileage: number | null
           notes: string | null
           organization_id: string | null
           photo_url: string | null
           plate: string | null
           pump_type: string | null
+          registration_expiry: string | null
           status: string
           unit_type: string | null
           vin: string | null
           water_capacity: string | null
+          weight_empty: number | null
+          weight_full: number | null
           year: number | null
         }
         Insert: {
+          bed_length?: string | null
           created_at?: string
           current_mileage?: number | null
           dot_number?: string | null
+          engine_type?: string | null
+          fuel_capacity?: number | null
+          fuel_type?: string | null
+          gvwr?: number | null
           id?: string
+          insurance_expiry?: string | null
+          last_oil_change_date?: string | null
+          last_oil_change_mileage?: number | null
           make?: string | null
           model?: string | null
           name: string
+          next_oil_change_mileage?: number | null
           notes?: string | null
           organization_id?: string | null
           photo_url?: string | null
           plate?: string | null
           pump_type?: string | null
+          registration_expiry?: string | null
           status?: string
           unit_type?: string | null
           vin?: string | null
           water_capacity?: string | null
+          weight_empty?: number | null
+          weight_full?: number | null
           year?: number | null
         }
         Update: {
+          bed_length?: string | null
           created_at?: string
           current_mileage?: number | null
           dot_number?: string | null
+          engine_type?: string | null
+          fuel_capacity?: number | null
+          fuel_type?: string | null
+          gvwr?: number | null
           id?: string
+          insurance_expiry?: string | null
+          last_oil_change_date?: string | null
+          last_oil_change_mileage?: number | null
           make?: string | null
           model?: string | null
           name?: string
+          next_oil_change_mileage?: number | null
           notes?: string | null
           organization_id?: string | null
           photo_url?: string | null
           plate?: string | null
           pump_type?: string | null
+          registration_expiry?: string | null
           status?: string
           unit_type?: string | null
           vin?: string | null
           water_capacity?: string | null
+          weight_empty?: number | null
+          weight_full?: number | null
           year?: number | null
         }
         Relationships: [
