@@ -188,35 +188,80 @@ export async function deleteTruckDocument(id: string) {
 export type TruckChecklistItem = Tables<"truck_checklist_items">;
 
 export const DEFAULT_CHECKLIST_ITEMS = [
-  // Walk-around exterior
-  "Tires inspected (tread & pressure)",
-  "Lights / turn signals / strobes working",
-  "Mirrors clean & adjusted",
-  "Body / frame — no visible damage",
+  // Exterior walk-around
+  "Tires inspected (tread depth & pressure - all axles)",
+  "Lug nuts torqued / no missing",
+  "Spare tire present & inflated",
+  "Lights working (headlights, taillights, brake lights)",
+  "Turn signals working (front & rear)",
+  "Strobes / warning lights working",
+  "Mirrors clean, adjusted & secure",
+  "Windshield clean, no cracks",
+  "Wiper blades in good condition",
+  "Body / frame -- no visible damage or rust",
   "License plate visible & current",
+  "Mud flaps / splash guards intact",
+  "Trailer hitch / pintle hook (if equipped)",
+  "Steps / running boards secure",
+  "Fuel cap secure",
+  "Exhaust system -- no leaks or damage",
   // Fluids & engine
-  "Oil level checked",
+  "Engine oil level checked",
   "Coolant level checked",
-  "Transmission fluid checked",
-  "Brake fluid checked",
+  "Transmission fluid level checked",
+  "Brake fluid level checked",
+  "Power steering fluid checked",
   "Windshield washer fluid filled",
-  // Fire equipment
-  "Pump operational",
+  "DEF fluid level (if diesel)",
+  "No visible fluid leaks under vehicle",
+  "Belts inspected (serpentine / drive belts)",
+  "Hoses inspected -- no cracks or bulges",
+  "Air filter condition checked",
+  "Battery terminals clean & secure",
+  // Brakes & steering
+  "Brake pedal feel / response tested",
+  "Parking brake holds on grade",
+  "Steering play within limits",
+  // Fire / water system
+  "Pump operational -- primed & tested",
   "Hoses inspected & connected",
-  "Nozzles accounted for",
+  "Nozzles accounted for & functional",
   "Water tank level checked",
+  "Water tank valves -- no leaks",
   "Foam / retardant supply checked",
-  // Safety
-  "Fire extinguisher charged",
+  "Hard suction hose on board",
+  "Discharge caps in place",
+  // Safety equipment
+  "Fire extinguisher(s) charged & current",
   "First aid kit stocked",
-  "PPE gear on board",
-  "Radio tested",
+  "PPE gear on board (hard hat, gloves, goggles)",
+  "Nomex / fire-resistant clothing",
+  "Fire shelter(s) on board",
+  "Reflective triangles / flares",
+  "Chock blocks present",
+  "Chains / tow strap on board",
+  "Shovel, axe, Pulaski on board",
+  // Communications
+  "Radio tested -- transmit & receive",
+  "Spare radio batteries charged",
+  "Cell phone charger in cab",
+  "GPS / navigation functional",
   "Sirens / PA working",
-  // Compliance
-  "DOT card current",
-  "Registration current",
+  // Compliance & documentation
+  "DOT card current & on board",
+  "Registration current & on board",
   "Insurance card on board",
+  "Driver license valid",
+  "Medical card current (if CDL)",
   "Driver log / ELD ready",
+  "Pre-trip inspection form signed",
+  "Vehicle accident kit on board",
+  // Cab interior
+  "Seatbelts working (all positions)",
+  "Horn working",
+  "HVAC / defroster working",
+  "Dash gauges / warning lights normal",
+  "Fuel level adequate for assignment",
 ];
 
 export async function fetchTruckChecklist(truckId: string) {
