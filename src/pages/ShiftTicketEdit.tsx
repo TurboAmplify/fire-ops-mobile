@@ -70,9 +70,19 @@ export default function ShiftTicketEdit() {
     );
   }
 
+  // Merge latest truck + org data into the ticket for display
+  const mergedTicket = useMemo(() => {
+    if (!ticket) return null;
+    const merged = { ...ticket };
+    if (truck?.plate && !merged.license_id_number) merged.license_id_number = truck.plate;
+    if (membership?.organizationName && !merged.contractor_name) merged.contractor_name = membership.organizationName;
+    if (truck?.vin && !merged.serial_vin_number) merged.serial_vin_number = truck.vin;
+    return merged;
+  }, [ticket, truck, membership]);
+
   return (
     <ShiftTicketForm
-      ticket={ticket || null}
+      ticket={mergedTicket}
       incidentTruckId={incidentTruckId || ""}
       organizationId={membership?.organizationId || ""}
       saving={updateMutation.isPending}
