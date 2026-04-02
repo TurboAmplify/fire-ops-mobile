@@ -520,6 +520,7 @@ function BulkTimeEntry({
         sb_stop: bulkSbStop || entry.sb_stop,
         total: Math.round(((bulkOpStart && bulkOpStop ? opHours : computeHours(entry.op_start, entry.op_stop)) + (bulkSbStart && bulkSbStop ? sbHours : computeHours(entry.sb_start, entry.sb_stop))) * 10) / 10,
         activity_type: bulkActivity,
+        work_context: bulkActivity === "work" ? bulkWorkContext : "",
         lodging: bulkLodging,
         per_diem_b: bulkPerDiemB,
         per_diem_l: bulkPerDiemL,
