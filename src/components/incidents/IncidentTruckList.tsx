@@ -20,6 +20,7 @@ interface Props {
 }
 
 export function IncidentTruckList({ incidentId, incidentName }: Props) {
+  const { membership } = useOrganization();
   const { data: incidentTrucks, isLoading } = useIncidentTrucks(incidentId);
   const { data: allTrucks } = useAvailableTrucks();
   const assignMutation = useAssignTruck(incidentId);
