@@ -56,7 +56,7 @@ export async function updateResourceOrderParsed(
     .from("resource_orders")
     .update({
       parsed_data: parsed,
-      agreement_number: parsed.agreement_number || null,
+      agreement_number: parsed.agreement_number || parsed.contract_number || null,
       resource_order_number: parsed.resource_order_number || null,
       parsed_at: new Date().toISOString(),
     })
