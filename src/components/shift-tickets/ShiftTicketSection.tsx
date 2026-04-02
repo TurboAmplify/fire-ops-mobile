@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Plus, Loader2, Pencil, Trash2, Copy } from "lucide-react";
+import { FileText, Plus, Loader2, Pencil, Trash2, Copy, Download } from "lucide-react";
 import { toast } from "sonner";
 import { useShiftTickets, useDeleteShiftTicket, useDuplicateShiftTicket } from "@/hooks/useShiftTickets";
+import { generateOF297PdfBlob, buildOF297FileName } from "@/components/shift-tickets/generateOF297Pdf";
+import type { ShiftTicket } from "@/services/shift-tickets";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,8 +46,39 @@ export function ShiftTicketSection({
   const deleteMutation = useDeleteShiftTicket(incidentTruckId);
   const duplicateMutation = useDuplicateShiftTicket(incidentTruckId);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string } | null>(null);
+  const [batchDownloading, setBatchDownloading] = useState(false);
 
   const navState = { truckName, truckMake, truckModel, truckVin, truckPlate, truckUnitType, incidentName };
+
+  const handleBatchDownload = async () => {
+    if (!tickets || tickets.length === 0) return;
+    setBatchDownloading(true);
+    try {
+      const JSZip = (await import("jszip")).default;
+      const zip = new JSZip();
+      for (const t of tickets) {
+        const { blob, fileName } = await generateOF297PdfBlob(t as ShiftTicket);
+        zip.file(fileName, blob);
+      }
+      const truckLabel = truckUnitType || truckName || "Truck";
+      const zipName = `${incidentName || "ShiftTickets"} - ${truckLabel} - All Tickets.zip`;
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const blobUrl = URL.createObjectURL(zipBlob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = zipName;
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => { document.body.removeChild(link); URL.revokeObjectURL(blobUrl); }, 500);
+      toast.success(`Downloaded ${tickets.length} shift tickets`);
+    } catch (err) {
+      console.error("Batch download failed:", err);
+      toast.error("Failed to generate batch download");
+    } finally {
+      setBatchDownloading(false);
+    }
+  };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -77,12 +110,24 @@ export function ShiftTicketSection({
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">OF-297 Shift Tickets</p>
-        <button
-          onClick={() => navigate(`/incidents/${incidentId}/trucks/${incidentTruckId}/shift-ticket/new`, { state: navState })}
-          className="flex items-center gap-1 text-xs font-bold text-primary touch-target"
-        >
-          <Plus className="h-3.5 w-3.5" /> New Ticket
-        </button>
+        <div className="flex items-center gap-3">
+          {tickets && tickets.length > 0 && (
+            <button
+              onClick={handleBatchDownload}
+              disabled={batchDownloading}
+              className="flex items-center gap-1 text-xs font-bold text-muted-foreground touch-target"
+            >
+              {batchDownloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+              Download All
+            </button>
+          )}
+          <button
+            onClick={() => navigate(`/incidents/${incidentId}/trucks/${incidentTruckId}/shift-ticket/new`, { state: navState })}
+            className="flex items-center gap-1 text-xs font-bold text-primary touch-target"
+          >
+            <Plus className="h-3.5 w-3.5" /> New Ticket
+          </button>
+        </div>
       </div>
 
       {isLoading && (
