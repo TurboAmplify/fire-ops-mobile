@@ -46,8 +46,39 @@ export function ShiftTicketSection({
   const deleteMutation = useDeleteShiftTicket(incidentTruckId);
   const duplicateMutation = useDuplicateShiftTicket(incidentTruckId);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string } | null>(null);
+  const [batchDownloading, setBatchDownloading] = useState(false);
 
   const navState = { truckName, truckMake, truckModel, truckVin, truckPlate, truckUnitType, incidentName };
+
+  const handleBatchDownload = async () => {
+    if (!tickets || tickets.length === 0) return;
+    setBatchDownloading(true);
+    try {
+      const JSZip = (await import("jszip")).default;
+      const zip = new JSZip();
+      for (const t of tickets) {
+        const { blob, fileName } = await generateOF297PdfBlob(t as ShiftTicket);
+        zip.file(fileName, blob);
+      }
+      const truckLabel = truckUnitType || truckName || "Truck";
+      const zipName = `${incidentName || "ShiftTickets"} - ${truckLabel} - All Tickets.zip`;
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const blobUrl = URL.createObjectURL(zipBlob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = zipName;
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => { document.body.removeChild(link); URL.revokeObjectURL(blobUrl); }, 500);
+      toast.success(`Downloaded ${tickets.length} shift tickets`);
+    } catch (err) {
+      console.error("Batch download failed:", err);
+      toast.error("Failed to generate batch download");
+    } finally {
+      setBatchDownloading(false);
+    }
+  };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
