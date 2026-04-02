@@ -1,0 +1,1 @@
+UPDATE shift_tickets SET supervisor_resource_order = NULL WHERE supervisor_resource_order = resource_order_number;
