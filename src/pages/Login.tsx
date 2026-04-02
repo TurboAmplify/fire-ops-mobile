@@ -76,12 +76,12 @@ export default function Login() {
         <img
           src={heroBg}
           alt=""
-          className="w-full h-56 object-cover"
+          className="w-full h-48 object-cover"
           width={1280}
           height={640}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-black/30" />
-        <div className="absolute bottom-0 left-0 right-0 p-6 pb-8 flex flex-col items-center">
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" style={{ backgroundSize: '100% 120%' }} />
+        <div className="absolute bottom-4 left-0 right-0 px-6 flex flex-col items-center">
           <img src={fireLogo} alt="FireOps HQ" className="h-16 w-16 mb-3" width={512} height={512} />
           <h1 className="text-2xl font-extrabold text-white tracking-tight">FireOps HQ</h1>
           <p className="text-sm text-white/50 mt-0.5">Wildfire Operations Management</p>
@@ -89,7 +89,7 @@ export default function Login() {
       </div>
 
       {/* Form */}
-      <div className="flex-1 -mt-3 rounded-t-3xl bg-background px-6 pt-8 pb-8 relative z-10">
+      <div className="flex-1 -mt-1 rounded-t-3xl bg-background px-6 pt-6 pb-8 relative z-10">
         <div className="mx-auto w-full max-w-sm space-y-6">
           <div className="text-center space-y-1">
             <h2 className="text-xl font-bold">
