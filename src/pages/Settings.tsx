@@ -23,6 +23,7 @@ import {
 export default function Settings() {
   const { user, signOut } = useAuth();
   const { membership } = useOrganization();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
