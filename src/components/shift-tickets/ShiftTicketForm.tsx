@@ -7,6 +7,7 @@ import type { SignatureMetadata } from "./SignaturePicker";
 import { EquipmentEntryRow } from "./EquipmentEntryRow";
 import { PersonnelEntryRow } from "./PersonnelEntryRow";
 import { MilitaryTimeInput } from "./MilitaryTimeInput";
+import { OF297FormPreview } from "./OF297FormPreview";
 import { uploadSignature, computeHours, buildRemarksString, insertSignatureAuditLog } from "@/services/shift-tickets";
 import type { ShiftTicket, EquipmentEntry, PersonnelEntry } from "@/services/shift-tickets";
 import type { IncidentTruckCrewWithMember } from "@/services/incident-truck-crew";
@@ -103,6 +104,12 @@ export function ShiftTicketForm({
   const [sigModal, setSigModal] = useState<"contractor" | "supervisor" | null>(null);
   const [uploadingSig, setUploadingSig] = useState(false);
   const [pendingSigs, setPendingSigs] = useState<Record<string, Blob>>({});
+
+  // Collapsible personnel
+  const [expandedPersonnelIndex, setExpandedPersonnelIndex] = useState<number | null>(null);
+
+  // Supervisor preview
+  const [showSupervisorPreview, setShowSupervisorPreview] = useState(false);
 
   // Populate from existing ticket
   useEffect(() => {
@@ -421,7 +428,9 @@ export function ShiftTicketForm({
             </p>
           )}
           {personnelEntries.map((entry, i) => (
-            <PersonnelEntryRow key={i} entry={entry} index={i} onChange={updatePersonnel} onRemove={removePersonnel} />
+            <PersonnelEntryRow key={i} entry={entry} index={i} onChange={updatePersonnel} onRemove={removePersonnel}
+              collapsed={expandedPersonnelIndex !== i}
+              onToggle={() => setExpandedPersonnelIndex(expandedPersonnelIndex === i ? null : i)} />
           ))}
         </section>
 
@@ -467,7 +476,7 @@ export function ShiftTicketForm({
                 <button onClick={() => setSupervisorSigUrl(null)} className="text-xs text-destructive touch-target">Clear</button>
               </div>
             ) : (
-              <button onClick={() => setSigModal("supervisor")} disabled={uploadingSig}
+              <button onClick={() => setShowSupervisorPreview(true)} disabled={uploadingSig}
                 className="w-full rounded-xl border-2 border-dashed border-border py-6 text-sm text-muted-foreground touch-target disabled:opacity-40">
                 Tap to sign
               </button>
@@ -502,6 +511,7 @@ export function ShiftTicketForm({
       </div>
 
       {/* Signature modal */}
+      {/* Signature modal */}
       <SignaturePicker
         open={sigModal !== null}
         onClose={() => setSigModal(null)}
@@ -509,6 +519,44 @@ export function ShiftTicketForm({
         title={sigModal === "contractor" ? "Contractor Signature" : "Supervisor Signature"}
         defaultName={sigModal === "contractor" ? contractorRepName : supervisorName}
       />
+
+      {/* Supervisor OF-297 preview */}
+      {showSupervisorPreview && (
+        <OF297FormPreview
+          ticket={{
+            agreement_number: agreementNumber,
+            contractor_name: contractorName,
+            resource_order_number: resourceOrderNumber,
+            incident_name: incidentName,
+            incident_number: incidentNumber,
+            financial_code: financialCode,
+            equipment_make_model: equipmentMakeModel,
+            equipment_type: equipmentType,
+            serial_vin_number: serialVin,
+            license_id_number: licenseId,
+            transport_retained: transportRetained,
+            is_first_last: isFirstLast,
+            first_last_type: firstLastType,
+            miles: miles ? parseFloat(miles) : null,
+            equipment_entries: equipmentEntries as any,
+            personnel_entries: personnelEntries as any,
+            remarks,
+            contractor_rep_name: contractorRepName,
+          }}
+          contractorSigUrl={contractorSigUrl}
+          supervisorSigUrl={supervisorSigUrl}
+          supervisorName={supervisorName}
+          supervisorRO={supervisorRO}
+          onSupervisorNameChange={setSupervisorName}
+          onSupervisorROChange={setSupervisorRO}
+          onTapToSign={() => {
+            setSigModal("supervisor");
+          }}
+          onClearSignature={() => setSupervisorSigUrl(null)}
+          onClose={() => setShowSupervisorPreview(false)}
+          uploadingSig={uploadingSig}
+        />
+      )}
     </AppShell>
   );
 }
