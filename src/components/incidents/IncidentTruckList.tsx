@@ -5,6 +5,7 @@ import { Truck, Plus, Loader2, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { TruckCrewSection } from "./TruckCrewSection";
+import { TruckInfoSection } from "@/components/fleet/TruckInfoSection";
 import { ShiftList } from "@/components/shifts/ShiftList";
 import { ResourceOrderSection } from "./ResourceOrderSection";
 import { AgreementUpload } from "./AgreementUpload";
@@ -114,6 +115,9 @@ export function IncidentTruckList({ incidentId, incidentName }: Props) {
 
             {isExpanded && (
               <div className="border-t px-4 pb-4 pt-3 space-y-4">
+                {/* Truck Info (collapsible) */}
+                <TruckInfoSection truck={it.trucks} />
+
                 {/* Status changer */}
                 <div className="space-y-1">
                   <p className="text-xs font-medium text-muted-foreground">Change Status</p>
