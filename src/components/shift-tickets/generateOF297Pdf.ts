@@ -276,9 +276,9 @@ export async function generateOF297Pdf(ticket: ShiftTicket): Promise<void> {
   y += 36;
   drawLine(margin, y, W - margin, y);
 
-  // Signatures - name and signature ABOVE the line
+  // Signatures - boxed layout matching OF-297 form (fields 31-34)
   const halfW = cw / 2;
-  const sigBlockH = 40;
+  const sigBoxH = 48;
 
   // Load signatures in parallel
   const [contractorSigData, supervisorSigData] = await Promise.all([
@@ -286,37 +286,42 @@ export async function generateOF297Pdf(ticket: ShiftTicket): Promise<void> {
     ticket.supervisor_signature_url ? loadImageAsBase64(ticket.supervisor_signature_url) : Promise.resolve(null),
   ]);
 
-  // Contractor - printed name above line
-  text(ticket.contractor_rep_name || "", margin + 4, y + sigBlockH - 14, { size: 9, bold: true });
-  drawLine(margin, y + sigBlockH, margin + halfW, y + sigBlockH);
-  text("31. Contractor/Agency Rep (Printed Name):", margin + 2, y + sigBlockH + 10, { size: 7 });
+  // Row 1: Contractor name (31) + Contractor signature (32)
+  // Draw box outlines
+  doc.rect(margin, y, halfW, sigBoxH); // box 31
+  doc.rect(margin + halfW, y, halfW, sigBoxH); // box 32
 
-  // Contractor signature above line
+  // 31 label at top of box, name content below
+  text("31. Contractor/Agency Rep (Printed Name):", margin + 3, y + 9, { size: 6 });
+  text(ticket.contractor_rep_name || "", margin + 4, y + 28, { size: 10, bold: true, maxWidth: halfW - 8 });
+
+  // 32 label at top of box, signature image inside
+  text("32. Signature:", margin + halfW + 3, y + 9, { size: 6 });
   if (contractorSigData) {
-    try { doc.addImage(contractorSigData, "JPEG", margin + halfW + 8, y + sigBlockH - 22, 140, 20); } catch (e) { console.warn("Contractor sig:", e); }
+    try { doc.addImage(contractorSigData, "JPEG", margin + halfW + 6, y + 14, 160, 30); } catch (e) { console.warn("Contractor sig:", e); }
   }
-  drawLine(margin + halfW, y + sigBlockH, W - margin, y + sigBlockH);
-  text("32. Signature:", margin + halfW + 2, y + sigBlockH + 10, { size: 7 });
-  y += sigBlockH + 16;
+  y += sigBoxH;
 
-  // Supervisor - printed name above line
+  // Row 2: Supervisor name & RO# (33) + Supervisor signature (34)
+  doc.rect(margin, y, halfW, sigBoxH); // box 33
+  doc.rect(margin + halfW, y, halfW, sigBoxH); // box 34
+
+  text("33. Incident Supervisor (Name & RO#):", margin + 3, y + 9, { size: 6 });
   const supText = `${ticket.supervisor_name || ""} ${ticket.supervisor_resource_order || ""}`.trim();
-  text(supText, margin + 4, y + sigBlockH - 14, { size: 9, bold: true });
-  drawLine(margin, y + sigBlockH, margin + halfW, y + sigBlockH);
-  text("33. Incident Supervisor (Name & RO#):", margin + 2, y + sigBlockH + 10, { size: 7 });
+  text(supText, margin + 4, y + 28, { size: 10, bold: true, maxWidth: halfW - 8 });
 
-  // Supervisor signature above line
+  text("34. Signature:", margin + halfW + 3, y + 9, { size: 6 });
   if (supervisorSigData) {
-    try { doc.addImage(supervisorSigData, "JPEG", margin + halfW + 8, y + sigBlockH - 22, 140, 20); } catch (e) { console.warn("Supervisor sig:", e); }
+    try { doc.addImage(supervisorSigData, "JPEG", margin + halfW + 6, y + 14, 160, 30); } catch (e) { console.warn("Supervisor sig:", e); }
   }
-  drawLine(margin + halfW, y + sigBlockH, W - margin, y + sigBlockH);
-  text("34. Signature:", margin + halfW + 2, y + sigBlockH + 10, { size: 7 });
-  y += sigBlockH + 16;
+  y += sigBoxH;
 
-  // Footer
-  y += 16;
-  text("OPTIONAL FORM 297 (REV. 5/2024)", W - margin - 2, y, { size: 7 });
-  text("USDA/USDI", W - margin - 2, y + 10, { size: 7 });
+  // Footer - right-aligned with enough room
+  y += 12;
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "normal");
+  doc.text("OPTIONAL FORM 297 (REV. 5/2024)", W - margin, y, { align: "right" });
+  doc.text("USDA/USDI", W - margin, y + 10, { align: "right" });
 
   // Mobile-friendly download with share fallback
   const fileName = `OF-297-${ticket.incident_name || "ShiftTicket"}-${ticket.id?.slice(0, 8)}.pdf`;
