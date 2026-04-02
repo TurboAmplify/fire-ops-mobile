@@ -1,57 +1,28 @@
 
 
-# Timesheet Enhancements Plan
+## Plan: Rename "Personnel" to "Crew" + Fix Bulk Date Reset
 
-## What We're Changing
+### Issues
+1. **Section header says "Personnel"** — should say "Crew" to match terminology.
+2. **BulkTimeEntry date resets to today on edit** — the `bulkDate` state initializes with `new Date()` (line 511) instead of reading the date from the existing personnel entries. When editing a saved ticket, the bulk entry box always shows today's date instead of the ticket's actual shift date.
 
-Four improvements to the OF-297 shift ticket personnel section:
+### Changes
 
-### 1. Military Time (24h format)
-All `<input type="time">` fields across `PersonnelEntryRow`, `EquipmentEntryRow`, `BulkTimeEntry`, and `ShiftCrewEditor` will get the `step="60"` attribute and explicit 24h formatting. Since HTML time inputs are locale-dependent on desktop, we'll add CSS to force 24h display and add helper text showing "HH:MM (24h)" labels.
+**File: `src/components/shift-tickets/ShiftTicketForm.tsx`**
 
-### 2. License Plate & Company Name Flow-Through
-`ShiftTicketCreate.tsx` already maps `truck?.plate` and `membership?.organizationName`. For **existing** tickets opened in `ShiftTicketEdit.tsx`, we need to ensure the latest truck and org data is available. We'll also re-fetch on edit so updated values appear (the user just updated these). No schema changes needed.
+1. **Line 394**: Change section heading from `"Personnel"` to `"Crew"`.
+2. **Line 407-409**: Update the helper text from "crew member" wording (already correct) — no change needed there.
+3. **BulkTimeEntry component** (line 504-638): Change the `bulkDate` initialization to accept the first personnel entry's date as a prop, falling back to today only if no entries exist. Also initialize the other bulk fields (activity type, lodging, per diem) from the first entry so the bulk tool reflects existing data when editing.
 
-### 3. Structured Remarks Column (replacing free-text)
-Replace the single `remarks` text field on each `PersonnelEntry` with structured selections, displayed in this order:
+Specifically:
+- Add a `defaultDate` prop to `BulkTimeEntry` derived from `personnelEntries[0]?.date`.
+- Pass it from the parent at line 403.
+- Initialize `bulkDate` with that prop instead of `new Date()`.
+- Also seed `bulkActivity`, `bulkWorkContext`, `bulkLodging`, and per diem states from the first personnel entry so the entire bulk section mirrors existing data on edit.
 
-```text
-Activity:     [ Travel/Check-In ] or [ Work ]     (radio/toggle, required)
-Lodging:      [ ] Lodging                         (checkbox, optional)
-Per Diem:     [ ] B  [ ] L  [ ] D                 (checkboxes, optional)
-```
+**File: `src/components/shift-tickets/PersonnelEntryRow.tsx`**
 
-The `PersonnelEntry` type gets new optional fields:
-- `activity_type`: `"travel"` | `"work"` (default `"work"`)
-- `lodging`: `boolean` (default `false`)
-- `per_diem_b`: `boolean`
-- `per_diem_l`: `boolean`  
-- `per_diem_d`: `boolean`
+- Line 41: Change the row label from `"Personnel Row {index + 1}"` to `"Crew Row {index + 1}"`.
 
-The `remarks` string is auto-computed from these selections in display order:
-- `"Travel/Check-In"` or `"Work"`
-- `", Lodging"` if checked
-- `", Per Diem (B, L, D)"` with only selected letters
-
-Example: `"Work, Lodging, Per Diem (B, D)"`
-
-### 4. Bulk Apply Enhancement
-The `BulkTimeEntry` component also gets the structured fields so the user can set activity type, lodging, and per diem for all crew at once.
-
-## Files Changed
-
-| File | Change |
-|------|--------|
-| `src/services/shift-tickets.ts` | Add new fields to `PersonnelEntry` type, add `buildRemarksString()` helper |
-| `src/components/shift-tickets/PersonnelEntryRow.tsx` | Replace remarks text input with structured Activity/Lodging/PerDiem selectors, auto-compute remarks |
-| `src/components/shift-tickets/ShiftTicketForm.tsx` | Update `BulkTimeEntry` with structured fields, update `emptyPersonnelEntry()` defaults |
-| `src/components/shift-tickets/EquipmentEntryRow.tsx` | Add 24h time labels |
-| `src/pages/ShiftTicketEdit.tsx` | Fetch truck + org data to ensure updated license plate and company name appear |
-| `src/components/shifts/ShiftCrewEditor.tsx` | Add 24h time labels |
-
-## What Won't Change
-- Database schema (the `personnel_entries` JSONB column already stores arbitrary JSON, so new fields just serialize naturally)
-- RLS policies (no new tables or columns on SQL tables)
-- Multi-tenant scoping (all existing org_id checks remain)
-- Existing shift ticket data (backward compatible -- old entries without new fields default gracefully)
+### No other files affected. Two files, minimal changes.
 
