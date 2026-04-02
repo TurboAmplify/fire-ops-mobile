@@ -130,6 +130,7 @@ function StatusBadge({ status }: { status: TruckStatus }) {
     available: "bg-success/12 text-success",
     deployed: "bg-primary/12 text-primary",
     maintenance: "bg-warning/12 text-warning",
+    needs_attention: "bg-destructive/12 text-destructive",
   };
   return (
     <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide shrink-0 ${colors[status]}`}>
