@@ -79,7 +79,16 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
   }
 }
 
-export async function generateOF297Pdf(ticket: ShiftTicket): Promise<void> {
+export function buildOF297FileName(ticket: ShiftTicket): string {
+  const fnEqEntries = (ticket.equipment_entries as any[]) || [];
+  const fnPeEntries = (ticket.personnel_entries as any[]) || [];
+  const ticketDate = fnEqEntries[0]?.date || fnPeEntries[0]?.date || new Date(ticket.updated_at).toISOString().split("T")[0];
+  const truckLabel = ticket.equipment_type || ticket.equipment_make_model || "Truck";
+  const sanitize = (s: string) => s.replace(/[^a-zA-Z0-9\s\-]/g, "").trim();
+  return `${sanitize(ticket.incident_name || "ShiftTicket")} - ${sanitize(truckLabel)} - ${ticketDate}.pdf`;
+}
+
+export async function generateOF297PdfBlob(ticket: ShiftTicket): Promise<{ blob: Blob; fileName: string }> {
   const JsPDF = await getJsPdf();
   const doc = new JsPDF({ orientation: "portrait", unit: "pt", format: "letter" });
   const W = 612;
