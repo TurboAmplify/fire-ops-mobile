@@ -328,7 +328,7 @@ export async function generateOF297Pdf(ticket: ShiftTicket): Promise<void> {
   const fnEqEntries = (ticket.equipment_entries as any[]) || [];
   const fnPeEntries = (ticket.personnel_entries as any[]) || [];
   const ticketDate = fnEqEntries[0]?.date || fnPeEntries[0]?.date || new Date(ticket.updated_at).toISOString().split("T")[0];
-  const truckLabel = ticket.equipment_make_model || ticket.equipment_type || "Truck";
+  const truckLabel = ticket.equipment_type || ticket.equipment_make_model || "Truck";
   const sanitize = (s: string) => s.replace(/[^a-zA-Z0-9\s\-]/g, "").trim();
   const fileName = `${sanitize(ticket.incident_name || "ShiftTicket")} - ${sanitize(truckLabel)} - ${ticketDate}.pdf`;
   const pdfBlob = doc.output("blob");
