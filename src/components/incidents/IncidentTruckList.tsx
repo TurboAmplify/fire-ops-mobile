@@ -1,11 +1,11 @@
 import { useIncidentTrucks, useAvailableTrucks, useAssignTruck, useUpdateTruckStatus } from "@/hooks/useIncidentTrucks";
 import { TRUCK_STATUS_LABELS } from "@/services/incident-trucks";
 import type { IncidentTruckStatus, IncidentTruckWithTruck } from "@/services/incident-trucks";
-import { Truck, Plus, Loader2, ChevronDown } from "lucide-react";
+import { Truck as TruckIcon, Plus, Loader2, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { TruckCrewSection } from "./TruckCrewSection";
-import { TruckInfoSection } from "@/components/fleet/TruckInfoSection";
+// TruckInfoSection replaced by inline photo+info layout
 import { ShiftList } from "@/components/shifts/ShiftList";
 import { ResourceOrderSection } from "./ResourceOrderSection";
 import { AgreementUpload } from "./AgreementUpload";
@@ -78,7 +78,7 @@ export function IncidentTruckList({ incidentId, incidentName }: Props) {
                 disabled={assignMutation.isPending}
                 className="flex w-full items-center gap-3 rounded-lg bg-secondary p-3 text-left transition-transform active:scale-[0.98] touch-target"
               >
-                <Truck className="h-4 w-4 text-muted-foreground" />
+                <TruckIcon className="h-4 w-4 text-muted-foreground" />
                 <span className="font-medium">{truck.name}</span>
               </button>
             ))
@@ -99,6 +99,7 @@ export function IncidentTruckList({ incidentId, incidentName }: Props) {
       {/* Truck cards */}
       {incidentTrucks?.map((it) => {
         const isExpanded = expandedTruck === it.id;
+        const photoUrl = (it.trucks as any).photo_url;
         return (
           <div key={it.id} className="rounded-xl bg-card overflow-hidden">
             <button
@@ -106,7 +107,7 @@ export function IncidentTruckList({ incidentId, incidentName }: Props) {
               className="flex w-full items-center justify-between p-4 text-left touch-target"
             >
               <div className="flex items-center gap-3">
-                <Truck className="h-5 w-5 text-muted-foreground" />
+                <TruckIcon className="h-5 w-5 text-muted-foreground" />
                 <div>
                   <p className="font-semibold">{it.trucks.name}</p>
                   <StatusBadge status={it.status as IncidentTruckStatus} />
@@ -116,9 +117,49 @@ export function IncidentTruckList({ incidentId, incidentName }: Props) {
             </button>
 
             {isExpanded && (
-              <div className="border-t px-4 pb-4 pt-3 space-y-4">
-                {/* Truck Info (collapsible) */}
-                <TruckInfoSection truck={it.trucks} />
+              <div className="border-t px-4 pb-4 pt-3 space-y-4 animate-fade-in">
+                {/* Truck photo + key info row */}
+                <div className="flex gap-3 items-start">
+                  {/* Small truck photo with right-side fade */}
+                  <div className="relative w-24 h-24 rounded-xl overflow-hidden shrink-0 bg-secondary">
+                    {photoUrl ? (
+                      <>
+                        <img
+                          src={photoUrl}
+                          alt={it.trucks.name}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-card to-transparent" />
+                      </>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <TruckIcon className="h-8 w-8 text-muted-foreground/40" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Key truck info */}
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <p className="text-sm font-bold truncate">{it.trucks.name}</p>
+                    {(it.trucks.make || it.trucks.model) && (
+                      <p className="text-xs text-muted-foreground truncate">
+                        {[it.trucks.year, it.trucks.make, it.trucks.model].filter(Boolean).join(" ")}
+                      </p>
+                    )}
+                    {it.trucks.unit_type && (
+                      <p className="text-xs text-muted-foreground">{it.trucks.unit_type}</p>
+                    )}
+                    {it.trucks.plate && (
+                      <p className="text-xs"><span className="text-muted-foreground">Plate:</span> {it.trucks.plate}</p>
+                    )}
+                    {it.trucks.vin && (
+                      <p className="text-xs truncate"><span className="text-muted-foreground">VIN:</span> {it.trucks.vin}</p>
+                    )}
+                    {(it.trucks as any).water_capacity && (
+                      <p className="text-xs"><span className="text-muted-foreground">Water:</span> {(it.trucks as any).water_capacity}</p>
+                    )}
+                  </div>
+                </div>
 
                 {/* Status changer */}
                 <div className="space-y-1">
