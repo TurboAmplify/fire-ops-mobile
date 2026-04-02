@@ -61,6 +61,17 @@ export default function ShiftTicketEdit() {
     }
   };
 
+  const handleDuplicate = async () => {
+    if (!ticket || !membership?.organizationId) return;
+    try {
+      const newTicket = await duplicateMutation.mutateAsync({ ticket: ticket as ShiftTicket, organizationId: membership.organizationId });
+      toast.success("Shift ticket duplicated (dates +1 day)");
+      navigate(`/incidents/${incidentId}/trucks/${incidentTruckId}/shift-ticket/${newTicket.id}`);
+    } catch {
+      toast.error("Failed to duplicate");
+    }
+  };
+
   // Merge latest truck + org data into the ticket for display
   const mergedTicket = useMemo(() => {
     if (!ticket) return null;
@@ -89,6 +100,8 @@ export default function ShiftTicketEdit() {
       saving={updateMutation.isPending}
       onSave={handleSave}
       onExportPdf={handleExportPdf}
+      onDuplicate={handleDuplicate}
+      duplicating={duplicateMutation.isPending}
       onBack={() => navigate(`/incidents/${incidentId}`)}
       exportingPdf={exportingPdf}
       crewRoster={activeCrew}
