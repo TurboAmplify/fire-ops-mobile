@@ -1,60 +1,57 @@
 
 
-## Batch Receipt Scanner -- Plan
+# Timesheet Enhancements Plan
 
-### What It Does
-User takes one photo of multiple receipts laid out together. The AI detects each receipt in the image, extracts data from all of them, and presents a review queue where the user can approve/edit/discard each one before they become draft expenses.
+## What We're Changing
 
-### User Flow
-1. On the Expenses page, tap a new "Scan Multiple" button (next to the existing "New" button)
-2. Camera opens -- user photographs several receipts laid out on a table
-3. Photo uploads to the `receipts` storage bucket
-4. A new edge function `parse-batch-receipts` sends the image to Gemini 2.5 Flash with a tool-call schema that returns an **array** of receipts
-5. App shows a scrollable review queue -- one card per detected receipt showing amount, date, vendor, category, description
-6. Each card has: "Approve" (creates a draft expense), "Edit" (opens pre-filled ExpenseForm), "Discard" (removes from queue)
-7. A "Save All" button at the bottom approves all remaining items at once
-8. After processing, user returns to the Expenses list with new drafts ready
+Four improvements to the OF-297 shift ticket personnel section:
 
-### Technical Changes
+### 1. Military Time (24h format)
+All `<input type="time">` fields across `PersonnelEntryRow`, `EquipmentEntryRow`, `BulkTimeEntry`, and `ShiftCrewEditor` will get the `step="60"` attribute and explicit 24h formatting. Since HTML time inputs are locale-dependent on desktop, we'll add CSS to force 24h display and add helper text showing "HH:MM (24h)" labels.
 
-**1. New edge function: `supabase/functions/parse-batch-receipts/index.ts`**
-- Accepts `{ imageUrl: string }` (same as existing parse-receipt)
-- Uses the same `toDataUrl` helper to convert the image
-- Calls Lovable AI with a modified system prompt: "This image may contain MULTIPLE receipts. Identify and extract data from each one separately."
-- Tool call schema returns `{ receipts: Array<{ amount, date, category, description, vendor }> }` instead of a single object
-- Handles 429/402 errors properly
-- Model: `google/gemini-2.5-flash` (same as existing, good at vision tasks)
+### 2. License Plate & Company Name Flow-Through
+`ShiftTicketCreate.tsx` already maps `truck?.plate` and `membership?.organizationName`. For **existing** tickets opened in `ShiftTicketEdit.tsx`, we need to ensure the latest truck and org data is available. We'll also re-fetch on edit so updated values appear (the user just updated these). No schema changes needed.
 
-**2. New service function in `src/services/ai-parsing.ts`**
-- Add `parseBatchReceiptsAI(imageUrl: string): Promise<ParsedReceipt[]>`
-- Invokes the new edge function and returns the array
+### 3. Structured Remarks Column (replacing free-text)
+Replace the single `remarks` text field on each `PersonnelEntry` with structured selections, displayed in this order:
 
-**3. New page: `src/pages/BatchReceiptScan.tsx`**
-- Photo capture via `<input type="file" accept="image/*" capture="environment">`
-- Upload to `receipts` bucket using existing `uploadReceipt()`
-- Call `parseBatchReceiptsAI()` with the uploaded URL
-- Render a review queue with cards for each detected receipt
-- Each card: approve (calls `createExpense` as draft), edit (navigates to `/expenses/new` with pre-filled state), discard
-- "Save All" button batch-creates all approved items
-- Loading state with progress indicator during AI analysis
-- Mobile-first layout: stacked cards, large touch targets, sticky action bar above BottomNav
+```text
+Activity:     [ Travel/Check-In ] or [ Work ]     (radio/toggle, required)
+Lodging:      [ ] Lodging                         (checkbox, optional)
+Per Diem:     [ ] B  [ ] L  [ ] D                 (checkboxes, optional)
+```
 
-**4. Route registration in `src/App.tsx`**
-- Add `/expenses/batch-scan` route
+The `PersonnelEntry` type gets new optional fields:
+- `activity_type`: `"travel"` | `"work"` (default `"work"`)
+- `lodging`: `boolean` (default `false`)
+- `per_diem_b`: `boolean`
+- `per_diem_l`: `boolean`  
+- `per_diem_d`: `boolean`
 
-**5. Entry point on Expenses page (`src/pages/Expenses.tsx`)**
-- Add a "Scan Multiple" button in the header area or as a secondary action below the "New" button
+The `remarks` string is auto-computed from these selections in display order:
+- `"Travel/Check-In"` or `"Work"`
+- `", Lodging"` if checked
+- `", Per Diem (B, L, D)"` with only selected letters
 
-### What Won't Change
-- Existing single-receipt flow (ExpenseForm + ReceiptParseButton) stays untouched
-- All existing expense CRUD, review queue, and status workflows remain as-is
-- No database schema changes needed -- uses existing `expenses` table
-- No changes to RLS policies
+Example: `"Work, Lodging, Per Diem (B, D)"`
 
-### Mobile / App Store Compliance
-- Camera input uses platform-neutral `<input type="file">` (no Capacitor-specific API)
-- All touch targets 44px+
-- No hover-only interactions
-- Sticky action bar positioned above BottomNav with safe area insets
-- Loading states and error handling for all async operations
+### 4. Bulk Apply Enhancement
+The `BulkTimeEntry` component also gets the structured fields so the user can set activity type, lodging, and per diem for all crew at once.
+
+## Files Changed
+
+| File | Change |
+|------|--------|
+| `src/services/shift-tickets.ts` | Add new fields to `PersonnelEntry` type, add `buildRemarksString()` helper |
+| `src/components/shift-tickets/PersonnelEntryRow.tsx` | Replace remarks text input with structured Activity/Lodging/PerDiem selectors, auto-compute remarks |
+| `src/components/shift-tickets/ShiftTicketForm.tsx` | Update `BulkTimeEntry` with structured fields, update `emptyPersonnelEntry()` defaults |
+| `src/components/shift-tickets/EquipmentEntryRow.tsx` | Add 24h time labels |
+| `src/pages/ShiftTicketEdit.tsx` | Fetch truck + org data to ensure updated license plate and company name appear |
+| `src/components/shifts/ShiftCrewEditor.tsx` | Add 24h time labels |
+
+## What Won't Change
+- Database schema (the `personnel_entries` JSONB column already stores arbitrary JSON, so new fields just serialize naturally)
+- RLS policies (no new tables or columns on SQL tables)
+- Multi-tenant scoping (all existing org_id checks remain)
+- Existing shift ticket data (backward compatible -- old entries without new fields default gracefully)
 
