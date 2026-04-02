@@ -5,6 +5,7 @@ import { Truck, Plus, Loader2, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { TruckCrewSection } from "./TruckCrewSection";
+import { TruckInfoSection } from "@/components/fleet/TruckInfoSection";
 import { ShiftList } from "@/components/shifts/ShiftList";
 import { ResourceOrderSection } from "./ResourceOrderSection";
 import { AgreementUpload } from "./AgreementUpload";
