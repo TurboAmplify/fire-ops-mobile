@@ -72,7 +72,7 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
       blob = await res.blob();
     }
 
-    return await normalizeSignatureBlob(blob);
+    return await signatureBlobToDataUrl(blob);
   } catch (err) {
     console.warn("Failed to load signature image:", err, url);
     return null;
