@@ -152,21 +152,23 @@ export function ShiftCrewEditor({ entries, onChange, incidentTruckId }: Props) {
             {/* Operating times */}
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
-                <label className="text-[10px] font-medium text-muted-foreground">Op Start</label>
+                <label className="text-[10px] font-medium text-muted-foreground">Op Start - 24h</label>
                 <input
                   type="time"
+                  step="60"
                   value={entry.operating_start || ""}
                   onChange={(e) => updateEntry(i, "operating_start", e.target.value || null)}
-                  className="w-full rounded-lg border bg-secondary px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring touch-target"
+                  className="w-full rounded-lg border bg-secondary px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring touch-target military-time"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-medium text-muted-foreground">Op Stop</label>
+                <label className="text-[10px] font-medium text-muted-foreground">Op Stop - 24h</label>
                 <input
                   type="time"
+                  step="60"
                   value={entry.operating_stop || ""}
                   onChange={(e) => updateEntry(i, "operating_stop", e.target.value || null)}
-                  className="w-full rounded-lg border bg-secondary px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring touch-target"
+                  className="w-full rounded-lg border bg-secondary px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring touch-target military-time"
                 />
               </div>
             </div>
