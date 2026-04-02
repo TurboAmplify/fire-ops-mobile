@@ -60,13 +60,15 @@ function roleBadgeVariant(role: string) {
 }
 
 export default function OrgSettings() {
-  const { membership } = useOrganization();
+  const { membership, refetch: refetchOrg } = useOrganization();
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("crew_member");
+  const [editingName, setEditingName] = useState(false);
+  const [orgName, setOrgName] = useState("");
 
   const orgId = membership?.organizationId;
 
