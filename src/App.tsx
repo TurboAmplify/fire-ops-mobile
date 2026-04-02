@@ -29,6 +29,7 @@ import Expenses from "./pages/Expenses";
 import ExpenseEdit from "./pages/ExpenseEdit";
 import ExpenseDetail from "./pages/ExpenseDetail";
 import ExpenseReview from "./pages/ExpenseReview";
+import BatchReceiptScan from "./pages/BatchReceiptScan";
 import Settings from "./pages/Settings";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
@@ -74,6 +75,7 @@ const App = () => (
               <Route path="/expenses/review" element={<ProtectedRoute><ExpenseReview /></ProtectedRoute>} />
               <Route path="/expenses/:id" element={<ProtectedRoute><ExpenseDetail /></ProtectedRoute>} />
               <Route path="/expenses/:id/edit" element={<ProtectedRoute><ExpenseEdit /></ProtectedRoute>} />
+              <Route path="/expenses/batch-scan" element={<ProtectedRoute><BatchReceiptScan /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="/settings/organization" element={<ProtectedRoute><OrgSettings /></ProtectedRoute>} />
               <Route path="/privacy" element={<ProtectedRoute><Privacy /></ProtectedRoute>} />
