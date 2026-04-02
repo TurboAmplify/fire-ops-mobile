@@ -324,7 +324,13 @@ export async function generateOF297Pdf(ticket: ShiftTicket): Promise<void> {
   doc.text("USDA/USDI", W - margin, y + 10, { align: "right" });
 
   // Mobile-friendly download with share fallback
-  const fileName = `OF-297-${ticket.incident_name || "ShiftTicket"}-${ticket.id?.slice(0, 8)}.pdf`;
+  // Build filename: IncidentName - TruckInfo - Date
+  const fnEqEntries = (ticket.equipment_entries as any[]) || [];
+  const fnPeEntries = (ticket.personnel_entries as any[]) || [];
+  const ticketDate = fnEqEntries[0]?.date || fnPeEntries[0]?.date || new Date(ticket.updated_at).toISOString().split("T")[0];
+  const truckLabel = ticket.equipment_make_model || ticket.equipment_type || "Truck";
+  const sanitize = (s: string) => s.replace(/[^a-zA-Z0-9\s\-]/g, "").trim();
+  const fileName = `${sanitize(ticket.incident_name || "ShiftTicket")} - ${sanitize(truckLabel)} - ${ticketDate}.pdf`;
   const pdfBlob = doc.output("blob");
   const pdfFile = new File([pdfBlob], fileName, { type: "application/pdf" });
 
