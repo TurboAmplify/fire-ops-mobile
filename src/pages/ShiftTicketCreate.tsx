@@ -25,6 +25,7 @@ export default function ShiftTicketCreate() {
   const { data: incidentTrucks } = useIncidentTrucks(incidentId || "");
   const { data: resourceOrders } = useResourceOrders(incidentTruckId || "");
   const { data: crewAssignments } = useIncidentTruckCrew(incidentTruckId || "");
+  const { data: agreements } = useAgreements({ incidentId, incidentTruckId });
 
   // Find the truck record from incident_trucks join
   const incidentTruck = useMemo(
