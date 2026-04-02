@@ -325,31 +325,21 @@ export async function generateOF297PdfBlob(ticket: ShiftTicket): Promise<{ blob:
   }
   y += sigBoxH;
 
-  // Footer - right-aligned with enough room
-  y += 12;
-  doc.setFontSize(7);
-  doc.setFont("helvetica", "normal");
-  doc.text("OPTIONAL FORM 297 (REV. 5/2024)", W - margin, y, { align: "right" });
-  doc.text("USDA/USDI", W - margin, y + 10, { align: "right" });
-
-  // Mobile-friendly download with share fallback
-  // Build filename: IncidentName - TruckInfo - Date
-  const fnEqEntries = (ticket.equipment_entries as any[]) || [];
-  const fnPeEntries = (ticket.personnel_entries as any[]) || [];
-  const ticketDate = fnEqEntries[0]?.date || fnPeEntries[0]?.date || new Date(ticket.updated_at).toISOString().split("T")[0];
-  const truckLabel = ticket.equipment_type || ticket.equipment_make_model || "Truck";
-  const sanitize = (s: string) => s.replace(/[^a-zA-Z0-9\s\-]/g, "").trim();
-  const fileName = `${sanitize(ticket.incident_name || "ShiftTicket")} - ${sanitize(truckLabel)} - ${ticketDate}.pdf`;
+  const fileName = buildOF297FileName(ticket);
   const pdfBlob = doc.output("blob");
+  return { blob: pdfBlob, fileName };
+}
+
+export async function generateOF297Pdf(ticket: ShiftTicket): Promise<void> {
+  const { blob: pdfBlob, fileName } = await generateOF297PdfBlob(ticket);
   const pdfFile = new File([pdfBlob], fileName, { type: "application/pdf" });
 
-  // Try native share (best mobile experience - saves to Files, sends via text/email)
+  // Try native share (best mobile experience)
   if (navigator.share && navigator.canShare?.({ files: [pdfFile] })) {
     try {
       await navigator.share({ files: [pdfFile], title: fileName });
       return;
     } catch (shareErr: any) {
-      // User cancelled share or share failed — fall through to download
       if (shareErr?.name === "AbortError") return;
     }
   }
