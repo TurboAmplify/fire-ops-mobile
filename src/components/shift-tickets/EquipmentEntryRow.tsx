@@ -32,14 +32,14 @@ export function EquipmentEntryRow({ entry, index, onChange, onRemove }: Props) {
             className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm outline-none focus:ring-1 focus:ring-ring" />
         </div>
         <div>
-          <label className="text-[10px] text-muted-foreground">16. Start</label>
-          <input type="time" value={entry.start} onChange={(e) => update("start", e.target.value)}
-            className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm outline-none focus:ring-1 focus:ring-ring" />
+          <label className="text-[10px] text-muted-foreground">16. Start - 24h</label>
+          <input type="time" step="60" value={entry.start} onChange={(e) => update("start", e.target.value)}
+            className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm outline-none focus:ring-1 focus:ring-ring military-time" />
         </div>
         <div>
-          <label className="text-[10px] text-muted-foreground">17. Stop</label>
-          <input type="time" value={entry.stop} onChange={(e) => update("stop", e.target.value)}
-            className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm outline-none focus:ring-1 focus:ring-ring" />
+          <label className="text-[10px] text-muted-foreground">17. Stop - 24h</label>
+          <input type="time" step="60" value={entry.stop} onChange={(e) => update("stop", e.target.value)}
+            className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm outline-none focus:ring-1 focus:ring-ring military-time" />
         </div>
       </div>
       <div className="grid grid-cols-3 gap-2">

@@ -8,6 +8,7 @@ import { useShiftTicket, useUpdateShiftTicket } from "@/hooks/useShiftTickets";
 import { generateOF297Pdf } from "@/components/shift-tickets/generateOF297Pdf";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useIncidentTruckCrew } from "@/hooks/useIncidentTruckCrew";
+import { useIncidentTrucks } from "@/hooks/useIncidentTrucks";
 import type { ShiftTicket } from "@/services/shift-tickets";
 
 export default function ShiftTicketEdit() {
@@ -21,7 +22,15 @@ export default function ShiftTicketEdit() {
   const { data: ticket, isLoading } = useShiftTicket(ticketId || "");
   const updateMutation = useUpdateShiftTicket(ticketId || "", incidentTruckId || "");
   const { data: crewAssignments } = useIncidentTruckCrew(incidentTruckId || "");
+  const { data: incidentTrucks } = useIncidentTrucks(incidentId || "");
   const [exportingPdf, setExportingPdf] = useState(false);
+
+  // Get latest truck data for license plate and company name flow-through
+  const incidentTruck = useMemo(
+    () => incidentTrucks?.find((it) => it.id === incidentTruckId),
+    [incidentTrucks, incidentTruckId]
+  );
+  const truck = incidentTruck?.trucks;
 
   const activeCrew = useMemo(
     () => crewAssignments?.filter((c) => c.is_active) ?? [],

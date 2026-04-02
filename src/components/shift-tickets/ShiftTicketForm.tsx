@@ -499,12 +499,17 @@ function BulkTimeEntry({
   const [bulkOpStop, setBulkOpStop] = useState("");
   const [bulkSbStart, setBulkSbStart] = useState("");
   const [bulkSbStop, setBulkSbStop] = useState("");
+  const [bulkActivity, setBulkActivity] = useState<"travel" | "work">("work");
+  const [bulkLodging, setBulkLodging] = useState(false);
+  const [bulkPerDiemB, setBulkPerDiemB] = useState(false);
+  const [bulkPerDiemL, setBulkPerDiemL] = useState(false);
+  const [bulkPerDiemD, setBulkPerDiemD] = useState(false);
 
   const applyToAll = () => {
     const updated = personnelEntries.map((entry) => {
       const opHours = computeHours(bulkOpStart, bulkOpStop);
       const sbHours = computeHours(bulkSbStart, bulkSbStop);
-      return {
+      const newEntry: PersonnelEntry = {
         ...entry,
         date: bulkDate || entry.date,
         op_start: bulkOpStart || entry.op_start,
@@ -512,7 +517,14 @@ function BulkTimeEntry({
         sb_start: bulkSbStart || entry.sb_start,
         sb_stop: bulkSbStop || entry.sb_stop,
         total: Math.round(((bulkOpStart && bulkOpStop ? opHours : computeHours(entry.op_start, entry.op_stop)) + (bulkSbStart && bulkSbStop ? sbHours : computeHours(entry.sb_start, entry.sb_stop))) * 10) / 10,
+        activity_type: bulkActivity,
+        lodging: bulkLodging,
+        per_diem_b: bulkPerDiemB,
+        per_diem_l: bulkPerDiemL,
+        per_diem_d: bulkPerDiemD,
       };
+      newEntry.remarks = buildRemarksString(newEntry);
+      return newEntry;
     });
     setPersonnelEntries(updated);
     toast.success(`Applied times to ${updated.length} crew members`);
@@ -524,7 +536,7 @@ function BulkTimeEntry({
     <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-3 space-y-2">
       <div className="flex items-center gap-2">
         <Users className="h-4 w-4 text-primary" />
-        <span className="text-xs font-bold text-primary">Apply Time to All Crew</span>
+        <span className="text-xs font-bold text-primary">Apply to All Crew</span>
       </div>
       <div className="space-y-2">
         <div>
@@ -533,23 +545,62 @@ function BulkTimeEntry({
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-[10px] text-muted-foreground">Operating Start</label>
-            <input type="time" value={bulkOpStart} onChange={(e) => setBulkOpStart(e.target.value)} className={bulkInput} />
+            <label className="text-[10px] text-muted-foreground">Operating Start - 24h</label>
+            <input type="time" step="60" value={bulkOpStart} onChange={(e) => setBulkOpStart(e.target.value)} className={`${bulkInput} military-time`} />
           </div>
           <div>
-            <label className="text-[10px] text-muted-foreground">Operating Stop</label>
-            <input type="time" value={bulkOpStop} onChange={(e) => setBulkOpStop(e.target.value)} className={bulkInput} />
+            <label className="text-[10px] text-muted-foreground">Operating Stop - 24h</label>
+            <input type="time" step="60" value={bulkOpStop} onChange={(e) => setBulkOpStop(e.target.value)} className={`${bulkInput} military-time`} />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-[10px] text-muted-foreground">Standby Start</label>
-            <input type="time" value={bulkSbStart} onChange={(e) => setBulkSbStart(e.target.value)} className={bulkInput} />
+            <label className="text-[10px] text-muted-foreground">Standby Start - 24h</label>
+            <input type="time" step="60" value={bulkSbStart} onChange={(e) => setBulkSbStart(e.target.value)} className={`${bulkInput} military-time`} />
           </div>
           <div>
-            <label className="text-[10px] text-muted-foreground">Standby Stop</label>
-            <input type="time" value={bulkSbStop} onChange={(e) => setBulkSbStop(e.target.value)} className={bulkInput} />
+            <label className="text-[10px] text-muted-foreground">Standby Stop - 24h</label>
+            <input type="time" step="60" value={bulkSbStop} onChange={(e) => setBulkSbStop(e.target.value)} className={`${bulkInput} military-time`} />
           </div>
+        </div>
+
+        {/* Activity type */}
+        <div className="flex gap-2">
+          <button type="button" onClick={() => setBulkActivity("travel")}
+            className={`flex-1 rounded-lg px-2 py-2 text-xs font-medium touch-target ${bulkActivity === "travel" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
+            Travel/Check-In
+          </button>
+          <button type="button" onClick={() => setBulkActivity("work")}
+            className={`flex-1 rounded-lg px-2 py-2 text-xs font-medium touch-target ${bulkActivity === "work" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
+            Work
+          </button>
+        </div>
+
+        {/* Lodging */}
+        <label className="flex items-center gap-2 touch-target">
+          <input type="checkbox" checked={bulkLodging} onChange={(e) => setBulkLodging(e.target.checked)}
+            className="h-5 w-5 rounded border-input accent-primary" />
+          <span className="text-sm">Lodging</span>
+        </label>
+
+        {/* Per Diem */}
+        <div className="flex gap-3">
+          <span className="text-[10px] text-muted-foreground self-center">Per Diem:</span>
+          <label className="flex items-center gap-1.5 touch-target">
+            <input type="checkbox" checked={bulkPerDiemB} onChange={(e) => setBulkPerDiemB(e.target.checked)}
+              className="h-5 w-5 rounded border-input accent-primary" />
+            <span className="text-sm font-medium">B</span>
+          </label>
+          <label className="flex items-center gap-1.5 touch-target">
+            <input type="checkbox" checked={bulkPerDiemL} onChange={(e) => setBulkPerDiemL(e.target.checked)}
+              className="h-5 w-5 rounded border-input accent-primary" />
+            <span className="text-sm font-medium">L</span>
+          </label>
+          <label className="flex items-center gap-1.5 touch-target">
+            <input type="checkbox" checked={bulkPerDiemD} onChange={(e) => setBulkPerDiemD(e.target.checked)}
+              className="h-5 w-5 rounded border-input accent-primary" />
+            <span className="text-sm font-medium">D</span>
+          </label>
         </div>
       </div>
       <button type="button" onClick={applyToAll}

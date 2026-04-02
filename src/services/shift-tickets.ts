@@ -19,6 +19,23 @@ export interface PersonnelEntry {
   sb_stop: string;
   total: number;
   remarks: string;
+  activity_type?: "travel" | "work";
+  lodging?: boolean;
+  per_diem_b?: boolean;
+  per_diem_l?: boolean;
+  per_diem_d?: boolean;
+}
+
+export function buildRemarksString(entry: PersonnelEntry): string {
+  const parts: string[] = [];
+  parts.push(entry.activity_type === "travel" ? "Travel/Check-In" : "Work");
+  if (entry.lodging) parts.push("Lodging");
+  const meals: string[] = [];
+  if (entry.per_diem_b) meals.push("B");
+  if (entry.per_diem_l) meals.push("L");
+  if (entry.per_diem_d) meals.push("D");
+  if (meals.length > 0) parts.push(`Per Diem (${meals.join(", ")})`);
+  return parts.join(", ");
 }
 
 export interface ShiftTicket {
