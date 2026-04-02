@@ -5,6 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { SignatureCanvas } from "./SignatureCanvas";
 import { EquipmentEntryRow } from "./EquipmentEntryRow";
 import { PersonnelEntryRow } from "./PersonnelEntryRow";
+import { MilitaryTimeInput } from "./MilitaryTimeInput";
 import { uploadSignature, computeHours, buildRemarksString } from "@/services/shift-tickets";
 import type { ShiftTicket, EquipmentEntry, PersonnelEntry } from "@/services/shift-tickets";
 import type { IncidentTruckCrewWithMember } from "@/services/incident-truck-crew";
@@ -545,22 +546,22 @@ function BulkTimeEntry({
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-[10px] text-muted-foreground">Operating Start - 24h</label>
-            <input type="time" step="60" value={bulkOpStart} onChange={(e) => setBulkOpStart(e.target.value)} className={`${bulkInput} military-time`} />
+            <label className="text-[10px] text-muted-foreground">Op Start (24h)</label>
+            <MilitaryTimeInput value={bulkOpStart} onChange={setBulkOpStart} className={bulkInput} />
           </div>
           <div>
-            <label className="text-[10px] text-muted-foreground">Operating Stop - 24h</label>
-            <input type="time" step="60" value={bulkOpStop} onChange={(e) => setBulkOpStop(e.target.value)} className={`${bulkInput} military-time`} />
+            <label className="text-[10px] text-muted-foreground">Op Stop (24h)</label>
+            <MilitaryTimeInput value={bulkOpStop} onChange={setBulkOpStop} className={bulkInput} />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-[10px] text-muted-foreground">Standby Start - 24h</label>
-            <input type="time" step="60" value={bulkSbStart} onChange={(e) => setBulkSbStart(e.target.value)} className={`${bulkInput} military-time`} />
+            <label className="text-[10px] text-muted-foreground">SB Start (24h)</label>
+            <MilitaryTimeInput value={bulkSbStart} onChange={setBulkSbStart} className={bulkInput} />
           </div>
           <div>
-            <label className="text-[10px] text-muted-foreground">Standby Stop - 24h</label>
-            <input type="time" step="60" value={bulkSbStop} onChange={(e) => setBulkSbStop(e.target.value)} className={`${bulkInput} military-time`} />
+            <label className="text-[10px] text-muted-foreground">SB Stop (24h)</label>
+            <MilitaryTimeInput value={bulkSbStop} onChange={setBulkSbStop} className={bulkInput} />
           </div>
         </div>
 

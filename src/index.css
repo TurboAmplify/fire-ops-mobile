@@ -112,12 +112,3 @@
     background: linear-gradient(135deg, hsl(8 85% 42%) 0%, hsl(20 90% 48%) 50%, hsl(8 85% 38%) 100%);
   }
 }
-
-/* Force 24-hour (military) time display on time inputs */
-input[type="time"].military-time::-webkit-calendar-picker-indicator {
-  /* keep native picker */
-}
-input[type="time"].military-time {
-  /* Chromium hint for 24h — combined with step=60 removes AM/PM in most browsers */
-  font-variant-numeric: tabular-nums;
-}
