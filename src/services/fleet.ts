@@ -5,12 +5,13 @@ export type Truck = Tables<"trucks">;
 export type TruckInsert = TablesInsert<"trucks">;
 export type TruckUpdate = TablesUpdate<"trucks">;
 
-export type TruckStatus = "available" | "deployed" | "maintenance";
+export type TruckStatus = "available" | "deployed" | "maintenance" | "needs_attention";
 
 export const TRUCK_STATUS_LABELS: Record<TruckStatus, string> = {
   available: "Available",
   deployed: "Deployed",
   maintenance: "Maintenance",
+  needs_attention: "Needs Attention",
 };
 
 export async function fetchTrucks() {

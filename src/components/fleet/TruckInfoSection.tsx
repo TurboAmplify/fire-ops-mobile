@@ -22,6 +22,7 @@ export function TruckInfoSection({ truck }: TruckInfoSectionProps) {
     available: "bg-success/15 text-success",
     deployed: "bg-primary/15 text-primary",
     maintenance: "bg-warning/15 text-warning",
+    needs_attention: "bg-destructive/15 text-destructive",
   };
 
   const sections = [
