@@ -428,7 +428,9 @@ export function ShiftTicketForm({
             </p>
           )}
           {personnelEntries.map((entry, i) => (
-            <PersonnelEntryRow key={i} entry={entry} index={i} onChange={updatePersonnel} onRemove={removePersonnel} />
+            <PersonnelEntryRow key={i} entry={entry} index={i} onChange={updatePersonnel} onRemove={removePersonnel}
+              collapsed={expandedPersonnelIndex !== i}
+              onToggle={() => setExpandedPersonnelIndex(expandedPersonnelIndex === i ? null : i)} />
           ))}
         </section>
 
