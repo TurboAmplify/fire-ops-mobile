@@ -14,7 +14,7 @@ function getSignatureStoragePath(url: string): string | null {
   return decodeURIComponent(url.slice(markerIndex + marker.length));
 }
 
-async function normalizeSignatureBlob(blob: Blob): Promise<string | null> {
+async function signatureBlobToDataUrl(blob: Blob): Promise<string | null> {
   const objectUrl = URL.createObjectURL(blob);
 
   try {
@@ -26,30 +26,23 @@ async function normalizeSignatureBlob(blob: Blob): Promise<string | null> {
     });
 
     const canvas = document.createElement("canvas");
-    canvas.width = image.naturalWidth || image.width || 1;
-    canvas.height = image.naturalHeight || image.height || 1;
+    const w = image.naturalWidth || image.width || 300;
+    const h = image.naturalHeight || image.height || 100;
+    canvas.width = w;
+    canvas.height = h;
     const ctx = canvas.getContext("2d");
-
     if (!ctx) return null;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    // Draw white background first so transparent areas don't become black in PDF
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, w, h);
 
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const pixels = imageData.data;
+    // Draw the signature on top
+    ctx.drawImage(image, 0, 0, w, h);
 
-    for (let i = 0; i < pixels.length; i += 4) {
-      if (pixels[i + 3] === 0) continue;
-      pixels[i] = 17;
-      pixels[i + 1] = 24;
-      pixels[i + 2] = 39;
-      pixels[i + 3] = Math.max(pixels[i + 3], 220);
-    }
-
-    ctx.putImageData(imageData, 0, 0);
-    return canvas.toDataURL("image/png");
+    return canvas.toDataURL("image/jpeg", 0.92);
   } catch (error) {
-    console.warn("Failed to normalize signature image:", error);
+    console.warn("Failed to convert signature image:", error);
     return null;
   } finally {
     URL.revokeObjectURL(objectUrl);
@@ -79,7 +72,7 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
       blob = await res.blob();
     }
 
-    return await normalizeSignatureBlob(blob);
+    return await signatureBlobToDataUrl(blob);
   } catch (err) {
     console.warn("Failed to load signature image:", err, url);
     return null;
@@ -267,7 +260,7 @@ export async function generateOF297Pdf(ticket: ShiftTicket): Promise<void> {
   if (ticket.contractor_rep_signature_url) {
     const sigData = await loadImageAsBase64(ticket.contractor_rep_signature_url);
     if (sigData) {
-      try { doc.addImage(sigData, "PNG", margin + halfW + 4, y + 12, 120, 16); } catch {}
+      try { doc.addImage(sigData, "JPEG", margin + halfW + 4, y + 12, 120, 16); } catch (e) { console.warn("Failed to add contractor sig to PDF:", e); }
     }
   }
   drawLine(margin + halfW, y, W - margin, y);
@@ -283,7 +276,7 @@ export async function generateOF297Pdf(ticket: ShiftTicket): Promise<void> {
   if (ticket.supervisor_signature_url) {
     const sigData = await loadImageAsBase64(ticket.supervisor_signature_url);
     if (sigData) {
-      try { doc.addImage(sigData, "PNG", margin + halfW + 4, y + 12, 120, 16); } catch {}
+      try { doc.addImage(sigData, "JPEG", margin + halfW + 4, y + 12, 120, 16); } catch (e) { console.warn("Failed to add supervisor sig to PDF:", e); }
     }
   }
   drawLine(margin + halfW, y + 30, W - margin, y + 30);

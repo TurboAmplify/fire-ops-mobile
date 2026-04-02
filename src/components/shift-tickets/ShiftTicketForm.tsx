@@ -501,6 +501,7 @@ function BulkTimeEntry({
   const [bulkSbStart, setBulkSbStart] = useState("");
   const [bulkSbStop, setBulkSbStop] = useState("");
   const [bulkActivity, setBulkActivity] = useState<"travel" | "work">("work");
+  const [bulkWorkContext, setBulkWorkContext] = useState("");
   const [bulkLodging, setBulkLodging] = useState(false);
   const [bulkPerDiemB, setBulkPerDiemB] = useState(false);
   const [bulkPerDiemL, setBulkPerDiemL] = useState(false);
@@ -519,6 +520,7 @@ function BulkTimeEntry({
         sb_stop: bulkSbStop || entry.sb_stop,
         total: Math.round(((bulkOpStart && bulkOpStop ? opHours : computeHours(entry.op_start, entry.op_stop)) + (bulkSbStart && bulkSbStop ? sbHours : computeHours(entry.sb_start, entry.sb_stop))) * 10) / 10,
         activity_type: bulkActivity,
+        work_context: bulkActivity === "work" ? bulkWorkContext : "",
         lodging: bulkLodging,
         per_diem_b: bulkPerDiemB,
         per_diem_l: bulkPerDiemL,
@@ -576,6 +578,15 @@ function BulkTimeEntry({
             Work
           </button>
         </div>
+
+        {/* Work context */}
+        {bulkActivity === "work" && (
+          <div>
+            <label className="text-[10px] text-muted-foreground">Work Context (e.g. IA2 - Fire Name)</label>
+            <input type="text" value={bulkWorkContext} onChange={(e) => setBulkWorkContext(e.target.value)}
+              placeholder="IA2 - Fire Name" className={bulkInput} />
+          </div>
+        )}
 
         {/* Lodging */}
         <label className="flex items-center gap-2 touch-target">
