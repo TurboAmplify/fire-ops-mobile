@@ -20,6 +20,7 @@ export interface PersonnelEntry {
   total: number;
   remarks: string;
   activity_type?: "travel" | "work";
+  work_context?: string;
   lodging?: boolean;
   per_diem_b?: boolean;
   per_diem_l?: boolean;
@@ -28,7 +29,12 @@ export interface PersonnelEntry {
 
 export function buildRemarksString(entry: PersonnelEntry): string {
   const parts: string[] = [];
-  parts.push(entry.activity_type === "travel" ? "Travel/Check-In" : "Work");
+  if (entry.activity_type === "travel") {
+    parts.push("Travel/Check-In");
+  } else {
+    const ctx = entry.work_context?.trim();
+    parts.push(ctx ? `Work - ${ctx}` : "Work");
+  }
   if (entry.lodging) parts.push("Lodging");
   const meals: string[] = [];
   if (entry.per_diem_b) meals.push("B");

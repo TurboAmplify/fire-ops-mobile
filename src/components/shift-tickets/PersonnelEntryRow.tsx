@@ -24,7 +24,7 @@ export function PersonnelEntryRow({ entry, index, onChange, onRemove }: Props) {
       updated.total = Math.round((opHours + sbHours) * 10) / 10;
     }
     // Auto-compute remarks from structured fields
-    if (["activity_type", "lodging", "per_diem_b", "per_diem_l", "per_diem_d"].includes(field as string)) {
+    if (["activity_type", "work_context", "lodging", "per_diem_b", "per_diem_l", "per_diem_d"].includes(field as string)) {
       updated.remarks = buildRemarksString(updated);
     }
     onChange(index, updated);
