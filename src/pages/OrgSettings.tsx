@@ -150,6 +150,23 @@ export default function OrgSettings() {
 
   const isOwner = membership?.role === "owner";
 
+  const handleSaveOrgName = async () => {
+    const trimmed = orgName.trim();
+    if (!trimmed || !orgId) return;
+    try {
+      const { error } = await supabase
+        .from("organizations")
+        .update({ name: trimmed })
+        .eq("id", orgId);
+      if (error) throw error;
+      toast({ title: "Updated", description: "Organization name saved." });
+      setEditingName(false);
+      refetchOrg();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
+
   return (
     <AppShell title="Organization">
       <div className="p-4 space-y-6">
@@ -159,13 +176,45 @@ export default function OrgSettings() {
             <Building2 className="h-5 w-5 text-primary" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold truncate">
-              {membership?.organizationName ?? "—"}
-            </p>
+            {editingName ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  value={orgName}
+                  onChange={(e) => setOrgName(e.target.value)}
+                  className="h-8 text-sm"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSaveOrgName();
+                    if (e.key === "Escape") setEditingName(false);
+                  }}
+                />
+                <button onClick={handleSaveOrgName} className="text-primary touch-target">
+                  <Check className="h-4 w-4" />
+                </button>
+                <button onClick={() => setEditingName(false)} className="text-muted-foreground touch-target">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <p className="text-sm font-semibold truncate">
+                {membership?.organizationName ?? "—"}
+              </p>
+            )}
             <p className="text-xs text-muted-foreground">
               Your role: {ROLE_LABELS[membership?.role ?? ""] ?? membership?.role}
             </p>
           </div>
+          {isOwner && !editingName && (
+            <button
+              onClick={() => {
+                setOrgName(membership?.organizationName ?? "");
+                setEditingName(true);
+              }}
+              className="text-muted-foreground touch-target"
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+          )}
         </div>
 
         {/* Members */}
