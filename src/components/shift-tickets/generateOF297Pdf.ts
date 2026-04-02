@@ -54,22 +54,36 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
 
   try {
     let blob: Blob | null = null;
-    const storagePath = getSignatureStoragePath(url);
 
+    // Try Supabase storage download first (avoids CORS issues)
+    const storagePath = getSignatureStoragePath(url);
     if (storagePath) {
       const { data, error } = await supabase.storage.from("signatures").download(storagePath);
       if (!error && data) {
         blob = data;
+      } else {
+        console.warn("Supabase storage download failed:", error?.message, "path:", storagePath);
+      }
+    }
+
+    // Fallback: try fetching directly (works for blob: URLs and public URLs)
+    if (!blob) {
+      try {
+        const res = await fetch(url);
+        if (res.ok) {
+          blob = await res.blob();
+        } else {
+          console.warn("Signature fetch failed:", res.status, url);
+        }
+      } catch (fetchErr) {
+        // Try with no-cors as last resort — won't give us usable data, but log the issue
+        console.warn("Signature fetch error:", fetchErr, url);
       }
     }
 
     if (!blob) {
-      const res = await fetch(url, { mode: "cors" });
-      if (!res.ok) {
-        console.warn("Signature fetch failed:", res.status, url);
-        return null;
-      }
-      blob = await res.blob();
+      console.warn("Could not load signature — no blob obtained for:", url);
+      return null;
     }
 
     return await signatureBlobToDataUrl(blob);
