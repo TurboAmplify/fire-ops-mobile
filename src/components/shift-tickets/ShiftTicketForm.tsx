@@ -502,11 +502,12 @@ export function ShiftTicketForm({
       </div>
 
       {/* Signature modal */}
-      <SignatureCanvas
+      <SignaturePicker
         open={sigModal !== null}
         onClose={() => setSigModal(null)}
         onSave={handleSignatureSave}
         title={sigModal === "contractor" ? "Contractor Signature" : "Supervisor Signature"}
+        defaultName={sigModal === "contractor" ? contractorRepName : supervisorName}
       />
     </AppShell>
   );
