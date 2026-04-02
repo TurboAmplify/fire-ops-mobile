@@ -166,6 +166,25 @@ export async function deleteShiftTicket(id: string): Promise<void> {
   if (error) throw error;
 }
 
+export interface SignatureAuditEntry {
+  shift_ticket_id: string;
+  organization_id: string | null;
+  signer_type: "contractor" | "supervisor";
+  signer_name: string | null;
+  signature_url: string;
+  method: "typed" | "drawn";
+  font_used?: string | null;
+  user_id?: string | null;
+}
+
+export async function insertSignatureAuditLog(entry: SignatureAuditEntry): Promise<void> {
+  const { error } = await supabase.from("signature_audit_log" as any).insert(entry as any);
+  if (error) {
+    console.error("Failed to insert signature audit log:", error);
+    // Don't throw — audit log failure shouldn't block signature save
+  }
+}
+
 export async function uploadSignature(file: Blob, ticketId: string, type: "contractor" | "supervisor"): Promise<string> {
   const path = `${ticketId}/${type}-${Date.now()}.png`;
   const { error } = await supabase.storage.from("signatures").upload(path, file, { contentType: "image/png" });

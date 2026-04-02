@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { Plus, Loader2, FileText, Save, Download, AlertTriangle, Clock, Users, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
-import { SignatureCanvas } from "./SignatureCanvas";
+import { SignaturePicker } from "./SignaturePicker";
+import type { SignatureMetadata } from "./SignaturePicker";
 import { EquipmentEntryRow } from "./EquipmentEntryRow";
 import { PersonnelEntryRow } from "./PersonnelEntryRow";
 import { MilitaryTimeInput } from "./MilitaryTimeInput";
-import { uploadSignature, computeHours, buildRemarksString } from "@/services/shift-tickets";
+import { uploadSignature, computeHours, buildRemarksString, insertSignatureAuditLog } from "@/services/shift-tickets";
 import type { ShiftTicket, EquipmentEntry, PersonnelEntry } from "@/services/shift-tickets";
 import type { IncidentTruckCrewWithMember } from "@/services/incident-truck-crew";
 
@@ -171,7 +172,7 @@ export function ShiftTicketForm({
     });
   };
 
-  const handleSignatureSave = async (blob: Blob) => {
+  const handleSignatureSave = async (blob: Blob, metadata: SignatureMetadata) => {
     if (!sigModal) return;
     const sigType = sigModal;
     setSigModal(null);
@@ -200,6 +201,17 @@ export function ShiftTicketForm({
 
       if (sigType === "contractor") setContractorSigUrl(url);
       else setSupervisorSigUrl(url);
+
+      // Audit log
+      await insertSignatureAuditLog({
+        shift_ticket_id: ticket.id,
+        organization_id: organizationId || null,
+        signer_type: sigType,
+        signer_name: sigType === "contractor" ? contractorRepName : supervisorName,
+        signature_url: url,
+        method: metadata.method,
+        font_used: metadata.font || null,
+      });
 
       await Promise.resolve(onSave(sigUpdate));
       toast.success("Signature saved");
@@ -490,11 +502,12 @@ export function ShiftTicketForm({
       </div>
 
       {/* Signature modal */}
-      <SignatureCanvas
+      <SignaturePicker
         open={sigModal !== null}
         onClose={() => setSigModal(null)}
         onSave={handleSignatureSave}
         title={sigModal === "contractor" ? "Contractor Signature" : "Supervisor Signature"}
+        defaultName={sigModal === "contractor" ? contractorRepName : supervisorName}
       />
     </AppShell>
   );

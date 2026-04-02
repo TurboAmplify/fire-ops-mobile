@@ -822,6 +822,45 @@ export type Database = {
           },
         ]
       }
+      signature_audit_log: {
+        Row: {
+          font_used: string | null
+          id: string
+          method: string
+          organization_id: string | null
+          shift_ticket_id: string
+          signature_url: string
+          signed_at: string
+          signer_name: string | null
+          signer_type: string
+          user_id: string | null
+        }
+        Insert: {
+          font_used?: string | null
+          id?: string
+          method: string
+          organization_id?: string | null
+          shift_ticket_id: string
+          signature_url: string
+          signed_at?: string
+          signer_name?: string | null
+          signer_type: string
+          user_id?: string | null
+        }
+        Update: {
+          font_used?: string | null
+          id?: string
+          method?: string
+          organization_id?: string | null
+          shift_ticket_id?: string
+          signature_url?: string
+          signed_at?: string
+          signer_name?: string | null
+          signer_type?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       truck_checklist_items: {
         Row: {
           created_at: string
