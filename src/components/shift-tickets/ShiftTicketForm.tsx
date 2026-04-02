@@ -579,6 +579,15 @@ function BulkTimeEntry({
           </button>
         </div>
 
+        {/* Work context */}
+        {bulkActivity === "work" && (
+          <div>
+            <label className="text-[10px] text-muted-foreground">Work Context (e.g. IA2 - Fire Name)</label>
+            <input type="text" value={bulkWorkContext} onChange={(e) => setBulkWorkContext(e.target.value)}
+              placeholder="IA2 - Fire Name" className={bulkInput} />
+          </div>
+        )}
+
         {/* Lodging */}
         <label className="flex items-center gap-2 touch-target">
           <input type="checkbox" checked={bulkLodging} onChange={(e) => setBulkLodging(e.target.checked)}
