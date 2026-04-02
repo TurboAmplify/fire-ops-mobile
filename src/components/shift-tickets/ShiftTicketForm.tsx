@@ -501,6 +501,7 @@ function BulkTimeEntry({
   const [bulkSbStart, setBulkSbStart] = useState("");
   const [bulkSbStop, setBulkSbStop] = useState("");
   const [bulkActivity, setBulkActivity] = useState<"travel" | "work">("work");
+  const [bulkWorkContext, setBulkWorkContext] = useState("");
   const [bulkLodging, setBulkLodging] = useState(false);
   const [bulkPerDiemB, setBulkPerDiemB] = useState(false);
   const [bulkPerDiemL, setBulkPerDiemL] = useState(false);
