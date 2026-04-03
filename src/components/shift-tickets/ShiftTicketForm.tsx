@@ -7,7 +7,7 @@ import type { SignatureMetadata } from "./SignaturePicker";
 import { EquipmentEntryRow } from "./EquipmentEntryRow";
 import { PersonnelEntryRow } from "./PersonnelEntryRow";
 import { CrewSyncCard } from "./CrewSyncCard";
-import { OF297FormPreview } from "./OF297FormPreview";
+import { SupervisorSignatureSheet } from "./SupervisorSignatureSheet";
 import { uploadSignature, computeHours, buildRemarksString, insertSignatureAuditLog } from "@/services/shift-tickets";
 import type { ShiftTicket, EquipmentEntry, PersonnelEntry } from "@/services/shift-tickets";
 import type { IncidentTruckCrewWithMember } from "@/services/incident-truck-crew";
@@ -108,8 +108,8 @@ export function ShiftTicketForm({
   // Collapsible personnel
   const [expandedPersonnelIndex, setExpandedPersonnelIndex] = useState<number | null>(null);
 
-  // Supervisor preview
-  const [showSupervisorPreview, setShowSupervisorPreview] = useState(false);
+  // Supervisor sheet
+  const [showSupervisorSheet, setShowSupervisorSheet] = useState(false);
 
   // Populate from existing ticket
   useEffect(() => {
@@ -179,9 +179,9 @@ export function ShiftTicketForm({
     });
   };
 
-  const handleSignatureSave = async (blob: Blob, metadata: SignatureMetadata) => {
-    if (!sigModal) return;
-    const sigType = sigModal;
+  const handleSignatureSave = async (blob: Blob, metadata: SignatureMetadata, sigTypeOverride?: "contractor" | "supervisor") => {
+    const sigType = sigTypeOverride || sigModal;
+    if (!sigType) return;
     setSigModal(null);
 
     if (!ticket?.id) {
@@ -469,23 +469,25 @@ export function ShiftTicketForm({
           </div>
 
           {/* Supervisor */}
-          <div className="rounded-xl border border-border bg-card p-3 space-y-2">
-            <label className={labelClass}>33. Incident Supervisor (Name & RO#)</label>
-            <input value={supervisorName} onChange={(e) => setSupervisorName(e.target.value)} placeholder="Name" className={inputClass} />
-            <input value={supervisorRO} onChange={(e) => setSupervisorRO(e.target.value)} placeholder="Resource Order #" className={inputClass} />
-            <label className={labelClass}>34. Signature</label>
-            {supervisorSigUrl ? (
-              <div className="space-y-2">
-                <img src={supervisorSigUrl} alt="Supervisor signature" className="h-16 rounded border border-border bg-card" />
-                <button onClick={() => setSupervisorSigUrl(null)} className="text-xs text-destructive touch-target">Clear</button>
-              </div>
-            ) : (
-              <button onClick={() => setShowSupervisorPreview(true)} disabled={uploadingSig}
-                className="w-full rounded-xl border-2 border-dashed border-border py-6 text-sm text-muted-foreground touch-target disabled:opacity-40">
-                Tap to sign
-              </button>
+          <button
+            type="button"
+            onClick={() => setShowSupervisorSheet(true)}
+            className="w-full rounded-xl border border-border bg-card p-3 space-y-2 text-left touch-target active:bg-accent/30"
+          >
+            <span className={labelClass}>33. Incident Supervisor (Name & RO#)</span>
+            <p className="text-sm font-medium truncate">
+              {supervisorName || <span className="text-muted-foreground">Tap to enter name</span>}
+            </p>
+            {supervisorRO && (
+              <p className="text-xs text-muted-foreground truncate">RO# {supervisorRO}</p>
             )}
-          </div>
+            <span className={labelClass}>34. Signature</span>
+            {supervisorSigUrl ? (
+              <img src={supervisorSigUrl} alt="Supervisor signature" className="h-12 rounded border border-border bg-card" />
+            ) : (
+              <p className="text-xs text-muted-foreground italic">No signature yet</p>
+            )}
+          </button>
         </section>
       </div>
 
@@ -524,43 +526,21 @@ export function ShiftTicketForm({
         defaultName={sigModal === "contractor" ? contractorRepName : supervisorName}
       />
 
-      {/* Supervisor OF-297 preview */}
-      {showSupervisorPreview && (
-        <OF297FormPreview
-          ticket={{
-            agreement_number: agreementNumber,
-            contractor_name: contractorName,
-            resource_order_number: resourceOrderNumber,
-            incident_name: incidentName,
-            incident_number: incidentNumber,
-            financial_code: financialCode,
-            equipment_make_model: equipmentMakeModel,
-            equipment_type: equipmentType,
-            serial_vin_number: serialVin,
-            license_id_number: licenseId,
-            transport_retained: transportRetained,
-            is_first_last: isFirstLast,
-            first_last_type: firstLastType,
-            miles: miles ? parseFloat(miles) : null,
-            equipment_entries: equipmentEntries as any,
-            personnel_entries: personnelEntries as any,
-            remarks,
-            contractor_rep_name: contractorRepName,
-          }}
-          contractorSigUrl={contractorSigUrl}
-          supervisorSigUrl={supervisorSigUrl}
-          supervisorName={supervisorName}
-          supervisorRO={supervisorRO}
-          onSupervisorNameChange={setSupervisorName}
-          onSupervisorROChange={setSupervisorRO}
-          onTapToSign={() => {
-            setSigModal("supervisor");
-          }}
-          onClearSignature={() => setSupervisorSigUrl(null)}
-          onClose={() => setShowSupervisorPreview(false)}
-          uploadingSig={uploadingSig}
-        />
-      )}
+      {/* Supervisor signature sheet */}
+      <SupervisorSignatureSheet
+        open={showSupervisorSheet}
+        onClose={() => setShowSupervisorSheet(false)}
+        supervisorName={supervisorName}
+        supervisorRO={supervisorRO}
+        supervisorSigUrl={supervisorSigUrl}
+        onSupervisorNameChange={setSupervisorName}
+        onSupervisorROChange={setSupervisorRO}
+        onSign={async (blob, metadata) => {
+          await handleSignatureSave(blob, metadata, "supervisor");
+        }}
+        onClearSignature={() => setSupervisorSigUrl(null)}
+        uploadingSig={uploadingSig}
+      />
     </AppShell>
   );
 }
