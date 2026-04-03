@@ -120,8 +120,8 @@ export function IncidentTruckList({ incidentId, incidentName }: Props) {
               <div className="border-t px-4 pb-4 pt-3 space-y-4 animate-fade-in">
                 {/* Truck photo + key info row */}
                 <div className="flex gap-3 items-start">
-                  {/* Small truck photo with right-side fade */}
-                  <div className="relative w-24 h-24 rounded-xl overflow-hidden shrink-0 bg-secondary">
+                  {/* Truck photo with right-side fade */}
+                  <div className="relative w-28 h-28 rounded-xl overflow-hidden shrink-0 bg-secondary">
                     {photoUrl ? (
                       <>
                         <img
@@ -155,11 +155,41 @@ export function IncidentTruckList({ incidentId, incidentName }: Props) {
                     {it.trucks.vin && (
                       <p className="text-xs truncate"><span className="text-muted-foreground">VIN:</span> {it.trucks.vin}</p>
                     )}
-                    {(it.trucks as any).water_capacity && (
-                      <p className="text-xs"><span className="text-muted-foreground">Water:</span> {(it.trucks as any).water_capacity}</p>
-                    )}
                   </div>
                 </div>
+
+                {/* Extended truck details */}
+                {(() => {
+                  const t = it.trucks as any;
+                  const details = [
+                    { label: "Water Capacity", value: t.water_capacity },
+                    { label: "Pump Type", value: t.pump_type },
+                    { label: "Fuel Type", value: t.fuel_type },
+                    { label: "Fuel Capacity", value: t.fuel_capacity ? `${t.fuel_capacity} gal` : null },
+                    { label: "Engine", value: t.engine_type },
+                    { label: "Bed Length", value: t.bed_length },
+                    { label: "DOT #", value: t.dot_number },
+                    { label: "Mileage", value: t.current_mileage ? `${Number(t.current_mileage).toLocaleString()} mi` : null },
+                    { label: "GVWR", value: t.gvwr ? `${Number(t.gvwr).toLocaleString()} lbs` : null },
+                    { label: "Weight (Empty)", value: t.weight_empty ? `${Number(t.weight_empty).toLocaleString()} lbs` : null },
+                    { label: "Weight (Full)", value: t.weight_full ? `${Number(t.weight_full).toLocaleString()} lbs` : null },
+                  ].filter((d) => d.value);
+                  if (details.length === 0) return null;
+                  return (
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                      {details.map((d) => (
+                        <div key={d.label}>
+                          <p className="text-[10px] text-muted-foreground">{d.label}</p>
+                          <p className="text-xs font-medium">{d.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()} 
+
+                {(it.trucks as any).notes && (
+                  <p className="text-xs text-muted-foreground"><span className="font-medium text-foreground">Notes:</span> {(it.trucks as any).notes}</p>
+                )}
 
                 {/* Status changer */}
                 <div className="space-y-1">
