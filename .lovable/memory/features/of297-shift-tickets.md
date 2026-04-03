@@ -9,6 +9,9 @@ type: feature
 - Personnel entries (date/name/op times/standby times/total/remarks) as JSONB array
 - Personnel remarks structured: line1=activity type (Travel or Work+context), line2=Lodging or Per Diem, line3=Per Diem if Lodging exists
 - work_context field on PersonnelEntry for specifying work details (e.g. "IA2 - Johnson Hill Fire")
+- CrewSyncCard: replaces old BulkTimeEntry. Reads equipment start/stop, auto-suggests 30-min lunch for 8h+ shifts, syncs times to all crew with one tap
+- Lunch break: deducts 0.5h from crew total, appends "30-min lunch at HHMM" to remarks
+- Individual crew members still editable via collapsible PersonnelEntryRow
 - Signature capture via full-screen canvas, stored in 'signatures' storage bucket
 - PDF: signatures drawn on white canvas background (prevents black box), name/sig ABOVE lines
 - PDF generation uses jspdf, matches federal OF-297 form layout
