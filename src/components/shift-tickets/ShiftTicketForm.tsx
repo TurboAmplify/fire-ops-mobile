@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
-import { Plus, Loader2, FileText, Save, Download, AlertTriangle, Clock, Users, Copy } from "lucide-react";
+import { Plus, Loader2, FileText, Save, Download, AlertTriangle, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { SignaturePicker } from "./SignaturePicker";
 import type { SignatureMetadata } from "./SignaturePicker";
 import { EquipmentEntryRow } from "./EquipmentEntryRow";
 import { PersonnelEntryRow } from "./PersonnelEntryRow";
-import { MilitaryTimeInput } from "./MilitaryTimeInput";
+import { CrewSyncCard } from "./CrewSyncCard";
 import { OF297FormPreview } from "./OF297FormPreview";
 import { uploadSignature, computeHours, buildRemarksString, insertSignatureAuditLog } from "@/services/shift-tickets";
 import type { ShiftTicket, EquipmentEntry, PersonnelEntry } from "@/services/shift-tickets";
@@ -417,9 +417,13 @@ export function ShiftTicketForm({
             </button>
           </div>
 
-          {/* Bulk time entry */}
-          {personnelEntries.length > 1 && (
-            <BulkTimeEntry personnelEntries={personnelEntries} setPersonnelEntries={setPersonnelEntries} />
+          {/* Sync crew times from equipment */}
+          {personnelEntries.length > 0 && equipmentEntries.length > 0 && (
+            <CrewSyncCard
+              equipmentEntries={equipmentEntries}
+              personnelEntries={personnelEntries}
+              setPersonnelEntries={setPersonnelEntries}
+            />
           )}
 
           {crewRoster && crewRoster.length > 0 && personnelEntries.length > 0 && (
@@ -558,143 +562,5 @@ export function ShiftTicketForm({
         />
       )}
     </AppShell>
-  );
-}
-
-/* ── Bulk Time Entry Component ── */
-function BulkTimeEntry({
-  personnelEntries,
-  setPersonnelEntries,
-}: {
-  personnelEntries: PersonnelEntry[];
-  setPersonnelEntries: React.Dispatch<React.SetStateAction<PersonnelEntry[]>>;
-}) {
-  const firstEntry = personnelEntries[0];
-  const [bulkDate, setBulkDate] = useState(firstEntry?.date || new Date().toISOString().split("T")[0]);
-  const [bulkOpStart, setBulkOpStart] = useState(firstEntry?.op_start || "");
-  const [bulkOpStop, setBulkOpStop] = useState(firstEntry?.op_stop || "");
-  const [bulkSbStart, setBulkSbStart] = useState(firstEntry?.sb_start || "");
-  const [bulkSbStop, setBulkSbStop] = useState(firstEntry?.sb_stop || "");
-  const [bulkActivity, setBulkActivity] = useState<"travel" | "work">(firstEntry?.activity_type || "work");
-  const [bulkWorkContext, setBulkWorkContext] = useState(firstEntry?.work_context || "");
-  const [bulkLodging, setBulkLodging] = useState(firstEntry?.lodging || false);
-  const [bulkPerDiemB, setBulkPerDiemB] = useState(firstEntry?.per_diem_b || false);
-  const [bulkPerDiemL, setBulkPerDiemL] = useState(firstEntry?.per_diem_l || false);
-  const [bulkPerDiemD, setBulkPerDiemD] = useState(firstEntry?.per_diem_d || false);
-
-  const applyToAll = () => {
-    const updated = personnelEntries.map((entry) => {
-      const opHours = computeHours(bulkOpStart, bulkOpStop);
-      const sbHours = computeHours(bulkSbStart, bulkSbStop);
-      const newEntry: PersonnelEntry = {
-        ...entry,
-        date: bulkDate || entry.date,
-        op_start: bulkOpStart || entry.op_start,
-        op_stop: bulkOpStop || entry.op_stop,
-        sb_start: bulkSbStart || entry.sb_start,
-        sb_stop: bulkSbStop || entry.sb_stop,
-        total: Math.round(((bulkOpStart && bulkOpStop ? opHours : computeHours(entry.op_start, entry.op_stop)) + (bulkSbStart && bulkSbStop ? sbHours : computeHours(entry.sb_start, entry.sb_stop))) * 10) / 10,
-        activity_type: bulkActivity,
-        work_context: bulkActivity === "work" ? bulkWorkContext : "",
-        lodging: bulkLodging,
-        per_diem_b: bulkPerDiemB,
-        per_diem_l: bulkPerDiemL,
-        per_diem_d: bulkPerDiemD,
-      };
-      newEntry.remarks = buildRemarksString(newEntry);
-      return newEntry;
-    });
-    setPersonnelEntries(updated);
-    toast.success(`Applied times to ${updated.length} crew members`);
-  };
-
-  const bulkInput = "w-full rounded-lg border border-input bg-background px-2 py-2 text-sm outline-none focus:ring-1 focus:ring-ring";
-
-  return (
-    <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-3 space-y-2">
-      <div className="flex items-center gap-2">
-        <Users className="h-4 w-4 text-primary" />
-        <span className="text-xs font-bold text-primary">Apply to All Crew</span>
-      </div>
-      <div className="space-y-2">
-        <div>
-          <label className="text-[10px] text-muted-foreground">Date</label>
-          <input type="date" value={bulkDate} onChange={(e) => setBulkDate(e.target.value)} className={bulkInput} />
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="text-[10px] text-muted-foreground">Op Start (24h)</label>
-            <MilitaryTimeInput value={bulkOpStart} onChange={setBulkOpStart} className={bulkInput} />
-          </div>
-          <div>
-            <label className="text-[10px] text-muted-foreground">Op Stop (24h)</label>
-            <MilitaryTimeInput value={bulkOpStop} onChange={setBulkOpStop} className={bulkInput} />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="text-[10px] text-muted-foreground">SB Start (24h)</label>
-            <MilitaryTimeInput value={bulkSbStart} onChange={setBulkSbStart} className={bulkInput} />
-          </div>
-          <div>
-            <label className="text-[10px] text-muted-foreground">SB Stop (24h)</label>
-            <MilitaryTimeInput value={bulkSbStop} onChange={setBulkSbStop} className={bulkInput} />
-          </div>
-        </div>
-
-        {/* Activity type */}
-        <div className="flex gap-2">
-          <button type="button" onClick={() => setBulkActivity("travel")}
-            className={`flex-1 rounded-lg px-2 py-2 text-xs font-medium touch-target ${bulkActivity === "travel" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
-            Travel/Check-In
-          </button>
-          <button type="button" onClick={() => setBulkActivity("work")}
-            className={`flex-1 rounded-lg px-2 py-2 text-xs font-medium touch-target ${bulkActivity === "work" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
-            Work
-          </button>
-        </div>
-
-        {/* Work context */}
-        {bulkActivity === "work" && (
-          <div>
-            <label className="text-[10px] text-muted-foreground">Work Context (e.g. IA2 - Fire Name)</label>
-            <input type="text" value={bulkWorkContext} onChange={(e) => setBulkWorkContext(e.target.value)}
-              placeholder="IA2 - Fire Name" className={bulkInput} />
-          </div>
-        )}
-
-        {/* Lodging */}
-        <label className="flex items-center gap-2 touch-target">
-          <input type="checkbox" checked={bulkLodging} onChange={(e) => setBulkLodging(e.target.checked)}
-            className="h-5 w-5 rounded border-input accent-primary" />
-          <span className="text-sm">Lodging</span>
-        </label>
-
-        {/* Per Diem */}
-        <div className="flex gap-3">
-          <span className="text-[10px] text-muted-foreground self-center">Per Diem:</span>
-          <label className="flex items-center gap-1.5 touch-target">
-            <input type="checkbox" checked={bulkPerDiemB} onChange={(e) => setBulkPerDiemB(e.target.checked)}
-              className="h-5 w-5 rounded border-input accent-primary" />
-            <span className="text-sm font-medium">B</span>
-          </label>
-          <label className="flex items-center gap-1.5 touch-target">
-            <input type="checkbox" checked={bulkPerDiemL} onChange={(e) => setBulkPerDiemL(e.target.checked)}
-              className="h-5 w-5 rounded border-input accent-primary" />
-            <span className="text-sm font-medium">L</span>
-          </label>
-          <label className="flex items-center gap-1.5 touch-target">
-            <input type="checkbox" checked={bulkPerDiemD} onChange={(e) => setBulkPerDiemD(e.target.checked)}
-              className="h-5 w-5 rounded border-input accent-primary" />
-            <span className="text-sm font-medium">D</span>
-          </label>
-        </div>
-      </div>
-      <button type="button" onClick={applyToAll}
-        className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-bold text-primary-foreground touch-target active:scale-[0.98]">
-        <Clock className="h-4 w-4" />
-        Apply to All ({personnelEntries.length})
-      </button>
-    </div>
   );
 }
