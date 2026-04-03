@@ -91,7 +91,16 @@ export function SignaturePicker({ open, onClose, onSave, title, defaultName = ""
         ctx.fillStyle = "hsl(0 0% 100%)";
         ctx.fillRect(0, 0, rect.width, rect.height);
         ctx.fillStyle = "hsl(222 47% 11%)";
-        ctx.font = `${font.weight} 32px "${font.family}", cursive`;
+
+        // Dynamic font sizing to fit the canvas width with padding
+        const maxWidth = rect.width * 0.85;
+        let fontSize = 42;
+        ctx.font = `${font.weight} ${fontSize}px "${font.family}", cursive`;
+        while (fontSize > 16 && ctx.measureText(name.trim()).width > maxWidth) {
+          fontSize -= 2;
+          ctx.font = `${font.weight} ${fontSize}px "${font.family}", cursive`;
+        }
+
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(name.trim(), rect.width / 2, rect.height / 2);
