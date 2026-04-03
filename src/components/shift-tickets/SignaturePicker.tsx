@@ -202,7 +202,7 @@ export function SignaturePicker({ open, onClose, onSave, title, defaultName = ""
   const canConfirm = mode === "type" ? !!selectedFont : hasStroke;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background">
+    <div className="fixed inset-0 z-[60] flex flex-col bg-background">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <button onClick={onClose} className="touch-target flex items-center gap-1 text-sm text-muted-foreground">
