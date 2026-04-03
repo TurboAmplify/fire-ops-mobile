@@ -468,7 +468,7 @@ export function ShiftTicketForm({
             )}
           </div>
 
-          {/* Supervisor */}
+          {/* Supervisor — opens OF-297 PDF view */}
           <button
             type="button"
             onClick={() => setShowSupervisorSheet(true)}
