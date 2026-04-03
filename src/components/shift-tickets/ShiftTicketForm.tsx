@@ -179,9 +179,9 @@ export function ShiftTicketForm({
     });
   };
 
-  const handleSignatureSave = async (blob: Blob, metadata: SignatureMetadata) => {
-    if (!sigModal) return;
-    const sigType = sigModal;
+  const handleSignatureSave = async (blob: Blob, metadata: SignatureMetadata, sigTypeOverride?: "contractor" | "supervisor") => {
+    const sigType = sigTypeOverride || sigModal;
+    if (!sigType) return;
     setSigModal(null);
 
     if (!ticket?.id) {
