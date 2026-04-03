@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
-import { Plus, Loader2, FileText, Save, Download, AlertTriangle, Clock, Users, Copy } from "lucide-react";
+import { Plus, Loader2, FileText, Save, Download, AlertTriangle, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { SignaturePicker } from "./SignaturePicker";
 import type { SignatureMetadata } from "./SignaturePicker";
 import { EquipmentEntryRow } from "./EquipmentEntryRow";
 import { PersonnelEntryRow } from "./PersonnelEntryRow";
-import { MilitaryTimeInput } from "./MilitaryTimeInput";
+import { CrewSyncCard } from "./CrewSyncCard";
 import { OF297FormPreview } from "./OF297FormPreview";
 import { uploadSignature, computeHours, buildRemarksString, insertSignatureAuditLog } from "@/services/shift-tickets";
 import type { ShiftTicket, EquipmentEntry, PersonnelEntry } from "@/services/shift-tickets";
