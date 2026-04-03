@@ -417,9 +417,13 @@ export function ShiftTicketForm({
             </button>
           </div>
 
-          {/* Bulk time entry */}
-          {personnelEntries.length > 1 && (
-            <BulkTimeEntry personnelEntries={personnelEntries} setPersonnelEntries={setPersonnelEntries} />
+          {/* Sync crew times from equipment */}
+          {personnelEntries.length > 0 && equipmentEntries.length > 0 && (
+            <CrewSyncCard
+              equipmentEntries={equipmentEntries}
+              personnelEntries={personnelEntries}
+              setPersonnelEntries={setPersonnelEntries}
+            />
           )}
 
           {crewRoster && crewRoster.length > 0 && personnelEntries.length > 0 && (
