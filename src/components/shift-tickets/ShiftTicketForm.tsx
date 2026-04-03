@@ -469,23 +469,25 @@ export function ShiftTicketForm({
           </div>
 
           {/* Supervisor */}
-          <div className="rounded-xl border border-border bg-card p-3 space-y-2">
-            <label className={labelClass}>33. Incident Supervisor (Name & RO#)</label>
-            <input value={supervisorName} onChange={(e) => setSupervisorName(e.target.value)} placeholder="Name" className={inputClass} />
-            <input value={supervisorRO} onChange={(e) => setSupervisorRO(e.target.value)} placeholder="Resource Order #" className={inputClass} />
-            <label className={labelClass}>34. Signature</label>
-            {supervisorSigUrl ? (
-              <div className="space-y-2">
-                <img src={supervisorSigUrl} alt="Supervisor signature" className="h-16 rounded border border-border bg-card" />
-                <button onClick={() => setSupervisorSigUrl(null)} className="text-xs text-destructive touch-target">Clear</button>
-              </div>
-            ) : (
-              <button onClick={() => setShowSupervisorPreview(true)} disabled={uploadingSig}
-                className="w-full rounded-xl border-2 border-dashed border-border py-6 text-sm text-muted-foreground touch-target disabled:opacity-40">
-                Tap to sign
-              </button>
+          <button
+            type="button"
+            onClick={() => setShowSupervisorSheet(true)}
+            className="w-full rounded-xl border border-border bg-card p-3 space-y-2 text-left touch-target active:bg-accent/30"
+          >
+            <span className={labelClass}>33. Incident Supervisor (Name & RO#)</span>
+            <p className="text-sm font-medium truncate">
+              {supervisorName || <span className="text-muted-foreground">Tap to enter name</span>}
+            </p>
+            {supervisorRO && (
+              <p className="text-xs text-muted-foreground truncate">RO# {supervisorRO}</p>
             )}
-          </div>
+            <span className={labelClass}>34. Signature</span>
+            {supervisorSigUrl ? (
+              <img src={supervisorSigUrl} alt="Supervisor signature" className="h-12 rounded border border-border bg-card" />
+            ) : (
+              <p className="text-xs text-muted-foreground italic">No signature yet</p>
+            )}
+          </button>
         </section>
       </div>
 
