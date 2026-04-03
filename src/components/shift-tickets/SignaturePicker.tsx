@@ -270,7 +270,7 @@ export function SignaturePicker({ open, onClose, onSave, title, defaultName = ""
                     <canvas
                       ref={(el) => { canvasRefs.current[font.family] = el; }}
                       className="w-full rounded-lg bg-card"
-                      style={{ height: 60 }}
+                      style={{ height: 80 }}
                     />
                   </button>
                 ))}
