@@ -108,8 +108,8 @@ export function ShiftTicketForm({
   // Collapsible personnel
   const [expandedPersonnelIndex, setExpandedPersonnelIndex] = useState<number | null>(null);
 
-  // Supervisor preview
-  const [showSupervisorPreview, setShowSupervisorPreview] = useState(false);
+  // Supervisor sheet
+  const [showSupervisorSheet, setShowSupervisorSheet] = useState(false);
 
   // Populate from existing ticket
   useEffect(() => {
