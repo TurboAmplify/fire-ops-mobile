@@ -34,6 +34,15 @@ export function PersonnelEntryRow({ entry, index, onChange, onRemove, collapsed,
   const activityType = entry.activity_type || "work";
   const timeInputClass = "w-full rounded-lg border border-input bg-background px-2 py-2 text-sm outline-none focus:ring-1 focus:ring-ring";
 
+  // Build badge list
+  const badges: string[] = [];
+  if (entry.lodging) badges.push("Lodging");
+  const meals: string[] = [];
+  if (entry.per_diem_b) meals.push("B");
+  if (entry.per_diem_l) meals.push("L");
+  if (entry.per_diem_d) meals.push("D");
+  if (meals.length > 0) badges.push(`Per Diem (${meals.join(",")})`);
+
   // Summary row (always visible)
   const summaryRow = (
     <button
@@ -41,9 +50,18 @@ export function PersonnelEntryRow({ entry, index, onChange, onRemove, collapsed,
       onClick={onToggle}
       className="w-full flex items-center justify-between px-3 py-2.5 touch-target"
     >
-      <div className="flex items-center gap-3 min-w-0">
-        <span className="text-sm font-semibold truncate">{entry.operator_name || `Crew ${index + 1}`}</span>
-        <span className="text-xs text-muted-foreground shrink-0">{entry.date}</span>
+      <div className="flex flex-col items-start gap-0.5 min-w-0">
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-semibold truncate">{entry.operator_name || `Crew ${index + 1}`}</span>
+          <span className="text-xs text-muted-foreground shrink-0">{entry.date}</span>
+        </div>
+        {badges.length > 0 && (
+          <div className="flex gap-1.5 flex-wrap">
+            {badges.map((b) => (
+              <span key={b} className="text-[10px] font-medium rounded-full bg-primary/10 text-primary px-2 py-0.5">{b}</span>
+            ))}
+          </div>
+        )}
       </div>
       <div className="flex items-center gap-3 shrink-0">
         <span className="text-sm font-bold text-primary">{entry.total || 0}h</span>
