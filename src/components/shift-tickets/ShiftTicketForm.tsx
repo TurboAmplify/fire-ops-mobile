@@ -536,9 +536,7 @@ export function ShiftTicketForm({
         onSupervisorNameChange={setSupervisorName}
         onSupervisorROChange={setSupervisorRO}
         onSign={async (blob, metadata) => {
-          // Temporarily set sigModal so handleSignatureSave knows the type
-          setSigModal("supervisor");
-          await handleSignatureSave(blob, metadata);
+          await handleSignatureSave(blob, metadata, "supervisor");
         }}
         onClearSignature={() => setSupervisorSigUrl(null)}
         uploadingSig={uploadingSig}
