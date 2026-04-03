@@ -526,21 +526,41 @@ export function ShiftTicketForm({
         defaultName={sigModal === "contractor" ? contractorRepName : supervisorName}
       />
 
-      {/* Supervisor signature sheet */}
-      <SupervisorSignatureSheet
-        open={showSupervisorSheet}
-        onClose={() => setShowSupervisorSheet(false)}
-        supervisorName={supervisorName}
-        supervisorRO={supervisorRO}
-        supervisorSigUrl={supervisorSigUrl}
-        onSupervisorNameChange={setSupervisorName}
-        onSupervisorROChange={setSupervisorRO}
-        onSign={async (blob, metadata) => {
-          await handleSignatureSave(blob, metadata, "supervisor");
-        }}
-        onClearSignature={() => setSupervisorSigUrl(null)}
-        uploadingSig={uploadingSig}
-      />
+      {/* OF-297 PDF view for supervisor signing */}
+      {showSupervisorSheet && (
+        <OF297FormPreview
+          ticket={{
+            agreement_number: agreementNumber,
+            contractor_name: contractorName,
+            resource_order_number: resourceOrderNumber,
+            incident_name: incidentName,
+            incident_number: incidentNumber,
+            financial_code: financialCode,
+            equipment_make_model: equipmentMakeModel,
+            equipment_type: equipmentType,
+            serial_vin_number: serialVin,
+            license_id_number: licenseId,
+            transport_retained: transportRetained,
+            is_first_last: isFirstLast,
+            first_last_type: firstLastType,
+            miles: miles ? parseFloat(miles) : null,
+            equipment_entries: equipmentEntries as any,
+            personnel_entries: personnelEntries as any,
+            remarks,
+            contractor_rep_name: contractorRepName,
+          }}
+          contractorSigUrl={contractorSigUrl}
+          supervisorSigUrl={supervisorSigUrl}
+          supervisorName={supervisorName}
+          supervisorRO={supervisorRO}
+          onSupervisorNameChange={setSupervisorName}
+          onSupervisorROChange={setSupervisorRO}
+          onTapToSign={() => setSigModal("supervisor")}
+          onClearSignature={() => setSupervisorSigUrl(null)}
+          onClose={() => setShowSupervisorSheet(false)}
+          uploadingSig={uploadingSig}
+        />
+      )}
     </AppShell>
   );
 }
