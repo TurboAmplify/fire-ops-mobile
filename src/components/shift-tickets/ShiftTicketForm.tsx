@@ -7,7 +7,7 @@ import type { SignatureMetadata } from "./SignaturePicker";
 import { EquipmentEntryRow } from "./EquipmentEntryRow";
 import { PersonnelEntryRow } from "./PersonnelEntryRow";
 import { CrewSyncCard } from "./CrewSyncCard";
-import { SupervisorSignatureSheet } from "./SupervisorSignatureSheet";
+import { OF297FormPreview } from "./OF297FormPreview";
 import { uploadSignature, computeHours, buildRemarksString, insertSignatureAuditLog } from "@/services/shift-tickets";
 import type { ShiftTicket, EquipmentEntry, PersonnelEntry } from "@/services/shift-tickets";
 import type { IncidentTruckCrewWithMember } from "@/services/incident-truck-crew";
