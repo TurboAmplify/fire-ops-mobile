@@ -76,6 +76,8 @@ export type Database = {
         Row: {
           active: boolean
           created_at: string
+          hourly_rate: number | null
+          hw_rate: number | null
           id: string
           name: string
           notes: string | null
@@ -87,6 +89,8 @@ export type Database = {
         Insert: {
           active?: boolean
           created_at?: string
+          hourly_rate?: number | null
+          hw_rate?: number | null
           id?: string
           name: string
           notes?: string | null
@@ -98,6 +102,8 @@ export type Database = {
         Update: {
           active?: boolean
           created_at?: string
+          hourly_rate?: number | null
+          hw_rate?: number | null
           id?: string
           name?: string
           notes?: string | null
@@ -490,16 +496,19 @@ export type Database = {
       organizations: {
         Row: {
           created_at: string
+          default_hw_rate: number | null
           id: string
           name: string
         }
         Insert: {
           created_at?: string
+          default_hw_rate?: number | null
           id?: string
           name: string
         }
         Update: {
           created_at?: string
+          default_hw_rate?: number | null
           id?: string
           name?: string
         }

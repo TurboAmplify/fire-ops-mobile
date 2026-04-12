@@ -35,6 +35,8 @@ import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Support from "./pages/Support";
 import Time from "./pages/Time";
+import Payroll from "./pages/Payroll";
+import More from "./pages/More";
 import NeedsList from "./pages/NeedsList";
 import NotFound from "./pages/NotFound";
 
@@ -82,6 +84,8 @@ const App = () => (
               <Route path="/terms" element={<ProtectedRoute><Terms /></ProtectedRoute>} />
               <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
               <Route path="/time" element={<ProtectedRoute><Time /></ProtectedRoute>} />
+              <Route path="/payroll" element={<ProtectedRoute><Payroll /></ProtectedRoute>} />
+              <Route path="/more" element={<ProtectedRoute><More /></ProtectedRoute>} />
               <Route path="/needs" element={<ProtectedRoute><NeedsList /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
