@@ -146,15 +146,26 @@ export async function generateOF297PdfBlob(ticket: ShiftTicket): Promise<{ blob:
 
   for (const row of headerRows) {
     const rowY = y;
+    // Calculate dynamic row height based on text wrapping
+    let maxH = 28;
+    row.forEach((cell) => {
+      if (cell.value) {
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "bold");
+        const lines = doc.splitTextToSize(cell.value, col3 - 8);
+        const needed = 14 + lines.length * 10 + 4;
+        if (needed > maxH) maxH = needed;
+      }
+    });
     row.forEach((cell, ci) => {
       const cx = margin + ci * col3;
       text(cell.label, cx + 2, rowY + 10, { size: 7 });
       text(cell.value || "", cx + 2, rowY + 22, { size: 9, bold: true, maxWidth: col3 - 8 });
-      drawLine(cx, rowY, cx, rowY + 28);
+      drawLine(cx, rowY, cx, rowY + maxH);
     });
-    drawLine(W - margin, rowY, W - margin, rowY + 28);
-    drawLine(margin, rowY + 28, W - margin, rowY + 28);
-    y += 28;
+    drawLine(W - margin, rowY, W - margin, rowY + maxH);
+    drawLine(margin, rowY + maxH, W - margin, rowY + maxH);
+    y += maxH;
   }
 
   // Row 3 - 4 columns
