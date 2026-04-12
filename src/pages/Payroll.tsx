@@ -1,33 +1,47 @@
 import { AppShell } from "@/components/AppShell";
 import { useCrewMembers } from "@/hooks/useCrewMembers";
-import { useAllShifts } from "@/hooks/useShifts";
 import { useIncidents } from "@/hooks/useIncidents";
 import { Loader2, ChevronLeft, ChevronRight, Clock, DollarSign, Users } from "lucide-react";
 import { useState, useMemo } from "react";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, parseISO, isWithinInterval } from "date-fns";
-import type { ShiftWithRelations } from "@/services/shifts";
-import type { CrewMember } from "@/services/crew";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
-interface ShiftCrewWithMember {
-  id: string;
-  shift_id: string;
-  crew_member_id: string;
-  hours: number;
-  role_on_shift: string | null;
-  crew_members: CrewMember & { hourly_rate?: number | null; hw_rate?: number | null };
+interface PersonnelEntry {
+  operator_name: string;
+  date: string;
+  total: number | string;
+  activity_type?: string;
+  lodging?: boolean;
+  per_diem_b?: boolean;
+  per_diem_l?: boolean;
+  per_diem_d?: boolean;
+  op_start?: string;
+  op_stop?: string;
+  sb_start?: string;
+  sb_stop?: string;
+  remarks?: string;
 }
 
-function useAllShiftCrew() {
+interface ShiftTicketRow {
+  id: string;
+  incident_truck_id: string;
+  personnel_entries: PersonnelEntry[];
+  incident_trucks: {
+    incident_id: string;
+    incidents: { id: string; name: string };
+  };
+}
+
+function useAllShiftTickets() {
   return useQuery({
-    queryKey: ["all-shift-crew"],
+    queryKey: ["all-shift-tickets-payroll"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("shift_crew")
-        .select("id, shift_id, crew_member_id, hours, role_on_shift, crew_members(*)");
+        .from("shift_tickets")
+        .select("id, incident_truck_id, personnel_entries, incident_trucks!inner(incident_id, incidents:incidents!incident_trucks_incident_id_fkey(id, name))");
       if (error) throw error;
-      return data as unknown as ShiftCrewWithMember[];
+      return data as unknown as ShiftTicketRow[];
     },
   });
 }
@@ -45,6 +59,8 @@ interface CrewPayrollLine {
   hwPay: number;
   overtimePay: number;
   grossPay: number;
+  lodgingDays: number;
+  perDiemDays: number;
 }
 
 export default function Payroll() {
@@ -55,47 +71,67 @@ export default function Payroll() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [incidentFilter, setIncidentFilter] = useState("all");
 
-  const { data: shifts, isLoading: loadingShifts } = useAllShifts();
-  const { data: shiftCrew, isLoading: loadingCrew } = useAllShiftCrew();
-  const { data: crewMembers } = useCrewMembers();
+  const { data: shiftTickets, isLoading: loadingTickets } = useAllShiftTickets();
+  const { data: crewMembers, isLoading: loadingCrew } = useCrewMembers();
   const { data: incidents } = useIncidents();
 
-  const isLoading = loadingShifts || loadingCrew;
+  const isLoading = loadingTickets || loadingCrew;
 
-  // Filter shifts to current week and optional incident
-  const weekShiftIds = useMemo(() => {
-    if (!shifts) return new Set<string>();
-    return new Set(
-      shifts
-        .filter((s) => {
-          try {
-            const d = parseISO(s.date);
-            const inWeek = isWithinInterval(d, { start: weekStart, end: weekEnd });
-            if (!inWeek) return false;
-            if (incidentFilter !== "all") {
-              return s.incident_trucks?.incidents?.id === incidentFilter;
-            }
-            return true;
-          } catch {
-            return false;
-          }
-        })
-        .map((s) => s.id)
-    );
-  }, [shifts, weekStart, weekEnd, incidentFilter]);
-
-  // Build payroll lines per crew member
+  // Build payroll lines from shift ticket personnel entries
   const payrollLines = useMemo((): CrewPayrollLine[] => {
-    if (!shiftCrew || !crewMembers) return [];
+    if (!shiftTickets || !crewMembers) return [];
 
+    // Build name -> crew member lookup (case-insensitive)
+    const nameMap = new Map<string, (typeof crewMembers)[number]>();
+    crewMembers.forEach((cm) => {
+      nameMap.set(cm.name.toLowerCase().trim(), cm);
+    });
+
+    // Aggregate hours, lodging, per diem per crew member
     const hoursMap = new Map<string, number>();
-    shiftCrew.forEach((sc) => {
-      if (!weekShiftIds.has(sc.shift_id)) return;
-      hoursMap.set(sc.crew_member_id, (hoursMap.get(sc.crew_member_id) || 0) + Number(sc.hours));
+    const lodgingMap = new Map<string, Set<string>>();
+    const perDiemMap = new Map<string, Set<string>>();
+
+    shiftTickets.forEach((st) => {
+      // Incident filter
+      if (incidentFilter !== "all") {
+        if (st.incident_trucks?.incidents?.id !== incidentFilter) return;
+      }
+
+      const entries = Array.isArray(st.personnel_entries) ? st.personnel_entries : [];
+      entries.forEach((pe) => {
+        if (!pe.operator_name || !pe.date) return;
+
+        // Check if date is within the selected week
+        try {
+          const d = parseISO(pe.date);
+          if (!isWithinInterval(d, { start: weekStart, end: weekEnd })) return;
+        } catch {
+          return;
+        }
+
+        const cm = nameMap.get(pe.operator_name.toLowerCase().trim());
+        if (!cm) return;
+
+        const hours = Number(pe.total) || 0;
+        hoursMap.set(cm.id, (hoursMap.get(cm.id) || 0) + hours);
+
+        // Track lodging days
+        if (pe.lodging) {
+          if (!lodgingMap.has(cm.id)) lodgingMap.set(cm.id, new Set());
+          lodgingMap.get(cm.id)!.add(pe.date);
+        }
+
+        // Track per diem days (any meal = per diem day)
+        if (pe.per_diem_b || pe.per_diem_l || pe.per_diem_d) {
+          if (!perDiemMap.has(cm.id)) perDiemMap.set(cm.id, new Set());
+          perDiemMap.get(cm.id)!.add(pe.date);
+        }
+      });
     });
 
     const lines: CrewPayrollLine[] = [];
-    crewMembers.forEach((cm: any) => {
+    crewMembers.forEach((cm) => {
       const totalHours = hoursMap.get(cm.id) || 0;
       if (totalHours <= 0) return;
 
@@ -121,11 +157,13 @@ export default function Payroll() {
         hwPay,
         overtimePay,
         grossPay,
+        lodgingDays: lodgingMap.get(cm.id)?.size || 0,
+        perDiemDays: perDiemMap.get(cm.id)?.size || 0,
       });
     });
 
-    return lines.sort((a, b) => b.grossPay - a.grossPay);
-  }, [shiftCrew, crewMembers, weekShiftIds]);
+    return lines.sort((a, b) => b.grossPay - a.grossPay || b.totalHours - a.totalHours);
+  }, [shiftTickets, crewMembers, weekStart, weekEnd, incidentFilter]);
 
   const totals = useMemo(() => {
     return payrollLines.reduce(
@@ -193,7 +231,7 @@ export default function Payroll() {
               <div className="py-12 text-center space-y-2">
                 <p className="text-muted-foreground">No hours logged this week.</p>
                 <p className="text-xs text-muted-foreground">
-                  Shift crew hours will appear here automatically.
+                  Shift ticket hours will appear here automatically.
                 </p>
               </div>
             )}
@@ -220,27 +258,19 @@ export default function Payroll() {
                     <DetailRow label="Base Rate" value={`$${line.hourlyRate.toFixed(2)}/hr`} />
                     <DetailRow label="H&W Rate" value={`$${line.hwRate.toFixed(2)}/hr`} />
                     <DetailRow label="Regular Hours" value={`${line.regularHours.toFixed(1)} hrs`} />
-                    <DetailRow
-                      label="Regular Pay"
-                      value={`$${line.regularPay.toFixed(2)}`}
-                    />
-                    <DetailRow
-                      label="H&W (first 40 hrs)"
-                      value={`$${line.hwPay.toFixed(2)}`}
-                    />
+                    <DetailRow label="Regular Pay" value={`$${line.regularPay.toFixed(2)}`} />
+                    <DetailRow label="H&W (first 40 hrs)" value={`$${line.hwPay.toFixed(2)}`} />
                     {line.overtimeHours > 0 && (
                       <>
-                        <DetailRow
-                          label="OT Hours (1.5x)"
-                          value={`${line.overtimeHours.toFixed(1)} hrs`}
-                          highlight
-                        />
-                        <DetailRow
-                          label="OT Pay"
-                          value={`$${line.overtimePay.toFixed(2)}`}
-                          highlight
-                        />
+                        <DetailRow label="OT Hours (1.5x)" value={`${line.overtimeHours.toFixed(1)} hrs`} highlight />
+                        <DetailRow label="OT Pay" value={`$${line.overtimePay.toFixed(2)}`} highlight />
                       </>
+                    )}
+                    {line.lodgingDays > 0 && (
+                      <DetailRow label="Lodging Days" value={`${line.lodgingDays}`} />
+                    )}
+                    {line.perDiemDays > 0 && (
+                      <DetailRow label="Per Diem Days" value={`${line.perDiemDays}`} />
                     )}
                     <div className="pt-1.5 border-t border-border/40 flex justify-between">
                       <span className="text-xs font-bold">Gross Pay</span>
