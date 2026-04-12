@@ -1,12 +1,12 @@
-import { LayoutDashboard, Flame, DollarSign, Truck, Settings } from "lucide-react";
+import { LayoutDashboard, Flame, DollarSign, Banknote, MoreHorizontal } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 const tabs = [
   { label: "Home", icon: LayoutDashboard, to: "/" },
   { label: "Incidents", icon: Flame, to: "/incidents" },
-  { label: "Fleet", icon: Truck, to: "/fleet" },
+  { label: "Payroll", icon: Banknote, to: "/payroll" },
   { label: "Expenses", icon: DollarSign, to: "/expenses" },
-  { label: "Settings", icon: Settings, to: "/settings" },
+  { label: "More", icon: MoreHorizontal, to: "/more" },
 ];
 
 export function BottomNav() {

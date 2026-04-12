@@ -21,6 +21,8 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
   const [phone, setPhone] = useState("");
   const [active, setActive] = useState(true);
   const [notes, setNotes] = useState("");
+  const [hourlyRate, setHourlyRate] = useState("");
+  const [hwRate, setHwRate] = useState("");
 
   useEffect(() => {
     if (existing) {
@@ -29,6 +31,8 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
       setPhone(existing.phone || "");
       setActive(existing.active);
       setNotes((existing as any).notes || "");
+      setHourlyRate((existing as any).hourly_rate?.toString() || "");
+      setHwRate((existing as any).hw_rate?.toString() || "");
     }
   }, [existing]);
 
@@ -45,6 +49,8 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
       phone: phone.trim() || null,
       active,
       notes: notes.trim() || null,
+      hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
+      hw_rate: hwRate ? parseFloat(hwRate) : null,
     } as any;
 
     try {
@@ -107,6 +113,17 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
               <div className="space-y-1">
                 <label className="text-sm font-medium text-muted-foreground">Phone</label>
                 <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className={inputClass} placeholder="555-123-4567" inputMode="tel" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-muted-foreground">Hourly Rate ($)</label>
+                  <input type="number" step="0.01" min="0" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} className={inputClass} placeholder="0.00" inputMode="decimal" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-muted-foreground">H&W Rate ($)</label>
+                  <input type="number" step="0.01" min="0" value={hwRate} onChange={(e) => setHwRate(e.target.value)} className={inputClass} placeholder="0.00" inputMode="decimal" />
+                </div>
               </div>
 
               <div className="space-y-1">
