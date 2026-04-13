@@ -45,6 +45,9 @@ export function CrewSyncCard({ equipmentEntries, personnelEntries, setPersonnelE
     }
 
     const updated = personnelEntries.map((entry) => {
+      // Explicitly compute hours for each crew member
+      const opHours = computeHours(eqStart, eqStop);
+      const finalTotal = hasLunch ? Math.round((opHours - 0.5) * 10) / 10 : opHours;
       const newEntry: PersonnelEntry = {
         ...entry,
         date: eqDate || entry.date,
@@ -52,7 +55,7 @@ export function CrewSyncCard({ equipmentEntries, personnelEntries, setPersonnelE
         op_stop: eqStop,
         sb_start: "",
         sb_stop: "",
-        total: crewTotal,
+        total: finalTotal,
         activity_type: activity,
         work_context: activity === "work" ? workContext : "",
         lodging,
