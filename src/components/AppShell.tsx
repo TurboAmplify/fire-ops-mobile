@@ -9,6 +9,7 @@ interface AppShellProps {
   title?: string;
   headerRight?: ReactNode;
   showBack?: boolean;
+  onBack?: () => void;
 }
 
 export function AppShell({ children, title, headerRight, showBack }: AppShellProps) {
