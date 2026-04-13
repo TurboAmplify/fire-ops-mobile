@@ -482,7 +482,11 @@ export function ShiftTicketForm({
             <CrewSyncCard
               equipmentEntries={equipmentEntries}
               personnelEntries={personnelEntries}
-              setPersonnelEntries={setPersonnelEntries}
+              setPersonnelEntries={(entries) => {
+                const resolved = typeof entries === "function" ? entries(personnelEntries) : entries;
+                setPersonnelEntries(resolved);
+                markDirty();
+              }}
             />
           )}
 
