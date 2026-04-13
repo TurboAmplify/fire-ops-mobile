@@ -1,6 +1,5 @@
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
-import { toast } from "sonner";
 import { ShiftTicketForm } from "@/components/shift-tickets/ShiftTicketForm";
 import { useCreateShiftTicket, useUpdateShiftTicket } from "@/hooks/useShiftTickets";
 import { useResourceOrders } from "@/hooks/useResourceOrders";
@@ -125,28 +124,20 @@ export default function ShiftTicketCreate() {
 
   const handleSave = async (data: Partial<ShiftTicket>) => {
     if (!orgId) {
-      toast.error("Organization not loaded yet. Please wait and try again.");
-      return;
+      throw new Error("Organization not loaded yet");
     }
-    try {
-      // Strip empty-string org/truck ids from form data before merging
-      const { organization_id: _o, incident_truck_id: _t, ...cleanData } = data as any;
-      if (ticket?.id) {
-        await updateMutation.mutateAsync(cleanData);
-        setTicket((prev) => ({ ...prev, ...cleanData }));
-        toast.success("Shift ticket saved");
-      } else {
-        const created = await createMutation.mutateAsync({
-          ...cleanData,
-          incident_truck_id: incidentTruckId!,
-          organization_id: orgId,
-        } as any);
-        setTicket(created);
-        toast.success("Shift ticket created");
-      }
-    } catch (err: any) {
-      console.error("Save shift ticket error:", err);
-      toast.error(err?.message || "Failed to save shift ticket");
+    // Strip empty-string org/truck ids from form data before merging
+    const { organization_id: _o, incident_truck_id: _t, ...cleanData } = data as any;
+    if (ticket?.id) {
+      await updateMutation.mutateAsync(cleanData);
+      setTicket((prev) => ({ ...prev, ...cleanData }));
+    } else {
+      const created = await createMutation.mutateAsync({
+        ...cleanData,
+        incident_truck_id: incidentTruckId!,
+        organization_id: orgId,
+      } as any);
+      setTicket(created);
     }
   };
 
@@ -154,12 +145,8 @@ export default function ShiftTicketCreate() {
     if (!ticket?.id) return;
     setExportingPdf(true);
     try {
-      // Merge current form signature URLs (which may be newer than DB state)
       const ticketForPdf = { ...ticket, ...sigOverrides } as ShiftTicket;
       await generateOF297Pdf(ticketForPdf);
-      toast.success("PDF downloaded");
-    } catch {
-      toast.error("Failed to generate PDF");
     } finally {
       setExportingPdf(false);
     }

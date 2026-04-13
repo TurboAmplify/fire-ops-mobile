@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useBlocker } from "react-router-dom";
 import { Plus, Loader2, FileText, Save, Download, AlertTriangle, Copy } from "lucide-react";
-import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { SignaturePicker } from "./SignaturePicker";
 import type { SignatureMetadata } from "./SignaturePicker";
@@ -8,6 +8,8 @@ import { EquipmentEntryRow } from "./EquipmentEntryRow";
 import { PersonnelEntryRow } from "./PersonnelEntryRow";
 import { CrewSyncCard } from "./CrewSyncCard";
 import { OF297FormPreview } from "./OF297FormPreview";
+import { UnsavedChangesDialog } from "./UnsavedChangesDialog";
+import { SuccessOverlay } from "@/components/ui/SuccessOverlay";
 import { uploadSignature, computeHours, buildRemarksString, insertSignatureAuditLog } from "@/services/shift-tickets";
 import type { ShiftTicket, EquipmentEntry, PersonnelEntry } from "@/services/shift-tickets";
 import type { IncidentTruckCrewWithMember } from "@/services/incident-truck-crew";
@@ -21,7 +23,7 @@ interface ShiftTicketFormProps {
   onExportPdf: (sigOverrides: { contractor_rep_signature_url: string | null; supervisor_signature_url: string | null }) => void;
   onDuplicate?: () => void;
   duplicating?: boolean;
-  onBack: () => void;
+  onBack?: () => void;
   exportingPdf?: boolean;
   warnings?: string[];
   crewRoster?: IncidentTruckCrewWithMember[];
@@ -111,6 +113,48 @@ export function ShiftTicketForm({
   // Supervisor sheet
   const [showSupervisorSheet, setShowSupervisorSheet] = useState(false);
 
+  // ── Dirty tracking & auto-save ──
+  const [isDirty, setIsDirty] = useState(false);
+  const [hasAutoSaved, setHasAutoSaved] = useState(false);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Success overlay ──
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  const showSuccess = useCallback((msg: string) => {
+    setSuccessMsg(msg);
+  }, []);
+
+  const markDirty = useCallback(() => {
+    if (!isDirty) setIsDirty(true);
+  }, [isDirty]);
+
+  // Browser beforeunload guard
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
+
+  // Auto-save draft 3 seconds after first edit (new tickets only)
+  useEffect(() => {
+    if (!isDirty || hasAutoSaved || ticket?.id) return;
+    autoSaveTimerRef.current = setTimeout(() => {
+      handleSave(true);
+      setHasAutoSaved(true);
+    }, 3000);
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  }, [isDirty, hasAutoSaved, ticket?.id]);
+
+  // React Router navigation blocker
+  const blocker = useBlocker(isDirty);
+
   // Populate from existing ticket
   useEffect(() => {
     if (!ticket) return;
@@ -144,11 +188,10 @@ export function ShiftTicketForm({
 
   const getPersistedSignatureUrl = (url: string | null) => (url && !url.startsWith("blob:") ? url : null);
 
-  const handleSave = () => {
+  const buildSavePayload = (): Partial<ShiftTicket> => {
     const persistedContractorSigUrl = getPersistedSignatureUrl(contractorSigUrl);
     const persistedSupervisorSigUrl = getPersistedSignatureUrl(supervisorSigUrl);
-
-    onSave({
+    return {
       incident_truck_id: incidentTruckId,
       organization_id: organizationId,
       agreement_number: agreementNumber || null,
@@ -176,7 +219,17 @@ export function ShiftTicketForm({
       supervisor_signature_url: persistedSupervisorSigUrl,
       supervisor_signed_at: persistedSupervisorSigUrl ? new Date().toISOString() : null,
       status: "draft",
-    });
+    };
+  };
+
+  const handleSave = async (silent = false) => {
+    try {
+      await Promise.resolve(onSave(buildSavePayload()));
+      setIsDirty(false);
+      if (!silent) showSuccess("Saved");
+    } catch {
+      // Error handled by parent
+    }
   };
 
   const handleSignatureSave = async (blob: Blob, metadata: SignatureMetadata, sigTypeOverride?: "contractor" | "supervisor") => {
@@ -189,7 +242,8 @@ export function ShiftTicketForm({
       if (sigType === "contractor") setContractorSigUrl(localUrl);
       else setSupervisorSigUrl(localUrl);
       setPendingSigs((prev) => ({ ...prev, [sigType]: blob }));
-      toast.success("Signature captured -- save draft to upload");
+      markDirty();
+      showSuccess("Signature captured");
       return;
     }
 
@@ -209,7 +263,6 @@ export function ShiftTicketForm({
       if (sigType === "contractor") setContractorSigUrl(url);
       else setSupervisorSigUrl(url);
 
-      // Audit log
       await insertSignatureAuditLog({
         shift_ticket_id: ticket.id,
         organization_id: organizationId || null,
@@ -221,15 +274,15 @@ export function ShiftTicketForm({
       });
 
       await Promise.resolve(onSave(sigUpdate));
-      toast.success("Signature saved");
+      showSuccess("Signature saved");
     } catch {
-      toast.error("Failed to save signature");
+      showSuccess("Failed to save signature");
     } finally {
       setUploadingSig(false);
     }
   };
 
-  // Upload pending sigs once ticket has an ID, then persist URLs to DB
+  // Upload pending sigs once ticket has an ID
   useEffect(() => {
     if (!ticket?.id || Object.keys(pendingSigs).length === 0) return;
     const uploadPending = async () => {
@@ -249,7 +302,7 @@ export function ShiftTicketForm({
             sigUpdates.supervisor_signed_at = new Date().toISOString();
           }
         } catch {
-          toast.error(`Failed to upload ${sigType} signature`);
+          // Silently fail individual sig uploads
         }
       }
 
@@ -259,9 +312,9 @@ export function ShiftTicketForm({
         if (Object.keys(sigUpdates).length > 0) {
           await Promise.resolve(onSave(sigUpdates));
         }
-        toast.success("Signatures uploaded");
+        showSuccess("Signatures uploaded");
       } catch {
-        toast.error("Failed to attach uploaded signatures to this shift ticket");
+        // Error handled by parent
       } finally {
         setUploadingSig(false);
       }
@@ -274,15 +327,23 @@ export function ShiftTicketForm({
     const next = [...equipmentEntries];
     next[i] = entry;
     setEquipmentEntries(next);
+    markDirty();
   };
-  const removeEquipment = (i: number) => setEquipmentEntries(equipmentEntries.filter((_, idx) => idx !== i));
+  const removeEquipment = (i: number) => { setEquipmentEntries(equipmentEntries.filter((_, idx) => idx !== i)); markDirty(); };
 
   const updatePersonnel = (i: number, entry: PersonnelEntry) => {
     const next = [...personnelEntries];
     next[i] = entry;
     setPersonnelEntries(next);
+    markDirty();
   };
-  const removePersonnel = (i: number) => setPersonnelEntries(personnelEntries.filter((_, idx) => idx !== i));
+  const removePersonnel = (i: number) => { setPersonnelEntries(personnelEntries.filter((_, idx) => idx !== i)); markDirty(); };
+
+  // Dirty-tracking wrappers for header fields
+  const setField = <T,>(setter: React.Dispatch<React.SetStateAction<T>>) => (val: T) => {
+    setter(val);
+    markDirty();
+  };
 
   return (
     <AppShell title="Shift Ticket">
@@ -314,28 +375,28 @@ export function ShiftTicketForm({
           <div className="space-y-2">
             <div>
               <label className={labelClass}>1. Agreement / Contract #</label>
-              <input value={agreementNumber} onChange={(e) => setAgreementNumber(e.target.value)} className={inputClass} />
+              <input value={agreementNumber} onChange={(e) => setField(setAgreementNumber)(e.target.value)} className={inputClass} />
             </div>
             <div>
               <label className={labelClass}>2. Contractor Name</label>
-              <input value={contractorName} onChange={(e) => setContractorName(e.target.value)} className={inputClass} />
+              <input value={contractorName} onChange={(e) => setField(setContractorName)(e.target.value)} className={inputClass} />
             </div>
             <div>
               <label className={labelClass}>3. Resource Order #</label>
-              <input value={resourceOrderNumber} onChange={(e) => setResourceOrderNumber(e.target.value)} className={inputClass} />
+              <input value={resourceOrderNumber} onChange={(e) => setField(setResourceOrderNumber)(e.target.value)} className={inputClass} />
             </div>
             <div>
               <label className={labelClass}>4. Incident Name</label>
-              <input value={incidentName} onChange={(e) => setIncidentName(e.target.value)} className={inputClass} />
+              <input value={incidentName} onChange={(e) => setField(setIncidentName)(e.target.value)} className={inputClass} />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className={labelClass}>5. Incident #</label>
-                <input value={incidentNumber} onChange={(e) => setIncidentNumber(e.target.value)} className={inputClass} />
+                <input value={incidentNumber} onChange={(e) => setField(setIncidentNumber)(e.target.value)} className={inputClass} />
               </div>
               <div>
                 <label className={labelClass}>6. Financial Code</label>
-                <input value={financialCode} onChange={(e) => setFinancialCode(e.target.value)} className={inputClass} />
+                <input value={financialCode} onChange={(e) => setField(setFinancialCode)(e.target.value)} className={inputClass} />
               </div>
             </div>
           </div>
@@ -347,20 +408,20 @@ export function ShiftTicketForm({
           <div className="space-y-2">
             <div>
               <label className={labelClass}>7. Equipment Make/Model</label>
-              <input value={equipmentMakeModel} onChange={(e) => setEquipmentMakeModel(e.target.value)} className={inputClass} />
+              <input value={equipmentMakeModel} onChange={(e) => setField(setEquipmentMakeModel)(e.target.value)} className={inputClass} />
             </div>
             <div>
               <label className={labelClass}>8. Equipment Type</label>
-              <input value={equipmentType} onChange={(e) => setEquipmentType(e.target.value)} className={inputClass} />
+              <input value={equipmentType} onChange={(e) => setField(setEquipmentType)(e.target.value)} className={inputClass} />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className={labelClass}>9. Serial/VIN</label>
-                <input value={serialVin} onChange={(e) => setSerialVin(e.target.value)} className={inputClass} />
+                <input value={serialVin} onChange={(e) => setField(setSerialVin)(e.target.value)} className={inputClass} />
               </div>
               <div>
                 <label className={labelClass}>10. License/ID</label>
-                <input value={licenseId} onChange={(e) => setLicenseId(e.target.value)} className={inputClass} />
+                <input value={licenseId} onChange={(e) => setField(setLicenseId)(e.target.value)} className={inputClass} />
               </div>
             </div>
           </div>
@@ -370,17 +431,17 @@ export function ShiftTicketForm({
         <section className="space-y-2">
           <h3 className="text-sm font-bold">Options</h3>
           <label className="flex items-center gap-3 touch-target">
-            <input type="checkbox" checked={transportRetained} onChange={(e) => setTransportRetained(e.target.checked)} className="h-5 w-5 rounded border-input accent-primary" />
+            <input type="checkbox" checked={transportRetained} onChange={(e) => { setTransportRetained(e.target.checked); markDirty(); }} className="h-5 w-5 rounded border-input accent-primary" />
             <span className="text-sm">12. Transport Retained</span>
           </label>
           <label className="flex items-center gap-3 touch-target">
-            <input type="checkbox" checked={isFirstLast} onChange={(e) => setIsFirstLast(e.target.checked)} className="h-5 w-5 rounded border-input accent-primary" />
+            <input type="checkbox" checked={isFirstLast} onChange={(e) => { setIsFirstLast(e.target.checked); markDirty(); }} className="h-5 w-5 rounded border-input accent-primary" />
             <span className="text-sm">13. First/Last Ticket</span>
           </label>
           {isFirstLast && (
             <div className="grid grid-cols-2 gap-2 pl-8">
               {(["mobilization", "demobilization"] as const).map((t) => (
-                <button key={t} type="button" onClick={() => setFirstLastType(t)}
+                <button key={t} type="button" onClick={() => { setFirstLastType(t); markDirty(); }}
                   className={`rounded-xl px-3 py-2.5 text-sm font-medium capitalize touch-target ${firstLastType === t ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
                   {t}
                 </button>
@@ -389,7 +450,7 @@ export function ShiftTicketForm({
           )}
           <div>
             <label className={labelClass}>14. Miles</label>
-            <input type="number" inputMode="decimal" value={miles} onChange={(e) => setMiles(e.target.value)} placeholder="0" className={inputClass} />
+            <input type="number" inputMode="decimal" value={miles} onChange={(e) => setField(setMiles)(e.target.value)} placeholder="0" className={inputClass} />
           </div>
         </section>
 
@@ -397,7 +458,7 @@ export function ShiftTicketForm({
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold">Equipment</h3>
-            <button onClick={() => setEquipmentEntries([...equipmentEntries, emptyEquipmentEntry()])}
+            <button onClick={() => { setEquipmentEntries([...equipmentEntries, emptyEquipmentEntry()]); markDirty(); }}
               className="flex items-center gap-1 text-xs font-bold text-primary touch-target">
               <Plus className="h-3.5 w-3.5" /> Add Row
             </button>
@@ -411,7 +472,7 @@ export function ShiftTicketForm({
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold">Crew</h3>
-            <button onClick={() => setPersonnelEntries([...personnelEntries, emptyPersonnelEntry()])}
+            <button onClick={() => { setPersonnelEntries([...personnelEntries, emptyPersonnelEntry()]); markDirty(); }}
               className="flex items-center gap-1 text-xs font-bold text-primary touch-target">
               <Plus className="h-3.5 w-3.5" /> Add Row
             </button>
@@ -441,7 +502,7 @@ export function ShiftTicketForm({
         {/* ── Remarks ── */}
         <section className="space-y-2">
           <h3 className="text-sm font-bold">30. Remarks</h3>
-          <textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} rows={3}
+          <textarea value={remarks} onChange={(e) => { setRemarks(e.target.value); markDirty(); }} rows={3}
             placeholder="Equipment breakdown, operating issues..."
             className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-ring resize-none" />
         </section>
@@ -453,12 +514,12 @@ export function ShiftTicketForm({
           {/* Contractor */}
           <div className="rounded-xl border border-border bg-card p-3 space-y-2">
             <label className={labelClass}>31. Contractor Rep (Printed Name)</label>
-            <input value={contractorRepName} onChange={(e) => setContractorRepName(e.target.value)} className={inputClass} />
+            <input value={contractorRepName} onChange={(e) => setField(setContractorRepName)(e.target.value)} className={inputClass} />
             <label className={labelClass}>32. Signature</label>
             {contractorSigUrl ? (
               <div className="space-y-2">
                 <img src={contractorSigUrl} alt="Contractor signature" className="h-16 rounded border border-border bg-card" />
-                <button onClick={() => setContractorSigUrl(null)} className="text-xs text-destructive touch-target">Clear</button>
+                <button onClick={() => { setContractorSigUrl(null); markDirty(); }} className="text-xs text-destructive touch-target">Clear</button>
               </div>
             ) : (
               <button onClick={() => setSigModal("contractor")} disabled={uploadingSig}
@@ -493,7 +554,7 @@ export function ShiftTicketForm({
 
       {/* ── Bottom Action Bar (above BottomNav) ── */}
       <div className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom))] left-0 right-0 border-t border-border bg-background/95 backdrop-blur-md p-3 flex gap-2 z-40">
-        <button onClick={handleSave} disabled={saving}
+        <button onClick={() => handleSave(false)} disabled={saving}
           className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground touch-target disabled:opacity-40 active:scale-[0.98]">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           Save Draft
@@ -516,7 +577,6 @@ export function ShiftTicketForm({
         )}
       </div>
 
-      {/* Signature modal */}
       {/* Signature modal */}
       <SignaturePicker
         open={sigModal !== null}
@@ -553,14 +613,28 @@ export function ShiftTicketForm({
           supervisorSigUrl={supervisorSigUrl}
           supervisorName={supervisorName}
           supervisorRO={supervisorRO}
-          onSupervisorNameChange={setSupervisorName}
-          onSupervisorROChange={setSupervisorRO}
+          onSupervisorNameChange={(v) => { setSupervisorName(v); markDirty(); }}
+          onSupervisorROChange={(v) => { setSupervisorRO(v); markDirty(); }}
           onTapToSign={() => setSigModal("supervisor")}
-          onClearSignature={() => setSupervisorSigUrl(null)}
+          onClearSignature={() => { setSupervisorSigUrl(null); markDirty(); }}
           onClose={() => setShowSupervisorSheet(false)}
           uploadingSig={uploadingSig}
         />
       )}
+
+      {/* Unsaved changes guard */}
+      <UnsavedChangesDialog
+        open={blocker.state === "blocked"}
+        onStay={() => blocker.state === "blocked" && blocker.reset?.()}
+        onLeave={() => blocker.state === "blocked" && blocker.proceed?.()}
+      />
+
+      {/* Success overlay (replaces toast) */}
+      <SuccessOverlay
+        message={successMsg || ""}
+        show={!!successMsg}
+        onDone={() => setSuccessMsg(null)}
+      />
     </AppShell>
   );
 }
