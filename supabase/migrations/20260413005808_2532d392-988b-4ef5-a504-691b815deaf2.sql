@@ -1,0 +1,1 @@
+UPDATE crew_members SET hw_rate = 5.65 WHERE role = 'FF 2';
