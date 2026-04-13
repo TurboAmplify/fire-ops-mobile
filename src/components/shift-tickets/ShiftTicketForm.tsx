@@ -23,7 +23,7 @@ interface ShiftTicketFormProps {
   onExportPdf: (sigOverrides: { contractor_rep_signature_url: string | null; supervisor_signature_url: string | null }) => void;
   onDuplicate?: () => void;
   duplicating?: boolean;
-  onBack: () => void;
+  onBack?: () => void;
   exportingPdf?: boolean;
   warnings?: string[];
   crewRoster?: IncidentTruckCrewWithMember[];
