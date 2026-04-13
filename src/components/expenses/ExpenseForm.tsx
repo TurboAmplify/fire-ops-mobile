@@ -258,54 +258,30 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
           </div>
         )}
 
-        {/* Category — dropdown if AI parsed, grid buttons if manual */}
+        {/* Category — always a dropdown */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-muted-foreground">Category</label>
-          {aiParsed || isEditing ? (
-            <div className="relative">
-              <select
-                value={category}
-                onChange={(e) => {
-                  const c = e.target.value as ExpenseCategory;
-                  setCategory(c);
-                  setDescription(CATEGORY_LABELS[c]);
-                  if (c === "fuel") {
-                    setShowFuelModal(true);
-                  } else {
-                    setFuelType("");
-                  }
-                }}
-                className="w-full rounded-xl border bg-card px-4 py-3 text-base outline-none focus:ring-2 focus:ring-ring touch-target appearance-none"
-              >
-                {categories.map((c) => (
-                  <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-2">
+          <div className="relative">
+            <select
+              value={category}
+              onChange={(e) => {
+                const c = e.target.value as ExpenseCategory;
+                setCategory(c);
+                setDescription(CATEGORY_LABELS[c]);
+                if (c === "fuel") {
+                  setShowFuelModal(true);
+                } else {
+                  setFuelType("");
+                }
+              }}
+              className="w-full rounded-xl border bg-card px-4 py-3 text-base outline-none focus:ring-2 focus:ring-ring touch-target appearance-none"
+            >
               {categories.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => {
-                    setCategory(c);
-                    setDescription(CATEGORY_LABELS[c]);
-                    if (c === "fuel") setShowFuelModal(true);
-                    if (c !== "fuel") setFuelType("");
-                  }}
-                  className={`rounded-xl px-3 py-2.5 text-sm font-medium transition-colors touch-target ${
-                    category === c
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-secondary text-secondary-foreground"
-                  }`}
-                >
-                  {CATEGORY_LABELS[c]}
-                </button>
+                <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
               ))}
-            </div>
-          )}
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          </div>
         </div>
 
         {/* Fuel type indicator */}
