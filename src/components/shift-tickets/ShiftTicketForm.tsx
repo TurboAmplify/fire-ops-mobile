@@ -153,26 +153,14 @@ export function ShiftTicketForm({
     };
   }, [isDirty, hasAutoSaved, ticket?.id]);
 
-  // Navigation guard: intercept onBack
-  const handleBack = useCallback(() => {
-    if (isDirty) {
-      pendingLeaveRef.current = onBack;
-      setShowLeaveDialog(true);
-    } else {
-      onBack();
-    }
-  }, [isDirty, onBack]);
-
+  // Navigation guard using react-router blocker
   const handleLeaveConfirm = useCallback(() => {
     setShowLeaveDialog(false);
     setIsDirty(false);
-    pendingLeaveRef.current?.();
-    pendingLeaveRef.current = null;
   }, []);
 
   const handleLeaveCancel = useCallback(() => {
     setShowLeaveDialog(false);
-    pendingLeaveRef.current = null;
   }, []);
 
   // Populate from existing ticket
