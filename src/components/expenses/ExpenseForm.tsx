@@ -3,11 +3,11 @@ import { useIncidentTrucks } from "@/hooks/useIncidentTrucks";
 import { CATEGORY_LABELS, FUEL_TYPE_LABELS, SCOPE_LABELS, uploadReceipt } from "@/services/expenses";
 import type { ExpenseCategory, ExpenseInsert, Expense, FuelType, ExpenseType, AttachmentScope } from "@/services/expenses";
 import type { ParsedReceipt } from "@/services/ai-parsing";
-import { ReceiptParseButton } from "./ReceiptParseButton";
+import { parseReceiptAI } from "@/services/ai-parsing";
 import { FuelTypeModal } from "./FuelTypeModal";
 import { MealComplianceFields } from "./MealComplianceFields";
 import { useState } from "react";
-import { Loader2, Camera } from "lucide-react";
+import { Loader2, Camera, Sparkles, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { useOrganization } from "@/hooks/useOrganization";
 
@@ -39,6 +39,7 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
   const [date, setDate] = useState(initial?.date ?? new Date().toISOString().split("T")[0]);
   const [receiptUrl, setReceiptUrl] = useState(initial?.receipt_url ?? "");
   const [uploading, setUploading] = useState(false);
+  const [parsing, setParsing] = useState(false);
   const [vendor, setVendor] = useState(initial?.vendor ?? "");
   const [expenseType, setExpenseType] = useState<ExpenseType>((initial?.expense_type as ExpenseType) ?? "company");
   const [fuelType, setFuelType] = useState<FuelType | "">(
@@ -47,6 +48,10 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
   const [mealAttendees, setMealAttendees] = useState(initial?.meal_attendees ?? "");
   const [mealPurpose, setMealPurpose] = useState(initial?.meal_purpose ?? "");
   const [showFuelModal, setShowFuelModal] = useState(false);
+  // Track whether AI has filled the form (hides manual category grid)
+  const [aiParsed, setAiParsed] = useState(false);
+  // Track if this is an edit of an existing expense
+  const isEditing = !!initial?.id;
 
   const { data: incidents } = useIncidents();
   const { data: incidentTrucks } = useIncidentTrucks(incidentId);
@@ -61,7 +66,7 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
   const incidentValid = !needsIncident || !!incidentId;
   const truckValid = !needsTruck || !!incidentTruckId;
 
-  const canSubmit = amount && parseFloat(amount) > 0 && date && mealValid && incidentValid && truckValid && !isPending && !uploading;
+  const canSubmit = amount && parseFloat(amount) > 0 && date && mealValid && incidentValid && truckValid && !isPending && !uploading && !parsing;
 
   const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -71,6 +76,16 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
       const url = await uploadReceipt(file, membership?.organizationId);
       setReceiptUrl(url);
       toast.success("Receipt uploaded");
+      // Auto-parse receipt with AI
+      setParsing(true);
+      try {
+        const parsed = await parseReceiptAI(url);
+        applyParsedData(parsed);
+      } catch {
+        toast.error("Could not analyze receipt - fill in manually");
+      } finally {
+        setParsing(false);
+      }
     } catch {
       toast.error("Failed to upload receipt");
     } finally {
@@ -78,17 +93,30 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
     }
   };
 
-  const handleApplyParsed = (parsed: ParsedReceipt) => {
+  const applyParsedData = (parsed: ParsedReceipt) => {
     if (parsed.amount != null) setAmount(String(parsed.amount));
     if (parsed.date) setDate(parsed.date);
-    if (parsed.description) setDescription(parsed.description);
     if (parsed.vendor) setVendor(parsed.vendor);
+
     if (parsed.category && categories.includes(parsed.category as ExpenseCategory)) {
       const detectedCategory = parsed.category as ExpenseCategory;
       setCategory(detectedCategory);
-      if (detectedCategory === "fuel") setShowFuelModal(true);
+      // Set description to the category label (simple, not itemized)
+      setDescription(CATEGORY_LABELS[detectedCategory]);
+      setAiParsed(true);
+
+      if (detectedCategory === "fuel") {
+        setShowFuelModal(true);
+      }
+    } else {
+      // If no category detected, set a generic description
+      if (parsed.category) {
+        setDescription(parsed.category);
+      }
+      setAiParsed(true);
     }
-    toast.success("AI suggestions applied — review before saving");
+
+    toast.success("Receipt analyzed - review before saving");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -119,6 +147,37 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
       />
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Receipt photo — FIRST, photo-first flow */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-muted-foreground">Receipt Photo</label>
+          <label className="flex items-center justify-center gap-2 rounded-xl border border-dashed bg-card px-4 py-4 text-sm text-muted-foreground cursor-pointer active:bg-secondary transition-colors touch-target">
+            {uploading || parsing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Camera className="h-5 w-5" />
+            )}
+            <span className="font-medium">
+              {uploading
+                ? "Uploading..."
+                : parsing
+                ? "Analyzing receipt..."
+                : receiptUrl
+                ? "Change photo"
+                : "Take or attach receipt photo"}
+            </span>
+            <input type="file" accept="image/*" capture="environment" onChange={handlePhoto} className="hidden" />
+          </label>
+          {receiptUrl && !parsing && (
+            <img src={receiptUrl} alt="Receipt preview" className="w-full max-h-40 object-contain rounded-lg bg-secondary" />
+          )}
+          {parsing && (
+            <div className="flex items-center gap-2 rounded-xl bg-primary/5 border border-primary/20 p-3">
+              <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+              <span className="text-sm font-medium text-primary">Reading receipt...</span>
+            </div>
+          )}
+        </div>
+
         {/* Expense Type */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-muted-foreground">Type</label>
@@ -199,52 +258,61 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
           </div>
         )}
 
-        {/* Receipt photo */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-muted-foreground">Receipt (optional)</label>
-          <label className="flex items-center justify-center gap-2 rounded-xl border border-dashed bg-card px-4 py-3 text-sm text-muted-foreground cursor-pointer active:bg-secondary transition-colors touch-target">
-            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-            <span>{uploading ? "Uploading..." : receiptUrl ? "Change photo" : "Take or attach photo"}</span>
-            <input type="file" accept="image/*" onChange={handlePhoto} className="hidden" />
-          </label>
-          {receiptUrl && (
-            <>
-              <img src={receiptUrl} alt="Receipt preview" className="w-full max-h-40 object-contain rounded-lg bg-secondary" />
-              <ReceiptParseButton receiptUrl={receiptUrl} onApply={handleApplyParsed} />
-            </>
-          )}
-        </div>
-
-        {/* Category */}
+        {/* Category — dropdown if AI parsed, grid buttons if manual */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-muted-foreground">Category</label>
-          <div className="grid grid-cols-3 gap-2">
-            {categories.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => {
+          {aiParsed || isEditing ? (
+            <div className="relative">
+              <select
+                value={category}
+                onChange={(e) => {
+                  const c = e.target.value as ExpenseCategory;
                   setCategory(c);
-                  if (c === "fuel") setShowFuelModal(true);
-                  if (c !== "fuel") setFuelType("");
+                  setDescription(CATEGORY_LABELS[c]);
+                  if (c === "fuel") {
+                    setShowFuelModal(true);
+                  } else {
+                    setFuelType("");
+                  }
                 }}
-                className={`rounded-xl px-3 py-2.5 text-sm font-medium transition-colors touch-target ${
-                  category === c
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary text-secondary-foreground"
-                }`}
+                className="w-full rounded-xl border bg-card px-4 py-3 text-base outline-none focus:ring-2 focus:ring-ring touch-target appearance-none"
               >
-                {CATEGORY_LABELS[c]}
-              </button>
-            ))}
-          </div>
+                {categories.map((c) => (
+                  <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-2">
+              {categories.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => {
+                    setCategory(c);
+                    setDescription(CATEGORY_LABELS[c]);
+                    if (c === "fuel") setShowFuelModal(true);
+                    if (c !== "fuel") setFuelType("");
+                  }}
+                  className={`rounded-xl px-3 py-2.5 text-sm font-medium transition-colors touch-target ${
+                    category === c
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary text-secondary-foreground"
+                  }`}
+                >
+                  {CATEGORY_LABELS[c]}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Fuel type indicator */}
         {isFuel && fuelType && (
           <div className="rounded-xl bg-primary/5 border border-primary/20 p-3 flex items-center justify-between">
             <span className="text-sm text-primary font-medium">
-              ⛽ Fuel type: {FUEL_TYPE_LABELS[fuelType as FuelType]}
+              Fuel type: {FUEL_TYPE_LABELS[fuelType as FuelType]}
             </span>
             <button type="button" onClick={() => setShowFuelModal(true)} className="text-xs text-primary font-semibold touch-target">
               Change
@@ -310,7 +378,7 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="e.g. Fuel for crew truck during fire response"
+            placeholder="e.g. Fuel"
             className="w-full rounded-xl border bg-card px-4 py-3 text-base outline-none focus:ring-2 focus:ring-ring touch-target"
           />
         </div>
