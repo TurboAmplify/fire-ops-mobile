@@ -624,9 +624,9 @@ export function ShiftTicketForm({
 
       {/* Unsaved changes guard */}
       <UnsavedChangesDialog
-        open={showLeaveDialog}
-        onStay={handleLeaveCancel}
-        onLeave={handleLeaveConfirm}
+        open={blocker.state === "blocked"}
+        onStay={() => blocker.state === "blocked" && blocker.reset?.()}
+        onLeave={() => blocker.state === "blocked" && blocker.proceed?.()}
       />
 
       {/* Success overlay (replaces toast) */}
