@@ -118,25 +118,85 @@ export default function OrgSettings() {
       role: string;
     }) => {
       if (!orgId || !user) throw new Error("Not authenticated");
+
+      const normalizedEmail = email.toLowerCase().trim();
+      const currentUserEmail = user.email?.toLowerCase().trim();
+
+      if (normalizedEmail === currentUserEmail) {
+        throw new Error("You already have access to this organization.");
+      }
+
+      const { data: existingInvite, error: lookupError } = await supabase
+        .from("organization_invites")
+        .select("id, status")
+        .eq("organization_id", orgId)
+        .eq("email", normalizedEmail)
+        .maybeSingle();
+
+      if (lookupError) throw lookupError;
+
+      if (existingInvite?.status === "accepted") {
+        throw new Error("This user already has access to your organization.");
+      }
+
+      if (existingInvite?.status === "pending") {
+        throw new Error("This email already has a pending invite.");
+      }
+
+      if (existingInvite) {
+        const { error } = await supabase
+          .from("organization_invites")
+          .update({
+            role,
+            status: "pending",
+            invited_by: user.id,
+            expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          })
+          .eq("id", existingInvite.id);
+
+        if (error) throw error;
+        return { email: normalizedEmail, mode: "resent" as const };
+      }
+
       const { error } = await supabase.from("organization_invites").insert({
         organization_id: orgId,
-        email: email.toLowerCase().trim(),
+        email: normalizedEmail,
         role,
         invited_by: user.id,
       });
-      if (error) throw error;
+
+      if (error) {
+        if (error.code === "23505") {
+          throw new Error("This user already has access to your organization.");
+        }
+        throw error;
+      }
+
+      return { email: normalizedEmail, mode: "created" as const };
     },
-    onSuccess: () => {
-      toast({ title: "Invite sent", description: `Invitation sent to ${inviteEmail}` });
+    onSuccess: ({ email, mode }) => {
+      toast({
+        title: mode === "resent" ? "Invite resent" : "Invite sent",
+        description:
+          mode === "resent"
+            ? `Invitation resent to ${email}`
+            : `Invitation sent to ${email}`,
+      });
       setInviteEmail("");
       setInviteRole("crew_member");
       setInviteOpen(false);
       queryClient.invalidateQueries({ queryKey: ["org-invites", orgId] });
     },
     onError: (err: any) => {
+      const description =
+        typeof err?.message === "string" &&
+        err.message.includes("organization_invites_organization_id_email_key")
+          ? "This person has already been invited or already has access to your organization."
+          : err.message || "Something went wrong.";
+
       toast({
-        title: "Error sending invite",
-        description: err.message || "Something went wrong.",
+        title: "Unable to send invite",
+        description,
         variant: "destructive",
       });
     },
