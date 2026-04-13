@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useBlocker } from "react-router-dom";
 import { Plus, Loader2, FileText, Save, Download, AlertTriangle, Copy } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { SignaturePicker } from "./SignaturePicker";
