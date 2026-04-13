@@ -38,12 +38,7 @@ export default function ShiftTicketEdit() {
   );
 
   const handleSave = async (data: Partial<ShiftTicket>) => {
-    try {
-      await updateMutation.mutateAsync(data);
-      toast.success("Shift ticket saved");
-    } catch {
-      toast.error("Failed to save");
-    }
+    await updateMutation.mutateAsync(data);
   };
 
   const handleExportPdf = async (sigOverrides: { contractor_rep_signature_url: string | null; supervisor_signature_url: string | null }) => {
@@ -52,9 +47,6 @@ export default function ShiftTicketEdit() {
     try {
       const ticketForPdf = { ...ticket, ...sigOverrides } as ShiftTicket;
       await generateOF297Pdf(ticketForPdf);
-      toast.success("PDF downloaded");
-    } catch {
-      toast.error("Failed to generate PDF");
     } finally {
       setExportingPdf(false);
     }
@@ -62,13 +54,8 @@ export default function ShiftTicketEdit() {
 
   const handleDuplicate = async () => {
     if (!ticket || !membership?.organizationId) return;
-    try {
-      const newTicket = await duplicateMutation.mutateAsync({ ticket: ticket as ShiftTicket, organizationId: membership.organizationId });
-      toast.success("Shift ticket duplicated (dates +1 day)");
-      navigate(`/incidents/${incidentId}/trucks/${incidentTruckId}/shift-ticket/${newTicket.id}`);
-    } catch {
-      toast.error("Failed to duplicate");
-    }
+    const newTicket = await duplicateMutation.mutateAsync({ ticket: ticket as ShiftTicket, organizationId: membership.organizationId });
+    navigate(`/incidents/${incidentId}/trucks/${incidentTruckId}/shift-ticket/${newTicket.id}`);
   };
 
   // Merge latest truck + org data into the ticket for display
