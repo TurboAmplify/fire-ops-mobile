@@ -9,9 +9,10 @@ interface AppShellProps {
   title?: string;
   headerRight?: ReactNode;
   showBack?: boolean;
+  onBack?: () => void;
 }
 
-export function AppShell({ children, title, headerRight, showBack }: AppShellProps) {
+export function AppShell({ children, title, headerRight, showBack, onBack }: AppShellProps) {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -30,7 +31,7 @@ export function AppShell({ children, title, headerRight, showBack }: AppShellPro
             <div className="flex items-center gap-2 min-w-0 flex-1">
               {isNested && (
                 <button
-                  onClick={() => navigate(-1)}
+                  onClick={() => onBack ? onBack() : navigate(-1)}
                   className="flex items-center justify-center -ml-2 mr-0.5 h-9 w-9 rounded-full text-primary active:bg-primary/10 transition-colors"
                   aria-label="Go back"
                 >

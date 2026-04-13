@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useBlocker } from "react-router-dom";
 import { Plus, Loader2, FileText, Save, Download, AlertTriangle, Copy } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { SignaturePicker } from "./SignaturePicker";
@@ -152,8 +151,8 @@ export function ShiftTicketForm({
     };
   }, [isDirty, hasAutoSaved, ticket?.id]);
 
-  // React Router navigation blocker
-  const blocker = useBlocker(isDirty);
+  // Navigation guard state (replaces useBlocker which requires data router)
+  const [showLeaveDialog, setShowLeaveDialog] = useState(false);
 
   // Populate from existing ticket
   useEffect(() => {
@@ -346,7 +345,7 @@ export function ShiftTicketForm({
   };
 
   return (
-    <AppShell title="Shift Ticket">
+    <AppShell title="Shift Ticket" onBack={() => isDirty ? setShowLeaveDialog(true) : onBack?.()}>
       <div className="px-4 pt-3 pb-40 space-y-5 overflow-x-hidden">
         {/* Title row */}
         <div className="flex items-center gap-2">
@@ -624,9 +623,9 @@ export function ShiftTicketForm({
 
       {/* Unsaved changes guard */}
       <UnsavedChangesDialog
-        open={blocker.state === "blocked"}
-        onStay={() => blocker.state === "blocked" && blocker.reset?.()}
-        onLeave={() => blocker.state === "blocked" && blocker.proceed?.()}
+        open={showLeaveDialog}
+        onStay={() => setShowLeaveDialog(false)}
+        onLeave={() => { setShowLeaveDialog(false); setIsDirty(false); onBack?.(); }}
       />
 
       {/* Success overlay (replaces toast) */}
