@@ -151,8 +151,8 @@ export function ShiftTicketForm({
     };
   }, [isDirty, hasAutoSaved, ticket?.id]);
 
-  // React Router navigation blocker
-  const blocker = useBlocker(isDirty);
+  // Navigation guard state (replaces useBlocker which requires data router)
+  const [showLeaveDialog, setShowLeaveDialog] = useState(false);
 
   // Populate from existing ticket
   useEffect(() => {
