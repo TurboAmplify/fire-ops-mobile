@@ -623,9 +623,9 @@ export function ShiftTicketForm({
 
       {/* Unsaved changes guard */}
       <UnsavedChangesDialog
-        open={blocker.state === "blocked"}
-        onStay={() => blocker.state === "blocked" && blocker.reset?.()}
-        onLeave={() => blocker.state === "blocked" && blocker.proceed?.()}
+        open={showLeaveDialog}
+        onStay={() => setShowLeaveDialog(false)}
+        onLeave={() => { setShowLeaveDialog(false); setIsDirty(false); onBack?.(); }}
       />
 
       {/* Success overlay (replaces toast) */}
