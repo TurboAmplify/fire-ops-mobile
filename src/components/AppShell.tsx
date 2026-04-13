@@ -12,7 +12,7 @@ interface AppShellProps {
   onBack?: () => void;
 }
 
-export function AppShell({ children, title, headerRight, showBack }: AppShellProps) {
+export function AppShell({ children, title, headerRight, showBack, onBack }: AppShellProps) {
   const navigate = useNavigate();
   const location = useLocation();
 
