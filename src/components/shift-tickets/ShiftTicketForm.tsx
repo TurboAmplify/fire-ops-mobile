@@ -116,8 +116,6 @@ export function ShiftTicketForm({
   // ── Dirty tracking & auto-save ──
   const [isDirty, setIsDirty] = useState(false);
   const [hasAutoSaved, setHasAutoSaved] = useState(false);
-  const [showLeaveDialog, setShowLeaveDialog] = useState(false);
-  const pendingLeaveRef = useRef<(() => void) | null>(null);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Success overlay ──
@@ -154,15 +152,8 @@ export function ShiftTicketForm({
     };
   }, [isDirty, hasAutoSaved, ticket?.id]);
 
-  // Navigation guard using react-router blocker
-  const handleLeaveConfirm = useCallback(() => {
-    setShowLeaveDialog(false);
-    setIsDirty(false);
-  }, []);
-
-  const handleLeaveCancel = useCallback(() => {
-    setShowLeaveDialog(false);
-  }, []);
+  // React Router navigation blocker
+  const blocker = useBlocker(isDirty);
 
   // Populate from existing ticket
   useEffect(() => {
