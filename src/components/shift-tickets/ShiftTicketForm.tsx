@@ -345,7 +345,7 @@ export function ShiftTicketForm({
   };
 
   return (
-    <AppShell title="Shift Ticket">
+    <AppShell title="Shift Ticket" onBack={() => isDirty ? setShowLeaveDialog(true) : onBack?.()}>
       <div className="px-4 pt-3 pb-40 space-y-5 overflow-x-hidden">
         {/* Title row */}
         <div className="flex items-center gap-2">
