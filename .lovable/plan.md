@@ -1,71 +1,81 @@
 
 
-# Rethink Dashboard: Status Hub, Not Nav Mirror
+# World-Class Dashboard Redesign
 
-## The insight
-The operations grid duplicates the bottom nav. Top apps solve this by making Home a **live status feed + quick actions**, not a second navigation menu. The bottom nav handles module switching -- that's its job. The dashboard should answer: "What do I need to know RIGHT NOW?"
+## Current problems
+1. Horizontal scrolling incidents feels disconnected from the vertical page flow
+2. "Add Expense" and "Scan Receipt" are redundant -- scanning IS the expense workflow 98% of the time
+3. Stats buried in the middle instead of being the first thing you see
+4. Too many small sections competing for attention -- no clear visual hierarchy
 
-## Changes
+## Design philosophy: Uber-level simplicity
+The best apps (Uber, Linear, Arc) have one rule: **hierarchy through size and position**. The most important thing is biggest and highest. Everything else falls below. No competing sections.
 
-### 1. Remove the operations grid entirely
-The bottom nav (customizable, up to 4 tabs + Home) already handles navigation. The grid is redundant.
-
-### 2. Replace with a contextual dashboard layout
+## New layout (top to bottom)
 
 ```text
 +----------------------------------+
 |  FireOps HQ              [gear] |
 |----------------------------------|
-|  [Active Incidents - horiz scroll]|
-|  (pulsing cards, already built)  |
-|----------------------------------|
-|  Quick Actions                   |
-|  [+ Incident] [+ Expense] [Scan]|
-|----------------------------------|
-|  Today's Summary                 |
-|  Active: 2  |  Crew: 12  |  ... |
-|----------------------------------|
-|  Needs List (preview)            |
-|  - 3 items need purchasing       |
-|  [View All ->]                   |
-|----------------------------------|
-|  Recent Activity                 |
-|  "Shift ticket submitted 2h ago" |
-|  "Expense added 4h ago"          |
+|                                  |
+|  OVERVIEW (hero stats)           |
+|  ┌──────┐ ┌──────┐ ┌──────┐    |
+|  │  2   │ │  12  │ │  5   │    |
+|  │Active│ │ Crew │ │Fleet │    |
+|  └──────┘ └──────┘ └──────┘    |
+|                                  |
+|  ACTIVE INCIDENTS                |
+|  ┌─────────────────────────┐    |
+|  │ ● Riverside Fire        │    |
+|  │   Riverside, CA         │    |
+|  ├─────────────────────────┤    |
+|  │ ● Cedar Creek           │    |
+|  │   Bend, OR              │    |
+|  └─────────────────────────┘    |
+|  (or "All Clear" empty state)   |
+|                                  |
+|  ── glow divider ──             |
+|                                  |
+|  QUICK ACTIONS (3 cols)          |
+|  [Shift     ] [Scan    ] [New  ]|
+|  [Ticket    ] [Receipt ] [Inc. ]|
+|                                  |
+|  NEEDS LIST (preview)            |
+|  ┌─────────────────────────┐    |
+|  │ item 1                  │    |
+|  │ item 2                  │    |
+|  │ item 3                  │    |
+|  │ +2 more items           │    |
+|  └─────────────────────────┘    |
 +----------------------------------+
 ```
 
-**Active Incidents** -- keep the horizontal scroll cards (already great)
+## Key changes
 
-**Quick Actions** -- 2-3 buttons for the most common *actions* (not pages): "New Incident", "Add Expense", "Scan Receipt". These are verbs, not nouns. Different from nav.
+### 1. Overview stats move to the TOP
+First thing you see when opening the app. Glanceable command-center feel. Same 3-column glass tiles but now the hero position.
 
-**Today's Summary** -- a compact stats row showing active incidents, crew on assignment, trucks deployed. Glanceable numbers.
+### 2. Active incidents become a stacked list (no horizontal scroll)
+Vertical cards inside a single glass container with dividers. Feels integrated with the page. Each row is tappable with the pulse dot, name, and location. Consistent with how every other list in the app works.
 
-**Needs List Preview** -- show top 3 unresolved needs items inline with a "View All" link. This puts Needs List on the dashboard without a redundant tile.
+### 3. Quick Actions: Shift Ticket, Scan Receipt, New Incident
+- **Shift Ticket** (ClipboardList, blue) -- the daily driver
+- **Scan Receipt** (ScanLine, emerald) -- replaces both "Add Expense" and "Scan Receipt"
+- **New Incident** (Plus, destructive) -- less frequent but critical
 
-**Recent Activity** -- last 3-5 actions across the app (ticket submitted, expense added, crew assigned). Shows the app is alive and being used.
+### 4. Needs List stays at the bottom
+Already works well. No changes needed.
 
-### 3. Deactivate Time module (as agreed)
-- Comment out `/time` route + import in `App.tsx`
-- Remove "time" from `NavBarCustomizer.tsx` options
-- Keep files on disk
-
-### 4. Add Needs List to NavBarCustomizer options
-Already there (`key: "needs"`). Just ensure it's available as a default option now that Time is gone. Update `DEFAULT_TAB_KEYS` to replace "shift-tickets" or keep as-is -- user can customize.
+### 5. Remove "Add Expense" button entirely
+Scan Receipt goes to `/expenses/batch-scan` which handles the real workflow. Manual expense entry is still accessible from the Expenses tab in the nav.
 
 ## Files changed
-- `src/pages/Dashboard.tsx` -- replace operations grid with quick actions, summary stats, needs preview, recent activity
-- `src/App.tsx` -- comment out Time route
-- `src/components/settings/NavBarCustomizer.tsx` -- remove "time" from `ALL_NAV_OPTIONS`
-- `src/hooks/useNeedsList.ts` -- already exists, will import for dashboard preview
+- `src/pages/Dashboard.tsx` -- reorder sections, replace horizontal scroll with stacked list, update quick actions
 
 ## What will NOT change
-- Bottom nav system unchanged (still customizable)
-- No database changes
-- No routing changes (except Time deactivation)
-- All module pages unchanged
-- Shift ticket logic unchanged
-
-## Risk
-Low-medium. Dashboard is a visual-only change. Time deactivation is commenting out, not deleting.
+- No database or routing changes
+- Glass-tile styling preserved
+- Mesh gradient background kept
+- Needs list section unchanged
+- Bottom nav unchanged
 
