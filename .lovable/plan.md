@@ -1,50 +1,49 @@
 
 
-# Simplify Incident Statuses: Active / Demob / Closed
+# Collapse Shift Ticket Form: Show Only What Matters
 
-## Why this is right
-The current 4 statuses (active, contained, controlled, out) mirror fire suppression stages -- that's the Incident Commander's world, not the contractor's. Contractors care about:
-- **Active** -- working the incident, logging time/expenses
-- **Demob** -- demobilizing, finishing paperwork, wrapping up
-- **Closed** -- done, everything submitted
+## The idea
+Since header info and equipment info are auto-populated from the truck/incident, they're just noise when filling out a ticket. The user's real workflow is: set times, review crew, sign. Everything else should be collapsed by default but expandable if needed.
 
-This matches the real operational workflow and reduces decision fatigue when updating status.
+## Changes (all in `src/components/shift-tickets/ShiftTicketForm.tsx`)
 
-## Changes
+### 1. Collapse Header Info and Equipment Info by default
+- Wrap "Header Info" section in a Collapsible (from `@radix-ui/react-collapsible`, already exists at `src/components/ui/collapsible.tsx`)
+- Wrap "Equipment Info" section in a Collapsible
+- Wrap "Options" section in a Collapsible
+- All three default to **closed**
+- Show a one-line summary when collapsed (e.g. "Johnson Fire | E-123 | 2024 Ford F-550")
+- Tap the row to expand and edit
 
-### 1. `src/services/incidents.ts`
-- Update `IncidentStatus` type: `"active" | "demob" | "closed"`
-- Update `STATUS_LABELS`: Active, Demob, Closed
-- Add status color mapping for consistent styling across pages
+### 2. Collapse Remarks by default
+- Same pattern, collapsed with summary text if any remarks exist
 
-### 2. `src/pages/Incidents.tsx`
-- Update filter chips to `["all", "active", "demob", "closed"]`
-- Update status badge colors: active = red, demob = amber/yellow, closed = green
+### 3. Keep these sections always visible (open)
+- **Equipment entries** (the time/date rows) -- this is the core data entry
+- **Crew** (personnel entries + CrewSyncCard) -- the main workflow
+- **Signatures** -- contractor sig inline, supervisor sig button stays as-is
 
-### 3. `src/pages/IncidentDetail.tsx`
-- Update `statusOptions` array to the new 3 statuses
-- Update status color logic to include demob (amber)
+### 4. Supervisor signature sheet stays unchanged
+- The OF297FormPreview popup behavior is preserved exactly as-is
 
-### 4. `src/pages/IncidentEdit.tsx`
-- Status selector already uses `STATUS_LABELS` -- will work automatically
+## Summary of collapsed vs visible
 
-### 5. `src/pages/Dashboard.tsx`
-- No changes needed -- already filters by `status === "active"`
+```text
+[v] Header Info          <- collapsed, tap to expand
+[v] Equipment Info       <- collapsed, tap to expand  
+[v] Options              <- collapsed, tap to expand
+[ ] Equipment (times)    <- ALWAYS OPEN
+[ ] Crew                 <- ALWAYS OPEN
+[v] Remarks              <- collapsed, tap to expand
+[ ] Signatures           <- ALWAYS OPEN
+```
 
-### 6. Database migration
-- Update the default value for `incidents.status` (already "active", no change needed)
-- Migrate any existing rows with "contained" or "controlled" to "demob", and "out" to "closed"
+## File changed
+- `src/components/shift-tickets/ShiftTicketForm.tsx` -- import Collapsible, wrap 4 sections
 
 ## What stays the same
-- The `containment` percentage field stays on incidents for reference
-- `acres` field unchanged
-- All other incident functionality unchanged
-- No routing changes
-
-## Files changed
-- `src/services/incidents.ts`
-- `src/pages/Incidents.tsx`
-- `src/pages/IncidentDetail.tsx`
-- `src/pages/IncidentEdit.tsx`
-- Database migration to update existing data
+- All data, auto-save, dirty tracking, signature flow
+- Supervisor sheet popup behavior unchanged
+- Bottom action bar unchanged
+- No database or routing changes
 
