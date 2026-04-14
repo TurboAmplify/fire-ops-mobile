@@ -173,10 +173,10 @@ function QuickAction({ icon: Icon, label, iconBg, iconColor, onClick }: { icon: 
 
 function StatCard({ icon: Icon, label, value, iconColor }: { icon: LucideIcon; label: string; value: number; iconColor: string }) {
   return (
-    <div className="rounded-2xl glass-tile p-3 flex flex-col items-center gap-1">
-      <Icon className={`h-4 w-4 ${iconColor}`} strokeWidth={1.75} />
-      <span className="text-lg font-bold">{value}</span>
-      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{label}</span>
+    <div className="rounded-2xl glass-tile p-2.5 flex flex-col items-center gap-0.5">
+      <Icon className={`h-3.5 w-3.5 ${iconColor}`} strokeWidth={1.75} />
+      <span className="text-base font-bold leading-tight">{value}</span>
+      <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">{label}</span>
     </div>
   );
 }
