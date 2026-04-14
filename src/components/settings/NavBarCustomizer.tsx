@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import {
-  Flame, Banknote, DollarSign, FileText, Users, Truck, Clock, ClipboardList,
+  Flame, Banknote, DollarSign, FileText, Users, Truck, ClipboardList,
 } from "lucide-react";
 import {
   Dialog,
