@@ -33,24 +33,27 @@ export default function Dashboard() {
             Operations
           </h2>
           <div className="grid grid-cols-3 gap-3">
-            <GridTile to="/incidents" icon={Flame} label="Incidents" variant="destructive" badge={activeCount || undefined} />
-            <GridTile to="/fleet" icon={Truck} label="Fleet" badge={truckCount || undefined} />
-            <GridTile to="/time" icon={Clock} label="Time" />
-            <GridTile to="/expenses" icon={Receipt} label="Expenses" />
-            <GridTile to="/crew" icon={Users} label="Crew" badge={crewCount || undefined} />
+            <GridTile to="/incidents" icon={Flame} label="Incidents" iconBg="bg-destructive/12" iconColor="text-destructive" badge={activeCount || undefined} />
+            <GridTile to="/fleet" icon={Truck} label="Fleet" iconBg="bg-blue-500/12" iconColor="text-blue-500" badge={truckCount || undefined} />
+            <GridTile to="/time" icon={Clock} label="Time" iconBg="bg-amber-500/12" iconColor="text-amber-500" />
+            <GridTile to="/expenses" icon={Receipt} label="Expenses" iconBg="bg-emerald-500/12" iconColor="text-emerald-500" />
+            <GridTile to="/crew" icon={Users} label="Crew" iconBg="bg-violet-500/12" iconColor="text-violet-500" badge={crewCount || undefined} />
             <button
               onClick={() => setShowTickets(true)}
               className="flex flex-col items-center justify-center gap-1.5 rounded-2xl bg-card p-4 card-shadow border border-border/20 transition-all duration-150 active:scale-[0.98] active:shadow-none aspect-square relative"
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary">
-                <FileText className="h-5 w-5 text-muted-foreground" strokeWidth={1.75} />
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500/12">
+                <FileText className="h-5 w-5 text-sky-500" strokeWidth={1.75} />
               </div>
               <span className="text-[11px] font-semibold text-muted-foreground">Tickets</span>
             </button>
           </div>
         </section>
 
-        {/* Active incidents only */}
+        {/* Gradient divider */}
+        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+
+        {/* Active incidents — horizontal scroll */}
         <section>
           <div className="flex items-center justify-between mb-3 px-0.5">
             <h2 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.15em]">
@@ -62,32 +65,36 @@ export default function Dashboard() {
               </Link>
             )}
           </div>
-          <div className="space-y-2">
-            {activeIncidents.length === 0 && (
-              <div className="rounded-2xl bg-card p-5 text-center card-shadow border border-border/30">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-success/10 mx-auto mb-2">
-                  <Flame className="h-5 w-5 text-success" strokeWidth={1.75} />
-                </div>
-                <p className="text-sm font-semibold">All Clear</p>
-                <p className="text-xs text-muted-foreground mt-0.5">No active incidents</p>
+
+          {activeIncidents.length === 0 ? (
+            <div className="rounded-2xl bg-card p-5 text-center card-shadow border border-border/30">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 mx-auto mb-2">
+                <Flame className="h-5 w-5 text-emerald-500" strokeWidth={1.75} />
               </div>
-            )}
-            {activeIncidents.map((inc) => (
-              <Link
-                key={inc.id}
-                to={`/incidents/${inc.id}`}
-                className="flex items-center justify-between rounded-2xl bg-card p-4 card-shadow border border-border/20 transition-all duration-150 active:scale-[0.98] active:shadow-none"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-[15px]">{inc.name}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{inc.location}</p>
-                </div>
-                <span className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide bg-destructive/15 text-destructive">
-                  Active
-                </span>
-              </Link>
-            ))}
-          </div>
+              <p className="text-sm font-semibold">All Clear</p>
+              <p className="text-xs text-muted-foreground mt-0.5">No active incidents</p>
+            </div>
+          ) : (
+            <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory no-scrollbar -mx-4 px-4">
+              {activeIncidents.map((inc) => (
+                <Link
+                  key={inc.id}
+                  to={`/incidents/${inc.id}`}
+                  className="min-w-[160px] max-w-[180px] snap-start flex-shrink-0 rounded-2xl bg-card p-4 card-shadow border border-border/20 transition-all duration-150 active:scale-[0.97] active:shadow-none"
+                >
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-destructive" />
+                    </span>
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-destructive">Active</span>
+                  </div>
+                  <p className="font-semibold text-[13px] leading-tight line-clamp-2">{inc.name}</p>
+                  <p className="text-[11px] text-muted-foreground mt-1 truncate">{inc.location}</p>
+                </Link>
+              ))}
+            </div>
+          )}
         </section>
       </div>
       <ShiftTicketQuickAccess open={showTickets} onOpenChange={setShowTickets} />
@@ -95,7 +102,7 @@ export default function Dashboard() {
   );
 }
 
-function GridTile({ to, icon: Icon, label, variant, badge }: { to: string; icon: LucideIcon; label: string; variant?: string; badge?: number }) {
+function GridTile({ to, icon: Icon, label, iconBg, iconColor, badge }: { to: string; icon: LucideIcon; label: string; iconBg: string; iconColor: string; badge?: number }) {
   return (
     <Link
       to={to}
@@ -106,8 +113,8 @@ function GridTile({ to, icon: Icon, label, variant, badge }: { to: string; icon:
           {badge}
         </span>
       )}
-      <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${variant === "destructive" ? "bg-destructive/15" : "bg-secondary"}`}>
-        <Icon className={`h-5 w-5 ${variant === "destructive" ? "text-destructive" : "text-muted-foreground"}`} strokeWidth={1.75} />
+      <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${iconBg}`}>
+        <Icon className={`h-5 w-5 ${iconColor}`} strokeWidth={1.75} />
       </div>
       <span className="text-[11px] font-semibold text-muted-foreground">{label}</span>
     </Link>
