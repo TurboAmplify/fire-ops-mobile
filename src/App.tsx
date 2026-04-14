@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
@@ -6,6 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import { OrganizationProvider } from "@/hooks/useOrganization";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { queryClient, asyncPersister } from "@/lib/query-client";
+import "@/lib/offline-queue";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import OrgSetup from "./pages/OrgSetup";
@@ -34,16 +36,13 @@ import Settings from "./pages/Settings";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Support from "./pages/Support";
-// import Time from "./pages/Time"; // Deactivated — shift tickets cover all time tracking
 import Payroll from "./pages/Payroll";
 import More from "./pages/More";
 import NeedsList from "./pages/NeedsList";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
-
 const App = () => (
-  <QueryClientProvider client={queryClient}>
+  <PersistQueryClientProvider client={queryClient} persistOptions={{ persister: asyncPersister, maxAge: 1000 * 60 * 60 * 24 }}>
     <AuthProvider>
       <OrganizationProvider>
         <TooltipProvider>
@@ -51,12 +50,9 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
-              {/* Public routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/org-setup" element={<OrgSetup />} />
-
-              {/* Protected routes */}
               <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/incidents" element={<ProtectedRoute><Incidents /></ProtectedRoute>} />
               <Route path="/incidents/new" element={<ProtectedRoute><IncidentCreate /></ProtectedRoute>} />
@@ -83,7 +79,6 @@ const App = () => (
               <Route path="/privacy" element={<ProtectedRoute><Privacy /></ProtectedRoute>} />
               <Route path="/terms" element={<ProtectedRoute><Terms /></ProtectedRoute>} />
               <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
-              {/* <Route path="/time" element={<ProtectedRoute><Time /></ProtectedRoute>} /> */}{/* Deactivated — shift tickets cover all time tracking */}
               <Route path="/payroll" element={<ProtectedRoute><Payroll /></ProtectedRoute>} />
               <Route path="/more" element={<ProtectedRoute><More /></ProtectedRoute>} />
               <Route path="/needs" element={<ProtectedRoute><NeedsList /></ProtectedRoute>} />
@@ -93,7 +88,7 @@ const App = () => (
         </TooltipProvider>
       </OrganizationProvider>
     </AuthProvider>
-  </QueryClientProvider>
+  </PersistQueryClientProvider>
 );
 
 export default App;
