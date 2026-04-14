@@ -1,74 +1,43 @@
 
 
-# Offline Tolerance for FireOps HQ (App Store Compliant)
+# Add Crew Assignment Prompt to Truck Cards
 
 ## Summary
 
-Add offline data caching, write queuing, and connectivity indicators using IndexedDB (not localStorage) to handle iOS WKWebView storage limits and meet App Store requirements.
+When a truck has no crew assigned, show a prominent warning banner inside the expanded truck card -- right above the Shift Tickets section. The banner nudges the user to add crew and provides a one-tap action to open the crew assignment picker. No existing flows are broken; this is additive UI only.
 
-## Technical Details
+## What changes
 
-### 1. Dependencies
+### 1. `src/components/incidents/IncidentTruckList.tsx`
 
-Install `idb-keyval`, `@tanstack/react-query-persist-client`, and `@tanstack/query-async-storage-persister`.
+- Import `useIncidentTruckCrew` hook
+- Inside each expanded truck card, call `useIncidentTruckCrew(it.id)` to get the active crew count
+- If active crew count is 0, render an amber warning card between the status changer and the Shift Tickets section:
+  - Icon: `AlertTriangle` (already imported pattern in TruckCrewSection)
+  - Text: "No crew assigned to this truck -- add crew before creating shift tickets"
+  - Button: "Add Crew" that auto-opens the Crew section and triggers the assign picker
+- Auto-expand the Crew `SectionHeader` when crew count is 0 (change `defaultOpen` to true when no crew)
 
-### 2. Query Client with IndexedDB Persistence
+### 2. `src/components/incidents/TruckCrewSection.tsx`
 
-**New file: `src/lib/query-client.ts`**
-- Create `QueryClient` with `networkMode: "offlineFirst"`, `staleTime: 5min`, `gcTime: 24h`
-- Create an async IndexedDB persister using `idb-keyval` + `@tanstack/query-async-storage-persister`
-- Export both for use in `App.tsx`
+- Accept an optional `autoOpen?: boolean` prop
+- When `autoOpen` is true, initialize `showAssign` to `true` so the crew picker is immediately visible
 
-### 3. Offline Mutation Queue
+### 3. `src/components/shift-tickets/ShiftTicketSection.tsx`
 
-**New file: `src/lib/offline-queue.ts`**
-- Store failed mutations in IndexedDB via `idb-keyval` (table, operation, payload, timestamp)
-- On `online` event, replay queued mutations in order with toast feedback
-- Expire mutations older than 72 hours
+- No changes needed -- the warning banner sits above it in the parent, which is sufficient guidance
 
-**New file: `src/lib/offline-mutations.ts`**
-- `useOfflineMutation` hook wrapping `useMutation` — if offline, optimistically update cache and queue the write
+## Technical details
 
-### 4. Network Status Hook
+- `useIncidentTruckCrew` is already built and returns crew with `is_active` flag
+- The warning banner uses existing Tailwind utility classes (amber bg, rounded-xl, touch-target button)
+- The Crew SectionHeader gets `defaultOpen={activeCrew === 0}` so it's open when empty
+- A ref or state callback scrolls the crew section into view when "Add Crew" is tapped
 
-**New file: `src/hooks/useNetworkStatus.ts`**
-- Returns `{ isOnline, pendingCount }`
-- Listens to `online`/`offline` events, reads queue length from IndexedDB
+## Files changed
 
-### 5. Offline Banner
-
-**New file: `src/components/OfflineBanner.tsx`**
-- Thin amber banner: "Offline -- changes will sync when connected" with pending count
-- Brief green "Back online" message on reconnect, auto-dismisses after 3 seconds
-- No emoji per project rules
-
-### 6. Wire It Up
-
-**`src/App.tsx`**
-- Replace `QueryClientProvider` with `PersistQueryClientProvider` from the persist-client package
-- Import client and persister from `src/lib/query-client.ts`
-
-**`src/components/AppShell.tsx`**
-- Add `<OfflineBanner />` between header spacer and main content
-
-### 7. App Store Compliance Notes
-
-- IndexedDB provides 250MB+ storage on iOS WKWebView (vs 5MB localStorage cap)
-- App gracefully degrades: cached reads work offline, writes queue and sync
-- Clear visual indicator of connectivity state (Apple requires graceful offline handling)
-- No crashes or blank screens when offline
-- No service worker needed — this is data-layer resilience only
-
-## Files Changed
-
-| File | Action |
+| File | Change |
 |------|--------|
-| `package.json` | Add 3 dependencies |
-| `src/lib/query-client.ts` | New |
-| `src/lib/offline-queue.ts` | New |
-| `src/lib/offline-mutations.ts` | New |
-| `src/hooks/useNetworkStatus.ts` | New |
-| `src/components/OfflineBanner.tsx` | New |
-| `src/App.tsx` | Use PersistQueryClientProvider |
-| `src/components/AppShell.tsx` | Add OfflineBanner |
+| `src/components/incidents/IncidentTruckList.tsx` | Add crew count check, warning banner, auto-open crew section |
+| `src/components/incidents/TruckCrewSection.tsx` | Add `autoOpen` prop |
 
