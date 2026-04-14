@@ -1,22 +1,35 @@
 import { useIncidentTrucks, useAvailableTrucks, useAssignTruck, useUpdateTruckStatus } from "@/hooks/useIncidentTrucks";
 import { TRUCK_STATUS_LABELS } from "@/services/incident-trucks";
 import type { IncidentTruckStatus, IncidentTruckWithTruck } from "@/services/incident-trucks";
-import { Truck as TruckIcon, Plus, Loader2, ChevronDown } from "lucide-react";
+import { Truck as TruckIcon, Plus, Loader2, ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { TruckCrewSection } from "./TruckCrewSection";
-// TruckInfoSection replaced by inline photo+info layout
 import { ShiftList } from "@/components/shifts/ShiftList";
 import { ResourceOrderSection } from "./ResourceOrderSection";
 import { AgreementUpload } from "./AgreementUpload";
 import { ShiftTicketSection } from "@/components/shift-tickets/ShiftTicketSection";
 import { useOrganization } from "@/hooks/useOrganization";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const truckStatuses: IncidentTruckStatus[] = ["assigned", "active", "demobed", "completed"];
 
 interface Props {
   incidentId: string;
   incidentName?: string;
+}
+
+function SectionHeader({ label, defaultOpen = false, children }: { label: string; defaultOpen?: boolean; children: React.ReactNode }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger className="flex w-full items-center justify-between py-2 touch-target">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{label}</p>
+        <ChevronRight className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${open ? "rotate-90" : ""}`} />
+      </CollapsibleTrigger>
+      <CollapsibleContent>{children}</CollapsibleContent>
+    </Collapsible>
+  );
 }
 
 export function IncidentTruckList({ incidentId, incidentName }: Props) {
@@ -117,81 +130,8 @@ export function IncidentTruckList({ incidentId, incidentName }: Props) {
             </button>
 
             {isExpanded && (
-              <div className="border-t px-4 pb-4 pt-3 space-y-4 animate-fade-in">
-                {/* Truck photo + key info row */}
-                <div className="flex gap-3 items-start">
-                  {/* Truck photo with right-side fade */}
-                  <div className="relative w-28 h-28 rounded-xl overflow-hidden shrink-0 bg-secondary">
-                    {photoUrl ? (
-                      <>
-                        <img
-                          src={photoUrl}
-                          alt={it.trucks.name}
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-card to-transparent" />
-                      </>
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <TruckIcon className="h-8 w-8 text-muted-foreground/40" />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Key truck info */}
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <p className="text-sm font-bold truncate">{it.trucks.name}</p>
-                    {(it.trucks.make || it.trucks.model) && (
-                      <p className="text-xs text-muted-foreground truncate">
-                        {[it.trucks.year, it.trucks.make, it.trucks.model].filter(Boolean).join(" ")}
-                      </p>
-                    )}
-                    {it.trucks.unit_type && (
-                      <p className="text-xs text-muted-foreground">{it.trucks.unit_type}</p>
-                    )}
-                    {it.trucks.plate && (
-                      <p className="text-xs"><span className="text-muted-foreground">Plate:</span> {it.trucks.plate}</p>
-                    )}
-                    {it.trucks.vin && (
-                      <p className="text-xs truncate"><span className="text-muted-foreground">VIN:</span> {it.trucks.vin}</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Extended truck details */}
-                {(() => {
-                  const t = it.trucks as any;
-                  const details = [
-                    { label: "Water Capacity", value: t.water_capacity },
-                    { label: "Pump Type", value: t.pump_type },
-                    { label: "Fuel Type", value: t.fuel_type },
-                    { label: "Fuel Capacity", value: t.fuel_capacity ? `${t.fuel_capacity} gal` : null },
-                    { label: "Engine", value: t.engine_type },
-                    { label: "Bed Length", value: t.bed_length },
-                    { label: "DOT #", value: t.dot_number },
-                    { label: "Mileage", value: t.current_mileage ? `${Number(t.current_mileage).toLocaleString()} mi` : null },
-                    { label: "GVWR", value: t.gvwr ? `${Number(t.gvwr).toLocaleString()} lbs` : null },
-                    { label: "Weight (Empty)", value: t.weight_empty ? `${Number(t.weight_empty).toLocaleString()} lbs` : null },
-                    { label: "Weight (Full)", value: t.weight_full ? `${Number(t.weight_full).toLocaleString()} lbs` : null },
-                  ].filter((d) => d.value);
-                  if (details.length === 0) return null;
-                  return (
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-                      {details.map((d) => (
-                        <div key={d.label}>
-                          <p className="text-[10px] text-muted-foreground">{d.label}</p>
-                          <p className="text-xs font-medium">{d.value}</p>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()} 
-
-                {(it.trucks as any).notes && (
-                  <p className="text-xs text-muted-foreground"><span className="font-medium text-foreground">Notes:</span> {(it.trucks as any).notes}</p>
-                )}
-
-                {/* Status changer */}
+              <div className="border-t px-4 pb-4 pt-3 space-y-2 animate-fade-in">
+                {/* Status changer — always visible */}
                 <div className="space-y-1">
                   <p className="text-xs font-medium text-muted-foreground">Change Status</p>
                   <div className="flex gap-2 flex-wrap">
@@ -212,41 +152,116 @@ export function IncidentTruckList({ incidentId, incidentName }: Props) {
                   </div>
                 </div>
 
-                {/* Resource Orders */}
-                <ResourceOrderSection incidentTruckId={it.id} />
+                {/* OF-297 Shift Tickets — expanded by default */}
+                <SectionHeader label="OF-297 Shift Tickets" defaultOpen={true}>
+                  <ShiftTicketSection
+                    incidentTruckId={it.id}
+                    incidentId={incidentId}
+                    organizationId={membership?.organizationId}
+                    truckName={it.trucks.name}
+                    truckMake={it.trucks.make}
+                    truckModel={it.trucks.model}
+                    truckVin={it.trucks.vin}
+                    truckPlate={it.trucks.plate}
+                    truckUnitType={it.trucks.unit_type}
+                    incidentName={incidentName}
+                  />
+                </SectionHeader>
 
-                {/* Agreements for this truck */}
-                <AgreementUpload incidentTruckId={it.id} label="Truck Agreements" />
+                {/* Truck Details — collapsed by default */}
+                <SectionHeader label="Truck Details">
+                  <div className="space-y-3 pt-1">
+                    {/* Truck photo + key info row */}
+                    <div className="flex gap-3 items-start">
+                      <div className="relative w-28 h-28 rounded-xl overflow-hidden shrink-0 bg-secondary">
+                        {photoUrl ? (
+                          <>
+                            <img src={photoUrl} alt={it.trucks.name} className="w-full h-full object-cover" />
+                            <div className="absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-card to-transparent" />
+                          </>
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <TruckIcon className="h-8 w-8 text-muted-foreground/40" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <p className="text-sm font-bold truncate">{it.trucks.name}</p>
+                        {(it.trucks.make || it.trucks.model) && (
+                          <p className="text-xs text-muted-foreground truncate">
+                            {[it.trucks.year, it.trucks.make, it.trucks.model].filter(Boolean).join(" ")}
+                          </p>
+                        )}
+                        {it.trucks.unit_type && <p className="text-xs text-muted-foreground">{it.trucks.unit_type}</p>}
+                        {it.trucks.plate && <p className="text-xs"><span className="text-muted-foreground">Plate:</span> {it.trucks.plate}</p>}
+                        {it.trucks.vin && <p className="text-xs truncate"><span className="text-muted-foreground">VIN:</span> {it.trucks.vin}</p>}
+                      </div>
+                    </div>
 
-                {/* Crew section */}
-                <TruckCrewSection incidentTruckId={it.id} />
+                    {/* Extended truck details */}
+                    {(() => {
+                      const t = it.trucks as any;
+                      const details = [
+                        { label: "Water Capacity", value: t.water_capacity },
+                        { label: "Pump Type", value: t.pump_type },
+                        { label: "Fuel Type", value: t.fuel_type },
+                        { label: "Fuel Capacity", value: t.fuel_capacity ? `${t.fuel_capacity} gal` : null },
+                        { label: "Engine", value: t.engine_type },
+                        { label: "Bed Length", value: t.bed_length },
+                        { label: "DOT #", value: t.dot_number },
+                        { label: "Mileage", value: t.current_mileage ? `${Number(t.current_mileage).toLocaleString()} mi` : null },
+                        { label: "GVWR", value: t.gvwr ? `${Number(t.gvwr).toLocaleString()} lbs` : null },
+                        { label: "Weight (Empty)", value: t.weight_empty ? `${Number(t.weight_empty).toLocaleString()} lbs` : null },
+                        { label: "Weight (Full)", value: t.weight_full ? `${Number(t.weight_full).toLocaleString()} lbs` : null },
+                      ].filter((d) => d.value);
+                      if (details.length === 0) return null;
+                      return (
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                          {details.map((d) => (
+                            <div key={d.label}>
+                              <p className="text-[10px] text-muted-foreground">{d.label}</p>
+                              <p className="text-xs font-medium">{d.value}</p>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
 
-                {/* Shifts section */}
-                <ShiftList
-                  incidentTruckId={it.id}
-                  incidentId={incidentId}
-                  truckName={it.trucks.name}
-                  truckMake={it.trucks.make}
-                  truckModel={it.trucks.model}
-                  truckVin={it.trucks.vin}
-                  truckPlate={it.trucks.plate}
-                  truckUnitType={it.trucks.unit_type}
-                  incidentName={incidentName}
-                />
+                    {(it.trucks as any).notes && (
+                      <p className="text-xs text-muted-foreground"><span className="font-medium text-foreground">Notes:</span> {(it.trucks as any).notes}</p>
+                    )}
+                  </div>
+                </SectionHeader>
 
-                {/* OF-297 Shift Tickets */}
-                <ShiftTicketSection
-                  incidentTruckId={it.id}
-                  incidentId={incidentId}
-                  organizationId={membership?.organizationId}
-                  truckName={it.trucks.name}
-                  truckMake={it.trucks.make}
-                  truckModel={it.trucks.model}
-                  truckVin={it.trucks.vin}
-                  truckPlate={it.trucks.plate}
-                  truckUnitType={it.trucks.unit_type}
-                  incidentName={incidentName}
-                />
+                {/* Resource Orders — collapsed */}
+                <SectionHeader label="Resource Orders">
+                  <ResourceOrderSection incidentTruckId={it.id} />
+                </SectionHeader>
+
+                {/* Agreements — collapsed */}
+                <SectionHeader label="Agreements">
+                  <AgreementUpload incidentTruckId={it.id} label="Truck Agreements" />
+                </SectionHeader>
+
+                {/* Crew — collapsed */}
+                <SectionHeader label="Crew">
+                  <TruckCrewSection incidentTruckId={it.id} />
+                </SectionHeader>
+
+                {/* Shifts — collapsed */}
+                <SectionHeader label="Shifts">
+                  <ShiftList
+                    incidentTruckId={it.id}
+                    incidentId={incidentId}
+                    truckName={it.trucks.name}
+                    truckMake={it.trucks.make}
+                    truckModel={it.trucks.model}
+                    truckVin={it.trucks.vin}
+                    truckPlate={it.trucks.plate}
+                    truckUnitType={it.trucks.unit_type}
+                    incidentName={incidentName}
+                  />
+                </SectionHeader>
               </div>
             )}
           </div>
