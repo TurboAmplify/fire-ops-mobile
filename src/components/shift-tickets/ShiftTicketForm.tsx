@@ -372,10 +372,18 @@ export function ShiftTicketForm({
           </div>
         )}
 
-        {/* ── Header Fields ── */}
-        <section className="space-y-2">
-          <h3 className="text-sm font-bold">Header Info</h3>
-          <div className="space-y-2">
+        {/* ── Header Fields (collapsed) ── */}
+        <Collapsible defaultOpen={false}>
+          <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl border border-border bg-card px-3 py-2.5 touch-target active:bg-accent/30">
+            <div className="text-left min-w-0">
+              <p className="text-sm font-bold">Header Info</p>
+              <p className="text-[11px] text-muted-foreground truncate">
+                {[incidentName, agreementNumber, contractorName].filter(Boolean).join(" | ") || "Tap to expand"}
+              </p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 transition-transform [[data-state=open]>&]:rotate-90" />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-2 space-y-2">
             <div>
               <label className={labelClass}>1. Agreement / Contract #</label>
               <input value={agreementNumber} onChange={(e) => setField(setAgreementNumber)(e.target.value)} className={inputClass} />
@@ -402,8 +410,8 @@ export function ShiftTicketForm({
                 <input value={financialCode} onChange={(e) => setField(setFinancialCode)(e.target.value)} className={inputClass} />
               </div>
             </div>
-          </div>
-        </section>
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* ── Equipment Info ── */}
         <section className="space-y-2">
