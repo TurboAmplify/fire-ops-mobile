@@ -41,7 +41,6 @@ export function BottomNav() {
   const allTabs: (Tab & { fixed?: boolean })[] = [
     { label: "Home", icon: LayoutDashboard, to: "/", fixed: true },
     ...middleTabs,
-    { label: "More", icon: MoreHorizontal, to: "/more", fixed: true },
   ];
 
   return (

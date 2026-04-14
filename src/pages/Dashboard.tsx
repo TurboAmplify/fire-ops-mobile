@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { Flame, Truck, Clock, Receipt, Users, ChevronRight, FileText } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Flame, Truck, Clock, Receipt, Users, ChevronRight, FileText, Settings } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { useIncidents } from "@/hooks/useIncidents";
 import { useTrucks } from "@/hooks/useFleet";
 import { useCrewMembers } from "@/hooks/useCrewMembers";
@@ -12,6 +12,7 @@ import type { LucideIcon } from "lucide-react";
 
 export default function Dashboard() {
   const [showTickets, setShowTickets] = useState(false);
+  const navigate = useNavigate();
   const { data: incidents } = useIncidents();
   const { data: trucks } = useTrucks();
   const { data: crew } = useCrewMembers();
@@ -21,7 +22,11 @@ export default function Dashboard() {
   const crewCount = crew?.filter((c) => c.active).length ?? 0;
 
   return (
-    <AppShell title="FireOps HQ">
+    <AppShell title="FireOps HQ" headerRight={
+      <button onClick={() => navigate("/settings")} className="flex items-center justify-center h-9 w-9 rounded-full active:bg-secondary transition-colors">
+        <Settings className="h-5 w-5 text-muted-foreground" strokeWidth={1.75} />
+      </button>
+    }>
       <div className="space-y-5">
         {/* Cinematic hero */}
         <div className="relative overflow-hidden">
