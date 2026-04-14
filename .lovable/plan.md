@@ -1,35 +1,28 @@
 
 
-# Tighten Dashboard: Single-Line Incidents + Compact Stats
+# Dashboard Polish: Match Sizes, Fix 404, Tighten Needs
 
-Both changes follow good design principles. Uber, Linear, and iOS Settings all use single-line list rows. Compact stats are standard in dashboard design (Apple Health, Robinhood). Less padding = more content above the fold = better.
+## Issues to fix
+
+### 1. Shift Ticket 404 (critical)
+The quick action navigates to `/shift-tickets/new` which doesn't exist. Shift tickets require incident + truck context. The `ShiftTicketQuickAccess` dialog already handles this picker flow and is already rendered in Dashboard with `showTickets` state. Fix: change the onClick to `() => setShowTickets(true)` instead of navigating.
+
+### 2. Quick Actions sizing -- match stat cards
+Currently quick actions use `aspect-square` with large icon circles, making them taller than the stat cards. Remove the aspect-square constraint, reduce padding, and match the compact feel of the stat cards above. Same glass-tile, similar height.
+
+### 3. Needs List -- keep it visible without scrolling
+On a 393x587 viewport, the needs list is below the fold. Two options:
+- **Tighten everything above** so needs list fits on screen
+- **Remove the needs list section header overhead** and make it more compact
+
+I'll do both: reduce quick action height (no more aspect-square), tighten section gaps, and make needs list rows more compact. This should get at least the first 2-3 needs items visible without scrolling on a standard phone.
 
 ## Changes (all in `src/pages/Dashboard.tsx`)
 
-### 1. Incident rows: single line
-Combine name and location into one row using an inline separator. Currently it's two lines (name + location below). Change to:
-
-```text
-● Riverside Fire  ·  Riverside, CA    >
-```
-
-- Remove the `<div className="flex-1 min-w-0">` wrapper with two `<p>` tags
-- Replace with a single `<p>` that shows `{inc.name} · {inc.location}` with truncation
-- Reduce vertical padding from `py-3.5` to `py-2.5`
-
-### 2. Stat cards: tighter padding
-- Reduce padding from `p-4` to `p-3`
-- Reduce number font from `text-xl` to `text-lg`
-- Reduce gap from `gap-1.5` to `gap-1`
-- This saves ~16px of vertical height across the section
-
-### 3. Reduce section spacing
-- Change outer `space-y-5` to `space-y-4` for slightly tighter overall feel
-
-## What stays the same
-- All functionality, routing, glass-tile styling, quick actions, needs list
-- Touch targets remain above 44px minimum
-- No database or logic changes
+1. **Fix Shift Ticket onClick**: `() => setShowTickets(true)`
+2. **QuickAction component**: Remove `aspect-square`, reduce padding from `p-4` to `p-3`, shrink icon container from `h-10 w-10` to `h-8 w-8`, match stat card text size
+3. **Reduce outer spacing**: `space-y-4` to `space-y-3`
+4. **Needs list rows**: tighter padding (`py-3` to `py-2`), smaller icon container
 
 ## File changed
 - `src/pages/Dashboard.tsx`
