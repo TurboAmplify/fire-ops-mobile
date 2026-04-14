@@ -39,7 +39,7 @@ export default function Dashboard() {
         <div className="absolute bottom-0 right-0 w-[400px] h-[300px] rounded-full bg-[hsl(220_80%_55%/0.03)] blur-[100px]" />
       </div>
 
-      <div className="px-4 pt-4 space-y-4 pb-6">
+      <div className="px-4 pt-4 space-y-3 pb-6">
         {/* Hero Stats */}
         <section>
           <h2 className="mb-3 text-[10px] font-semibold text-muted-foreground/80 uppercase tracking-[0.15em] px-0.5">
@@ -106,7 +106,7 @@ export default function Dashboard() {
             Quick Actions
           </h2>
           <div className="grid grid-cols-3 gap-3">
-            <QuickAction icon={ClipboardList} label="Shift Ticket" iconBg="bg-blue-500/15" iconColor="text-blue-500" onClick={() => navigate("/shift-tickets/new")} />
+            <QuickAction icon={ClipboardList} label="Shift Ticket" iconBg="bg-blue-500/15" iconColor="text-blue-500" onClick={() => setShowTickets(true)} />
             <QuickAction icon={ScanLine} label="Scan Receipt" iconBg="bg-emerald-500/15" iconColor="text-emerald-500" onClick={() => navigate("/expenses/batch-scan")} />
             <QuickAction icon={Plus} label="New Incident" iconBg="bg-destructive/15" iconColor="text-destructive" onClick={() => navigate("/incidents/new")} />
           </div>
@@ -134,13 +134,12 @@ export default function Dashboard() {
           ) : (
             <div className="rounded-2xl glass-tile divide-y divide-border/30">
               {unpurchasedNeeds.slice(0, 3).map((item: any) => (
-                <div key={item.id} className="flex items-center gap-3 px-4 py-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/15 shrink-0">
-                    <ClipboardList className="h-4 w-4 text-amber-500" strokeWidth={1.75} />
+                <div key={item.id} className="flex items-center gap-3 px-4 py-2">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-md bg-amber-500/15 shrink-0">
+                    <ClipboardList className="h-3.5 w-3.5 text-amber-500" strokeWidth={1.75} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{item.title}</p>
-                    {item.notes && <p className="text-[11px] text-muted-foreground truncate">{item.notes}</p>}
+                    <p className="text-[13px] font-medium truncate">{item.title}</p>
                   </div>
                 </div>
               ))}
@@ -162,12 +161,12 @@ function QuickAction({ icon: Icon, label, iconBg, iconColor, onClick }: { icon: 
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center justify-center gap-1.5 rounded-2xl glass-tile p-4 transition-all duration-150 active:scale-[0.97] active:opacity-80 aspect-square touch-target"
+      className="flex flex-col items-center justify-center gap-1 rounded-2xl glass-tile p-3 transition-all duration-150 active:scale-[0.97] active:opacity-80 touch-target"
     >
-      <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${iconBg}`}>
-        <Icon className={`h-5 w-5 ${iconColor}`} strokeWidth={1.75} />
+      <div className={`flex h-8 w-8 items-center justify-center rounded-xl ${iconBg}`}>
+        <Icon className={`h-4 w-4 ${iconColor}`} strokeWidth={1.75} />
       </div>
-      <span className="text-[11px] font-semibold text-muted-foreground">{label}</span>
+      <span className="text-[10px] font-semibold text-muted-foreground">{label}</span>
     </button>
   );
 }
