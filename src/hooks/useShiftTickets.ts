@@ -57,22 +57,32 @@ export function useDeleteShiftTicket(incidentTruckId: string) {
 }
 
 export type RecentShiftTicket = ShiftTicket & {
-  incident_trucks: { incident_id: string } | null;
+  incident_trucks: { incident_id: string; trucks: { name: string; unit_type: string | null } } | null;
 };
 
-export function useRecentShiftTickets(limit = 5) {
+export function useRecentShiftTickets(limit = 25) {
   return useQuery({
     queryKey: ["shift-tickets-recent", limit],
     queryFn: async () => {
       const { data, error } = await (await import("@/integrations/supabase/client")).supabase
         .from("shift_tickets")
-        .select("*, incident_trucks(incident_id)")
+        .select("*, incident_trucks(incident_id, trucks(name, unit_type))")
         .order("updated_at", { ascending: false })
         .limit(limit);
       if (error) throw error;
       return (data ?? []) as unknown as RecentShiftTicket[];
     },
   });
+}
+
+export function useLatestTicketPerTruck() {
+  const { data, ...rest } = useRecentShiftTickets(50);
+  const latestPerTruck = data
+    ? data.filter(
+        (t, i, self) => i === self.findIndex((s) => s.incident_truck_id === t.incident_truck_id)
+      )
+    : undefined;
+  return { data: latestPerTruck, ...rest };
 }
 
 export function useDuplicateShiftTicket(incidentTruckId: string) {

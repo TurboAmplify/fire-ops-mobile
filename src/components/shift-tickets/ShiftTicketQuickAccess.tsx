@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Plus, Loader2, ChevronRight, Flame, Truck as TruckIcon } from "lucide-react";
-import { useRecentShiftTickets } from "@/hooks/useShiftTickets";
+import { FileText, Plus, Loader2, ChevronRight, Flame, Truck as TruckIcon, History } from "lucide-react";
+import { useLatestTicketPerTruck, useRecentShiftTickets } from "@/hooks/useShiftTickets";
 import { useIncidents } from "@/hooks/useIncidents";
 import { useIncidentTrucks } from "@/hooks/useIncidentTrucks";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -16,11 +17,25 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
+/** Format a YYYY-MM-DD string for display without UTC shift */
+function fmtDate(dateStr: string) {
+  const [y, m, d] = dateStr.split("-");
+  if (!y || !m || !d) return dateStr;
+  return `${parseInt(m)}/${parseInt(d)}`;
+}
+
+function getTicketDate(t: any): string {
+  const entries = (t.equipment_entries as any[]) || [];
+  const pEntries = (t.personnel_entries as any[]) || [];
+  const shiftDate = entries[0]?.date || pEntries[0]?.date || null;
+  return shiftDate || t.updated_at?.split("T")[0] || "";
+}
+
 export function ShiftTicketQuickAccess({ open, onOpenChange }: Props) {
   const navigate = useNavigate();
-  const { data: recentTickets, isLoading: loadingRecent } = useRecentShiftTickets(5);
+  const { data: latestPerTruck, isLoading: loadingLatest } = useLatestTicketPerTruck();
   const { data: incidents } = useIncidents();
-  const [step, setStep] = useState<"home" | "pick-incident" | "pick-truck">("home");
+  const [step, setStep] = useState<"home" | "history" | "pick-incident" | "pick-truck">("home");
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
 
   const activeIncidents = incidents?.filter((i) => i.status === "active") ?? [];
@@ -28,7 +43,7 @@ export function ShiftTicketQuickAccess({ open, onOpenChange }: Props) {
   const handleTicketTap = (ticket: any) => {
     const incidentId = ticket.incident_trucks?.incident_id;
     if (!incidentId) return;
-    onOpenChange(false);
+    handleClose();
     navigate(`/incidents/${incidentId}/trucks/${ticket.incident_truck_id}/shift-ticket/${ticket.id}`);
   };
 
@@ -43,19 +58,13 @@ export function ShiftTicketQuickAccess({ open, onOpenChange }: Props) {
     setSelectedIncidentId(null);
   };
 
-  /** Format a YYYY-MM-DD string for display without UTC shift */
-  const formatDateString = (dateStr: string) => {
-    const [y, m, d] = dateStr.split("-");
-    if (!y || !m || !d) return dateStr;
-    return `${parseInt(m)}/${parseInt(d)}/${y}`;
-  };
-
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-[95vw] max-h-[85vh] overflow-y-auto rounded-2xl p-4 sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-base">
             {step === "home" && "Shift Tickets"}
+            {step === "history" && "All Tickets"}
             {step === "pick-incident" && "Select Incident"}
             {step === "pick-truck" && "Select Truck"}
           </DialogTitle>
@@ -63,7 +72,6 @@ export function ShiftTicketQuickAccess({ open, onOpenChange }: Props) {
 
         {step === "home" && (
           <div className="space-y-4">
-            {/* New Ticket button */}
             <button
               onClick={() => setStep("pick-incident")}
               className="flex w-full items-center gap-3 rounded-xl bg-primary p-4 text-primary-foreground text-left touch-target"
@@ -72,50 +80,58 @@ export function ShiftTicketQuickAccess({ open, onOpenChange }: Props) {
               <span className="font-semibold text-sm">New Shift Ticket</span>
             </button>
 
-            {/* Recent tickets */}
             <div>
               <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.15em] mb-2">
-                Recent Tickets
+                Latest by Truck
               </p>
-              {loadingRecent && (
+              {loadingLatest && (
                 <div className="flex justify-center py-4">
                   <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                 </div>
               )}
-              {!loadingRecent && (!recentTickets || recentTickets.length === 0) && (
+              {!loadingLatest && (!latestPerTruck || latestPerTruck.length === 0) && (
                 <p className="text-sm text-muted-foreground text-center py-4">No shift tickets yet</p>
               )}
               <div className="space-y-2">
-                {recentTickets?.map((t) => {
-                  const entries = (t.equipment_entries as any[]) || [];
-                  const pEntries = (t.personnel_entries as any[]) || [];
-                  const shiftDate = entries[0]?.date || pEntries[0]?.date || null;
-                  // Display raw YYYY-MM-DD string to avoid UTC shift
-                  const dateDisplay = shiftDate
-                    ? formatDateString(shiftDate)
-                    : formatDateString(t.updated_at.split("T")[0]);
-                  const label = [t.incident_name, t.equipment_type, dateDisplay].filter(Boolean).join(" - ") || "OF-297";
+                {latestPerTruck?.map((t) => {
+                  const truckName = t.incident_trucks?.trucks?.name ?? t.equipment_type ?? "Truck";
+                  const dateDisplay = fmtDate(getTicketDate(t));
                   return (
                     <button
                       key={t.id}
                       onClick={() => handleTicketTap(t)}
                       className="flex w-full items-center gap-3 rounded-xl bg-card p-3 border border-border/20 text-left transition-transform active:scale-[0.98] touch-target"
                     >
-                      <FileText className="h-4 w-4 text-primary shrink-0" />
+                      <TruckIcon className="h-4 w-4 text-primary shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{label}</p>
-                        <p className="text-[10px] text-muted-foreground">
-                          {t.status === "draft" ? "Draft" : "Final"}
+                        <p className="text-sm font-medium truncate">{truckName}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">
+                          {[t.incident_name, dateDisplay].filter(Boolean).join(" - ")}
                         </p>
                       </div>
+                      <Badge variant={t.status === "draft" ? "secondary" : "default"} className="text-[9px] shrink-0">
+                        {t.status === "draft" ? "Draft" : "Final"}
+                      </Badge>
                       <ChevronRight className="h-4 w-4 text-muted-foreground/30 shrink-0" />
                     </button>
                   );
                 })}
               </div>
             </div>
+
+            {latestPerTruck && latestPerTruck.length > 0 && (
+              <button
+                onClick={() => setStep("history")}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-border/30 p-3 text-sm text-muted-foreground transition-transform active:scale-[0.98] touch-target"
+              >
+                <History className="h-4 w-4" />
+                View All Tickets
+              </button>
+            )}
           </div>
         )}
+
+        {step === "history" && <HistoryList onTap={handleTicketTap} onBack={() => setStep("home")} />}
 
         {step === "pick-incident" && (
           <div className="space-y-2">
@@ -157,6 +173,52 @@ export function ShiftTicketQuickAccess({ open, onOpenChange }: Props) {
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function HistoryList({ onTap, onBack }: { onTap: (t: any) => void; onBack: () => void }) {
+  const { data: tickets, isLoading } = useRecentShiftTickets(25);
+
+  return (
+    <div className="space-y-2">
+      {isLoading && (
+        <div className="flex justify-center py-4">
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        </div>
+      )}
+      {!isLoading && (!tickets || tickets.length === 0) && (
+        <p className="text-sm text-muted-foreground text-center py-4">No tickets found</p>
+      )}
+      {tickets?.map((t) => {
+        const truckName = t.incident_trucks?.trucks?.name ?? t.equipment_type ?? "Truck";
+        const dateDisplay = fmtDate(getTicketDate(t));
+        return (
+          <button
+            key={t.id}
+            onClick={() => onTap(t)}
+            className="flex w-full items-center gap-3 rounded-xl bg-card p-3 border border-border/20 text-left transition-transform active:scale-[0.98] touch-target"
+          >
+            <FileText className="h-4 w-4 text-primary shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium truncate">{truckName}</p>
+              <p className="text-[10px] text-muted-foreground truncate">
+                {[t.incident_name, dateDisplay].filter(Boolean).join(" - ")}
+              </p>
+            </div>
+            <Badge variant={t.status === "draft" ? "secondary" : "default"} className="text-[9px] shrink-0">
+              {t.status === "draft" ? "Draft" : "Final"}
+            </Badge>
+            <ChevronRight className="h-4 w-4 text-muted-foreground/30 shrink-0" />
+          </button>
+        );
+      })}
+      <button
+        onClick={onBack}
+        className="w-full text-center text-sm text-muted-foreground py-2 touch-target"
+      >
+        Back
+      </button>
+    </div>
   );
 }
 
