@@ -1,5 +1,6 @@
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
+import { getLocalDateString } from "@/lib/local-date";
 import { ShiftTicketForm } from "@/components/shift-tickets/ShiftTicketForm";
 import { useCreateShiftTicket, useUpdateShiftTicket } from "@/hooks/useShiftTickets";
 import { useResourceOrders } from "@/hooks/useResourceOrders";
@@ -63,7 +64,7 @@ export default function ShiftTicketCreate() {
     // Build personnel entries from assigned crew
     const personnelEntries: PersonnelEntry[] = activeCrew.length > 0
       ? activeCrew.map((c) => ({
-          date: new Date().toISOString().split("T")[0],
+          date: getLocalDateString(),
           operator_name: c.crew_members?.name || "",
           op_start: "",
           op_stop: "",

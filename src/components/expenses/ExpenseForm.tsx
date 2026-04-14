@@ -1,4 +1,5 @@
 import { useIncidents } from "@/hooks/useIncidents";
+import { getLocalDateString } from "@/lib/local-date";
 import { useIncidentTrucks } from "@/hooks/useIncidentTrucks";
 import { CATEGORY_LABELS, FUEL_TYPE_LABELS, SCOPE_LABELS, uploadReceipt } from "@/services/expenses";
 import type { ExpenseCategory, ExpenseInsert, Expense, FuelType, ExpenseType, AttachmentScope } from "@/services/expenses";
@@ -36,7 +37,7 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
   const [category, setCategory] = useState<ExpenseCategory>((initial?.category as ExpenseCategory) ?? "fuel");
   const [amount, setAmount] = useState(initial?.amount?.toString() ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
-  const [date, setDate] = useState(initial?.date ?? new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(initial?.date ?? getLocalDateString());
   const [receiptUrl, setReceiptUrl] = useState(initial?.receipt_url ?? "");
   const [uploading, setUploading] = useState(false);
   const [parsing, setParsing] = useState(false);

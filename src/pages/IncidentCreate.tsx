@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { getLocalDateString } from "@/lib/local-date";
 import { useCreateIncident } from "@/hooks/useIncidents";
 import { TYPE_LABELS } from "@/services/incidents";
 import type { IncidentType } from "@/services/incidents";
@@ -25,7 +26,7 @@ export default function IncidentCreate() {
         type,
         status: "active",
         location: location.trim(),
-        start_date: new Date().toISOString().split("T")[0],
+        start_date: getLocalDateString(),
       });
       toast.success("Incident created");
       navigate(`/incidents/${incident.id}`);

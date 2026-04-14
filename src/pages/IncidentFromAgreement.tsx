@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { getLocalDateString } from "@/lib/local-date";
 import { Upload, Loader2, FileText, Check, ChevronRight, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { uploadAgreementForParsing, parseAgreementAI } from "@/services/agreement-parsing";
@@ -26,7 +27,7 @@ export default function IncidentFromAgreement() {
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
   const [type, setType] = useState<IncidentType>("wildfire");
-  const [startDate, setStartDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [startDate, setStartDate] = useState(() => getLocalDateString());
   const [agreementNumber, setAgreementNumber] = useState("");
   const [selectedTruckId, setSelectedTruckId] = useState("");
 
