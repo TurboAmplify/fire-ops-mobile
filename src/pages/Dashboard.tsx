@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import {
-  Flame, Plus, Receipt, ScanLine, ChevronRight, Settings,
+  Flame, Plus, ScanLine, ChevronRight, Settings,
   Truck, Users, ClipboardList, CheckCircle2,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
@@ -40,7 +40,19 @@ export default function Dashboard() {
       </div>
 
       <div className="px-4 pt-4 space-y-5 pb-6">
-        {/* Active incidents */}
+        {/* Hero Stats */}
+        <section>
+          <h2 className="mb-3 text-[10px] font-semibold text-muted-foreground/80 uppercase tracking-[0.15em] px-0.5">
+            Overview
+          </h2>
+          <div className="grid grid-cols-3 gap-3">
+            <StatCard icon={Flame} label="Active" value={activeCount} iconColor="text-destructive" />
+            <StatCard icon={Users} label="Crew" value={crewCount} iconColor="text-violet-500" />
+            <StatCard icon={Truck} label="Fleet" value={truckCount} iconColor="text-blue-500" />
+          </div>
+        </section>
+
+        {/* Active Incidents - vertical stacked list */}
         <section>
           <div className="flex items-center justify-between mb-3 px-0.5">
             <h2 className="text-[10px] font-semibold text-muted-foreground/80 uppercase tracking-[0.15em]">
@@ -62,27 +74,30 @@ export default function Dashboard() {
               <p className="text-xs text-muted-foreground mt-0.5">No active incidents</p>
             </div>
           ) : (
-            <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory no-scrollbar -mx-4 px-4">
+            <div className="rounded-2xl glass-tile divide-y divide-border/30">
               {activeIncidents.map((inc) => (
                 <Link
                   key={inc.id}
                   to={`/incidents/${inc.id}`}
-                  className="min-w-[160px] max-w-[180px] snap-start flex-shrink-0 rounded-2xl glass-tile p-4 border-l-2 border-l-destructive/40 transition-all duration-150 active:scale-[0.97] active:opacity-80"
+                  className="flex items-center gap-3 px-4 py-3.5 transition-all duration-150 active:bg-secondary/50 first:rounded-t-2xl last:rounded-b-2xl"
                 >
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-destructive" />
-                    </span>
-                    <span className="text-[10px] font-bold uppercase tracking-wide text-destructive">Active</span>
+                  <span className="relative flex h-2.5 w-2.5 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-destructive" />
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-[13px] leading-tight truncate">{inc.name}</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{inc.location}</p>
                   </div>
-                  <p className="font-semibold text-[13px] leading-tight line-clamp-2">{inc.name}</p>
-                  <p className="text-[11px] text-muted-foreground mt-1 truncate">{inc.location}</p>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0" />
                 </Link>
               ))}
             </div>
           )}
         </section>
+
+        {/* Glow divider */}
+        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent shadow-[0_0_8px_hsl(8_85%_52%/0.08)]" />
 
         {/* Quick Actions */}
         <section>
@@ -90,24 +105,9 @@ export default function Dashboard() {
             Quick Actions
           </h2>
           <div className="grid grid-cols-3 gap-3">
+            <QuickAction icon={ClipboardList} label="Shift Ticket" iconBg="bg-blue-500/15" iconColor="text-blue-500" onClick={() => navigate("/shift-tickets/new")} />
+            <QuickAction icon={ScanLine} label="Scan Receipt" iconBg="bg-emerald-500/15" iconColor="text-emerald-500" onClick={() => navigate("/expenses/batch-scan")} />
             <QuickAction icon={Plus} label="New Incident" iconBg="bg-destructive/15" iconColor="text-destructive" onClick={() => navigate("/incidents/new")} />
-            <QuickAction icon={Receipt} label="Add Expense" iconBg="bg-emerald-500/15" iconColor="text-emerald-500" onClick={() => navigate("/expenses/new")} />
-            <QuickAction icon={ScanLine} label="Scan Receipt" iconBg="bg-sky-500/15" iconColor="text-sky-500" onClick={() => navigate("/expenses/batch-scan")} />
-          </div>
-        </section>
-
-        {/* Glow divider */}
-        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent shadow-[0_0_8px_hsl(8_85%_52%/0.08)]" />
-
-        {/* Today's Summary */}
-        <section>
-          <h2 className="mb-3 text-[10px] font-semibold text-muted-foreground/80 uppercase tracking-[0.15em] px-0.5">
-            Overview
-          </h2>
-          <div className="grid grid-cols-3 gap-3">
-            <StatCard icon={Flame} label="Active" value={activeCount} iconColor="text-destructive" />
-            <StatCard icon={Users} label="Crew" value={crewCount} iconColor="text-violet-500" />
-            <StatCard icon={Truck} label="Fleet" value={truckCount} iconColor="text-blue-500" />
           </div>
         </section>
 
