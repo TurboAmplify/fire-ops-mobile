@@ -1,7 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { useParams, useNavigate } from "react-router-dom";
 import { useIncident, useUpdateIncident, useDeleteIncident } from "@/hooks/useIncidents";
-import { STATUS_LABELS, TYPE_LABELS } from "@/services/incidents";
+import { STATUS_LABELS, STATUS_COLORS, TYPE_LABELS } from "@/services/incidents";
 import type { IncidentStatus } from "@/services/incidents";
 import { ArrowLeft, MapPin, Calendar, Flame, TrendingUp, Loader2, Pencil, Trash2 } from "lucide-react";
 import { IncidentTruckList } from "@/components/incidents/IncidentTruckList";
@@ -9,7 +9,7 @@ import { AgreementUpload } from "@/components/incidents/AgreementUpload";
 import { useState } from "react";
 import { toast } from "sonner";
 
-const statusOptions: IncidentStatus[] = ["active", "contained", "controlled", "out"];
+const statusOptions: IncidentStatus[] = ["active", "demob", "closed"];
 
 export default function IncidentDetail() {
   const { incidentId } = useParams<{ incidentId: string }>();
@@ -44,10 +44,7 @@ export default function IncidentDetail() {
     );
   }
 
-  const statusColor =
-    incident.status === "active"
-      ? "bg-destructive/15 text-destructive"
-      : "bg-success/15 text-success";
+  const statusColor = STATUS_COLORS[incident.status as IncidentStatus] || "bg-secondary text-muted-foreground";
 
   const handleStatusChange = async (newStatus: IncidentStatus) => {
     try {
