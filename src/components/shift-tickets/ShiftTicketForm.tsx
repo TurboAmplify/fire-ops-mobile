@@ -532,13 +532,23 @@ export function ShiftTicketForm({
           ))}
         </section>
 
-        {/* ── Remarks ── */}
-        <section className="space-y-2">
-          <h3 className="text-sm font-bold">30. Remarks</h3>
-          <textarea value={remarks} onChange={(e) => { setRemarks(e.target.value); markDirty(); }} rows={3}
-            placeholder="Equipment breakdown, operating issues..."
-            className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-ring resize-none" />
-        </section>
+        {/* ── Remarks (collapsed) ── */}
+        <Collapsible defaultOpen={false}>
+          <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl border border-border bg-card px-3 py-2.5 touch-target active:bg-accent/30">
+            <div className="text-left min-w-0">
+              <p className="text-sm font-bold">30. Remarks</p>
+              <p className="text-[11px] text-muted-foreground truncate">
+                {remarks || "Tap to expand"}
+              </p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 transition-transform [[data-state=open]>&]:rotate-90" />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-2">
+            <textarea value={remarks} onChange={(e) => { setRemarks(e.target.value); markDirty(); }} rows={3}
+              placeholder="Equipment breakdown, operating issues..."
+              className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-ring resize-none" />
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* ── Signatures ── */}
         <section className="space-y-3">
