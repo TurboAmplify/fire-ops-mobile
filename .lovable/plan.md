@@ -1,54 +1,46 @@
 
 
-# Fix: Mobile Zoom and Horizontal Overflow
+# Shift Ticket Quick Access + Collapsible Truck Sections
 
-## What changes
+## What you're asking for
+1. **Inside the truck card**: Make sections collapsible to reduce scrolling, but keep them accessible
+2. **On the Dashboard**: Add a "Shift Tickets" quick-access button that opens a dialog/popup where you can pick incident + truck, see recent tickets, duplicate, or create new -- without navigating through the full incident drill-down
 
-Three targeted CSS/HTML edits. No component logic, save behavior, or workflow changes.
+## Plan
 
-### 1. Viewport meta tag (index.html)
-Add `maximum-scale=1, user-scalable=no` to prevent iOS Safari from auto-zooming on input focus.
+### Part 1: Collapsible truck sections (IncidentTruckList.tsx)
 
-```html
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-```
+Wrap these sections inside the expanded truck card with collapsible headers:
+- **Truck Details** (photo, specs) -- collapsed by default
+- **Resource Orders** -- collapsed by default  
+- **Agreements** -- collapsed by default
+- **Crew** -- collapsed by default
+- **Shifts** -- collapsed by default
+- **Shift Tickets** -- **expanded by default** (most used, should be visible first)
 
-**Risk**: None. This is standard for Capacitor apps. Accessibility zoom is handled at the OS level, not browser level, in native wrappers.
+Each section gets a small header bar with a chevron toggle. Uses the existing Radix `Collapsible` component already in the project. The shift tickets section stays at the bottom but is the only one open by default, so it's immediately visible without scrolling past all the other content.
 
-### 2. Global overflow guard (src/index.css)
-Add `overflow-x: hidden` to `html` and `body` to prevent any screen from scrolling sideways.
+Status changer stays always visible (it's small and important).
 
-```css
-html, body {
-  overflow-x: hidden;
-}
-```
+### Part 2: Dashboard shift ticket popup (Dashboard.tsx)
 
-**Risk**: Very low. The app is single-column mobile layout -- there is no legitimate horizontal scroll. This only clips accidental spill from wide tables or grids.
+Add a "Shift Tickets" button to the Operations quick-actions list on the home screen. When tapped, it opens a full-screen dialog (not a page navigation) that:
 
-### 3. Bump form input font sizes to 16px (src/index.css)
-Add a global rule so all `input`, `select`, and `textarea` elements render at minimum 16px. This is the root cause of iOS auto-zoom -- Safari zooms any focused input below 16px.
+1. **Shows recent shift tickets** (last 5 across all incidents) with incident name, truck, date, and status. Tapping one navigates directly to edit it.
+2. **Shows a "New Ticket" flow**: pick active incident -> pick assigned truck -> navigates to the create page. Two taps instead of six.
+3. **Duplicate button** on recent tickets, same as existing behavior.
 
-```css
-input, select, textarea {
-  font-size: 16px;
-}
-```
-
-**Risk assessment**:
-- The shared `Input` component already uses `text-base` (16px) on mobile -- no change there.
-- `SelectTrigger` uses `text-sm` (14px) -- bumped to 16px. Visually nearly identical, prevents zoom.
-- `Textarea` uses `text-sm` -- bumped to 16px. Same reasoning.
-- Inline inputs in `EquipmentEntryRow`, `PersonnelEntryRow`, `CrewSyncCard`, and `ShiftTicketForm` use `text-sm` -- bumped to 16px. These are in grid layouts with fixed gaps, so the 2px increase fits fine.
-- The OF-297 preview uses `text-[11px]` inputs for supervisor name/RO fields. These are inside a form-like preview, not a Capacitor webview, so the global 16px rule will override them. This is acceptable -- those two fields will render slightly larger but still fit within their container.
-
-### What is NOT changing
-- No component files edited (no risk of breaking save/signature/sync logic)
-- No shift ticket workflow changes
-- No database or service changes
-- Vertical scrolling behavior untouched
+This requires a new hook `useRecentShiftTickets()` that queries the shift_tickets table ordered by `updated_at` desc, limit 5.
 
 ### Files changed
-- `index.html` -- viewport meta tag only
-- `src/index.css` -- 2 additions (overflow-x, font-size floor)
+- `src/components/incidents/IncidentTruckList.tsx` -- wrap each section in Collapsible, shift tickets expanded by default
+- `src/pages/Dashboard.tsx` -- add Shift Tickets quick action that opens a dialog
+- `src/hooks/useShiftTickets.ts` -- add `useRecentShiftTickets()` hook
+- New: `src/components/shift-tickets/ShiftTicketQuickAccess.tsx` -- the popup dialog component
+
+### What will NOT change
+- No shift ticket form, save, signature, or PDF logic changes
+- No routing changes (existing routes stay the same)
+- No database changes
+- The full drill-down path (Incident -> Truck -> Shift Tickets) still works exactly as before
 
