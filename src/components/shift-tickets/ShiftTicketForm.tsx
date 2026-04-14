@@ -510,31 +510,7 @@ export function ShiftTicketForm({
           </DrawerContent>
         </Drawer>
 
-        {/* ── Equipment Time Entries ── */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold">Equipment Time</h3>
-            <button type="button" onClick={() => { setEquipmentEntries((prev) => [...prev, emptyEquipmentEntry()]); markDirty(); }}
-              className="flex items-center gap-1 text-xs font-medium text-primary touch-target">
-              <Plus className="h-3.5 w-3.5" /> Add Row
-            </button>
-          </div>
-          {equipmentEntries.map((entry, i) => (
-            <EquipmentEntryRow key={i} entry={entry} index={i}
-              onChange={(idx, updated) => { setEquipmentEntries((prev) => prev.map((e, j) => (j === idx ? updated : e))); markDirty(); }}
-              onRemove={(idx) => { if (equipmentEntries.length > 1) { setEquipmentEntries((prev) => prev.filter((_, j) => j !== idx)); markDirty(); } }}
-            />
-          ))}
-        </section>
-
-        {/* ── Crew Sync ── */}
-        <CrewSyncCard
-          equipmentEntries={equipmentEntries}
-          personnelEntries={personnelEntries}
-          setPersonnelEntries={(updater) => { setPersonnelEntries(updater); markDirty(); }}
-        />
-
-        {/* ── Personnel Entries ── */}
+        {/* ── Crew (Personnel Entries) ── */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold">Crew ({personnelEntries.length})</h3>
@@ -552,6 +528,33 @@ export function ShiftTicketForm({
             />
           ))}
         </section>
+
+        {/* ── Combined Time + Crew Sync Card ── */}
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <section className="p-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold">Equipment Time</h3>
+              <button type="button" onClick={() => { setEquipmentEntries((prev) => [...prev, emptyEquipmentEntry()]); markDirty(); }}
+                className="flex items-center gap-1 text-xs font-medium text-primary touch-target">
+                <Plus className="h-3.5 w-3.5" /> Add Row
+              </button>
+            </div>
+            {equipmentEntries.map((entry, i) => (
+              <EquipmentEntryRow key={i} entry={entry} index={i}
+                onChange={(idx, updated) => { setEquipmentEntries((prev) => prev.map((e, j) => (j === idx ? updated : e))); markDirty(); }}
+                onRemove={(idx) => { if (equipmentEntries.length > 1) { setEquipmentEntries((prev) => prev.filter((_, j) => j !== idx)); markDirty(); } }}
+              />
+            ))}
+          </section>
+          <div className="border-t border-border" />
+          <div className="p-3">
+            <CrewSyncCard
+              equipmentEntries={equipmentEntries}
+              personnelEntries={personnelEntries}
+              setPersonnelEntries={(updater) => { setPersonnelEntries(updater); markDirty(); }}
+            />
+          </div>
+        </div>
 
         <section className="space-y-3">
           <h3 className="text-sm font-bold">Signatures</h3>

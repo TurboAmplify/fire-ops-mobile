@@ -85,8 +85,7 @@ export function CrewSyncCard({ equipmentEntries, personnelEntries, setPersonnelE
   const miniInputClass = "w-full rounded-lg border border-input bg-background px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring";
 
   return (
-    <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-3 space-y-2">
-      {/* Row 1: All toggles in one line */}
+    <div className="space-y-2">
       <div className="flex items-center gap-1.5 flex-wrap">
         <button type="button" onClick={() => setActivity(activity === "travel" ? "work" : "travel")} className={chipClass(activity === "travel")}>
           {activity === "travel" ? "Travel" : "Work"}
@@ -97,7 +96,7 @@ export function CrewSyncCard({ equipmentEntries, personnelEntries, setPersonnelE
         <button type="button" onClick={() => setLodging(!lodging)} className={chipClass(lodging)}>
           Lodging
         </button>
-        <span className="text-[10px] text-muted-foreground">PD:</span>
+        <span className="w-px h-4 bg-border" />
         {(["B", "L", "D"] as const).map((meal) => {
           const val = meal === "B" ? perDiemB : meal === "L" ? perDiemL : perDiemD;
           const setter = meal === "B" ? setPerDiemB : meal === "L" ? setPerDiemL : setPerDiemD;
