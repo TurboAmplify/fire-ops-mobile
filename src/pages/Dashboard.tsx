@@ -1,10 +1,14 @@
 import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { Flame, Truck, Clock, Receipt, Users, ChevronRight, FileText, Settings } from "lucide-react";
+import {
+  Flame, Plus, Receipt, ScanLine, ChevronRight, Settings,
+  Truck, Users, ClipboardList, CheckCircle2,
+} from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useIncidents } from "@/hooks/useIncidents";
 import { useTrucks } from "@/hooks/useFleet";
 import { useCrewMembers } from "@/hooks/useCrewMembers";
+import { useNeedsList } from "@/hooks/useNeedsList";
 import { ShiftTicketQuickAccess } from "@/components/shift-tickets/ShiftTicketQuickAccess";
 import type { LucideIcon } from "lucide-react";
 
@@ -14,11 +18,14 @@ export default function Dashboard() {
   const { data: incidents } = useIncidents();
   const { data: trucks } = useTrucks();
   const { data: crew } = useCrewMembers();
+  const { data: needsItems } = useNeedsList();
 
   const activeIncidents = incidents?.filter((i) => i.status === "active") ?? [];
   const activeCount = activeIncidents.length;
   const truckCount = trucks?.length ?? 0;
   const crewCount = crew?.filter((c) => c.active).length ?? 0;
+
+  const unpurchasedNeeds = (needsItems ?? []).filter((n: any) => !n.is_purchased);
 
   return (
     <AppShell title="FireOps HQ" headerRight={
@@ -32,33 +39,7 @@ export default function Dashboard() {
         <div className="absolute bottom-0 right-0 w-[400px] h-[300px] rounded-full bg-[hsl(220_80%_55%/0.03)] blur-[100px]" />
       </div>
 
-      <div className="px-4 pt-4 space-y-6">
-        {/* Operations grid */}
-        <section>
-          <h2 className="mb-3 text-[10px] font-semibold text-muted-foreground/80 uppercase tracking-[0.15em] px-0.5">
-            Operations
-          </h2>
-          <div className="grid grid-cols-3 gap-3">
-            <GridTile to="/incidents" icon={Flame} label="Incidents" iconBg="bg-destructive/15" iconColor="text-destructive" badge={activeCount || undefined} />
-            <GridTile to="/fleet" icon={Truck} label="Fleet" iconBg="bg-blue-500/15" iconColor="text-blue-500" badge={truckCount || undefined} />
-            <GridTile to="/time" icon={Clock} label="Time" iconBg="bg-amber-500/15" iconColor="text-amber-500" />
-            <GridTile to="/expenses" icon={Receipt} label="Expenses" iconBg="bg-emerald-500/15" iconColor="text-emerald-500" />
-            <GridTile to="/crew" icon={Users} label="Crew" iconBg="bg-violet-500/15" iconColor="text-violet-500" badge={crewCount || undefined} />
-            <button
-              onClick={() => setShowTickets(true)}
-              className="flex flex-col items-center justify-center gap-1.5 rounded-2xl glass-tile p-4 transition-all duration-150 active:scale-[0.97] active:opacity-80 aspect-square relative"
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500/15">
-                <FileText className="h-5 w-5 text-sky-500" strokeWidth={1.75} />
-              </div>
-              <span className="text-[11px] font-semibold text-muted-foreground">Tickets</span>
-            </button>
-          </div>
-        </section>
-
-        {/* Glow divider */}
-        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent shadow-[0_0_8px_hsl(8_85%_52%/0.08)]" />
-
+      <div className="px-4 pt-4 space-y-5 pb-6">
         {/* Active incidents */}
         <section>
           <div className="flex items-center justify-between mb-3 px-0.5">
@@ -102,27 +83,100 @@ export default function Dashboard() {
             </div>
           )}
         </section>
+
+        {/* Quick Actions */}
+        <section>
+          <h2 className="mb-3 text-[10px] font-semibold text-muted-foreground/80 uppercase tracking-[0.15em] px-0.5">
+            Quick Actions
+          </h2>
+          <div className="grid grid-cols-3 gap-3">
+            <QuickAction icon={Plus} label="New Incident" iconBg="bg-destructive/15" iconColor="text-destructive" onClick={() => navigate("/incidents/new")} />
+            <QuickAction icon={Receipt} label="Add Expense" iconBg="bg-emerald-500/15" iconColor="text-emerald-500" onClick={() => navigate("/expenses/new")} />
+            <QuickAction icon={ScanLine} label="Scan Receipt" iconBg="bg-sky-500/15" iconColor="text-sky-500" onClick={() => navigate("/expenses/batch-scan")} />
+          </div>
+        </section>
+
+        {/* Glow divider */}
+        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent shadow-[0_0_8px_hsl(8_85%_52%/0.08)]" />
+
+        {/* Today's Summary */}
+        <section>
+          <h2 className="mb-3 text-[10px] font-semibold text-muted-foreground/80 uppercase tracking-[0.15em] px-0.5">
+            Overview
+          </h2>
+          <div className="grid grid-cols-3 gap-3">
+            <StatCard icon={Flame} label="Active" value={activeCount} iconColor="text-destructive" />
+            <StatCard icon={Users} label="Crew" value={crewCount} iconColor="text-violet-500" />
+            <StatCard icon={Truck} label="Fleet" value={truckCount} iconColor="text-blue-500" />
+          </div>
+        </section>
+
+        {/* Needs List Preview */}
+        <section>
+          <div className="flex items-center justify-between mb-3 px-0.5">
+            <h2 className="text-[10px] font-semibold text-muted-foreground/80 uppercase tracking-[0.15em]">
+              Needs List
+            </h2>
+            <Link to="/needs" className="text-xs font-semibold text-primary flex items-center gap-0.5">
+              View All <ChevronRight className="h-3 w-3" />
+            </Link>
+          </div>
+
+          {unpurchasedNeeds.length === 0 ? (
+            <div className="rounded-2xl glass-tile p-5 text-center">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 mx-auto mb-2">
+                <CheckCircle2 className="h-5 w-5 text-emerald-500" strokeWidth={1.75} />
+              </div>
+              <p className="text-sm font-semibold">All Stocked</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Nothing on the list</p>
+            </div>
+          ) : (
+            <div className="rounded-2xl glass-tile divide-y divide-border/30">
+              {unpurchasedNeeds.slice(0, 3).map((item: any) => (
+                <div key={item.id} className="flex items-center gap-3 px-4 py-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/15 shrink-0">
+                    <ClipboardList className="h-4 w-4 text-amber-500" strokeWidth={1.75} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{item.title}</p>
+                    {item.notes && <p className="text-[11px] text-muted-foreground truncate">{item.notes}</p>}
+                  </div>
+                </div>
+              ))}
+              {unpurchasedNeeds.length > 3 && (
+                <Link to="/needs" className="flex items-center justify-center py-2.5 text-xs font-semibold text-primary">
+                  +{unpurchasedNeeds.length - 3} more items
+                </Link>
+              )}
+            </div>
+          )}
+        </section>
       </div>
       <ShiftTicketQuickAccess open={showTickets} onOpenChange={setShowTickets} />
     </AppShell>
   );
 }
 
-function GridTile({ to, icon: Icon, label, iconBg, iconColor, badge }: { to: string; icon: LucideIcon; label: string; iconBg: string; iconColor: string; badge?: number }) {
+function QuickAction({ icon: Icon, label, iconBg, iconColor, onClick }: { icon: LucideIcon; label: string; iconBg: string; iconColor: string; onClick: () => void }) {
   return (
-    <Link
-      to={to}
-      className="flex flex-col items-center justify-center gap-1.5 rounded-2xl glass-tile p-4 transition-all duration-150 active:scale-[0.97] active:opacity-80 aspect-square relative"
+    <button
+      onClick={onClick}
+      className="flex flex-col items-center justify-center gap-1.5 rounded-2xl glass-tile p-4 transition-all duration-150 active:scale-[0.97] active:opacity-80 aspect-square touch-target"
     >
-      {badge !== undefined && (
-        <span className="absolute top-2 right-2 min-w-[20px] h-5 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold px-1.5">
-          {badge}
-        </span>
-      )}
       <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${iconBg}`}>
         <Icon className={`h-5 w-5 ${iconColor}`} strokeWidth={1.75} />
       </div>
       <span className="text-[11px] font-semibold text-muted-foreground">{label}</span>
-    </Link>
+    </button>
+  );
+}
+
+function StatCard({ icon: Icon, label, value, iconColor }: { icon: LucideIcon; label: string; value: number; iconColor: string }) {
+  return (
+    <div className="rounded-2xl glass-tile p-4 flex flex-col items-center gap-1.5">
+      <Icon className={`h-4 w-4 ${iconColor}`} strokeWidth={1.75} />
+      <span className="text-xl font-bold">{value}</span>
+      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{label}</span>
+    </div>
   );
 }
