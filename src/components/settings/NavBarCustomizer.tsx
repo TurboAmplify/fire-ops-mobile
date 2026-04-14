@@ -30,14 +30,14 @@ export const ALL_NAV_OPTIONS: NavTabOption[] = [
   { key: "needs", label: "Needs List", icon: ClipboardList, to: "/needs" },
 ];
 
-export const DEFAULT_TAB_KEYS = ["incidents", "payroll", "expenses"];
+export const DEFAULT_TAB_KEYS = ["incidents", "payroll", "expenses", "shift-tickets"];
 
 export function getSelectedTabKeys(): string[] {
   try {
     const stored = localStorage.getItem(NAV_STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed) && parsed.length === 3) return parsed;
+      if (Array.isArray(parsed) && parsed.length >= 1 && parsed.length <= 4) return parsed;
     }
   } catch {}
   return DEFAULT_TAB_KEYS;
@@ -66,7 +66,7 @@ export function NavBarCustomizer({ open, onOpenChange }: Props) {
         if (prev.length <= 1) return prev; // keep at least 1
         return prev.filter((k) => k !== key);
       }
-      if (prev.length >= 3) return prev; // max 3
+      if (prev.length >= 4) return prev; // max 4
       return [...prev, key];
     });
   };
@@ -84,12 +84,12 @@ export function NavBarCustomizer({ open, onOpenChange }: Props) {
           <DialogTitle className="text-base">Customize Navigation</DialogTitle>
         </DialogHeader>
         <p className="text-xs text-muted-foreground mb-3">
-          Choose 3 items for your bottom navigation bar. Home and More are always visible.
+          Choose up to 4 items for your bottom navigation bar. Home is always visible.
         </p>
         <div className="space-y-2">
           {ALL_NAV_OPTIONS.map((opt) => {
             const isSelected = selected.includes(opt.key);
-            const atMax = selected.length >= 3 && !isSelected;
+            const atMax = selected.length >= 4 && !isSelected;
             return (
               <button
                 key={opt.key}
@@ -118,7 +118,7 @@ export function NavBarCustomizer({ open, onOpenChange }: Props) {
         </div>
         <button
           onClick={handleSave}
-          disabled={selected.length !== 3}
+          disabled={selected.length < 1 || selected.length > 4}
           className="w-full mt-4 rounded-xl bg-primary py-3.5 text-sm font-semibold text-primary-foreground disabled:opacity-40 touch-target transition-all active:scale-[0.98]"
         >
           Save
