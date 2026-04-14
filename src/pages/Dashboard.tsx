@@ -128,6 +128,7 @@ export default function Dashboard() {
           </section>
         </div>
       </div>
+      <ShiftTicketQuickAccess open={showTickets} onOpenChange={setShowTickets} />
     </AppShell>
   );
 }
