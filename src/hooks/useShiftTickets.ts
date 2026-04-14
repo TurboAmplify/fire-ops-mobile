@@ -56,6 +56,21 @@ export function useDeleteShiftTicket(incidentTruckId: string) {
   });
 }
 
+export function useRecentShiftTickets(limit = 5) {
+  return useQuery({
+    queryKey: ["shift-tickets-recent", limit],
+    queryFn: async () => {
+      const { data, error } = await (await import("@/integrations/supabase/client")).supabase
+        .from("shift_tickets")
+        .select("*")
+        .order("updated_at", { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return (data ?? []) as unknown as ShiftTicket[];
+    },
+  });
+}
+
 export function useDuplicateShiftTicket(incidentTruckId: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -63,6 +78,7 @@ export function useDuplicateShiftTicket(incidentTruckId: string) {
       duplicateShiftTicket(ticket, organizationId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["shift-tickets", incidentTruckId] });
+      qc.invalidateQueries({ queryKey: ["shift-tickets-recent"] });
     },
   });
 }

@@ -1,14 +1,17 @@
+import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { Flame, Truck, Clock, Receipt, Users, ChevronRight } from "lucide-react";
+import { Flame, Truck, Clock, Receipt, Users, ChevronRight, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useIncidents } from "@/hooks/useIncidents";
 import { useTrucks } from "@/hooks/useFleet";
 import { useCrewMembers } from "@/hooks/useCrewMembers";
+import { ShiftTicketQuickAccess } from "@/components/shift-tickets/ShiftTicketQuickAccess";
 import heroBg from "@/assets/hero-bg.jpg";
 import fireLogo from "@/assets/fire-logo.png";
 import type { LucideIcon } from "lucide-react";
 
 export default function Dashboard() {
+  const [showTickets, setShowTickets] = useState(false);
   const { data: incidents } = useIncidents();
   const { data: trucks } = useTrucks();
   const { data: crew } = useCrewMembers();
@@ -62,6 +65,19 @@ export default function Dashboard() {
               <QuickAction to="/time" icon={Clock} label="Time" desc="Shift tracking" />
               <QuickAction to="/expenses" icon={Receipt} label="Expenses" desc="Receipts & costs" />
               <QuickAction to="/crew" icon={Users} label="Crew" desc="Personnel management" />
+              <button
+                onClick={() => setShowTickets(true)}
+                className="flex w-full items-center gap-3.5 rounded-2xl bg-card p-4 card-shadow border border-border/20 transition-all duration-150 active:scale-[0.98] active:shadow-none text-left"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary shrink-0">
+                  <FileText className="h-[18px] w-[18px] text-muted-foreground" strokeWidth={1.75} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold">Shift Tickets</p>
+                  <p className="text-[11px] text-muted-foreground">OF-297 quick access</p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground/30 shrink-0" />
+              </button>
             </div>
           </section>
 
@@ -112,6 +128,7 @@ export default function Dashboard() {
           </section>
         </div>
       </div>
+      <ShiftTicketQuickAccess open={showTickets} onOpenChange={setShowTickets} />
     </AppShell>
   );
 }
