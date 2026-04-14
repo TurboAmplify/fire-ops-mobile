@@ -2,11 +2,11 @@ import { AppShell } from "@/components/AppShell";
 import { Link } from "react-router-dom";
 import { Plus, Loader2, FileUp, Flame } from "lucide-react";
 import { useIncidents } from "@/hooks/useIncidents";
-import { STATUS_LABELS } from "@/services/incidents";
+import { STATUS_LABELS, STATUS_COLORS } from "@/services/incidents";
 import { useState } from "react";
 import type { IncidentStatus } from "@/services/incidents";
 
-const filters: (IncidentStatus | "all")[] = ["all", "active", "contained", "controlled", "out"];
+const filters: (IncidentStatus | "all")[] = ["all", "active", "demob", "closed"];
 
 export default function Incidents() {
   const [filter, setFilter] = useState<IncidentStatus | "all">("all");
@@ -91,12 +91,10 @@ export default function Incidents() {
                   </div>
                   <span
                     className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ml-3 shrink-0 ${
-                      inc.status === "active"
-                        ? "bg-destructive/12 text-destructive"
-                        : "bg-success/12 text-success"
+                      STATUS_COLORS[inc.status as IncidentStatus] || "bg-secondary text-muted-foreground"
                     }`}
                   >
-                    {inc.status}
+                    {STATUS_LABELS[inc.status as IncidentStatus] || inc.status}
                   </span>
                 </div>
                 <div className="mt-2.5 flex gap-3 text-xs text-muted-foreground">

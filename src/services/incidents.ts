@@ -5,14 +5,19 @@ export type Incident = Tables<"incidents">;
 export type IncidentInsert = TablesInsert<"incidents">;
 export type IncidentUpdate = TablesUpdate<"incidents">;
 
-export type IncidentStatus = "active" | "contained" | "controlled" | "out";
+export type IncidentStatus = "active" | "demob" | "closed";
 export type IncidentType = "wildfire" | "prescribed" | "structure" | "other";
 
 export const STATUS_LABELS: Record<IncidentStatus, string> = {
   active: "Active",
-  contained: "Contained",
-  controlled: "Controlled",
-  out: "Out",
+  demob: "Demob",
+  closed: "Closed",
+};
+
+export const STATUS_COLORS: Record<IncidentStatus, string> = {
+  active: "bg-destructive/12 text-destructive",
+  demob: "bg-amber-500/12 text-amber-600",
+  closed: "bg-success/12 text-success",
 };
 
 export const TYPE_LABELS: Record<IncidentType, string> = {
