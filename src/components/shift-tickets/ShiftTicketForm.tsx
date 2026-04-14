@@ -480,7 +480,8 @@ export function ShiftTicketForm({
             <label className={labelClass}>14. Miles</label>
             <input type="number" inputMode="decimal" value={miles} onChange={(e) => setField(setMiles)(e.target.value)} placeholder="0" className={inputClass} />
           </div>
-        </section>
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* ── Equipment Entries ── */}
         <section className="space-y-3">
