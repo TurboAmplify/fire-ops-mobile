@@ -513,20 +513,58 @@ export function ShiftTicketForm({
         {/* ── Crew (Personnel Entries) ── */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold">Crew ({personnelEntries.length})</h3>
+            <h3 className="text-sm font-bold">
+              Crew ({personnelEntries.length})
+              {personnelEntries.length > 0 && (
+                <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                  {Math.round(personnelEntries.reduce((sum, e) => sum + (e.total || 0), 0) * 10) / 10}h
+                </span>
+              )}
+            </h3>
             <button type="button" onClick={() => { setPersonnelEntries((prev) => [...prev, emptyPersonnelEntry()]); markDirty(); }}
               className="flex items-center gap-1 text-xs font-medium text-primary touch-target">
               <Plus className="h-3.5 w-3.5" /> Add Crew
             </button>
           </div>
-          {personnelEntries.map((entry, i) => (
-            <PersonnelEntryRow key={i} entry={entry} index={i}
-              collapsed={expandedPersonnelIndex !== i}
-              onToggle={() => setExpandedPersonnelIndex(expandedPersonnelIndex === i ? null : i)}
+          {/* Compact initials grid */}
+          <div className="flex flex-wrap gap-1.5">
+            {personnelEntries.map((entry, i) => {
+              const name = entry.operator_name || "";
+              const parts = name.trim().split(/\s+/);
+              const initials = parts.length >= 2
+                ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+                : name.slice(0, 2).toUpperCase() || String(i + 1);
+              const hasHours = (entry.total || 0) > 0;
+              const isExpanded = expandedPersonnelIndex === i;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setExpandedPersonnelIndex(isExpanded ? null : i)}
+                  className={`w-9 h-9 rounded-full text-[11px] font-bold flex items-center justify-center transition-colors touch-target ${
+                    isExpanded
+                      ? "bg-primary text-primary-foreground ring-2 ring-primary/30"
+                      : hasHours
+                        ? "bg-primary/15 text-primary"
+                        : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {initials}
+                </button>
+              );
+            })}
+          </div>
+          {/* Expanded detail for selected crew member */}
+          {expandedPersonnelIndex !== null && personnelEntries[expandedPersonnelIndex] && (
+            <PersonnelEntryRow
+              entry={personnelEntries[expandedPersonnelIndex]}
+              index={expandedPersonnelIndex}
+              collapsed={false}
+              onToggle={() => setExpandedPersonnelIndex(null)}
               onChange={(idx, updated) => { setPersonnelEntries((prev) => prev.map((e, j) => (j === idx ? updated : e))); markDirty(); }}
-              onRemove={(idx) => { if (personnelEntries.length > 1) { setPersonnelEntries((prev) => prev.filter((_, j) => j !== idx)); markDirty(); } }}
+              onRemove={(idx) => { if (personnelEntries.length > 1) { setPersonnelEntries((prev) => prev.filter((_, j) => j !== idx)); setExpandedPersonnelIndex(null); markDirty(); } }}
             />
-          ))}
+          )}
         </section>
 
         {/* ── Combined Time + Crew Sync Card ── */}
