@@ -56,17 +56,21 @@ export function useDeleteShiftTicket(incidentTruckId: string) {
   });
 }
 
+export type RecentShiftTicket = ShiftTicket & {
+  incident_trucks: { incident_id: string } | null;
+};
+
 export function useRecentShiftTickets(limit = 5) {
   return useQuery({
     queryKey: ["shift-tickets-recent", limit],
     queryFn: async () => {
       const { data, error } = await (await import("@/integrations/supabase/client")).supabase
         .from("shift_tickets")
-        .select("*")
+        .select("*, incident_trucks(incident_id)")
         .order("updated_at", { ascending: false })
         .limit(limit);
       if (error) throw error;
-      return (data ?? []) as unknown as ShiftTicket[];
+      return (data ?? []) as unknown as RecentShiftTicket[];
     },
   });
 }

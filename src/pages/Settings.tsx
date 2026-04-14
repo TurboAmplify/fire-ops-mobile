@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/useAuth";
 import { useOrganization } from "@/hooks/useOrganization";
@@ -18,13 +19,16 @@ import {
   ClipboardList,
   Sun,
   Moon,
+  SlidersHorizontal,
 } from "lucide-react";
+import { NavBarCustomizer } from "@/components/settings/NavBarCustomizer";
 
 export default function Settings() {
   const { user, signOut } = useAuth();
   const { membership } = useOrganization();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const [showNavCustomizer, setShowNavCustomizer] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -94,6 +98,11 @@ export default function Settings() {
               <span className="flex-1 text-sm">Theme</span>
               <span className="text-sm text-muted-foreground capitalize">{theme}</span>
             </button>
+            <LinkRow
+              icon={SlidersHorizontal}
+              label="Customize Nav Bar"
+              onClick={() => setShowNavCustomizer(true)}
+            />
           </div>
         </section>
 
@@ -141,6 +150,7 @@ export default function Settings() {
           Sign Out
         </button>
       </div>
+      <NavBarCustomizer open={showNavCustomizer} onOpenChange={setShowNavCustomizer} />
     </AppShell>
   );
 }
