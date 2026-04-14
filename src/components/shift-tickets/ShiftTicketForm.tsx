@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Plus, Loader2, FileText, Save, Download, AlertTriangle, Copy } from "lucide-react";
+import { getLocalDateString } from "@/lib/local-date";
 import { AppShell } from "@/components/AppShell";
 import { SignaturePicker } from "./SignaturePicker";
 import type { SignatureMetadata } from "./SignaturePicker";
@@ -29,7 +30,7 @@ interface ShiftTicketFormProps {
 }
 
 const emptyEquipmentEntry = (): EquipmentEntry => ({
-  date: new Date().toISOString().split("T")[0],
+  date: getLocalDateString(),
   start: "",
   stop: "",
   total: 0,
@@ -39,7 +40,7 @@ const emptyEquipmentEntry = (): EquipmentEntry => ({
 });
 
 const emptyPersonnelEntry = (): PersonnelEntry => ({
-  date: new Date().toISOString().split("T")[0],
+  date: getLocalDateString(),
   operator_name: "",
   op_start: "",
   op_stop: "",

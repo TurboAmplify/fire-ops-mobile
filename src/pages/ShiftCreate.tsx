@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/AppShell";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { getLocalDateString } from "@/lib/local-date";
 import { useIncidentTruckCrew } from "@/hooks/useIncidentTruckCrew";
 import { useResourceOrders } from "@/hooks/useResourceOrders";
 import { useCreateShift } from "@/hooks/useShifts";
@@ -37,7 +38,7 @@ export default function ShiftCreate() {
   const { data: resourceOrders } = useResourceOrders(incidentTruckId || "");
   const createMutation = useCreateShift(incidentTruckId || "");
 
-  const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(() => getLocalDateString());
   const [type, setType] = useState<ShiftType>("day");
   const [startTime, setStartTime] = useState("06:00");
   const [endTime, setEndTime] = useState("18:00");
