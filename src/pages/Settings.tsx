@@ -14,9 +14,6 @@ import {
   Flame,
   Mail,
   Building2,
-  Users,
-  Truck,
-  ClipboardList,
   Sun,
   Moon,
   SlidersHorizontal,
@@ -59,21 +56,6 @@ export default function Settings() {
               icon={Building2}
               label={membership?.organizationName ?? "Organization"}
               onClick={() => navigate("/settings/organization")}
-            />
-            <LinkRow
-              icon={ClipboardList}
-              label="Needs List"
-              onClick={() => navigate("/needs")}
-            />
-            <LinkRow
-              icon={Users}
-              label="Crew"
-              onClick={() => navigate("/crew")}
-            />
-            <LinkRow
-              icon={Truck}
-              label="Fleet"
-              onClick={() => navigate("/fleet")}
             />
           </div>
         </section>
