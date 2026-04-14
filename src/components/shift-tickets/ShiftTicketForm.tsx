@@ -111,6 +111,7 @@ export function ShiftTicketForm({
 
   // Collapsible personnel
   const [expandedPersonnelIndex, setExpandedPersonnelIndex] = useState<number | null>(null);
+  const [activeDrawer, setActiveDrawer] = useState<"header" | "equipment" | "options" | "remarks" | null>(null);
 
   // Supervisor sheet
   const [showSupervisorSheet, setShowSupervisorSheet] = useState(false);
@@ -373,185 +374,141 @@ export function ShiftTicketForm({
           </div>
         )}
 
-        {/* ── Header Fields (collapsed) ── */}
-        <Collapsible defaultOpen={false}>
-          <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl border border-border bg-card px-3 py-2.5 touch-target active:bg-accent/30">
-            <div className="text-left min-w-0">
-              <p className="text-sm font-bold">Header Info</p>
-              <p className="text-[11px] text-muted-foreground truncate">
-                {[incidentName, agreementNumber, contractorName].filter(Boolean).join(" | ") || "Tap to expand"}
-              </p>
-            </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 transition-transform [[data-state=open]>&]:rotate-90" />
-          </CollapsibleTrigger>
-          <CollapsibleContent className="pt-2 space-y-2">
-            <div>
-              <label className={labelClass}>1. Agreement / Contract #</label>
-              <input value={agreementNumber} onChange={(e) => setField(setAgreementNumber)(e.target.value)} className={inputClass} />
-            </div>
-            <div>
-              <label className={labelClass}>2. Contractor Name</label>
-              <input value={contractorName} onChange={(e) => setField(setContractorName)(e.target.value)} className={inputClass} />
-            </div>
-            <div>
-              <label className={labelClass}>3. Resource Order #</label>
-              <input value={resourceOrderNumber} onChange={(e) => setField(setResourceOrderNumber)(e.target.value)} className={inputClass} />
-            </div>
-            <div>
-              <label className={labelClass}>4. Incident Name</label>
-              <input value={incidentName} onChange={(e) => setField(setIncidentName)(e.target.value)} className={inputClass} />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className={labelClass}>5. Incident #</label>
-                <input value={incidentNumber} onChange={(e) => setField(setIncidentNumber)(e.target.value)} className={inputClass} />
-              </div>
-              <div>
-                <label className={labelClass}>6. Financial Code</label>
-                <input value={financialCode} onChange={(e) => setField(setFinancialCode)(e.target.value)} className={inputClass} />
-              </div>
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
-
-        {/* ── Equipment Info (collapsed) ── */}
-        <Collapsible defaultOpen={false}>
-          <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl border border-border bg-card px-3 py-2.5 touch-target active:bg-accent/30">
-            <div className="text-left min-w-0">
-              <p className="text-sm font-bold">Equipment Info</p>
-              <p className="text-[11px] text-muted-foreground truncate">
-                {[equipmentMakeModel, equipmentType, licenseId].filter(Boolean).join(" | ") || "Tap to expand"}
-              </p>
-            </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 transition-transform [[data-state=open]>&]:rotate-90" />
-          </CollapsibleTrigger>
-          <CollapsibleContent className="pt-2 space-y-2">
-            <div>
-              <label className={labelClass}>7. Equipment Make/Model</label>
-              <input value={equipmentMakeModel} onChange={(e) => setField(setEquipmentMakeModel)(e.target.value)} className={inputClass} />
-            </div>
-            <div>
-              <label className={labelClass}>8. Equipment Type</label>
-              <input value={equipmentType} onChange={(e) => setField(setEquipmentType)(e.target.value)} className={inputClass} />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className={labelClass}>9. Serial/VIN</label>
-                <input value={serialVin} onChange={(e) => setField(setSerialVin)(e.target.value)} className={inputClass} />
-              </div>
-              <div>
-                <label className={labelClass}>10. License/ID</label>
-                <input value={licenseId} onChange={(e) => setField(setLicenseId)(e.target.value)} className={inputClass} />
-              </div>
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
-
-        {/* ── Options (collapsed) ── */}
-        <Collapsible defaultOpen={false}>
-          <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl border border-border bg-card px-3 py-2.5 touch-target active:bg-accent/30">
-            <div className="text-left min-w-0">
-              <p className="text-sm font-bold">Options</p>
-              <p className="text-[11px] text-muted-foreground truncate">
-                {[transportRetained && "Transport Retained", isFirstLast && `First/Last (${firstLastType})`, miles && `${miles} mi`].filter(Boolean).join(" | ") || "Tap to expand"}
-              </p>
-            </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 transition-transform [[data-state=open]>&]:rotate-90" />
-          </CollapsibleTrigger>
-          <CollapsibleContent className="pt-2 space-y-2">
-            <label className="flex items-center gap-3 touch-target">
-              <input type="checkbox" checked={transportRetained} onChange={(e) => { setTransportRetained(e.target.checked); markDirty(); }} className="h-5 w-5 rounded border-input accent-primary" />
-              <span className="text-sm">12. Transport Retained</span>
-            </label>
-            <label className="flex items-center gap-3 touch-target">
-              <input type="checkbox" checked={isFirstLast} onChange={(e) => { setIsFirstLast(e.target.checked); markDirty(); }} className="h-5 w-5 rounded border-input accent-primary" />
-              <span className="text-sm">13. First/Last Ticket</span>
-            </label>
-          {isFirstLast && (
-            <div className="grid grid-cols-2 gap-2 pl-8">
-              {(["mobilization", "demobilization"] as const).map((t) => (
-                <button key={t} type="button" onClick={() => { setFirstLastType(t); markDirty(); }}
-                  className={`rounded-xl px-3 py-2.5 text-sm font-medium capitalize touch-target ${firstLastType === t ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
-                  {t}
-                </button>
-              ))}
-            </div>
-          )}
-          <div>
-            <label className={labelClass}>14. Miles</label>
-            <input type="number" inputMode="decimal" value={miles} onChange={(e) => setField(setMiles)(e.target.value)} placeholder="0" className={inputClass} />
-          </div>
-          </CollapsibleContent>
-        </Collapsible>
-
-        {/* ── Equipment Entries ── */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold">Equipment</h3>
-            <button onClick={() => { setEquipmentEntries([...equipmentEntries, emptyEquipmentEntry()]); markDirty(); }}
-              className="flex items-center gap-1 text-xs font-bold text-primary touch-target">
-              <Plus className="h-3.5 w-3.5" /> Add Row
+        {/* ── Chip row for secondary info ── */}
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
+          {([
+            { key: "header" as const, label: "Header", hasData: !!(incidentName || agreementNumber || contractorName) },
+            { key: "equipment" as const, label: "Equipment", hasData: !!(equipmentMakeModel || equipmentType || licenseId) },
+            { key: "options" as const, label: "Options", hasData: !!(transportRetained || isFirstLast || miles) },
+            { key: "remarks" as const, label: "Remarks", hasData: !!remarks },
+          ]).map((chip) => (
+            <button
+              key={chip.key}
+              type="button"
+              onClick={() => setActiveDrawer(chip.key)}
+              className="relative shrink-0 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-semibold text-foreground touch-target active:bg-accent/40 transition-colors"
+            >
+              {chip.label}
+              {chip.hasData && (
+                <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-primary" />
+              )}
             </button>
-          </div>
-          {equipmentEntries.map((entry, i) => (
-            <EquipmentEntryRow key={i} entry={entry} index={i} onChange={updateEquipment} onRemove={removeEquipment} />
           ))}
-        </section>
+        </div>
 
-        {/* ── Personnel Entries ── */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold">Crew</h3>
-            <button onClick={() => { setPersonnelEntries([...personnelEntries, emptyPersonnelEntry()]); markDirty(); }}
-              className="flex items-center gap-1 text-xs font-bold text-primary touch-target">
-              <Plus className="h-3.5 w-3.5" /> Add Row
-            </button>
-          </div>
-
-          {/* Sync crew times from equipment */}
-          {personnelEntries.length > 0 && equipmentEntries.length > 0 && (
-            <CrewSyncCard
-              equipmentEntries={equipmentEntries}
-              personnelEntries={personnelEntries}
-              setPersonnelEntries={(entries) => {
-                const resolved = typeof entries === "function" ? entries(personnelEntries) : entries;
-                setPersonnelEntries(resolved);
-                markDirty();
-              }}
-            />
-          )}
-
-          {crewRoster && crewRoster.length > 0 && personnelEntries.length > 0 && (
-            <p className="text-[10px] text-muted-foreground">
-              {crewRoster.length} crew member{crewRoster.length !== 1 ? "s" : ""} auto-loaded from truck assignment
-            </p>
-          )}
-          {personnelEntries.map((entry, i) => (
-            <PersonnelEntryRow key={i} entry={entry} index={i} onChange={updatePersonnel} onRemove={removePersonnel}
-              collapsed={expandedPersonnelIndex !== i}
-              onToggle={() => setExpandedPersonnelIndex(expandedPersonnelIndex === i ? null : i)} />
-          ))}
-        </section>
-
-        {/* ── Remarks (collapsed) ── */}
-        <Collapsible defaultOpen={false}>
-          <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl border border-border bg-card px-3 py-2.5 touch-target active:bg-accent/30">
-            <div className="text-left min-w-0">
-              <p className="text-sm font-bold">30. Remarks</p>
-              <p className="text-[11px] text-muted-foreground truncate">
-                {remarks || "Tap to expand"}
-              </p>
+        {/* ── Drawers for each chip ── */}
+        <Drawer open={activeDrawer === "header"} onOpenChange={(open) => !open && setActiveDrawer(null)}>
+          <DrawerContent>
+            <DrawerHeader><DrawerTitle>Header Info</DrawerTitle></DrawerHeader>
+            <div className="px-4 pb-2 space-y-2">
+              <div>
+                <label className={labelClass}>1. Agreement / Contract #</label>
+                <input value={agreementNumber} onChange={(e) => setField(setAgreementNumber)(e.target.value)} className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>2. Contractor Name</label>
+                <input value={contractorName} onChange={(e) => setField(setContractorName)(e.target.value)} className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>3. Resource Order #</label>
+                <input value={resourceOrderNumber} onChange={(e) => setField(setResourceOrderNumber)(e.target.value)} className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>4. Incident Name</label>
+                <input value={incidentName} onChange={(e) => setField(setIncidentName)(e.target.value)} className={inputClass} />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className={labelClass}>5. Incident #</label>
+                  <input value={incidentNumber} onChange={(e) => setField(setIncidentNumber)(e.target.value)} className={inputClass} />
+                </div>
+                <div>
+                  <label className={labelClass}>6. Financial Code</label>
+                  <input value={financialCode} onChange={(e) => setField(setFinancialCode)(e.target.value)} className={inputClass} />
+                </div>
+              </div>
             </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 transition-transform [[data-state=open]>&]:rotate-90" />
-          </CollapsibleTrigger>
-          <CollapsibleContent className="pt-2">
-            <textarea value={remarks} onChange={(e) => { setRemarks(e.target.value); markDirty(); }} rows={3}
-              placeholder="Equipment breakdown, operating issues..."
-              className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-ring resize-none" />
-          </CollapsibleContent>
-        </Collapsible>
+            <DrawerFooter>
+              <Button onClick={() => setActiveDrawer(null)}>Done</Button>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
 
-        {/* ── Signatures ── */}
+        <Drawer open={activeDrawer === "equipment"} onOpenChange={(open) => !open && setActiveDrawer(null)}>
+          <DrawerContent>
+            <DrawerHeader><DrawerTitle>Equipment Info</DrawerTitle></DrawerHeader>
+            <div className="px-4 pb-2 space-y-2">
+              <div>
+                <label className={labelClass}>7. Equipment Make/Model</label>
+                <input value={equipmentMakeModel} onChange={(e) => setField(setEquipmentMakeModel)(e.target.value)} className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>8. Equipment Type</label>
+                <input value={equipmentType} onChange={(e) => setField(setEquipmentType)(e.target.value)} className={inputClass} />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className={labelClass}>9. Serial/VIN</label>
+                  <input value={serialVin} onChange={(e) => setField(setSerialVin)(e.target.value)} className={inputClass} />
+                </div>
+                <div>
+                  <label className={labelClass}>10. License/ID</label>
+                  <input value={licenseId} onChange={(e) => setField(setLicenseId)(e.target.value)} className={inputClass} />
+                </div>
+              </div>
+            </div>
+            <DrawerFooter>
+              <Button onClick={() => setActiveDrawer(null)}>Done</Button>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+
+        <Drawer open={activeDrawer === "options"} onOpenChange={(open) => !open && setActiveDrawer(null)}>
+          <DrawerContent>
+            <DrawerHeader><DrawerTitle>Options</DrawerTitle></DrawerHeader>
+            <div className="px-4 pb-2 space-y-2">
+              <label className="flex items-center gap-3 touch-target">
+                <input type="checkbox" checked={transportRetained} onChange={(e) => { setTransportRetained(e.target.checked); markDirty(); }} className="h-5 w-5 rounded border-input accent-primary" />
+                <span className="text-sm">12. Transport Retained</span>
+              </label>
+              <label className="flex items-center gap-3 touch-target">
+                <input type="checkbox" checked={isFirstLast} onChange={(e) => { setIsFirstLast(e.target.checked); markDirty(); }} className="h-5 w-5 rounded border-input accent-primary" />
+                <span className="text-sm">13. First/Last Ticket</span>
+              </label>
+              {isFirstLast && (
+                <div className="grid grid-cols-2 gap-2 pl-8">
+                  {(["mobilization", "demobilization"] as const).map((t) => (
+                    <button key={t} type="button" onClick={() => { setFirstLastType(t); markDirty(); }}
+                      className={`rounded-xl px-3 py-2.5 text-sm font-medium capitalize touch-target ${firstLastType === t ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div>
+                <label className={labelClass}>14. Miles</label>
+                <input type="number" inputMode="decimal" value={miles} onChange={(e) => setField(setMiles)(e.target.value)} placeholder="0" className={inputClass} />
+              </div>
+            </div>
+            <DrawerFooter>
+              <Button onClick={() => setActiveDrawer(null)}>Done</Button>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+
+        <Drawer open={activeDrawer === "remarks"} onOpenChange={(open) => !open && setActiveDrawer(null)}>
+          <DrawerContent>
+            <DrawerHeader><DrawerTitle>30. Remarks</DrawerTitle></DrawerHeader>
+            <div className="px-4 pb-2">
+              <textarea value={remarks} onChange={(e) => { setRemarks(e.target.value); markDirty(); }} rows={4}
+                placeholder="Equipment breakdown, operating issues..."
+                className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-ring resize-none" />
+            </div>
+            <DrawerFooter>
+              <Button onClick={() => setActiveDrawer(null)}>Done</Button>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
         <section className="space-y-3">
           <h3 className="text-sm font-bold">Signatures</h3>
 
