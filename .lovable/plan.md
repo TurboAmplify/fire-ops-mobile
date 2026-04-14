@@ -1,27 +1,63 @@
 
 
-# Reorder: Equipment on Top, Crew Below with Inline Status
+# Clean Up Shift Ticket Quick Access: One Per Truck + View History
 
 ## What's changing
 
-### 1. Move Equipment Time card above Crew section (`ShiftTicketForm.tsx`)
-Current order: Crew (initials) -> Equipment Time + CrewSync card
-New order: Equipment Time + CrewSync card -> Crew section
+The home screen of the ShiftTicketQuickAccess dialog currently shows the last 5 tickets as a flat list, which gets cluttered fast. Instead, show **one ticket per active truck** (the most recent), grouped by truck name, with a "View All Tickets" button that opens the full history.
 
-### 2. Add compact status line below initials row (`ShiftTicketForm.tsx`)
-Right below the initials chips, show 1-2 lines summarizing the current per diem/lodging/lunch state pulled from the CrewSyncCard values. Something like:
+## Changes
+
+### 1. New query: `useLatestTicketPerTruck` in `useShiftTickets.ts`
+- Query shift_tickets joined with incident_trucks and trucks
+- Group by `incident_truck_id`, return only the most recent ticket per truck
+- Use a raw query approach: fetch recent tickets (e.g. limit 50), then deduplicate client-side by `incident_truck_id`, keeping only the first (most recent) per truck
+- Also fetch truck name via `incident_trucks(incident_id, trucks(name, unit_type))`
+
+### 2. Update `ShiftTicketQuickAccess.tsx` home view
+- Replace `useRecentShiftTickets(5)` with the new per-truck query
+- Each card shows: **Truck Name** (primary), incident name + date (secondary), draft/final badge
+- Add a new step `"history"` to the step state
+- Add a **"View All Tickets"** button below the per-truck list that sets step to `"history"`
+
+### 3. New step: `"history"` in ShiftTicketQuickAccess
+- Shows a scrollable list of ALL recent shift tickets (use existing `useRecentShiftTickets` with a higher limit like 25)
+- Each row: incident name, truck/equipment type, date, status
+- Back button returns to home
 
 ```text
-Crew (23) 241.5h                    [+ Add]
-[JS] [JD] [BW] [MR] [TL] [AK] [CP] [DH]
-Lunch 1200 | Lodging | Per Diem B, L, D
+BEFORE:
+┌ Shift Tickets ────────────────┐
+│ [+ New Shift Ticket]          │
+│ Recent Tickets                │
+│  Ticket 1 - 4/10             │
+│  Ticket 2 - 4/10             │
+│  Ticket 3 - 4/9              │
+│  Ticket 4 - 4/9              │
+│  Ticket 5 - 4/8              │
+└───────────────────────────────┘
+
+AFTER:
+┌ Shift Tickets ────────────────┐
+│ [+ New Shift Ticket]          │
+│ Latest by Truck               │
+│  DL31 - Johnson Fire - 4/10  │
+│  DL61 - Smith Fire - 4/10    │
+│ [View All Tickets]            │
+└───────────────────────────────┘
+
+(tap "View All Tickets" →)
+┌ All Tickets ──────────────────┐
+│  DL31 - Johnson - 4/10 Draft │
+│  DL31 - Johnson - 4/9  Final │
+│  DL61 - Smith - 4/10   Draft │
+│  DL61 - Smith - 4/9    Final │
+│  ... more ...                 │
+│ [Back]                        │
+└───────────────────────────────┘
 ```
 
-This is read-only summary text -- the actual controls to change these values stay in the CrewSyncCard (inside the Equipment Time card). When you tap a crew member initial, the full PersonnelEntryRow expands below as it does now.
-
-### 3. No other changes
-CrewSyncCard stays inside the Equipment Time card with the Apply button. PersonnelEntryRow expand-on-tap stays the same.
-
 ## Files changed
-- `src/components/shift-tickets/ShiftTicketForm.tsx` -- swap section order, add compact status line below initials
+- `src/hooks/useShiftTickets.ts` -- add `useLatestTicketPerTruck` hook (fetches recent tickets with truck info, dedupes by incident_truck_id)
+- `src/components/shift-tickets/ShiftTicketQuickAccess.tsx` -- use new hook for home view, add "history" step with full ticket list, add "View All Tickets" button
 
