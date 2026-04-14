@@ -1,49 +1,71 @@
 
 
-# Glassmorphism + Depth Polish for Dashboard
+# Rethink Dashboard: Status Hub, Not Nav Mirror
 
-## The vision
-Subtle glassmorphism and depth effects that feel like a premium command center without going sci-fi. Think Apple Vision Pro meets field ops -- frosted surfaces, soft glows, and layered depth. Clean, professional, cutting-edge.
+## The insight
+The operations grid duplicates the bottom nav. Top apps solve this by making Home a **live status feed + quick actions**, not a second navigation menu. The bottom nav handles module switching -- that's its job. The dashboard should answer: "What do I need to know RIGHT NOW?"
 
 ## Changes
 
-### 1. Grid tiles -- frosted glass with subtle glow
-Replace flat `bg-card` tiles with translucent glass surfaces. Each tile gets a faint colored inner glow matching its icon color, creating a "lit from within" effect.
+### 1. Remove the operations grid entirely
+The bottom nav (customizable, up to 4 tabs + Home) already handles navigation. The grid is redundant.
 
-- `backdrop-blur-xl bg-white/[0.06]` (dark) / `bg-white/60` (light)
-- Thin `border border-white/10` for the glass edge
-- Subtle `shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)]` for the top-edge highlight
-- Icon backgrounds get slightly more vibrancy: `bg-destructive/15` instead of `/12`
-- On press: scale down + glow dims (already have `active:scale-[0.98]`)
+### 2. Replace with a contextual dashboard layout
 
-### 2. Active incident cards -- glass + ember glow
-The horizontal scroll cards get the same glass treatment plus a faint warm glow on the left border (like embers):
+```text
++----------------------------------+
+|  FireOps HQ              [gear] |
+|----------------------------------|
+|  [Active Incidents - horiz scroll]|
+|  (pulsing cards, already built)  |
+|----------------------------------|
+|  Quick Actions                   |
+|  [+ Incident] [+ Expense] [Scan]|
+|----------------------------------|
+|  Today's Summary                 |
+|  Active: 2  |  Crew: 12  |  ... |
+|----------------------------------|
+|  Needs List (preview)            |
+|  - 3 items need purchasing       |
+|  [View All ->]                   |
+|----------------------------------|
+|  Recent Activity                 |
+|  "Shift ticket submitted 2h ago" |
+|  "Expense added 4h ago"          |
++----------------------------------+
+```
 
-- `border-l-2 border-destructive/40` for the ember accent
-- Same frosted glass background
-- The pulse dot already looks great, keep it
+**Active Incidents** -- keep the horizontal scroll cards (already great)
 
-### 3. Section headers -- subtle gradient text
-The "Operations" and "Active Incidents" labels get a very subtle gradient or just slightly brighter opacity to feel more premium. Keep them uppercase and small.
+**Quick Actions** -- 2-3 buttons for the most common *actions* (not pages): "New Incident", "Add Expense", "Scan Receipt". These are verbs, not nouns. Different from nav.
 
-### 4. Background -- subtle mesh gradient
-Add a very faint radial gradient overlay to the dashboard background behind the grid. A soft warm spot (fire-orange at ~3% opacity) near the top and a cool spot (blue at ~2% opacity) at the bottom. This adds dimensionality without being distracting.
+**Today's Summary** -- a compact stats row showing active incidents, crew on assignment, trucks deployed. Glanceable numbers.
 
-### 5. Divider -- glow line
-The gradient divider between sections gets a slight glow effect: `shadow-[0_0_8px_rgba(var(--primary),0.1)]` to feel like a subtle light seam.
+**Needs List Preview** -- show top 3 unresolved needs items inline with a "View All" link. This puts Needs List on the dashboard without a redundant tile.
 
-### 6. Bottom nav + header -- enhanced glass
-Already using `glass` class. Add a subtle top-edge highlight to the header (`shadow-[inset_0_-1px_0_0_rgba(255,255,255,0.05)]`) and same for bottom nav's top border.
+**Recent Activity** -- last 3-5 actions across the app (ticket submitted, expense added, crew assigned). Shows the app is alive and being used.
 
-## Implementation
-All changes are CSS/className only in two files:
-- `src/pages/Dashboard.tsx` -- tile styles, card styles, background gradient div
-- `src/index.css` -- add a `.glass-tile` utility class for reuse
+### 3. Deactivate Time module (as agreed)
+- Comment out `/time` route + import in `App.tsx`
+- Remove "time" from `NavBarCustomizer.tsx` options
+- Keep files on disk
+
+### 4. Add Needs List to NavBarCustomizer options
+Already there (`key: "needs"`). Just ensure it's available as a default option now that Time is gone. Update `DEFAULT_TAB_KEYS` to replace "shift-tickets" or keep as-is -- user can customize.
+
+## Files changed
+- `src/pages/Dashboard.tsx` -- replace operations grid with quick actions, summary stats, needs preview, recent activity
+- `src/App.tsx` -- comment out Time route
+- `src/components/settings/NavBarCustomizer.tsx` -- remove "time" from `ALL_NAV_OPTIONS`
+- `src/hooks/useNeedsList.ts` -- already exists, will import for dashboard preview
 
 ## What will NOT change
-- No layout changes (grid stays 2x3)
-- No logic, routing, or data changes
+- Bottom nav system unchanged (still customizable)
 - No database changes
-- Touch targets unchanged
-- All navigation preserved
+- No routing changes (except Time deactivation)
+- All module pages unchanged
+- Shift ticket logic unchanged
+
+## Risk
+Low-medium. Dashboard is a visual-only change. Time deactivation is commenting out, not deleting.
 
