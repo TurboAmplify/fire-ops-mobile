@@ -1,81 +1,36 @@
 
 
-# World-Class Dashboard Redesign
+# Tighten Dashboard: Single-Line Incidents + Compact Stats
 
-## Current problems
-1. Horizontal scrolling incidents feels disconnected from the vertical page flow
-2. "Add Expense" and "Scan Receipt" are redundant -- scanning IS the expense workflow 98% of the time
-3. Stats buried in the middle instead of being the first thing you see
-4. Too many small sections competing for attention -- no clear visual hierarchy
+Both changes follow good design principles. Uber, Linear, and iOS Settings all use single-line list rows. Compact stats are standard in dashboard design (Apple Health, Robinhood). Less padding = more content above the fold = better.
 
-## Design philosophy: Uber-level simplicity
-The best apps (Uber, Linear, Arc) have one rule: **hierarchy through size and position**. The most important thing is biggest and highest. Everything else falls below. No competing sections.
+## Changes (all in `src/pages/Dashboard.tsx`)
 
-## New layout (top to bottom)
+### 1. Incident rows: single line
+Combine name and location into one row using an inline separator. Currently it's two lines (name + location below). Change to:
 
 ```text
-+----------------------------------+
-|  FireOps HQ              [gear] |
-|----------------------------------|
-|                                  |
-|  OVERVIEW (hero stats)           |
-|  ┌──────┐ ┌──────┐ ┌──────┐    |
-|  │  2   │ │  12  │ │  5   │    |
-|  │Active│ │ Crew │ │Fleet │    |
-|  └──────┘ └──────┘ └──────┘    |
-|                                  |
-|  ACTIVE INCIDENTS                |
-|  ┌─────────────────────────┐    |
-|  │ ● Riverside Fire        │    |
-|  │   Riverside, CA         │    |
-|  ├─────────────────────────┤    |
-|  │ ● Cedar Creek           │    |
-|  │   Bend, OR              │    |
-|  └─────────────────────────┘    |
-|  (or "All Clear" empty state)   |
-|                                  |
-|  ── glow divider ──             |
-|                                  |
-|  QUICK ACTIONS (3 cols)          |
-|  [Shift     ] [Scan    ] [New  ]|
-|  [Ticket    ] [Receipt ] [Inc. ]|
-|                                  |
-|  NEEDS LIST (preview)            |
-|  ┌─────────────────────────┐    |
-|  │ item 1                  │    |
-|  │ item 2                  │    |
-|  │ item 3                  │    |
-|  │ +2 more items           │    |
-|  └─────────────────────────┘    |
-+----------------------------------+
+● Riverside Fire  ·  Riverside, CA    >
 ```
 
-## Key changes
+- Remove the `<div className="flex-1 min-w-0">` wrapper with two `<p>` tags
+- Replace with a single `<p>` that shows `{inc.name} · {inc.location}` with truncation
+- Reduce vertical padding from `py-3.5` to `py-2.5`
 
-### 1. Overview stats move to the TOP
-First thing you see when opening the app. Glanceable command-center feel. Same 3-column glass tiles but now the hero position.
+### 2. Stat cards: tighter padding
+- Reduce padding from `p-4` to `p-3`
+- Reduce number font from `text-xl` to `text-lg`
+- Reduce gap from `gap-1.5` to `gap-1`
+- This saves ~16px of vertical height across the section
 
-### 2. Active incidents become a stacked list (no horizontal scroll)
-Vertical cards inside a single glass container with dividers. Feels integrated with the page. Each row is tappable with the pulse dot, name, and location. Consistent with how every other list in the app works.
+### 3. Reduce section spacing
+- Change outer `space-y-5` to `space-y-4` for slightly tighter overall feel
 
-### 3. Quick Actions: Shift Ticket, Scan Receipt, New Incident
-- **Shift Ticket** (ClipboardList, blue) -- the daily driver
-- **Scan Receipt** (ScanLine, emerald) -- replaces both "Add Expense" and "Scan Receipt"
-- **New Incident** (Plus, destructive) -- less frequent but critical
+## What stays the same
+- All functionality, routing, glass-tile styling, quick actions, needs list
+- Touch targets remain above 44px minimum
+- No database or logic changes
 
-### 4. Needs List stays at the bottom
-Already works well. No changes needed.
-
-### 5. Remove "Add Expense" button entirely
-Scan Receipt goes to `/expenses/batch-scan` which handles the real workflow. Manual expense entry is still accessible from the Expenses tab in the nav.
-
-## Files changed
-- `src/pages/Dashboard.tsx` -- reorder sections, replace horizontal scroll with stacked list, update quick actions
-
-## What will NOT change
-- No database or routing changes
-- Glass-tile styling preserved
-- Mesh gradient background kept
-- Needs list section unchanged
-- Bottom nav unchanged
+## File changed
+- `src/pages/Dashboard.tsx`
 
