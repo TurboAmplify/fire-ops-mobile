@@ -93,7 +93,7 @@ const App = () => (
         </TooltipProvider>
       </OrganizationProvider>
     </AuthProvider>
-  </QueryClientProvider>
+  </PersistQueryClientProvider>
 );
 
 export default App;
