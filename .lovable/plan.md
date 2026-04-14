@@ -1,43 +1,49 @@
 
 
-# Polish Dashboard UI + Restyle Active Incidents
+# Glassmorphism + Depth Polish for Dashboard
 
-## The problem
-The layout is right but the visual treatment is flat -- every tile looks the same gray, and the active incidents as stacked rows feel like a basic list. Two upgrades will make this feel premium without adding complexity.
+## The vision
+Subtle glassmorphism and depth effects that feel like a premium command center without going sci-fi. Think Apple Vision Pro meets field ops -- frosted surfaces, soft glows, and layered depth. Clean, professional, cutting-edge.
 
 ## Changes
 
-### 1. Color-tinted icon backgrounds on grid tiles
-Give each tile a unique subtle color tint instead of all using the same `bg-secondary`. This is what Uber, Revolut, and Cash App do -- each action has its own color identity so users build muscle memory visually.
+### 1. Grid tiles -- frosted glass with subtle glow
+Replace flat `bg-card` tiles with translucent glass surfaces. Each tile gets a faint colored inner glow matching its icon color, creating a "lit from within" effect.
 
-| Tile | Icon bg | Icon color |
-|------|---------|------------|
-| Incidents | `bg-destructive/12` | `text-destructive` (already) |
-| Fleet | `bg-blue-500/12` | `text-blue-500` |
-| Time | `bg-amber-500/12` | `text-amber-500` |
-| Expenses | `bg-emerald-500/12` | `text-emerald-500` |
-| Crew | `bg-violet-500/12` | `text-violet-500` |
-| Tickets | `bg-sky-500/12` | `text-sky-500` |
+- `backdrop-blur-xl bg-white/[0.06]` (dark) / `bg-white/60` (light)
+- Thin `border border-white/10` for the glass edge
+- Subtle `shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)]` for the top-edge highlight
+- Icon backgrounds get slightly more vibrancy: `bg-destructive/15` instead of `/12`
+- On press: scale down + glow dims (already have `active:scale-[0.98]`)
 
-### 2. Active incidents as horizontal scroll chips
-Instead of stacked full-width rows, active incidents become a **horizontal scrolling row of compact cards**. Each card shows the incident name, location, and a pulsing dot indicator. This:
-- Saves vertical space (single row vs N rows)
-- Looks more dynamic and modern
-- Works great for 1-5 active incidents
-- If zero incidents: keep the current "All Clear" card
+### 2. Active incident cards -- glass + ember glow
+The horizontal scroll cards get the same glass treatment plus a faint warm glow on the left border (like embers):
 
-The cards will be ~160px wide, showing name + location, with a small red pulse dot. Horizontal scroll with `overflow-x-auto` and snap points.
+- `border-l-2 border-destructive/40` for the ember accent
+- Same frosted glass background
+- The pulse dot already looks great, keep it
 
-### 3. Subtle section styling
-- Add a thin gradient divider line between Operations and Active Incidents sections
-- Slightly larger section headers with better spacing
+### 3. Section headers -- subtle gradient text
+The "Operations" and "Active Incidents" labels get a very subtle gradient or just slightly brighter opacity to feel more premium. Keep them uppercase and small.
 
-## File changed
-- `src/pages/Dashboard.tsx` -- update GridTile to accept color props, refactor incident list to horizontal scroll, add color map
+### 4. Background -- subtle mesh gradient
+Add a very faint radial gradient overlay to the dashboard background behind the grid. A soft warm spot (fire-orange at ~3% opacity) near the top and a cool spot (blue at ~2% opacity) at the bottom. This adds dimensionality without being distracting.
+
+### 5. Divider -- glow line
+The gradient divider between sections gets a slight glow effect: `shadow-[0_0_8px_rgba(var(--primary),0.1)]` to feel like a subtle light seam.
+
+### 6. Bottom nav + header -- enhanced glass
+Already using `glass` class. Add a subtle top-edge highlight to the header (`shadow-[inset_0_-1px_0_0_rgba(255,255,255,0.05)]`) and same for bottom nav's top border.
+
+## Implementation
+All changes are CSS/className only in two files:
+- `src/pages/Dashboard.tsx` -- tile styles, card styles, background gradient div
+- `src/index.css` -- add a `.glass-tile` utility class for reuse
 
 ## What will NOT change
-- No database or routing changes
-- Grid layout stays 2x3
-- All navigation paths preserved
-- Badge counts unchanged
+- No layout changes (grid stays 2x3)
+- No logic, routing, or data changes
+- No database changes
+- Touch targets unchanged
+- All navigation preserved
 
