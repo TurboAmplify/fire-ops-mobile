@@ -35,6 +35,7 @@ export function buildRemarksString(entry: PersonnelEntry): string {
     const ctx = entry.work_context?.trim();
     parts.push(ctx ? `Work - ${ctx}` : "Work");
   }
+
   if (entry.lodging) parts.push("Lodging");
   const meals: string[] = [];
   if (entry.per_diem_b) meals.push("B");

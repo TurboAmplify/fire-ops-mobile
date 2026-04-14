@@ -20,19 +20,14 @@ export function CrewSyncCard({ equipmentEntries, personnelEntries, setPersonnelE
 
   const [hasLunch, setHasLunch] = useState(false);
   const [lunchTime, setLunchTime] = useState("1200");
-  const [activity, setActivity] = useState<"travel" | "work">("work");
-  const [workContext, setWorkContext] = useState("");
   const [lodging, setLodging] = useState(false);
   const [perDiemB, setPerDiemB] = useState(false);
   const [perDiemL, setPerDiemL] = useState(false);
   const [perDiemD, setPerDiemD] = useState(false);
 
-  // Init from first personnel entry
   useEffect(() => {
     const first = personnelEntries[0];
     if (first) {
-      setActivity(first.activity_type || "work");
-      setWorkContext(first.work_context || "");
       setLodging(first.lodging || false);
       setPerDiemB(first.per_diem_b || false);
       setPerDiemL(first.per_diem_l || false);
@@ -62,8 +57,8 @@ export function CrewSyncCard({ equipmentEntries, personnelEntries, setPersonnelE
         sb_start: "",
         sb_stop: "",
         total: finalTotal,
-        activity_type: activity,
-        work_context: activity === "work" ? workContext : "",
+        activity_type: "work",
+        work_context: "",
         lodging,
         per_diem_b: perDiemB,
         per_diem_l: perDiemL,
@@ -80,50 +75,41 @@ export function CrewSyncCard({ equipmentEntries, personnelEntries, setPersonnelE
   };
 
   const chipClass = (active: boolean) =>
-    `rounded-full px-2.5 py-1.5 text-[11px] font-medium touch-target whitespace-nowrap ${active ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`;
+    `rounded-full px-3 py-1.5 text-xs font-medium touch-target whitespace-nowrap ${active ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`;
 
   const miniInputClass = "w-full rounded-lg border border-input bg-background px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring";
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-1.5 flex-wrap">
-        <button type="button" onClick={() => setActivity(activity === "travel" ? "work" : "travel")} className={chipClass(activity === "travel")}>
-          {activity === "travel" ? "Travel" : "Work"}
-        </button>
+    <div className="space-y-2.5">
+      {/* Row 1: Lunch + Lodging */}
+      <div className="flex items-center gap-2">
         <button type="button" onClick={() => setHasLunch(!hasLunch)} className={chipClass(hasLunch)}>
           Lunch
         </button>
         <button type="button" onClick={() => setLodging(!lodging)} className={chipClass(lodging)}>
           Lodging
         </button>
-        <span className="w-px h-4 bg-border" />
+        {hasLunch && (
+          <div className="w-20 ml-auto">
+            <MilitaryTimeInput value={lunchTime} onChange={setLunchTime} className={miniInputClass} />
+          </div>
+        )}
+      </div>
+
+      {/* Row 2: Per Diem */}
+      <div className="flex items-center gap-2">
+        <span className="text-[11px] font-semibold text-muted-foreground">Per Diem</span>
         {(["B", "L", "D"] as const).map((meal) => {
           const val = meal === "B" ? perDiemB : meal === "L" ? perDiemL : perDiemD;
           const setter = meal === "B" ? setPerDiemB : meal === "L" ? setPerDiemL : setPerDiemD;
+          const label = meal === "B" ? "Breakfast" : meal === "L" ? "Lunch" : "Dinner";
           return (
-            <button key={meal} type="button" onClick={() => setter(!val)} className={chipClass(val)}>
+            <button key={meal} type="button" onClick={() => setter(!val)} className={chipClass(val)} title={label}>
               {meal}
             </button>
           );
         })}
       </div>
-
-      {/* Row 2: Conditional inputs */}
-      {(activity === "work" || hasLunch) && (
-        <div className="flex gap-2">
-          {activity === "work" && (
-            <div className="flex-1">
-              <input type="text" value={workContext} onChange={(e) => setWorkContext(e.target.value)}
-                placeholder="IA2 - Fire Name" className={miniInputClass} />
-            </div>
-          )}
-          {hasLunch && (
-            <div className="w-20">
-              <MilitaryTimeInput value={lunchTime} onChange={setLunchTime} className={miniInputClass} />
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Apply button */}
       <button
