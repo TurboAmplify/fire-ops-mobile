@@ -1,55 +1,77 @@
 
 
-# Fix Sticky Header + Clean Up Settings + Compact Dashboard
+# Dashboard Redesign -- World-Class Mobile Experience
 
-## Three issues to address
+## Current state
+The dashboard has: hero image (224px), stats row, 2x3 operations grid, and a recent incidents list showing up to 3 items. It works, but there's redundancy and wasted space. The hero takes up nearly half the screen before any actionable content appears.
 
-### 1. Sticky header not working on scroll
-The header uses `sticky top-0` which should work, but the `glass` backdrop-filter class can cause stacking context issues in some mobile browsers. Fix: change from `sticky` to `fixed` positioning and add a spacer div below it so content doesn't hide behind it. This is the standard mobile app pattern (iOS/Android both use fixed headers).
+## My recommendation
 
-**File**: `src/components/AppShell.tsx`
+### 1. Kill the hero image, keep the brand minimal
+Top-rated apps (Uber, Cash App, Venmo, Google Pay) do NOT waste above-the-fold space on decorative images. The user opens this app 20+ times a day during fire season -- they know what app they're in. The hero is beautiful but costs 224px of prime real estate.
 
-### 2. Remove Crew/Fleet/Needs List from Settings
-These are duplicated from the Dashboard operations list. Settings should only contain: account info, org settings link, appearance (theme + nav customizer), about, legal, and sign out.
+**Replace with**: The fixed header already says "FireOps HQ" with the logo. That's enough branding. Jump straight into content.
 
-**File**: `src/pages/Settings.tsx` -- remove the Crew, Fleet, and Needs List rows from the Organization section. Keep only the org name/settings link.
+### 2. Merge stats into the operations grid
+The stats row (Active/Trucks/Crew) and operations grid are separate sections showing overlapping info -- Incidents tile + Active stat, Fleet tile + Trucks stat, Crew tile + Crew stat. World-class apps merge these.
 
-### 3. Compact Dashboard operations with icon grid tiles
-
-**My recommendation: 2x3 icon grid tiles** (like iOS Shortcuts or Google Pay).
-
-Why this over other options:
-- **Carousel**: Bad for discoverability -- users don't know what's hidden off-screen. Violates "minimize taps" principle.
-- **Expandable/collapsible**: Adds a tap just to see options. Hides the core of the app.
-- **Current list rows**: Takes ~400px of vertical space for 6 items. Too much scrolling.
-
-**Icon grid tiles** compress 6 operations into ~200px (half the space) while keeping everything visible at a glance. This is what Uber, Cash App, Google Pay, and most world-class mobile apps do for their main action grid. Each tile is a compact square with an icon and label -- no description text needed since users learn them quickly.
-
-Layout: 3 columns, 2 rows. Each tile is a rounded card with centered icon + label below. Large touch targets maintained.
+**New layout**: A single 2x3 grid where each tile shows the icon, label, AND the live count as a small badge. This eliminates an entire section.
 
 ```text
-+------------+------------+------------+
-| [fire]     | [truck]    | [clock]    |
-| Incidents  | Fleet      | Time       |
-+------------+------------+------------+
-| [receipt]  | [users]    | [doc]      |
-| Expenses   | Crew       | Tickets    |
-+------------+------------+------------+
++------------------+------------------+------------------+
+| [fire]           | [truck]          | [clock]          |
+| Incidents    (3) | Fleet        (3) | Time             |
++------------------+------------------+------------------+
+| [receipt]        | [users]          | [doc]            |
+| Expenses         | Crew         (8) | Tickets          |
++------------------+------------------+------------------+
 ```
 
-This cuts the operations section height in half and looks more polished. The stats row above already uses 3-column grid, so this creates visual consistency.
+Counts appear as small badges on relevant tiles. No separate stats row needed.
 
-**File**: `src/pages/Dashboard.tsx` -- replace the `QuickAction` list with a 2x3 grid of compact tiles.
+### 3. Recent incidents -- show only active, compact format
+For the dashboard, only **active** incidents matter. Closed ones are history. Show active incidents in a compact horizontal pill/chip format if there are few (1-3), or a small vertical list if more.
+
+If no active incidents: show a calm "All clear" state instead of an empty card.
+
+If active incidents exist: show them as compact cards right below the grid. Keep "See All" link to the full incidents page.
+
+### 4. Add Needs List and Payroll to the operations grid
+These are currently hidden. Make it a 3x3 grid (9 tiles) or keep 2x3 with the most important 6. Since the user can customize the bottom nav, the dashboard grid should show ALL operations as the master menu.
+
+**My recommendation**: Keep it at 2x3 with the 6 most-used operations. Payroll and Needs List are accessible via the bottom nav customizer. This keeps the dashboard clean.
+
+## Final dashboard layout (top to bottom)
+
+```text
+[Fixed header: FireOps HQ logo + gear icon]
+
+[Operations grid -- 2x3 with badge counts]
+  Incidents(3)  Fleet(3)     Time
+  Expenses      Crew(8)      Tickets
+
+[Active Incidents -- only active ones]
+  79 Fire - Buffalo Gap          ACTIVE
+  Ashby - NE                     ACTIVE
+  
+  See All >
+
+[bottom nav bar]
+```
+
+Total scroll: nearly zero. Everything fits on one screen. This is the Uber/Cash App pattern.
 
 ## Files changed
-- `src/components/AppShell.tsx` -- fixed header instead of sticky
-- `src/pages/Settings.tsx` -- remove duplicate Crew/Fleet/Needs List rows
-- `src/pages/Dashboard.tsx` -- operations become icon grid tiles
+- `src/pages/Dashboard.tsx` -- remove hero image, merge stats into grid tiles with badge counts, filter incidents to active only, remove stats section
 
 ## What will NOT change
 - No database changes
-- No routing changes
+- No routing changes  
 - No workflow or form logic changes
 - Bottom nav unchanged
-- Settings page keeps all its current functionality
+- Operations grid tiles still link to the same pages
+- Settings gear stays in header
+
+## Risk
+Low. Removing decorative hero and merging two visual sections. All navigation paths preserved.
 
