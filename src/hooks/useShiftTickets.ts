@@ -82,12 +82,3 @@ export function useDuplicateShiftTicket(incidentTruckId: string) {
     },
   });
 }
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ ticket, organizationId }: { ticket: ShiftTicket; organizationId: string }) =>
-      duplicateShiftTicket(ticket, organizationId),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["shift-tickets", incidentTruckId] });
-    },
-  });
-}
