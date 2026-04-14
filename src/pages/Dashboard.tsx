@@ -39,7 +39,7 @@ export default function Dashboard() {
         <div className="absolute bottom-0 right-0 w-[400px] h-[300px] rounded-full bg-[hsl(220_80%_55%/0.03)] blur-[100px]" />
       </div>
 
-      <div className="px-4 pt-4 space-y-5 pb-6">
+      <div className="px-4 pt-4 space-y-4 pb-6">
         {/* Hero Stats */}
         <section>
           <h2 className="mb-3 text-[10px] font-semibold text-muted-foreground/80 uppercase tracking-[0.15em] px-0.5">
@@ -79,16 +79,17 @@ export default function Dashboard() {
                 <Link
                   key={inc.id}
                   to={`/incidents/${inc.id}`}
-                  className="flex items-center gap-3 px-4 py-3.5 transition-all duration-150 active:bg-secondary/50 first:rounded-t-2xl last:rounded-b-2xl"
+                  className="flex items-center gap-3 px-4 py-2.5 transition-all duration-150 active:bg-secondary/50 first:rounded-t-2xl last:rounded-b-2xl"
                 >
                   <span className="relative flex h-2.5 w-2.5 shrink-0">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75" />
                     <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-destructive" />
                   </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-[13px] leading-tight truncate">{inc.name}</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{inc.location}</p>
-                  </div>
+                  <p className="flex-1 min-w-0 font-semibold text-[13px] truncate">
+                    {inc.name}
+                    <span className="text-muted-foreground font-normal mx-1.5">·</span>
+                    <span className="text-muted-foreground font-normal text-[12px]">{inc.location}</span>
+                  </p>
                   <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0" />
                 </Link>
               ))}
@@ -173,9 +174,9 @@ function QuickAction({ icon: Icon, label, iconBg, iconColor, onClick }: { icon: 
 
 function StatCard({ icon: Icon, label, value, iconColor }: { icon: LucideIcon; label: string; value: number; iconColor: string }) {
   return (
-    <div className="rounded-2xl glass-tile p-4 flex flex-col items-center gap-1.5">
+    <div className="rounded-2xl glass-tile p-3 flex flex-col items-center gap-1">
       <Icon className={`h-4 w-4 ${iconColor}`} strokeWidth={1.75} />
-      <span className="text-xl font-bold">{value}</span>
+      <span className="text-lg font-bold">{value}</span>
       <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{label}</span>
     </div>
   );
