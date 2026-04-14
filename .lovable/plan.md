@@ -1,45 +1,37 @@
 
 
-# Fix Shift Ticket Issues + Customizable Bottom Nav
+# Move Settings to Header, Add 4th Nav Slot
 
-## Issue 1: Dates still off by one day
+## What changes
 
-The `useRecentShiftTickets` hook displays dates using `new Date(t.updated_at).toLocaleDateString()` which can shift dates due to UTC interpretation. The date from equipment/personnel entries (stored as `YYYY-MM-DD` strings) is also being parsed through `Date` which causes UTC-ahead shifts.
+### 1. Remove "More/Settings" from bottom nav
+The fixed last tab ("More") is removed from `BottomNav.tsx`. The bottom bar becomes: **Home + 4 customizable tabs** (up from 3).
 
-**Fix**: Display the raw `YYYY-MM-DD` string dates directly without converting through `new Date()`. For `updated_at` fallback, parse with timezone awareness using the same local-date pattern already in the project.
+### 2. Add settings gear icon to Dashboard header
+In `src/pages/Dashboard.tsx`, pass a gear icon button as `headerRight` to `AppShell`. Tapping it navigates to `/settings`.
 
-**Files**: `src/components/shift-tickets/ShiftTicketQuickAccess.tsx`
+### 3. Update NavBarCustomizer to allow 4 selections
+Change the max from 3 to 4 in `src/components/settings/NavBarCustomizer.tsx`. Update the help text accordingly.
 
-## Issue 2: Tapping a recent ticket goes to 404
+### 4. Update default tabs
+Default tabs become: Incidents, Payroll, Expenses, Shift Tickets (4 items).
 
-Line 30-33 in `ShiftTicketQuickAccess.tsx` has a broken `handleTicketTap` -- it calls `navigate` twice, first to a malformed URL using `incident_truck_id` for both the incident and truck params, then to a non-existent `/shift-ticket/:id` route.
+### 5. Redirect cleanup
+The `/more` route redirect in `App.tsx` stays (safety net), but nothing links to it anymore.
 
-The problem: `shift_tickets` table has `incident_truck_id` but not `incident_id`. We need to look up the `incident_id` from the `incident_trucks` table.
+## Files changed
+- `src/components/BottomNav.tsx` -- remove fixed "More" tab, render 4 middle tabs
+- `src/pages/Dashboard.tsx` -- add gear icon in header that goes to `/settings`
+- `src/components/settings/NavBarCustomizer.tsx` -- change max from 3 to 4, update defaults and text
+- `src/components/AppShell.tsx` -- no changes needed (headerRight already supported)
 
-**Fix**: Update the `useRecentShiftTickets` query to join `incident_trucks` to get `incident_id`. Then build the correct route: `/incidents/{incident_id}/trucks/{incident_truck_id}/shift-ticket/{ticket_id}`. Remove the duplicate navigate call.
-
-**Files**: `src/hooks/useShiftTickets.ts`, `src/components/shift-tickets/ShiftTicketQuickAccess.tsx`
-
-## Issue 3: Customizable bottom navigation bar
-
-Add a "favorites" system where users pick which 3 middle tabs appear in the bottom nav (Home and More stay fixed at positions 1 and 5).
-
-**How it works**:
-- Store the user's chosen tabs in `localStorage` (no database change needed)
-- Available options: Incidents, Payroll, Expenses, Shift Tickets, Crew, Fleet, Time, Needs List
-- Default: Incidents, Payroll, Expenses (current behavior)
-- Add a "Customize Nav Bar" option in Settings page that opens a picker
-- Bottom nav reads from localStorage and renders the chosen tabs
-
-**Files**:
-- `src/components/BottomNav.tsx` -- read tab config from localStorage, render dynamic middle 3 tabs
-- `src/pages/Settings.tsx` -- add "Customize Navigation" row
-- New: `src/components/settings/NavBarCustomizer.tsx` -- picker dialog where user selects 3 favorites
-- `src/pages/Dashboard.tsx` -- wire up Shift Tickets button to open the quick access dialog (already done), ensure it works as a nav target too
-
-### What will NOT change
-- No shift ticket form, save, signature, or PDF logic
+## What will NOT change
+- No shift ticket, form, save, or signature logic
 - No database changes
-- No routing changes
+- No routing changes (Settings page stays at `/settings`)
 - All existing workflows preserved
+- The full Settings page content unchanged
+
+## Risk
+Very low. Removing one fixed tab and adjusting a max count. The gear icon pattern is standard mobile UX.
 
