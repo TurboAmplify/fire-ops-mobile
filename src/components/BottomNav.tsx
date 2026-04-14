@@ -29,14 +29,22 @@ export function BottomNav() {
   const refresh = useCallback(() => setMiddleTabs(buildTabs()), []);
 
   useEffect(() => {
-    window.addEventListener("nav-tabs-changed", refresh);
-    window.addEventListener("storage", (e) => {
-      if ((e as StorageEvent).key === NAV_STORAGE_KEY) refresh();
-    });
+    const onNavChanged = () => refresh();
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === NAV_STORAGE_KEY) refresh();
+    };
+    window.addEventListener("nav-tabs-changed", onNavChanged);
+    window.addEventListener("storage", onStorage);
     return () => {
-      window.removeEventListener("nav-tabs-changed", refresh);
+      window.removeEventListener("nav-tabs-changed", onNavChanged);
+      window.removeEventListener("storage", onStorage);
     };
   }, [refresh]);
+
+  // Also refresh when navigating back to a page with the bottom nav
+  useEffect(() => {
+    setMiddleTabs(buildTabs());
+  }, []);
 
   const allTabs: (Tab & { fixed?: boolean })[] = [
     { label: "Home", icon: LayoutDashboard, to: "/", fixed: true },
