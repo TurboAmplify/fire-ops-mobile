@@ -1,59 +1,46 @@
 
 
-# Compact Shift Ticket: Chip Row + Bottom Sheets
+# Restore Time Entry + Compact Crew Sync
 
-## The idea
-Replace the three stacked collapsible sections (Header Info, Equipment Info, Options) with a single horizontal row of compact chip buttons. Tapping a chip opens a bottom sheet (Drawer) with the edit fields. Remarks also becomes a chip in the same row.
+## Problem
+The equipment time entries, CrewSyncCard, and personnel entries sections were dropped from the JSX during the chip-row refactor. The imports exist but the components are never rendered -- that's why there's no place to enter time.
 
-This cuts ~120px of vertical space and puts time entry, crew, and signatures front and center.
+## Plan
 
-## Layout change
+### 1. Restore missing sections in `ShiftTicketForm.tsx`
+Add back between the chip-row drawers (line ~511) and the Signatures section (line ~512):
+- Equipment entries with Add row button
+- CrewSyncCard
+- Personnel entries with Add crew button
+
+### 2. Make CrewSyncCard more compact in `CrewSyncCard.tsx`
+Current layout is tall with many stacked rows. Redesign to be a single tight card:
+- Remove the "Equipment Times" readout box (redundant -- user just entered times above)
+- Put Travel/Work toggle + Lunch checkbox + Lodging + Per Diem (B/L/D) all in a compact 2-row layout
+- Work context input only shows when "Work" is selected
+- Lunch time input only shows when lunch is checked
+- "Apply to All Crew" button stays at bottom, same size
 
 ```text
-BEFORE                          AFTER
-┌──────────────────────┐       ┌──────────────────────────┐
-│ [v] Header Info      │       │ [Header] [Equip] [Opts] [Remarks]  <- chip row
-│    summary line      │       ├──────────────────────────┤
-├──────────────────────┤       │ Equipment entries (times)│
-│ [v] Equipment Info   │       │ Crew                     │
-│    summary line      │       │ Signatures               │
-├──────────────────────┤       └──────────────────────────┘
-│ [v] Options          │
-│    summary line      │
-├──────────────────────┤
-│ Equipment (times)    │
-│ Crew                 │
-│ Signatures           │
-└──────────────────────┘
+BEFORE (~200px tall):
+┌─ Equipment Times readout ─┐
+│ Lunch checkbox + time      │
+│ Travel | Work buttons      │
+│ Work context input         │
+│ Lodging checkbox           │
+│ Per Diem: B L D            │
+│ [Apply to All Crew]        │
+└────────────────────────────┘
+
+AFTER (~100px tall, expands as needed):
+┌────────────────────────────┐
+│ [Travel|Work]  [Lunch] [Lodging] [B][L][D] │
+│ Work context (if Work)  Lunch@(if checked)  │
+│ [Apply to All Crew (3)]                     │
+└─────────────────────────────────────────────┘
 ```
 
-## Changes (all in `src/components/shift-tickets/ShiftTicketForm.tsx`)
-
-### 1. Replace 4 Collapsibles with chip row
-- Remove the 4 `<Collapsible>` blocks (Header, Equipment Info, Options, Remarks)
-- Add a horizontal flex row with 4 small chip buttons: "Header", "Equipment", "Options", "Remarks"
-- Each chip shows a subtle dot indicator if it has data filled in
-- Chips are compact: small text, pill-shaped, scrollable row if needed
-
-### 2. Bottom sheet (Drawer) for each chip
-- Use the existing `Drawer` component (`src/components/ui/drawer.tsx`, already in project)
-- State: `activeDrawer: "header" | "equipment" | "options" | "remarks" | null`
-- Tapping a chip sets `activeDrawer`, opening the Drawer with that section's fields
-- Drawer contains the exact same form fields currently in each CollapsibleContent
-- Drawer has a "Done" button to close
-
-### 3. Keep everything else unchanged
-- Equipment entries (times), Crew, Signatures stay exactly where they are
-- All state management, auto-save, dirty tracking unchanged
-- Supervisor signature sheet popup unchanged
-
-## File changed
-- `src/components/shift-tickets/ShiftTicketForm.tsx`
-
-## What stays the same
-- All form fields and their behavior
-- Save/export/duplicate logic
-- Signature flow
-- No database changes
-- No new components needed (Drawer already exists)
+## Files changed
+- `src/components/shift-tickets/ShiftTicketForm.tsx` -- restore 3 missing sections
+- `src/components/shift-tickets/CrewSyncCard.tsx` -- compact single-row layout
 
