@@ -26,11 +26,10 @@ export function ShiftTicketQuickAccess({ open, onOpenChange }: Props) {
   const activeIncidents = incidents?.filter((i) => i.status === "active") ?? [];
 
   const handleTicketTap = (ticket: any) => {
+    const incidentId = ticket.incident_trucks?.incident_id;
+    if (!incidentId) return;
     onOpenChange(false);
-    navigate(`/incidents/${ticket.incident_truck_id}/trucks/${ticket.incident_truck_id}/shift-ticket/${ticket.id}`);
-    // We need to navigate via incident_truck_id — but we need incident_id too.
-    // The ticket has incident_truck_id. We'll navigate to the edit route directly.
-    navigate(`/shift-ticket/${ticket.id}`);
+    navigate(`/incidents/${incidentId}/trucks/${ticket.incident_truck_id}/shift-ticket/${ticket.id}`);
   };
 
   const handlePickIncident = (incidentId: string) => {
@@ -42,6 +41,13 @@ export function ShiftTicketQuickAccess({ open, onOpenChange }: Props) {
     onOpenChange(false);
     setStep("home");
     setSelectedIncidentId(null);
+  };
+
+  /** Format a YYYY-MM-DD string for display without UTC shift */
+  const formatDateString = (dateStr: string) => {
+    const [y, m, d] = dateStr.split("-");
+    if (!y || !m || !d) return dateStr;
+    return `${parseInt(m)}/${parseInt(d)}/${y}`;
   };
 
   return (
@@ -84,7 +90,10 @@ export function ShiftTicketQuickAccess({ open, onOpenChange }: Props) {
                   const entries = (t.equipment_entries as any[]) || [];
                   const pEntries = (t.personnel_entries as any[]) || [];
                   const shiftDate = entries[0]?.date || pEntries[0]?.date || null;
-                  const dateDisplay = shiftDate || new Date(t.updated_at).toLocaleDateString();
+                  // Display raw YYYY-MM-DD string to avoid UTC shift
+                  const dateDisplay = shiftDate
+                    ? formatDateString(shiftDate)
+                    : formatDateString(t.updated_at.split("T")[0]);
                   const label = [t.incident_name, t.equipment_type, dateDisplay].filter(Boolean).join(" - ") || "OF-297";
                   return (
                     <button
