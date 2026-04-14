@@ -1,7 +1,8 @@
 import { useIncidentTrucks, useAvailableTrucks, useAssignTruck, useUpdateTruckStatus } from "@/hooks/useIncidentTrucks";
+import { useIncidentTruckCrew } from "@/hooks/useIncidentTruckCrew";
 import { TRUCK_STATUS_LABELS } from "@/services/incident-trucks";
 import type { IncidentTruckStatus, IncidentTruckWithTruck } from "@/services/incident-trucks";
-import { Truck as TruckIcon, Plus, Loader2, ChevronDown, ChevronRight } from "lucide-react";
+import { Truck as TruckIcon, Plus, Loader2, ChevronDown, ChevronRight, AlertTriangle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { TruckCrewSection } from "./TruckCrewSection";

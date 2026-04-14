@@ -15,14 +15,15 @@ import {
 
 interface Props {
   incidentTruckId: string;
+  autoOpen?: boolean;
 }
 
-export function TruckCrewSection({ incidentTruckId }: Props) {
+export function TruckCrewSection({ incidentTruckId, autoOpen = false }: Props) {
   const { data: crew, isLoading } = useIncidentTruckCrew(incidentTruckId);
   const { data: allCrew } = useAvailableCrewMembers();
   const assignMutation = useAssignCrew(incidentTruckId);
   const releaseMutation = useReleaseCrew(incidentTruckId);
-  const [showAssign, setShowAssign] = useState(false);
+  const [showAssign, setShowAssign] = useState(autoOpen);
   const [releaseTarget, setReleaseTarget] = useState<{ id: string; name: string } | null>(null);
   const activeCrew = crew?.filter((c) => c.is_active) ?? [];
   const releasedCrew = crew?.filter((c) => !c.is_active) ?? [];
