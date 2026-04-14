@@ -1,63 +1,74 @@
 
 
-# Clean Up Shift Ticket Quick Access: One Per Truck + View History
+# Offline Tolerance for FireOps HQ (App Store Compliant)
 
-## What's changing
+## Summary
 
-The home screen of the ShiftTicketQuickAccess dialog currently shows the last 5 tickets as a flat list, which gets cluttered fast. Instead, show **one ticket per active truck** (the most recent), grouped by truck name, with a "View All Tickets" button that opens the full history.
+Add offline data caching, write queuing, and connectivity indicators using IndexedDB (not localStorage) to handle iOS WKWebView storage limits and meet App Store requirements.
 
-## Changes
+## Technical Details
 
-### 1. New query: `useLatestTicketPerTruck` in `useShiftTickets.ts`
-- Query shift_tickets joined with incident_trucks and trucks
-- Group by `incident_truck_id`, return only the most recent ticket per truck
-- Use a raw query approach: fetch recent tickets (e.g. limit 50), then deduplicate client-side by `incident_truck_id`, keeping only the first (most recent) per truck
-- Also fetch truck name via `incident_trucks(incident_id, trucks(name, unit_type))`
+### 1. Dependencies
 
-### 2. Update `ShiftTicketQuickAccess.tsx` home view
-- Replace `useRecentShiftTickets(5)` with the new per-truck query
-- Each card shows: **Truck Name** (primary), incident name + date (secondary), draft/final badge
-- Add a new step `"history"` to the step state
-- Add a **"View All Tickets"** button below the per-truck list that sets step to `"history"`
+Install `idb-keyval`, `@tanstack/react-query-persist-client`, and `@tanstack/query-async-storage-persister`.
 
-### 3. New step: `"history"` in ShiftTicketQuickAccess
-- Shows a scrollable list of ALL recent shift tickets (use existing `useRecentShiftTickets` with a higher limit like 25)
-- Each row: incident name, truck/equipment type, date, status
-- Back button returns to home
+### 2. Query Client with IndexedDB Persistence
 
-```text
-BEFORE:
-┌ Shift Tickets ────────────────┐
-│ [+ New Shift Ticket]          │
-│ Recent Tickets                │
-│  Ticket 1 - 4/10             │
-│  Ticket 2 - 4/10             │
-│  Ticket 3 - 4/9              │
-│  Ticket 4 - 4/9              │
-│  Ticket 5 - 4/8              │
-└───────────────────────────────┘
+**New file: `src/lib/query-client.ts`**
+- Create `QueryClient` with `networkMode: "offlineFirst"`, `staleTime: 5min`, `gcTime: 24h`
+- Create an async IndexedDB persister using `idb-keyval` + `@tanstack/query-async-storage-persister`
+- Export both for use in `App.tsx`
 
-AFTER:
-┌ Shift Tickets ────────────────┐
-│ [+ New Shift Ticket]          │
-│ Latest by Truck               │
-│  DL31 - Johnson Fire - 4/10  │
-│  DL61 - Smith Fire - 4/10    │
-│ [View All Tickets]            │
-└───────────────────────────────┘
+### 3. Offline Mutation Queue
 
-(tap "View All Tickets" →)
-┌ All Tickets ──────────────────┐
-│  DL31 - Johnson - 4/10 Draft │
-│  DL31 - Johnson - 4/9  Final │
-│  DL61 - Smith - 4/10   Draft │
-│  DL61 - Smith - 4/9    Final │
-│  ... more ...                 │
-│ [Back]                        │
-└───────────────────────────────┘
-```
+**New file: `src/lib/offline-queue.ts`**
+- Store failed mutations in IndexedDB via `idb-keyval` (table, operation, payload, timestamp)
+- On `online` event, replay queued mutations in order with toast feedback
+- Expire mutations older than 72 hours
 
-## Files changed
-- `src/hooks/useShiftTickets.ts` -- add `useLatestTicketPerTruck` hook (fetches recent tickets with truck info, dedupes by incident_truck_id)
-- `src/components/shift-tickets/ShiftTicketQuickAccess.tsx` -- use new hook for home view, add "history" step with full ticket list, add "View All Tickets" button
+**New file: `src/lib/offline-mutations.ts`**
+- `useOfflineMutation` hook wrapping `useMutation` — if offline, optimistically update cache and queue the write
+
+### 4. Network Status Hook
+
+**New file: `src/hooks/useNetworkStatus.ts`**
+- Returns `{ isOnline, pendingCount }`
+- Listens to `online`/`offline` events, reads queue length from IndexedDB
+
+### 5. Offline Banner
+
+**New file: `src/components/OfflineBanner.tsx`**
+- Thin amber banner: "Offline -- changes will sync when connected" with pending count
+- Brief green "Back online" message on reconnect, auto-dismisses after 3 seconds
+- No emoji per project rules
+
+### 6. Wire It Up
+
+**`src/App.tsx`**
+- Replace `QueryClientProvider` with `PersistQueryClientProvider` from the persist-client package
+- Import client and persister from `src/lib/query-client.ts`
+
+**`src/components/AppShell.tsx`**
+- Add `<OfflineBanner />` between header spacer and main content
+
+### 7. App Store Compliance Notes
+
+- IndexedDB provides 250MB+ storage on iOS WKWebView (vs 5MB localStorage cap)
+- App gracefully degrades: cached reads work offline, writes queue and sync
+- Clear visual indicator of connectivity state (Apple requires graceful offline handling)
+- No crashes or blank screens when offline
+- No service worker needed — this is data-layer resilience only
+
+## Files Changed
+
+| File | Action |
+|------|--------|
+| `package.json` | Add 3 dependencies |
+| `src/lib/query-client.ts` | New |
+| `src/lib/offline-queue.ts` | New |
+| `src/lib/offline-mutations.ts` | New |
+| `src/hooks/useNetworkStatus.ts` | New |
+| `src/components/OfflineBanner.tsx` | New |
+| `src/App.tsx` | Use PersistQueryClientProvider |
+| `src/components/AppShell.tsx` | Add OfflineBanner |
 
