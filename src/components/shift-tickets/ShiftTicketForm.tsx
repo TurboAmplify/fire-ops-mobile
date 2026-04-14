@@ -510,6 +510,33 @@ export function ShiftTicketForm({
           </DrawerContent>
         </Drawer>
 
+        {/* ── Combined Time + Crew Sync Card ── */}
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <section className="p-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold">Equipment Time</h3>
+              <button type="button" onClick={() => { setEquipmentEntries((prev) => [...prev, emptyEquipmentEntry()]); markDirty(); }}
+                className="flex items-center gap-1 text-xs font-medium text-primary touch-target">
+                <Plus className="h-3.5 w-3.5" /> Add Row
+              </button>
+            </div>
+            {equipmentEntries.map((entry, i) => (
+              <EquipmentEntryRow key={i} entry={entry} index={i}
+                onChange={(idx, updated) => { setEquipmentEntries((prev) => prev.map((e, j) => (j === idx ? updated : e))); markDirty(); }}
+                onRemove={(idx) => { if (equipmentEntries.length > 1) { setEquipmentEntries((prev) => prev.filter((_, j) => j !== idx)); markDirty(); } }}
+              />
+            ))}
+          </section>
+          <div className="border-t border-border" />
+          <div className="p-3">
+            <CrewSyncCard
+              equipmentEntries={equipmentEntries}
+              personnelEntries={personnelEntries}
+              setPersonnelEntries={(updater) => { setPersonnelEntries(updater); markDirty(); }}
+            />
+          </div>
+        </div>
+
         {/* ── Crew (Personnel Entries) ── */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">
@@ -554,6 +581,26 @@ export function ShiftTicketForm({
               );
             })}
           </div>
+          {/* Compact status summary */}
+          {personnelEntries.length > 0 && (() => {
+            const first = personnelEntries[0];
+            const tags: string[] = [];
+            if (first.lodging) tags.push("Lodging");
+            const meals: string[] = [];
+            if (first.per_diem_b) meals.push("B");
+            if (first.per_diem_l) meals.push("L");
+            if (first.per_diem_d) meals.push("D");
+            if (meals.length > 0) tags.push(`Per Diem: ${meals.join(", ")}`);
+            // Check if any entry has a lunch remark
+            const lunchMatch = first.remarks?.match(/lunch at (\d{4})/);
+            if (lunchMatch) tags.push(`Lunch ${lunchMatch[1]}`);
+            if (tags.length === 0) return null;
+            return (
+              <p className="text-[11px] text-muted-foreground px-1">
+                {tags.join(" | ")}
+              </p>
+            );
+          })()}
           {/* Expanded detail for selected crew member */}
           {expandedPersonnelIndex !== null && personnelEntries[expandedPersonnelIndex] && (
             <PersonnelEntryRow
@@ -566,33 +613,6 @@ export function ShiftTicketForm({
             />
           )}
         </section>
-
-        {/* ── Combined Time + Crew Sync Card ── */}
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
-          <section className="p-3 space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold">Equipment Time</h3>
-              <button type="button" onClick={() => { setEquipmentEntries((prev) => [...prev, emptyEquipmentEntry()]); markDirty(); }}
-                className="flex items-center gap-1 text-xs font-medium text-primary touch-target">
-                <Plus className="h-3.5 w-3.5" /> Add Row
-              </button>
-            </div>
-            {equipmentEntries.map((entry, i) => (
-              <EquipmentEntryRow key={i} entry={entry} index={i}
-                onChange={(idx, updated) => { setEquipmentEntries((prev) => prev.map((e, j) => (j === idx ? updated : e))); markDirty(); }}
-                onRemove={(idx) => { if (equipmentEntries.length > 1) { setEquipmentEntries((prev) => prev.filter((_, j) => j !== idx)); markDirty(); } }}
-              />
-            ))}
-          </section>
-          <div className="border-t border-border" />
-          <div className="p-3">
-            <CrewSyncCard
-              equipmentEntries={equipmentEntries}
-              personnelEntries={personnelEntries}
-              setPersonnelEntries={(updater) => { setPersonnelEntries(updater); markDirty(); }}
-            />
-          </div>
-        </div>
 
         <section className="space-y-3">
           <h3 className="text-sm font-bold">Signatures</h3>
