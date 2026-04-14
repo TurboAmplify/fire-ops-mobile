@@ -28,11 +28,11 @@ export function EquipmentEntryRow({ entry, index, onChange, onRemove }: Props) {
         <span className="text-xs font-bold text-muted-foreground">Equipment Row {index + 1}</span>
         <button onClick={() => onRemove(index)} className="text-xs text-destructive touch-target">Remove</button>
       </div>
+      <div>
+        <label className="text-[10px] text-muted-foreground">15. Date</label>
+        <input type="date" value={entry.date} onChange={(e) => update("date", e.target.value)} className={inputClass} />
+      </div>
       <div className="grid grid-cols-3 gap-2">
-        <div>
-          <label className="text-[10px] text-muted-foreground">15. Date</label>
-          <input type="date" value={entry.date} onChange={(e) => update("date", e.target.value)} className={inputClass} />
-        </div>
         <div>
           <label className="text-[10px] text-muted-foreground">16. Start (24h)</label>
           <MilitaryTimeInput value={entry.start} onChange={(v) => update("start", v)} className={inputClass} />
@@ -41,13 +41,13 @@ export function EquipmentEntryRow({ entry, index, onChange, onRemove }: Props) {
           <label className="text-[10px] text-muted-foreground">17. Stop (24h)</label>
           <MilitaryTimeInput value={entry.stop} onChange={(v) => update("stop", v)} className={inputClass} />
         </div>
-      </div>
-      <div className="grid grid-cols-3 gap-2">
         <div>
           <label className="text-[10px] text-muted-foreground">18. Total</label>
           <input type="text" readOnly value={entry.total || ""}
             className="w-full rounded-lg border border-input bg-muted px-2 py-2 text-sm" />
         </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
         <div>
           <label className="text-[10px] text-muted-foreground">19. Quantity</label>
           <input type="text" inputMode="numeric" value={entry.quantity} onChange={(e) => update("quantity", e.target.value)}
