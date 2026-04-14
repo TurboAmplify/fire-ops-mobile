@@ -1,40 +1,48 @@
 
 
-# Clean Up Equipment Time + Crew Sync Card
+# Compact Crew List: Initials Row with Tap-to-Expand
 
-## Issues from screenshot
-1. **Date overlaps Start time** -- the 3-column grid is too tight on mobile for a date input
-2. **"Work" button is confusing** -- user wants to remove the Work/Travel toggle (remarks can handle that)
-3. **B/L/D not labeled** -- unclear what they mean without context
-4. **Per Diem needs its own labeled row** -- separate from Lunch/Lodging
+## Problem
+With 23 crew members, even collapsed PersonnelEntryRows take ~23 lines of vertical space (each is a full-width card with name, date, badges, hours, chevron). This pushes the time entry card way off screen.
+
+## Solution
+Replace the list of individual collapsed cards with a compact **initials row** -- small circular avatar chips showing crew initials. Tapping an initial opens that crew member's detail row inline (or as the only expanded card). One line of wrapped initials covers ~8-10 crew per row, so 23 crew fits in 3 rows instead of 23.
+
+```text
+BEFORE (23 cards):
+┌ John Smith       10/14  10.5h  v ┐
+┌ Jane Doe         10/14  10.5h  v ┐
+┌ Bob Wilson       10/14  10.5h  v ┐
+... (20 more cards)
+
+AFTER (initials row + expand on tap):
+Crew (23)                    [+ Add]
+[JS] [JD] [BW] [MR] [TL] [AK] [CP] [DH]
+[SG] [RN] [KF] [LM] [WB] [ET] [JC] [PD]
+[HJ] [QR] [VT] [XY] [ZA] [NM] [OL]
+
+(tap JS →)
+┌ John Smith  10/14  Op: 0600-1800  10.5h ┐
+│ [time fields, remarks, etc.]             │
+└──────────────────────────────────────────┘
+```
 
 ## Changes
 
-### 1. Fix EquipmentEntryRow grid (`EquipmentEntryRow.tsx`)
-- Change Date row from `grid-cols-3` to: Date on its own row (full width), then Start/Stop/Total on a second row as `grid-cols-3`
-- This prevents the date input from overlapping the time fields
+### 1. Wrap crew list in `ShiftTicketForm.tsx`
+- Default view: render crew as a flex-wrap row of small circular chips (32x32px) showing 2-letter initials
+- Each chip is color-coded: muted if no hours logged, primary-tinted if hours > 0
+- Tapping a chip sets `expandedPersonnelIndex` to that crew member, showing the full `PersonnelEntryRow` expanded below the initials row
+- Tapping again (or another chip) collapses it
+- Show total crew hours next to the section header: `Crew (23) -- 241.5h`
 
-### 2. Clean up CrewSyncCard (`CrewSyncCard.tsx`)
-- **Remove** the Work/Travel toggle button entirely (activity defaults to "work", context handled via remarks)
-- **Remove** the work context input
-- **Row 1**: `[Lunch] [Lodging]` -- two chip toggles, plus lunch time input inline when Lunch is active
-- **Row 2**: Small "Per Diem" label, then `[B] [L] [D]` chips
-- **Apply button** stays the same
+### 2. Build initials helper
+- Extract initials from `operator_name`: "John Smith" -> "JS", "Bob" -> "BO", empty -> crew index number
+- Small utility function, inline in the form component
 
-```text
-AFTER:
-┌────────────────────────────────────────┐
-│ [Lunch] [Lodging]   lunch@1200         │
-│ Per Diem  [B] [L] [D]                 │
-│ [Apply to All Crew (3)  10.5h]        │
-└────────────────────────────────────────┘
-```
-
-### 3. Update buildRemarksString in `shift-tickets.ts`
-- Since activity_type is removed from UI, default to "Work" in the remarks builder (no breaking change, just always outputs "Work" unless explicitly set)
+### 3. No changes to PersonnelEntryRow
+- The expanded form stays exactly as-is -- only one shows at a time when a chip is tapped
 
 ## Files changed
-- `src/components/shift-tickets/EquipmentEntryRow.tsx` -- fix date/time grid layout
-- `src/components/shift-tickets/CrewSyncCard.tsx` -- remove Work/Travel, add Per Diem label, clean layout
-- `src/services/shift-tickets.ts` -- minor: default activity_type to "work" in buildRemarksString
+- `src/components/shift-tickets/ShiftTicketForm.tsx` -- replace mapped PersonnelEntryRow list with initials chip row + single expanded detail
 
