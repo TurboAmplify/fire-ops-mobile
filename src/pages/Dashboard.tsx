@@ -59,29 +59,25 @@ export default function Dashboard() {
             <StatCard value={crewCount} label="Crew" icon={Users} variant="muted" />
           </div>
 
-          {/* Quick actions */}
+          {/* Operations grid */}
           <section>
             <h2 className="mb-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.15em] px-0.5">
               Operations
             </h2>
-            <div className="space-y-2.5">
-              <QuickAction to="/incidents" icon={Flame} label="Incidents" desc="Manage active fires" />
-              <QuickAction to="/fleet" icon={Truck} label="Fleet" desc="Trucks & equipment" />
-              <QuickAction to="/time" icon={Clock} label="Time" desc="Shift tracking" />
-              <QuickAction to="/expenses" icon={Receipt} label="Expenses" desc="Receipts & costs" />
-              <QuickAction to="/crew" icon={Users} label="Crew" desc="Personnel management" />
+            <div className="grid grid-cols-3 gap-3">
+              <GridTile to="/incidents" icon={Flame} label="Incidents" variant="destructive" />
+              <GridTile to="/fleet" icon={Truck} label="Fleet" />
+              <GridTile to="/time" icon={Clock} label="Time" />
+              <GridTile to="/expenses" icon={Receipt} label="Expenses" />
+              <GridTile to="/crew" icon={Users} label="Crew" />
               <button
                 onClick={() => setShowTickets(true)}
-                className="flex w-full items-center gap-3.5 rounded-2xl bg-card p-4 card-shadow border border-border/20 transition-all duration-150 active:scale-[0.98] active:shadow-none text-left"
+                className="flex flex-col items-center justify-center gap-1.5 rounded-2xl bg-card p-4 card-shadow border border-border/20 transition-all duration-150 active:scale-[0.98] active:shadow-none aspect-square"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary shrink-0">
-                  <FileText className="h-[18px] w-[18px] text-muted-foreground" strokeWidth={1.75} />
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary">
+                  <FileText className="h-5 w-5 text-muted-foreground" strokeWidth={1.75} />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold">Shift Tickets</p>
-                  <p className="text-[11px] text-muted-foreground">OF-297 quick access</p>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground/30 shrink-0" />
+                <span className="text-[11px] font-semibold text-muted-foreground">Tickets</span>
               </button>
             </div>
           </section>
