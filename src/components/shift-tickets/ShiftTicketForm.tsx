@@ -413,10 +413,18 @@ export function ShiftTicketForm({
           </CollapsibleContent>
         </Collapsible>
 
-        {/* ── Equipment Info ── */}
-        <section className="space-y-2">
-          <h3 className="text-sm font-bold">Equipment Info</h3>
-          <div className="space-y-2">
+        {/* ── Equipment Info (collapsed) ── */}
+        <Collapsible defaultOpen={false}>
+          <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl border border-border bg-card px-3 py-2.5 touch-target active:bg-accent/30">
+            <div className="text-left min-w-0">
+              <p className="text-sm font-bold">Equipment Info</p>
+              <p className="text-[11px] text-muted-foreground truncate">
+                {[equipmentMakeModel, equipmentType, licenseId].filter(Boolean).join(" | ") || "Tap to expand"}
+              </p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 transition-transform [[data-state=open]>&]:rotate-90" />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-2 space-y-2">
             <div>
               <label className={labelClass}>7. Equipment Make/Model</label>
               <input value={equipmentMakeModel} onChange={(e) => setField(setEquipmentMakeModel)(e.target.value)} className={inputClass} />
@@ -435,20 +443,29 @@ export function ShiftTicketForm({
                 <input value={licenseId} onChange={(e) => setField(setLicenseId)(e.target.value)} className={inputClass} />
               </div>
             </div>
-          </div>
-        </section>
+          </CollapsibleContent>
+        </Collapsible>
 
-        {/* ── Options ── */}
-        <section className="space-y-2">
-          <h3 className="text-sm font-bold">Options</h3>
-          <label className="flex items-center gap-3 touch-target">
-            <input type="checkbox" checked={transportRetained} onChange={(e) => { setTransportRetained(e.target.checked); markDirty(); }} className="h-5 w-5 rounded border-input accent-primary" />
-            <span className="text-sm">12. Transport Retained</span>
-          </label>
-          <label className="flex items-center gap-3 touch-target">
-            <input type="checkbox" checked={isFirstLast} onChange={(e) => { setIsFirstLast(e.target.checked); markDirty(); }} className="h-5 w-5 rounded border-input accent-primary" />
-            <span className="text-sm">13. First/Last Ticket</span>
-          </label>
+        {/* ── Options (collapsed) ── */}
+        <Collapsible defaultOpen={false}>
+          <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl border border-border bg-card px-3 py-2.5 touch-target active:bg-accent/30">
+            <div className="text-left min-w-0">
+              <p className="text-sm font-bold">Options</p>
+              <p className="text-[11px] text-muted-foreground truncate">
+                {[transportRetained && "Transport Retained", isFirstLast && `First/Last (${firstLastType})`, miles && `${miles} mi`].filter(Boolean).join(" | ") || "Tap to expand"}
+              </p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 transition-transform [[data-state=open]>&]:rotate-90" />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-2 space-y-2">
+            <label className="flex items-center gap-3 touch-target">
+              <input type="checkbox" checked={transportRetained} onChange={(e) => { setTransportRetained(e.target.checked); markDirty(); }} className="h-5 w-5 rounded border-input accent-primary" />
+              <span className="text-sm">12. Transport Retained</span>
+            </label>
+            <label className="flex items-center gap-3 touch-target">
+              <input type="checkbox" checked={isFirstLast} onChange={(e) => { setIsFirstLast(e.target.checked); markDirty(); }} className="h-5 w-5 rounded border-input accent-primary" />
+              <span className="text-sm">13. First/Last Ticket</span>
+            </label>
           {isFirstLast && (
             <div className="grid grid-cols-2 gap-2 pl-8">
               {(["mobilization", "demobilization"] as const).map((t) => (
