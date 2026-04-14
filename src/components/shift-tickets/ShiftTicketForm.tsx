@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Plus, Loader2, FileText, Save, Download, AlertTriangle, Copy, ChevronRight } from "lucide-react";
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+import { Plus, Loader2, FileText, Save, Download, AlertTriangle, Copy } from "lucide-react";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
+import { Button } from "@/components/ui/button";
 import { getLocalDateString } from "@/lib/local-date";
 import { AppShell } from "@/components/AppShell";
 import { SignaturePicker } from "./SignaturePicker";
