@@ -26,23 +26,29 @@ export default function Dashboard() {
         <Settings className="h-5 w-5 text-muted-foreground" strokeWidth={1.75} />
       </button>
     }>
+      {/* Subtle mesh gradient background */}
+      <div className="fixed inset-0 pointer-events-none -z-10">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] rounded-full bg-[hsl(8_85%_52%/0.04)] blur-[100px]" />
+        <div className="absolute bottom-0 right-0 w-[400px] h-[300px] rounded-full bg-[hsl(220_80%_55%/0.03)] blur-[100px]" />
+      </div>
+
       <div className="px-4 pt-4 space-y-6">
-        {/* Operations grid with badge counts */}
+        {/* Operations grid */}
         <section>
-          <h2 className="mb-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.15em] px-0.5">
+          <h2 className="mb-3 text-[10px] font-semibold text-muted-foreground/80 uppercase tracking-[0.15em] px-0.5">
             Operations
           </h2>
           <div className="grid grid-cols-3 gap-3">
-            <GridTile to="/incidents" icon={Flame} label="Incidents" iconBg="bg-destructive/12" iconColor="text-destructive" badge={activeCount || undefined} />
-            <GridTile to="/fleet" icon={Truck} label="Fleet" iconBg="bg-blue-500/12" iconColor="text-blue-500" badge={truckCount || undefined} />
-            <GridTile to="/time" icon={Clock} label="Time" iconBg="bg-amber-500/12" iconColor="text-amber-500" />
-            <GridTile to="/expenses" icon={Receipt} label="Expenses" iconBg="bg-emerald-500/12" iconColor="text-emerald-500" />
-            <GridTile to="/crew" icon={Users} label="Crew" iconBg="bg-violet-500/12" iconColor="text-violet-500" badge={crewCount || undefined} />
+            <GridTile to="/incidents" icon={Flame} label="Incidents" iconBg="bg-destructive/15" iconColor="text-destructive" badge={activeCount || undefined} />
+            <GridTile to="/fleet" icon={Truck} label="Fleet" iconBg="bg-blue-500/15" iconColor="text-blue-500" badge={truckCount || undefined} />
+            <GridTile to="/time" icon={Clock} label="Time" iconBg="bg-amber-500/15" iconColor="text-amber-500" />
+            <GridTile to="/expenses" icon={Receipt} label="Expenses" iconBg="bg-emerald-500/15" iconColor="text-emerald-500" />
+            <GridTile to="/crew" icon={Users} label="Crew" iconBg="bg-violet-500/15" iconColor="text-violet-500" badge={crewCount || undefined} />
             <button
               onClick={() => setShowTickets(true)}
-              className="flex flex-col items-center justify-center gap-1.5 rounded-2xl bg-card p-4 card-shadow border border-border/20 transition-all duration-150 active:scale-[0.98] active:shadow-none aspect-square relative"
+              className="flex flex-col items-center justify-center gap-1.5 rounded-2xl glass-tile p-4 transition-all duration-150 active:scale-[0.97] active:opacity-80 aspect-square relative"
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500/12">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500/15">
                 <FileText className="h-5 w-5 text-sky-500" strokeWidth={1.75} />
               </div>
               <span className="text-[11px] font-semibold text-muted-foreground">Tickets</span>
@@ -50,13 +56,13 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* Gradient divider */}
-        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+        {/* Glow divider */}
+        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent shadow-[0_0_8px_hsl(8_85%_52%/0.08)]" />
 
-        {/* Active incidents — horizontal scroll */}
+        {/* Active incidents */}
         <section>
           <div className="flex items-center justify-between mb-3 px-0.5">
-            <h2 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.15em]">
+            <h2 className="text-[10px] font-semibold text-muted-foreground/80 uppercase tracking-[0.15em]">
               Active Incidents
             </h2>
             {incidents && incidents.length > 0 && (
@@ -67,8 +73,8 @@ export default function Dashboard() {
           </div>
 
           {activeIncidents.length === 0 ? (
-            <div className="rounded-2xl bg-card p-5 text-center card-shadow border border-border/30">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 mx-auto mb-2">
+            <div className="rounded-2xl glass-tile p-5 text-center">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 mx-auto mb-2">
                 <Flame className="h-5 w-5 text-emerald-500" strokeWidth={1.75} />
               </div>
               <p className="text-sm font-semibold">All Clear</p>
@@ -80,7 +86,7 @@ export default function Dashboard() {
                 <Link
                   key={inc.id}
                   to={`/incidents/${inc.id}`}
-                  className="min-w-[160px] max-w-[180px] snap-start flex-shrink-0 rounded-2xl bg-card p-4 card-shadow border border-border/20 transition-all duration-150 active:scale-[0.97] active:shadow-none"
+                  className="min-w-[160px] max-w-[180px] snap-start flex-shrink-0 rounded-2xl glass-tile p-4 border-l-2 border-l-destructive/40 transition-all duration-150 active:scale-[0.97] active:opacity-80"
                 >
                   <div className="flex items-center gap-1.5 mb-2">
                     <span className="relative flex h-2 w-2">
@@ -106,7 +112,7 @@ function GridTile({ to, icon: Icon, label, iconBg, iconColor, badge }: { to: str
   return (
     <Link
       to={to}
-      className="flex flex-col items-center justify-center gap-1.5 rounded-2xl bg-card p-4 card-shadow border border-border/20 transition-all duration-150 active:scale-[0.98] active:shadow-none aspect-square relative"
+      className="flex flex-col items-center justify-center gap-1.5 rounded-2xl glass-tile p-4 transition-all duration-150 active:scale-[0.97] active:opacity-80 aspect-square relative"
     >
       {badge !== undefined && (
         <span className="absolute top-2 right-2 min-w-[20px] h-5 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold px-1.5">
