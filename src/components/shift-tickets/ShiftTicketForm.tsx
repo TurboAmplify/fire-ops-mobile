@@ -272,7 +272,8 @@ export function ShiftTicketForm({
         font_used: metadata.font || null,
       });
 
-      await Promise.resolve(onSave(sigUpdate));
+      await Promise.resolve(onSave({ ...buildSavePayload(), ...sigUpdate }));
+      setIsDirty(false);
       showSuccess("Signature saved");
     } catch {
       showSuccess("Failed to save signature");
@@ -309,7 +310,8 @@ export function ShiftTicketForm({
 
       try {
         if (Object.keys(sigUpdates).length > 0) {
-          await Promise.resolve(onSave(sigUpdates));
+          await Promise.resolve(onSave({ ...buildSavePayload(), ...sigUpdates }));
+          setIsDirty(false);
         }
         showSuccess("Signatures uploaded");
       } catch {
