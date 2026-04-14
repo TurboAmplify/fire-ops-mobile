@@ -1,34 +1,54 @@
 
 
-# Fix: Delete and Re-create daldrich75@yahoo.com Account
+# Fix: Mobile Zoom and Horizontal Overflow
 
-## Problem
-The account `daldrich75@yahoo.com` was created on April 2 (likely by the `auto_join_demo_org` trigger) with no password set. Login fails because there's nothing to authenticate against. Password reset emails aren't arriving.
+## What changes
 
-## Plan
+Three targeted CSS/HTML edits. No component logic, save behavior, or workflow changes.
 
-### Step 1: Clean up existing records
-Using database insert tool (which supports DELETE/UPDATE):
-1. Delete from `organization_members` where `user_id = '81444a20-21a3-4543-9f65-a8b3048fafd4'`
-2. Delete from `profiles` where `id = '81444a20-21a3-4543-9f65-a8b3048fafd4'`
-3. Delete from `auth.users` where `id = '81444a20-21a3-4543-9f65-a8b3048fafd4'`
+### 1. Viewport meta tag (index.html)
+Add `maximum-scale=1, user-scalable=no` to prevent iOS Safari from auto-zooming on input focus.
 
-### Step 2: Verify auto-confirm is on
-Already enabled from a previous change. No email verification required -- signup works instantly.
+```html
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+```
 
-### Step 3: User signs up fresh
-- Go to the login page, tap "Sign up"
-- Enter `daldrich75@yahoo.com` / `Bigjake2020!!`
-- Account is created and logged in immediately (no email needed)
+**Risk**: None. This is standard for Capacitor apps. Accessibility zoom is handled at the OS level, not browser level, in native wrappers.
 
-### Step 4: Auto-join organization
-The `auto_join_demo_org` trigger will automatically add the new user to the organization as owner -- same access as the B Aldrich account. No manual invite needed.
+### 2. Global overflow guard (src/index.css)
+Add `overflow-x: hidden` to `html` and `body` to prevent any screen from scrolling sideways.
 
-### Step 5: Also update the pending invite status
-Mark any existing invite for that email as "accepted" so it doesn't show up again.
+```css
+html, body {
+  overflow-x: hidden;
+}
+```
 
-## Technical details
-- The `auto_join_demo_org` trigger fires on new `auth.users` inserts and adds users to org `00000000-0000-0000-0000-000000000001` automatically
-- `handle_new_user` trigger creates a `profiles` row automatically
-- Auto-confirm is already enabled, so no email verification step
+**Risk**: Very low. The app is single-column mobile layout -- there is no legitimate horizontal scroll. This only clips accidental spill from wide tables or grids.
+
+### 3. Bump form input font sizes to 16px (src/index.css)
+Add a global rule so all `input`, `select`, and `textarea` elements render at minimum 16px. This is the root cause of iOS auto-zoom -- Safari zooms any focused input below 16px.
+
+```css
+input, select, textarea {
+  font-size: 16px;
+}
+```
+
+**Risk assessment**:
+- The shared `Input` component already uses `text-base` (16px) on mobile -- no change there.
+- `SelectTrigger` uses `text-sm` (14px) -- bumped to 16px. Visually nearly identical, prevents zoom.
+- `Textarea` uses `text-sm` -- bumped to 16px. Same reasoning.
+- Inline inputs in `EquipmentEntryRow`, `PersonnelEntryRow`, `CrewSyncCard`, and `ShiftTicketForm` use `text-sm` -- bumped to 16px. These are in grid layouts with fixed gaps, so the 2px increase fits fine.
+- The OF-297 preview uses `text-[11px]` inputs for supervisor name/RO fields. These are inside a form-like preview, not a Capacitor webview, so the global 16px rule will override them. This is acceptable -- those two fields will render slightly larger but still fit within their container.
+
+### What is NOT changing
+- No component files edited (no risk of breaking save/signature/sync logic)
+- No shift ticket workflow changes
+- No database or service changes
+- Vertical scrolling behavior untouched
+
+### Files changed
+- `index.html` -- viewport meta tag only
+- `src/index.css` -- 2 additions (overflow-x, font-size floor)
 
