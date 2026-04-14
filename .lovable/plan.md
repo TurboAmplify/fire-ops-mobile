@@ -1,29 +1,50 @@
 
 
-# Dashboard Polish: Match Sizes, Fix 404, Tighten Needs
+# Simplify Incident Statuses: Active / Demob / Closed
 
-## Issues to fix
+## Why this is right
+The current 4 statuses (active, contained, controlled, out) mirror fire suppression stages -- that's the Incident Commander's world, not the contractor's. Contractors care about:
+- **Active** -- working the incident, logging time/expenses
+- **Demob** -- demobilizing, finishing paperwork, wrapping up
+- **Closed** -- done, everything submitted
 
-### 1. Shift Ticket 404 (critical)
-The quick action navigates to `/shift-tickets/new` which doesn't exist. Shift tickets require incident + truck context. The `ShiftTicketQuickAccess` dialog already handles this picker flow and is already rendered in Dashboard with `showTickets` state. Fix: change the onClick to `() => setShowTickets(true)` instead of navigating.
+This matches the real operational workflow and reduces decision fatigue when updating status.
 
-### 2. Quick Actions sizing -- match stat cards
-Currently quick actions use `aspect-square` with large icon circles, making them taller than the stat cards. Remove the aspect-square constraint, reduce padding, and match the compact feel of the stat cards above. Same glass-tile, similar height.
+## Changes
 
-### 3. Needs List -- keep it visible without scrolling
-On a 393x587 viewport, the needs list is below the fold. Two options:
-- **Tighten everything above** so needs list fits on screen
-- **Remove the needs list section header overhead** and make it more compact
+### 1. `src/services/incidents.ts`
+- Update `IncidentStatus` type: `"active" | "demob" | "closed"`
+- Update `STATUS_LABELS`: Active, Demob, Closed
+- Add status color mapping for consistent styling across pages
 
-I'll do both: reduce quick action height (no more aspect-square), tighten section gaps, and make needs list rows more compact. This should get at least the first 2-3 needs items visible without scrolling on a standard phone.
+### 2. `src/pages/Incidents.tsx`
+- Update filter chips to `["all", "active", "demob", "closed"]`
+- Update status badge colors: active = red, demob = amber/yellow, closed = green
 
-## Changes (all in `src/pages/Dashboard.tsx`)
+### 3. `src/pages/IncidentDetail.tsx`
+- Update `statusOptions` array to the new 3 statuses
+- Update status color logic to include demob (amber)
 
-1. **Fix Shift Ticket onClick**: `() => setShowTickets(true)`
-2. **QuickAction component**: Remove `aspect-square`, reduce padding from `p-4` to `p-3`, shrink icon container from `h-10 w-10` to `h-8 w-8`, match stat card text size
-3. **Reduce outer spacing**: `space-y-4` to `space-y-3`
-4. **Needs list rows**: tighter padding (`py-3` to `py-2`), smaller icon container
+### 4. `src/pages/IncidentEdit.tsx`
+- Status selector already uses `STATUS_LABELS` -- will work automatically
 
-## File changed
-- `src/pages/Dashboard.tsx`
+### 5. `src/pages/Dashboard.tsx`
+- No changes needed -- already filters by `status === "active"`
+
+### 6. Database migration
+- Update the default value for `incidents.status` (already "active", no change needed)
+- Migrate any existing rows with "contained" or "controlled" to "demob", and "out" to "closed"
+
+## What stays the same
+- The `containment` percentage field stays on incidents for reference
+- `acres` field unchanged
+- All other incident functionality unchanged
+- No routing changes
+
+## Files changed
+- `src/services/incidents.ts`
+- `src/pages/Incidents.tsx`
+- `src/pages/IncidentDetail.tsx`
+- `src/pages/IncidentEdit.tsx`
+- Database migration to update existing data
 
