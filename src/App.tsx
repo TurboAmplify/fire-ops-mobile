@@ -34,7 +34,7 @@ import Settings from "./pages/Settings";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Support from "./pages/Support";
-import Time from "./pages/Time";
+// import Time from "./pages/Time"; // Deactivated — shift tickets cover all time tracking
 import Payroll from "./pages/Payroll";
 import More from "./pages/More";
 import NeedsList from "./pages/NeedsList";
@@ -83,7 +83,7 @@ const App = () => (
               <Route path="/privacy" element={<ProtectedRoute><Privacy /></ProtectedRoute>} />
               <Route path="/terms" element={<ProtectedRoute><Terms /></ProtectedRoute>} />
               <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
-              <Route path="/time" element={<ProtectedRoute><Time /></ProtectedRoute>} />
+              {/* <Route path="/time" element={<ProtectedRoute><Time /></ProtectedRoute>} /> */}{/* Deactivated — shift tickets cover all time tracking */}
               <Route path="/payroll" element={<ProtectedRoute><Payroll /></ProtectedRoute>} />
               <Route path="/more" element={<ProtectedRoute><More /></ProtectedRoute>} />
               <Route path="/needs" element={<ProtectedRoute><NeedsList /></ProtectedRoute>} />
