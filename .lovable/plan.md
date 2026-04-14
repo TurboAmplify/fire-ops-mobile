@@ -1,46 +1,45 @@
 
 
-# Shift Ticket Quick Access + Collapsible Truck Sections
+# Fix Shift Ticket Issues + Customizable Bottom Nav
 
-## What you're asking for
-1. **Inside the truck card**: Make sections collapsible to reduce scrolling, but keep them accessible
-2. **On the Dashboard**: Add a "Shift Tickets" quick-access button that opens a dialog/popup where you can pick incident + truck, see recent tickets, duplicate, or create new -- without navigating through the full incident drill-down
+## Issue 1: Dates still off by one day
 
-## Plan
+The `useRecentShiftTickets` hook displays dates using `new Date(t.updated_at).toLocaleDateString()` which can shift dates due to UTC interpretation. The date from equipment/personnel entries (stored as `YYYY-MM-DD` strings) is also being parsed through `Date` which causes UTC-ahead shifts.
 
-### Part 1: Collapsible truck sections (IncidentTruckList.tsx)
+**Fix**: Display the raw `YYYY-MM-DD` string dates directly without converting through `new Date()`. For `updated_at` fallback, parse with timezone awareness using the same local-date pattern already in the project.
 
-Wrap these sections inside the expanded truck card with collapsible headers:
-- **Truck Details** (photo, specs) -- collapsed by default
-- **Resource Orders** -- collapsed by default  
-- **Agreements** -- collapsed by default
-- **Crew** -- collapsed by default
-- **Shifts** -- collapsed by default
-- **Shift Tickets** -- **expanded by default** (most used, should be visible first)
+**Files**: `src/components/shift-tickets/ShiftTicketQuickAccess.tsx`
 
-Each section gets a small header bar with a chevron toggle. Uses the existing Radix `Collapsible` component already in the project. The shift tickets section stays at the bottom but is the only one open by default, so it's immediately visible without scrolling past all the other content.
+## Issue 2: Tapping a recent ticket goes to 404
 
-Status changer stays always visible (it's small and important).
+Line 30-33 in `ShiftTicketQuickAccess.tsx` has a broken `handleTicketTap` -- it calls `navigate` twice, first to a malformed URL using `incident_truck_id` for both the incident and truck params, then to a non-existent `/shift-ticket/:id` route.
 
-### Part 2: Dashboard shift ticket popup (Dashboard.tsx)
+The problem: `shift_tickets` table has `incident_truck_id` but not `incident_id`. We need to look up the `incident_id` from the `incident_trucks` table.
 
-Add a "Shift Tickets" button to the Operations quick-actions list on the home screen. When tapped, it opens a full-screen dialog (not a page navigation) that:
+**Fix**: Update the `useRecentShiftTickets` query to join `incident_trucks` to get `incident_id`. Then build the correct route: `/incidents/{incident_id}/trucks/{incident_truck_id}/shift-ticket/{ticket_id}`. Remove the duplicate navigate call.
 
-1. **Shows recent shift tickets** (last 5 across all incidents) with incident name, truck, date, and status. Tapping one navigates directly to edit it.
-2. **Shows a "New Ticket" flow**: pick active incident -> pick assigned truck -> navigates to the create page. Two taps instead of six.
-3. **Duplicate button** on recent tickets, same as existing behavior.
+**Files**: `src/hooks/useShiftTickets.ts`, `src/components/shift-tickets/ShiftTicketQuickAccess.tsx`
 
-This requires a new hook `useRecentShiftTickets()` that queries the shift_tickets table ordered by `updated_at` desc, limit 5.
+## Issue 3: Customizable bottom navigation bar
 
-### Files changed
-- `src/components/incidents/IncidentTruckList.tsx` -- wrap each section in Collapsible, shift tickets expanded by default
-- `src/pages/Dashboard.tsx` -- add Shift Tickets quick action that opens a dialog
-- `src/hooks/useShiftTickets.ts` -- add `useRecentShiftTickets()` hook
-- New: `src/components/shift-tickets/ShiftTicketQuickAccess.tsx` -- the popup dialog component
+Add a "favorites" system where users pick which 3 middle tabs appear in the bottom nav (Home and More stay fixed at positions 1 and 5).
+
+**How it works**:
+- Store the user's chosen tabs in `localStorage` (no database change needed)
+- Available options: Incidents, Payroll, Expenses, Shift Tickets, Crew, Fleet, Time, Needs List
+- Default: Incidents, Payroll, Expenses (current behavior)
+- Add a "Customize Nav Bar" option in Settings page that opens a picker
+- Bottom nav reads from localStorage and renders the chosen tabs
+
+**Files**:
+- `src/components/BottomNav.tsx` -- read tab config from localStorage, render dynamic middle 3 tabs
+- `src/pages/Settings.tsx` -- add "Customize Navigation" row
+- New: `src/components/settings/NavBarCustomizer.tsx` -- picker dialog where user selects 3 favorites
+- `src/pages/Dashboard.tsx` -- wire up Shift Tickets button to open the quick access dialog (already done), ensure it works as a nav target too
 
 ### What will NOT change
-- No shift ticket form, save, signature, or PDF logic changes
-- No routing changes (existing routes stay the same)
+- No shift ticket form, save, signature, or PDF logic
 - No database changes
-- The full drill-down path (Incident -> Truck -> Shift Tickets) still works exactly as before
+- No routing changes
+- All existing workflows preserved
 
