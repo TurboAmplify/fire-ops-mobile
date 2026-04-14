@@ -146,20 +146,16 @@ function StatCard({ value, label, icon: Icon, variant }: { value: number; label:
   );
 }
 
-function QuickAction({ to, icon: Icon, label, desc }: { to: string; icon: LucideIcon; label: string; desc: string }) {
+function GridTile({ to, icon: Icon, label, variant }: { to: string; icon: LucideIcon; label: string; variant?: string }) {
   return (
     <Link
       to={to}
-      className="flex items-center gap-3.5 rounded-2xl bg-card p-4 card-shadow border border-border/20 transition-all duration-150 active:scale-[0.98] active:shadow-none"
+      className="flex flex-col items-center justify-center gap-1.5 rounded-2xl bg-card p-4 card-shadow border border-border/20 transition-all duration-150 active:scale-[0.98] active:shadow-none aspect-square"
     >
-      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary shrink-0">
-        <Icon className="h-[18px] w-[18px] text-muted-foreground" strokeWidth={1.75} />
+      <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${variant === "destructive" ? "bg-destructive/15" : "bg-secondary"}`}>
+        <Icon className={`h-5 w-5 ${variant === "destructive" ? "text-destructive" : "text-muted-foreground"}`} strokeWidth={1.75} />
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold">{label}</p>
-        <p className="text-[11px] text-muted-foreground">{desc}</p>
-      </div>
-      <ChevronRight className="h-4 w-4 text-muted-foreground/30 shrink-0" />
+      <span className="text-[11px] font-semibold text-muted-foreground">{label}</span>
     </Link>
   );
 }
