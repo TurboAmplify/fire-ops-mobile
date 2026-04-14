@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
-import { LayoutDashboard, MoreHorizontal, FileText } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { LayoutDashboard, FileText } from "lucide-react";
+import { NavLink, useLocation } from "react-router-dom";
 import { getSelectedTabs, NAV_STORAGE_KEY } from "@/components/settings/NavBarCustomizer";
 import { ShiftTicketQuickAccess } from "@/components/shift-tickets/ShiftTicketQuickAccess";
 import type { LucideIcon } from "lucide-react";
@@ -23,27 +23,23 @@ function buildTabs(): Tab[] {
 }
 
 export function BottomNav() {
-  const [middleTabs, setMiddleTabs] = useState<Tab[]>(buildTabs);
+  const [middleTabs, setMiddleTabs] = useState<Tab[]>(() => buildTabs());
   const [showTickets, setShowTickets] = useState(false);
+  const location = useLocation();
 
-  const refresh = useCallback(() => setMiddleTabs(buildTabs()), []);
-
-  useEffect(() => {
-    const onNavChanged = () => refresh();
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === NAV_STORAGE_KEY) refresh();
-    };
-    window.addEventListener("nav-tabs-changed", onNavChanged);
-    window.addEventListener("storage", onStorage);
-    return () => {
-      window.removeEventListener("nav-tabs-changed", onNavChanged);
-      window.removeEventListener("storage", onStorage);
-    };
-  }, [refresh]);
-
-  // Also refresh when navigating back to a page with the bottom nav
+  // Re-read tabs on every route change (catches navigation back from Settings)
   useEffect(() => {
     setMiddleTabs(buildTabs());
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const refresh = () => setMiddleTabs(buildTabs());
+    window.addEventListener("nav-tabs-changed", refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener("nav-tabs-changed", refresh);
+      window.removeEventListener("storage", refresh);
+    };
   }, []);
 
   const allTabs: (Tab & { fixed?: boolean })[] = [
