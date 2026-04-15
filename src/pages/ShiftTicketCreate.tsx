@@ -109,7 +109,7 @@ export default function ShiftTicketCreate() {
       ...(personnelEntries.length > 0 ? { personnel_entries: personnelEntries as any } : {}),
     });
     setInitialized(true);
-  }, [resourceOrders, membership, locState, ticket?.id, initialized, incident, truck, activeCrew, incidentId, agreements]);
+  }, [resourceOrders, membership, locState, ticket?.id, initialized, incident, truck, activeCrew, crewAssignments, incidentId, incidentTruckId, agreements]);
 
   const updateMutation = useUpdateShiftTicket(ticket?.id || "", incidentTruckId || "");
 
