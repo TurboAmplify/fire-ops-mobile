@@ -1196,6 +1196,7 @@ export type Database = {
         Args: { _name: string }
         Returns: string
       }
+      delete_user_data: { Args: { _user_id: string }; Returns: undefined }
       get_auth_email: { Args: never; Returns: string }
       get_org_from_incident: { Args: { _incident_id: string }; Returns: string }
       get_org_from_incident_truck: { Args: { _it_id: string }; Returns: string }
