@@ -112,6 +112,7 @@ export function ShiftTicketForm({
   // Collapsible personnel
   const [expandedPersonnelIndex, setExpandedPersonnelIndex] = useState<number | null>(null);
   const [activeDrawer, setActiveDrawer] = useState<"header" | "equipment" | "options" | "remarks" | null>(null);
+  const [showCrewPicker, setShowCrewPicker] = useState(false);
 
   // Supervisor sheet
   const [showSupervisorSheet, setShowSupervisorSheet] = useState(false);
@@ -548,11 +549,65 @@ export function ShiftTicketForm({
                 </span>
               )}
             </h3>
-            <button type="button" onClick={() => { setPersonnelEntries((prev) => [...prev, emptyPersonnelEntry()]); markDirty(); }}
+            <button type="button" onClick={() => {
+              if (crewRoster && crewRoster.length > 0) {
+                setShowCrewPicker(!showCrewPicker);
+              } else {
+                setPersonnelEntries((prev) => [...prev, emptyPersonnelEntry()]);
+                markDirty();
+              }
+            }}
               className="flex items-center gap-1 text-xs font-medium text-primary touch-target">
               <Plus className="h-3.5 w-3.5" /> Add Crew
             </button>
           </div>
+
+          {/* Crew roster picker */}
+          {showCrewPicker && crewRoster && crewRoster.length > 0 && (
+            <div className="rounded-xl border border-border bg-card p-2 space-y-1">
+              <p className="text-[11px] font-medium text-muted-foreground px-1">Select crew member</p>
+              {crewRoster
+                .filter((c) => c.is_active && !personnelEntries.some((pe) => pe.operator_name === c.crew_members?.name))
+                .map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      const newEntry: PersonnelEntry = {
+                        ...emptyPersonnelEntry(),
+                        operator_name: c.crew_members?.name || "",
+                      };
+                      setPersonnelEntries((prev) => [...prev, newEntry]);
+                      markDirty();
+                      setShowCrewPicker(false);
+                    }}
+                    className="flex w-full items-center gap-3 rounded-lg bg-secondary p-2.5 text-left active:bg-accent/40 touch-target"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-primary/15 text-primary flex items-center justify-center text-xs font-bold">
+                      {(() => {
+                        const name = c.crew_members?.name || "";
+                        const parts = name.trim().split(/\s+/);
+                        return parts.length >= 2 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : name.slice(0, 2).toUpperCase();
+                      })()}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{c.crew_members?.name}</p>
+                      {c.crew_members?.role && <p className="text-[11px] text-muted-foreground">{c.crew_members.role}</p>}
+                    </div>
+                  </button>
+                ))}
+              {crewRoster.filter((c) => c.is_active && !personnelEntries.some((pe) => pe.operator_name === c.crew_members?.name)).length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-2">All crew members already added</p>
+              )}
+              <button
+                type="button"
+                onClick={() => { setPersonnelEntries((prev) => [...prev, emptyPersonnelEntry()]); markDirty(); setShowCrewPicker(false); }}
+                className="flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-border p-2 text-xs text-muted-foreground touch-target"
+              >
+                <Plus className="h-3 w-3" /> Add manually
+              </button>
+            </div>
+          )}
           {/* Compact initials grid */}
           <div className="flex flex-wrap gap-1.5">
             {personnelEntries.map((entry, i) => {

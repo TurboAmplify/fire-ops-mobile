@@ -147,9 +147,10 @@ function TruckCard({
   incidentName?: string;
   organizationId?: string;
 }) {
-  const { data: crew } = useIncidentTruckCrew(isExpanded ? it.id : "");
+  // Always fetch crew so we can show warning on collapsed card too
+  const { data: crew } = useIncidentTruckCrew(it.id);
   const activeCrew = crew?.filter((c) => c.is_active) ?? [];
-  const noCrewAssigned = isExpanded && crew !== undefined && activeCrew.length === 0;
+  const noCrewAssigned = crew !== undefined && activeCrew.length === 0;
   const [autoOpenCrew, setAutoOpenCrew] = useState(false);
   const photoUrl = (it.trucks as any).photo_url;
 
@@ -167,7 +168,15 @@ function TruckCard({
           <TruckIcon className="h-5 w-5 text-muted-foreground" />
           <div>
             <p className="font-semibold">{it.trucks.name}</p>
-            <StatusBadge status={it.status as IncidentTruckStatus} />
+            <div className="flex items-center gap-2">
+              <StatusBadge status={it.status as IncidentTruckStatus} />
+              {noCrewAssigned && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase mt-0.5">
+                  <AlertTriangle className="h-2.5 w-2.5" />
+                  No Crew
+                </span>
+              )}
+            </div>
           </div>
         </div>
         <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isExpanded ? "rotate-180" : ""}`} />
