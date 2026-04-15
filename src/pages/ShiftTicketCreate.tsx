@@ -53,6 +53,7 @@ export default function ShiftTicketCreate() {
     if (!incident && incidentId) return;
     if (!resourceOrders && incidentTruckId) return;
     if (!incidentTrucks && incidentId) return;
+    if (!crewAssignments && incidentTruckId) return; // Wait for crew data
 
     const latestRO = resourceOrders?.find((ro) => ro.parsed_at != null);
     const roData = (latestRO?.parsed_data || {}) as Record<string, any>;
@@ -108,7 +109,7 @@ export default function ShiftTicketCreate() {
       ...(personnelEntries.length > 0 ? { personnel_entries: personnelEntries as any } : {}),
     });
     setInitialized(true);
-  }, [resourceOrders, membership, locState, ticket?.id, initialized, incident, truck, activeCrew, incidentId, agreements]);
+  }, [resourceOrders, membership, locState, ticket?.id, initialized, incident, truck, activeCrew, crewAssignments, incidentId, incidentTruckId, agreements]);
 
   const updateMutation = useUpdateShiftTicket(ticket?.id || "", incidentTruckId || "");
 
