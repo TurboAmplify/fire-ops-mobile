@@ -30,10 +30,36 @@ export default function Settings() {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [showNavCustomizer, setShowNavCustomizer] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
     navigate("/login");
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("No session");
+
+      const { data, error } = await supabase.functions.invoke("delete-account", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      if (error) throw error;
+
+      toast({ title: "Account deleted", description: "Your account and data have been removed." });
+      await signOut();
+      navigate("/login");
+    } catch (err: any) {
+      console.error("Delete account error:", err);
+      toast({ title: "Error", description: "Failed to delete account. Please try again.", variant: "destructive" });
+    } finally {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
   };
 
   return (
@@ -135,6 +161,41 @@ export default function Settings() {
           <LogOut className="h-4 w-4" />
           Sign Out
         </button>
+
+        {/* Delete Account */}
+        {!showDeleteConfirm ? (
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="w-full flex items-center justify-center gap-2 rounded-2xl border border-destructive/20 py-4 text-sm font-semibold text-destructive/70 transition-all duration-150 active:scale-[0.98] touch-target"
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete Account
+          </button>
+        ) : (
+          <div className="rounded-2xl border-2 border-destructive/30 bg-destructive/5 p-4 space-y-3">
+            <p className="text-sm font-semibold text-destructive">Are you sure?</p>
+            <p className="text-xs text-muted-foreground">
+              This will permanently delete your account, organization, and all associated data. This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleting}
+                className="flex-1 rounded-xl bg-secondary py-3 text-sm font-semibold transition-all active:scale-[0.98] touch-target"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleting}
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-destructive py-3 text-sm font-semibold text-destructive-foreground transition-all active:scale-[0.98] touch-target"
+              >
+                {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                {deleting ? "Deleting..." : "Delete Forever"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       <NavBarCustomizer open={showNavCustomizer} onOpenChange={setShowNavCustomizer} />
     </AppShell>
