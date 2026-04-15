@@ -1,43 +1,52 @@
 
 
-# Add Crew Assignment Prompt to Truck Cards
+# App Store Readiness — Implementation Plan
 
-## Summary
+## What I'll build now (in Lovable)
 
-When a truck has no crew assigned, show a prominent warning banner inside the expanded truck card -- right above the Shift Tickets section. The banner nudges the user to add crew and provides a one-tap action to open the crew assignment picker. No existing flows are broken; this is additive UI only.
+### 1. Install Capacitor and configure
+- Add `@capacitor/core`, `@capacitor/cli`, `@capacitor/ios`, `@capacitor/android` to package.json
+- Create `capacitor.config.ts` with appId `app.lovable.63e454bc32e142ee9def17eb4240739a`, appName `fire-buddy-mobile`, and dev server URL
 
-## What changes
+### 2. Account Deletion (App Store requirement)
+- Add "Delete Account" button with confirmation dialog in `src/pages/Settings.tsx`
+- Create `supabase/functions/delete-account/index.ts` edge function that:
+  - Validates the authenticated user
+  - Deletes all user data across tables (cascading via org membership)
+  - Deletes the auth user using service role key
+- Wire the button to call the edge function, then sign out
 
-### 1. `src/components/incidents/IncidentTruckList.tsx`
+### 3. Make Privacy/Terms publicly accessible
+- Move `/privacy` and `/terms` routes outside `ProtectedRoute` in `src/App.tsx`
 
-- Import `useIncidentTruckCrew` hook
-- Inside each expanded truck card, call `useIncidentTruckCrew(it.id)` to get the active crew count
-- If active crew count is 0, render an amber warning card between the status changer and the Shift Tickets section:
-  - Icon: `AlertTriangle` (already imported pattern in TruckCrewSection)
-  - Text: "No crew assigned to this truck -- add crew before creating shift tickets"
-  - Button: "Add Crew" that auto-opens the Crew section and triggers the assign picker
-- Auto-expand the Crew `SectionHeader` when crew count is 0 (change `defaultOpen` to true when no crew)
+### 4. Update Support FAQ
+- Fix the offline answer in `src/pages/Support.tsx` to reflect actual offline capability
 
-### 2. `src/components/incidents/TruckCrewSection.tsx`
+### 5. Fix NotFound page
+- Add safe-area inset classes to `src/pages/NotFound.tsx`
 
-- Accept an optional `autoOpen?: boolean` prop
-- When `autoOpen` is true, initialize `showAssign` to `true` so the crew picker is immediately visible
+## What you'll need to do locally (after)
+1. Export to GitHub and clone
+2. `npm install`
+3. `npx cap add ios` (and/or `android`)
+4. `npx cap sync`
+5. Open in Xcode, add your 1024x1024 app icon, configure signing
+6. Build and submit
 
-### 3. `src/components/shift-tickets/ShiftTicketSection.tsx`
-
-- No changes needed -- the warning banner sits above it in the parent, which is sufficient guidance
-
-## Technical details
-
-- `useIncidentTruckCrew` is already built and returns crew with `is_active` flag
-- The warning banner uses existing Tailwind utility classes (amber bg, rounded-xl, touch-target button)
-- The Crew SectionHeader gets `defaultOpen={activeCrew === 0}` so it's open when empty
-- A ref or state callback scrolls the crew section into view when "Add Crew" is tapped
+For the full native setup guide, see: https://docs.lovable.dev/tips-tricks/native-mobile-apps
 
 ## Files changed
 
 | File | Change |
-|------|--------|
-| `src/components/incidents/IncidentTruckList.tsx` | Add crew count check, warning banner, auto-open crew section |
-| `src/components/incidents/TruckCrewSection.tsx` | Add `autoOpen` prop |
+|---|---|
+| `package.json` | Add Capacitor dependencies |
+| `capacitor.config.ts` | New — Capacitor configuration |
+| `src/App.tsx` | Move `/privacy`, `/terms` outside ProtectedRoute |
+| `src/pages/Settings.tsx` | Add Delete Account with confirmation |
+| `src/pages/Support.tsx` | Update offline FAQ answer |
+| `src/pages/NotFound.tsx` | Add safe-area classes |
+| `supabase/functions/delete-account/index.ts` | New — account deletion edge function |
+
+## Database migration
+- Create a `delete_user_data` database function that cascades deletion across all org-owned tables for the user
 
