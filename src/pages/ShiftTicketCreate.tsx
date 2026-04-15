@@ -53,6 +53,7 @@ export default function ShiftTicketCreate() {
     if (!incident && incidentId) return;
     if (!resourceOrders && incidentTruckId) return;
     if (!incidentTrucks && incidentId) return;
+    if (!crewAssignments && incidentTruckId) return; // Wait for crew data
 
     const latestRO = resourceOrders?.find((ro) => ro.parsed_at != null);
     const roData = (latestRO?.parsed_data || {}) as Record<string, any>;
