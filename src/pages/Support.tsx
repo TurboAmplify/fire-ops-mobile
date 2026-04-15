@@ -61,8 +61,9 @@ export default function Support() {
             <div>
               <p className="font-medium">Can I use the app offline?</p>
               <p className="text-muted-foreground">
-                The app requires an internet connection for data sync. Offline support
-                is planned for a future update.
+                Yes. Previously viewed data is cached on your device so you can keep
+                working without a connection. Any changes you make offline will
+                automatically sync when connectivity is restored.
               </p>
             </div>
           </div>

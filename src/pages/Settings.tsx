@@ -17,7 +17,11 @@ import {
   Sun,
   Moon,
   SlidersHorizontal,
+  Trash2,
+  Loader2,
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 import { NavBarCustomizer } from "@/components/settings/NavBarCustomizer";
 
 export default function Settings() {
