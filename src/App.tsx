@@ -76,8 +76,8 @@ const App = () => (
               <Route path="/expenses/batch-scan" element={<ProtectedRoute><BatchReceiptScan /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="/settings/organization" element={<ProtectedRoute><OrgSettings /></ProtectedRoute>} />
-              <Route path="/privacy" element={<ProtectedRoute><Privacy /></ProtectedRoute>} />
-              <Route path="/terms" element={<ProtectedRoute><Terms /></ProtectedRoute>} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/terms" element={<Terms />} />
               <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
               <Route path="/payroll" element={<ProtectedRoute><Payroll /></ProtectedRoute>} />
               <Route path="/more" element={<ProtectedRoute><More /></ProtectedRoute>} />
