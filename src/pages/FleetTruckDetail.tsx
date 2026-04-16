@@ -1,6 +1,6 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { AppShell } from "@/components/AppShell";
-import { useTruck, useDeleteTruck } from "@/hooks/useFleet";
+import { useTruck, useDeleteTruck, useUpdateTruck } from "@/hooks/useFleet";
 import { Loader2, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { TruckHeroPhoto } from "@/components/fleet/TruckHeroPhoto";
