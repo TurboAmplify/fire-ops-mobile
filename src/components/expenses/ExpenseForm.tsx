@@ -7,6 +7,7 @@ import type { ParsedReceipt } from "@/services/ai-parsing";
 import { parseReceiptAI } from "@/services/ai-parsing";
 import { FuelTypeModal } from "./FuelTypeModal";
 import { MealComplianceFields } from "./MealComplianceFields";
+import { IncidentAttachSheet } from "./IncidentAttachSheet";
 import { useState } from "react";
 import { Loader2, Camera, Sparkles, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
