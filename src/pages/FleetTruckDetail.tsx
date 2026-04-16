@@ -1,6 +1,6 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { AppShell } from "@/components/AppShell";
-import { useTruck, useDeleteTruck } from "@/hooks/useFleet";
+import { useTruck, useDeleteTruck, useUpdateTruck } from "@/hooks/useFleet";
 import { Loader2, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { TruckHeroPhoto } from "@/components/fleet/TruckHeroPhoto";
@@ -26,7 +26,17 @@ export default function FleetTruckDetail() {
   const navigate = useNavigate();
   const { data: truck, isLoading } = useTruck(truckId!);
   const deleteMutation = useDeleteTruck();
+  const updateMutation = useUpdateTruck(truckId!);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  const handleStatusChange = async (status: string) => {
+    try {
+      await updateMutation.mutateAsync({ status } as any);
+      toast.success("Status updated");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to update status");
+    }
+  };
 
   const handleDelete = async () => {
     try {
@@ -88,7 +98,7 @@ export default function FleetTruckDetail() {
         />
 
         {/* Collapsible Info Section */}
-        <TruckInfoSection truck={truck} />
+        <TruckInfoSection truck={truck} onStatusChange={handleStatusChange} isUpdatingStatus={updateMutation.isPending} />
 
         {/* Checklist */}
         <TruckChecklistSection truckId={truckId!} />
