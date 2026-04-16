@@ -206,6 +206,40 @@ export default function BatchReceiptScan() {
               {pendingItems.length} receipt{pendingItems.length !== 1 ? "s" : ""} detected — review and approve
             </p>
 
+            {/* Attachment summary — tap to change */}
+            <button
+              type="button"
+              onClick={() => setAttachSheetOpen(true)}
+              className="w-full flex items-center gap-3 rounded-2xl bg-card p-3.5 card-shadow text-left active:bg-secondary/40 transition-colors"
+            >
+              <div className="h-9 w-9 rounded-xl bg-accent flex items-center justify-center shrink-0">
+                {attachedIncident ? (
+                  <Flame className="h-4.5 w-4.5 text-accent-foreground" strokeWidth={1.75} />
+                ) : (
+                  <Link2 className="h-4.5 w-4.5 text-muted-foreground" strokeWidth={1.75} />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                {attachedIncident ? (
+                  <>
+                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Attached to</p>
+                    <p className="text-sm font-semibold truncate">
+                      {attachedIncident.name}
+                      {attachedTruck && (
+                        <span className="text-muted-foreground font-normal"> · {attachedTruck.trucks.name}</span>
+                      )}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Not attached</p>
+                    <p className="text-sm font-semibold">Tap to attach to an incident</p>
+                  </>
+                )}
+              </div>
+              <span className="text-xs font-semibold text-primary shrink-0">Change</span>
+            </button>
+
             <div className="space-y-3">
               {queue.map((item) => {
                 if (item.status === "discarded") return null;
