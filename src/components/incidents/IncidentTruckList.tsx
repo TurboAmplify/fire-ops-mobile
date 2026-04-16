@@ -325,11 +325,6 @@ function TruckCard({
             <AgreementUpload incidentTruckId={it.id} label="Truck Agreements" />
           </SectionHeader>
 
-          {/* Crew — auto-expand when no crew */}
-          <SectionHeader label="Crew" defaultOpen={noCrewAssigned}>
-            <TruckCrewSection incidentTruckId={it.id} autoOpen={autoOpenCrew || noCrewAssigned} />
-          </SectionHeader>
-
           {/* Shifts */}
           <SectionHeader label="Shifts">
             <ShiftList
