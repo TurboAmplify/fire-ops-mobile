@@ -3,7 +3,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Check } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
 import type { Truck } from "@/services/fleet";
@@ -11,10 +11,15 @@ import { TRUCK_STATUS_LABELS, type TruckStatus } from "@/services/fleet";
 
 interface TruckInfoSectionProps {
   truck: Truck;
+  onStatusChange?: (status: TruckStatus) => void;
+  isUpdatingStatus?: boolean;
 }
 
-export function TruckInfoSection({ truck }: TruckInfoSectionProps) {
+const STATUS_OPTIONS: TruckStatus[] = ["available", "deployed", "maintenance", "needs_attention"];
+
+export function TruckInfoSection({ truck, onStatusChange, isUpdatingStatus }: TruckInfoSectionProps) {
   const [isOpen, setIsOpen] = useState(true);
+  const [showStatusPicker, setShowStatusPicker] = useState(false);
   const t = truck as any;
   const status = truck.status as TruckStatus;
 
