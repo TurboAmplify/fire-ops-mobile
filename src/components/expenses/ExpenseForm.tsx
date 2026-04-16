@@ -84,6 +84,10 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
       try {
         const parsed = await parseReceiptAI(url);
         applyParsedData(parsed);
+        // After successful parse, prompt to attach to incident (new expenses only, no existing link)
+        if (!isEditing && !incidentId) {
+          setShowAttachSheet(true);
+        }
       } catch {
         toast.error("Could not analyze receipt - fill in manually");
       } finally {
