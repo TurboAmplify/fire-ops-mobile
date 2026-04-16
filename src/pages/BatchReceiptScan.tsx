@@ -22,7 +22,7 @@ import {
 import { IncidentAttachSheet, type IncidentAttachResult } from "@/components/expenses/IncidentAttachSheet";
 import { useIncidents } from "@/hooks/useIncidents";
 import { useIncidentTrucks } from "@/hooks/useIncidentTrucks";
-import { Flame, Truck as TruckIcon, Link2 } from "lucide-react";
+import { Flame, Link2 } from "lucide-react";
 
 type QueueItem = ParsedReceipt & { id: string; status: "pending" | "approved" | "discarded" };
 

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useIncidents } from "@/hooks/useIncidents";
 import { useIncidentTrucks } from "@/hooks/useIncidentTrucks";
-import { Loader2, Flame, X } from "lucide-react";
+import { Loader2, Flame } from "lucide-react";
 import type { IncidentStatus } from "@/services/incidents";
 
 export type IncidentAttachResult = {
