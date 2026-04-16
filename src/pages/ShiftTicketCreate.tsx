@@ -93,6 +93,19 @@ export default function ShiftTicketCreate() {
       return parts.join(" ").trim() || roData.equipment_make_model || "";
     })();
 
+    const today = getLocalDateString();
+
+    // Build default equipment entry with same date as personnel
+    const defaultEquipmentEntries = [{
+      date: today,
+      start: "",
+      stop: "",
+      total: 0,
+      quantity: "1",
+      type: "Day",
+      remarks: "",
+    }];
+
     setTicket({
       agreement_number: latestAgreement?.agreement_number || agreementParsed.agreement_number || roData.agreement_number || roData.contract_number || latestRO?.agreement_number || "",
       contractor_name: agreementParsed.contractor_name || roData.contractor_name || membership?.organizationName || "",
@@ -106,6 +119,7 @@ export default function ShiftTicketCreate() {
       license_id_number: truck?.plate || roData.license_plate || "",
       resource_order_id: latestRO?.id || null,
       status: "draft",
+      equipment_entries: defaultEquipmentEntries as any,
       ...(personnelEntries.length > 0 ? { personnel_entries: personnelEntries as any } : {}),
     });
     setInitialized(true);

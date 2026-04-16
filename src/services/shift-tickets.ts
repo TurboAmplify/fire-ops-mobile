@@ -105,9 +105,11 @@ export async function duplicateShiftTicket(
     ...e,
     date: advanceDate(e.date),
   }));
+  // Use the first equipment entry date as source of truth for personnel dates
+  const personnelDate = newEquipment.length > 0 ? newEquipment[0].date : advanceDate((sourceTicket.personnel_entries as PersonnelEntry[])[0]?.date || "");
   const newPersonnel = (sourceTicket.personnel_entries as PersonnelEntry[]).map((p) => ({
     ...p,
-    date: advanceDate(p.date),
+    date: personnelDate,
   }));
 
   const { id, created_at, updated_at, contractor_rep_signature_url, contractor_rep_signed_at, supervisor_signature_url, supervisor_signed_at, ...rest } = sourceTicket;
