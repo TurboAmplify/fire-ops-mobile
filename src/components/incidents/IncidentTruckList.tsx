@@ -85,17 +85,25 @@ export function IncidentTruckList({ incidentId, incidentName }: Props) {
           {unassigned.length === 0 ? (
             <p className="text-sm text-muted-foreground">No trucks available to assign.</p>
           ) : (
-            unassigned.map((truck) => (
-              <button
-                key={truck.id}
-                onClick={() => handleAssign(truck.id)}
-                disabled={assignMutation.isPending}
-                className="flex w-full items-center gap-3 rounded-lg bg-secondary p-3 text-left transition-transform active:scale-[0.98] touch-target"
-              >
-                <TruckIcon className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium">{truck.name}</span>
-              </button>
-            ))
+            unassigned.map((truck) => {
+              const subtitle = [truck.unit_type, truck.make, truck.model].filter(Boolean).join(" ");
+              return (
+                <button
+                  key={truck.id}
+                  onClick={() => handleAssign(truck.id)}
+                  disabled={assignMutation.isPending}
+                  className="flex w-full items-center gap-3 rounded-lg bg-secondary p-3 text-left transition-transform active:scale-[0.98] touch-target"
+                >
+                  <TruckIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium truncate">{truck.name}</p>
+                    {subtitle && (
+                      <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
+                    )}
+                  </div>
+                </button>
+              );
+            })
           )}
         </div>
       )}
