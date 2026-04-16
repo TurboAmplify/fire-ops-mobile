@@ -1,52 +1,36 @@
 
 
-# App Store Readiness — Implementation Plan
+# Fix Shift Ticket Date Mismatch
 
-## What I'll build now (in Lovable)
+## Problem
 
-### 1. Install Capacitor and configure
-- Add `@capacitor/core`, `@capacitor/cli`, `@capacitor/ios`, `@capacitor/android` to package.json
-- Create `capacitor.config.ts` with appId `app.lovable.63e454bc32e142ee9def17eb4240739a`, appName `fire-buddy-mobile`, and dev server URL
+The two 79 Fire shift tickets have personnel dates that are 1 day ahead of equipment dates:
 
-### 2. Account Deletion (App Store requirement)
-- Add "Delete Account" button with confirmation dialog in `src/pages/Settings.tsx`
-- Create `supabase/functions/delete-account/index.ts` edge function that:
-  - Validates the authenticated user
-  - Deletes all user data across tables (cascading via org membership)
-  - Deletes the auth user using service role key
-- Wire the button to call the edge function, then sign out
+- Ticket 8046 (4/12): equipment date = 4/12, but personnel dates = 4/13. Should all be 4/12.
+- Ticket 4809 (4/13): equipment date = 4/13, but personnel dates = 4/14. Should all be 4/13.
 
-### 3. Make Privacy/Terms publicly accessible
-- Move `/privacy` and `/terms` routes outside `ProtectedRoute` in `src/App.tsx`
+The crew assignments are correct (8046 = Dustin/Brandon/Kenna, 4809 = Dustin/Bobby/Nevaeh).
 
-### 4. Update Support FAQ
-- Fix the offline answer in `src/pages/Support.tsx` to reflect actual offline capability
+**Root cause**: The `duplicateShiftTicket` function advances both equipment and personnel dates by +1 day. But the original ticket already had mismatched dates (personnel was 1 day ahead from initial creation), so the mismatch carried forward.
 
-### 5. Fix NotFound page
-- Add safe-area inset classes to `src/pages/NotFound.tsx`
+## What will be fixed
 
-## What you'll need to do locally (after)
-1. Export to GitHub and clone
-2. `npm install`
-3. `npx cap add ios` (and/or `android`)
-4. `npx cap sync`
-5. Open in Xcode, add your 1024x1024 app icon, configure signing
-6. Build and submit
+### 1. Fix existing data (database update)
+Update the two tickets to correct personnel dates:
+- Ticket `8046eae0...`: set all personnel_entries dates to `2026-04-12`
+- Ticket `4809a412...`: set all personnel_entries dates to `2026-04-13`
 
-For the full native setup guide, see: https://docs.lovable.dev/tips-tricks/native-mobile-apps
+### 2. Fix the duplicate logic in code
+In `src/services/shift-tickets.ts` `duplicateShiftTicket()`: ensure personnel entry dates match the equipment entry dates after duplication (use the equipment date as the source of truth rather than independently advancing both).
+
+### 3. Fix the create logic
+In `src/pages/ShiftTicketCreate.tsx`: the equipment entry date isn't being set during initialization (it uses the default `getLocalDateString()` from `emptyEquipmentEntry()`), while personnel entries also use `getLocalDateString()`. These should always match. Add explicit equipment entry initialization with the same date.
 
 ## Files changed
 
 | File | Change |
-|---|---|
-| `package.json` | Add Capacitor dependencies |
-| `capacitor.config.ts` | New — Capacitor configuration |
-| `src/App.tsx` | Move `/privacy`, `/terms` outside ProtectedRoute |
-| `src/pages/Settings.tsx` | Add Delete Account with confirmation |
-| `src/pages/Support.tsx` | Update offline FAQ answer |
-| `src/pages/NotFound.tsx` | Add safe-area classes |
-| `supabase/functions/delete-account/index.ts` | New — account deletion edge function |
-
-## Database migration
-- Create a `delete_user_data` database function that cascades deletion across all org-owned tables for the user
+|------|--------|
+| DB migration | Update personnel dates on the two affected tickets |
+| `src/services/shift-tickets.ts` | Fix `duplicateShiftTicket` to sync personnel dates to equipment date |
+| `src/pages/ShiftTicketCreate.tsx` | Ensure initial equipment + personnel dates match |
 
