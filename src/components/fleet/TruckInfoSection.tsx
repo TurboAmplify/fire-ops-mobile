@@ -78,19 +78,54 @@ export function TruckInfoSection({ truck, onStatusChange, isUpdatingStatus }: Tr
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <div className="rounded-2xl bg-card card-shadow overflow-hidden">
-        <CollapsibleTrigger className="flex w-full items-center justify-between p-4 touch-target">
-          <div className="flex items-center gap-3 min-w-0">
+        <div className="flex w-full items-center justify-between p-4">
+          <CollapsibleTrigger className="flex items-center gap-3 min-w-0 flex-1 touch-target text-left">
             <h2 className="text-lg font-bold truncate">{truck.name}</h2>
-            <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide shrink-0 ${statusColors[status]}`}>
-              {TRUCK_STATUS_LABELS[status] ?? truck.status}
-            </span>
+            <ChevronDown
+              className={`h-5 w-5 text-muted-foreground shrink-0 transition-transform duration-200 ${
+                isOpen ? "rotate-180" : ""
+              }`}
+            />
+          </CollapsibleTrigger>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onStatusChange) setShowStatusPicker((v) => !v);
+            }}
+            disabled={!onStatusChange || isUpdatingStatus}
+            className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide shrink-0 ml-2 ${statusColors[status]} ${onStatusChange ? "active:opacity-70" : ""}`}
+          >
+            {TRUCK_STATUS_LABELS[status] ?? truck.status}
+          </button>
+        </div>
+
+        {showStatusPicker && onStatusChange && (
+          <div className="px-4 pb-3 -mt-1 animate-fade-in">
+            <p className="text-xs text-muted-foreground mb-2">Change status</p>
+            <div className="flex flex-wrap gap-2">
+              {STATUS_OPTIONS.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => {
+                    onStatusChange(s);
+                    setShowStatusPicker(false);
+                  }}
+                  disabled={isUpdatingStatus}
+                  className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold touch-target ${
+                    s === status
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary text-secondary-foreground active:opacity-70"
+                  }`}
+                >
+                  {s === status && <Check className="h-3 w-3" />}
+                  {TRUCK_STATUS_LABELS[s]}
+                </button>
+              ))}
+            </div>
           </div>
-          <ChevronDown
-            className={`h-5 w-5 text-muted-foreground shrink-0 transition-transform duration-200 ${
-              isOpen ? "rotate-180" : ""
-            }`}
-          />
-        </CollapsibleTrigger>
+        )}
 
         <CollapsibleContent>
           <div className="px-4 pb-4 space-y-4">
