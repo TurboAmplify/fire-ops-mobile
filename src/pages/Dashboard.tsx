@@ -46,9 +46,9 @@ export default function Dashboard() {
             Overview
           </h2>
           <div className="grid grid-cols-3 gap-3">
-            <StatCard icon={Flame} label="Active" value={activeCount} iconColor="text-destructive" />
-            <StatCard icon={Users} label="Crew" value={crewCount} iconColor="text-violet-500" />
-            <StatCard icon={Truck} label="Fleet" value={truckCount} iconColor="text-blue-500" />
+            <StatCard icon={Flame} label="Active" value={activeCount} iconColor="text-destructive" onClick={() => navigate("/incidents")} />
+            <StatCard icon={Users} label="Crew" value={crewCount} iconColor="text-violet-500" onClick={() => navigate("/crew")} />
+            <StatCard icon={Truck} label="Fleet" value={truckCount} iconColor="text-blue-500" onClick={() => navigate("/fleet")} />
           </div>
         </section>
 
@@ -171,12 +171,15 @@ function QuickAction({ icon: Icon, label, iconBg, iconColor, onClick }: { icon: 
   );
 }
 
-function StatCard({ icon: Icon, label, value, iconColor }: { icon: LucideIcon; label: string; value: number; iconColor: string }) {
+function StatCard({ icon: Icon, label, value, iconColor, onClick }: { icon: LucideIcon; label: string; value: number; iconColor: string; onClick?: () => void }) {
   return (
-    <div className="rounded-2xl glass-tile p-2.5 flex flex-col items-center gap-0.5">
+    <button
+      onClick={onClick}
+      className="rounded-2xl glass-tile p-2.5 flex flex-col items-center gap-0.5 transition-all duration-150 active:scale-[0.97] active:opacity-80 touch-target"
+    >
       <Icon className={`h-3.5 w-3.5 ${iconColor}`} strokeWidth={1.75} />
       <span className="text-base font-bold leading-tight">{value}</span>
       <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">{label}</span>
-    </div>
+    </button>
   );
 }
