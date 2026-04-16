@@ -343,6 +343,13 @@ export default function BatchReceiptScan() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Incident attach sheet */}
+      <IncidentAttachSheet
+        open={attachSheetOpen}
+        onOpenChange={setAttachSheetOpen}
+        onConfirm={(result) => setAttachment(result)}
+      />
     </AppShell>
   );
 }
