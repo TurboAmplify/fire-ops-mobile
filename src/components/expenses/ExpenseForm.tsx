@@ -7,6 +7,7 @@ import type { ParsedReceipt } from "@/services/ai-parsing";
 import { parseReceiptAI } from "@/services/ai-parsing";
 import { FuelTypeModal } from "./FuelTypeModal";
 import { MealComplianceFields } from "./MealComplianceFields";
+import { IncidentAttachSheet } from "./IncidentAttachSheet";
 import { useState } from "react";
 import { Loader2, Camera, Sparkles, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
@@ -49,6 +50,7 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
   const [mealAttendees, setMealAttendees] = useState(initial?.meal_attendees ?? "");
   const [mealPurpose, setMealPurpose] = useState(initial?.meal_purpose ?? "");
   const [showFuelModal, setShowFuelModal] = useState(false);
+  const [showAttachSheet, setShowAttachSheet] = useState(false);
   // Track whether AI has filled the form (hides manual category grid)
   const [aiParsed, setAiParsed] = useState(false);
   // Track if this is an edit of an existing expense
@@ -82,6 +84,10 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
       try {
         const parsed = await parseReceiptAI(url);
         applyParsedData(parsed);
+        // After successful parse, prompt to attach to incident (new expenses only, no existing link)
+        if (!isEditing && !incidentId) {
+          setShowAttachSheet(true);
+        }
       } catch {
         toast.error("Could not analyze receipt - fill in manually");
       } finally {
@@ -145,6 +151,26 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
         open={showFuelModal}
         onConfirm={(ft) => { setFuelType(ft); setShowFuelModal(false); }}
         onSkip={() => { setCategory("other"); setFuelType(""); setShowFuelModal(false); }}
+      />
+
+      <IncidentAttachSheet
+        open={showAttachSheet}
+        onOpenChange={setShowAttachSheet}
+        onConfirm={({ incidentId: incId, incidentTruckId: itId }) => {
+          if (itId) {
+            setScope("truck");
+            setIncidentId(incId ?? "");
+            setIncidentTruckId(itId);
+          } else if (incId) {
+            setScope("incident");
+            setIncidentId(incId);
+            setIncidentTruckId("");
+          } else {
+            setScope("company");
+            setIncidentId("");
+            setIncidentTruckId("");
+          }
+        }}
       />
 
       <form onSubmit={handleSubmit} className="space-y-4">

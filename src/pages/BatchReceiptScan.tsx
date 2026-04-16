@@ -19,6 +19,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { IncidentAttachSheet, type IncidentAttachResult } from "@/components/expenses/IncidentAttachSheet";
+import { useIncidents } from "@/hooks/useIncidents";
+import { useIncidentTrucks } from "@/hooks/useIncidentTrucks";
+import { Flame, Link2 } from "lucide-react";
 
 type QueueItem = ParsedReceipt & { id: string; status: "pending" | "approved" | "discarded" };
 
@@ -34,6 +38,16 @@ export default function BatchReceiptScan() {
   const [receiptUrl, setReceiptUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [discardTarget, setDiscardTarget] = useState<string | null>(null);
+  const [attachSheetOpen, setAttachSheetOpen] = useState(false);
+  const [attachment, setAttachment] = useState<IncidentAttachResult>({
+    incidentId: null,
+    incidentTruckId: null,
+  });
+
+  const { data: allIncidents } = useIncidents();
+  const { data: allTrucks } = useIncidentTrucks(attachment.incidentId ?? "");
+  const attachedIncident = allIncidents?.find((i) => i.id === attachment.incidentId) ?? null;
+  const attachedTruck = allTrucks?.find((t) => t.id === attachment.incidentTruckId) ?? null;
 
   const pendingItems = queue.filter((q) => q.status === "pending");
 
@@ -60,6 +74,8 @@ export default function BatchReceiptScan() {
         }))
       );
       setPhase("review");
+      // Prompt the user to attach this batch to an incident
+      setAttachSheetOpen(true);
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : "Failed to analyze receipts");
@@ -80,6 +96,8 @@ export default function BatchReceiptScan() {
         receipt_url: receiptUrl,
         expense_type: "company",
         status: "draft",
+        incident_id: attachment.incidentId,
+        incident_truck_id: attachment.incidentTruckId,
         organization_id: membership?.organizationId ?? null,
         submitted_by_user_id: user?.id ?? null,
       });
@@ -106,6 +124,8 @@ export default function BatchReceiptScan() {
           description: item.description,
           vendor: item.vendor,
           receipt_url: receiptUrl,
+          incident_id: attachment.incidentId,
+          incident_truck_id: attachment.incidentTruckId,
         },
       },
     });
@@ -125,6 +145,8 @@ export default function BatchReceiptScan() {
           receipt_url: receiptUrl,
           expense_type: "company",
           status: "draft",
+          incident_id: attachment.incidentId,
+          incident_truck_id: attachment.incidentTruckId,
           organization_id: membership?.organizationId ?? null,
           submitted_by_user_id: user?.id ?? null,
         });
@@ -183,6 +205,40 @@ export default function BatchReceiptScan() {
             <p className="text-sm font-medium text-muted-foreground">
               {pendingItems.length} receipt{pendingItems.length !== 1 ? "s" : ""} detected — review and approve
             </p>
+
+            {/* Attachment summary — tap to change */}
+            <button
+              type="button"
+              onClick={() => setAttachSheetOpen(true)}
+              className="w-full flex items-center gap-3 rounded-2xl bg-card p-3.5 card-shadow text-left active:bg-secondary/40 transition-colors"
+            >
+              <div className="h-9 w-9 rounded-xl bg-accent flex items-center justify-center shrink-0">
+                {attachedIncident ? (
+                  <Flame className="h-4.5 w-4.5 text-accent-foreground" strokeWidth={1.75} />
+                ) : (
+                  <Link2 className="h-4.5 w-4.5 text-muted-foreground" strokeWidth={1.75} />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                {attachedIncident ? (
+                  <>
+                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Attached to</p>
+                    <p className="text-sm font-semibold truncate">
+                      {attachedIncident.name}
+                      {attachedTruck && (
+                        <span className="text-muted-foreground font-normal"> · {attachedTruck.trucks.name}</span>
+                      )}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Not attached</p>
+                    <p className="text-sm font-semibold">Tap to attach to an incident</p>
+                  </>
+                )}
+              </div>
+              <span className="text-xs font-semibold text-primary shrink-0">Change</span>
+            </button>
 
             <div className="space-y-3">
               {queue.map((item) => {
@@ -287,6 +343,13 @@ export default function BatchReceiptScan() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Incident attach sheet */}
+      <IncidentAttachSheet
+        open={attachSheetOpen}
+        onOpenChange={setAttachSheetOpen}
+        onConfirm={(result) => setAttachment(result)}
+      />
     </AppShell>
   );
 }
