@@ -38,6 +38,16 @@ export default function BatchReceiptScan() {
   const [receiptUrl, setReceiptUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [discardTarget, setDiscardTarget] = useState<string | null>(null);
+  const [attachSheetOpen, setAttachSheetOpen] = useState(false);
+  const [attachment, setAttachment] = useState<IncidentAttachResult>({
+    incidentId: null,
+    incidentTruckId: null,
+  });
+
+  const { data: allIncidents } = useIncidents();
+  const { data: allTrucks } = useIncidentTrucks(attachment.incidentId ?? "");
+  const attachedIncident = allIncidents?.find((i) => i.id === attachment.incidentId) ?? null;
+  const attachedTruck = allTrucks?.find((t) => t.id === attachment.incidentTruckId) ?? null;
 
   const pendingItems = queue.filter((q) => q.status === "pending");
 
