@@ -171,12 +171,15 @@ function QuickAction({ icon: Icon, label, iconBg, iconColor, onClick }: { icon: 
   );
 }
 
-function StatCard({ icon: Icon, label, value, iconColor }: { icon: LucideIcon; label: string; value: number; iconColor: string }) {
+function StatCard({ icon: Icon, label, value, iconColor, onClick }: { icon: LucideIcon; label: string; value: number; iconColor: string; onClick?: () => void }) {
   return (
-    <div className="rounded-2xl glass-tile p-2.5 flex flex-col items-center gap-0.5">
+    <button
+      onClick={onClick}
+      className="rounded-2xl glass-tile p-2.5 flex flex-col items-center gap-0.5 transition-all duration-150 active:scale-[0.97] active:opacity-80 touch-target"
+    >
       <Icon className={`h-3.5 w-3.5 ${iconColor}`} strokeWidth={1.75} />
       <span className="text-base font-bold leading-tight">{value}</span>
       <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">{label}</span>
-    </div>
+    </button>
   );
 }
