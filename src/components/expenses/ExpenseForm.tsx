@@ -50,6 +50,7 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
   const [mealAttendees, setMealAttendees] = useState(initial?.meal_attendees ?? "");
   const [mealPurpose, setMealPurpose] = useState(initial?.meal_purpose ?? "");
   const [showFuelModal, setShowFuelModal] = useState(false);
+  const [showAttachSheet, setShowAttachSheet] = useState(false);
   // Track whether AI has filled the form (hides manual category grid)
   const [aiParsed, setAiParsed] = useState(false);
   // Track if this is an edit of an existing expense
