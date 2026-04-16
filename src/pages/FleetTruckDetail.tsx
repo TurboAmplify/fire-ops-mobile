@@ -26,7 +26,17 @@ export default function FleetTruckDetail() {
   const navigate = useNavigate();
   const { data: truck, isLoading } = useTruck(truckId!);
   const deleteMutation = useDeleteTruck();
+  const updateMutation = useUpdateTruck(truckId!);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  const handleStatusChange = async (status: string) => {
+    try {
+      await updateMutation.mutateAsync({ status } as any);
+      toast.success("Status updated");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to update status");
+    }
+  };
 
   const handleDelete = async () => {
     try {
