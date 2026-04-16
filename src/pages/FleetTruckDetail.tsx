@@ -98,7 +98,7 @@ export default function FleetTruckDetail() {
         />
 
         {/* Collapsible Info Section */}
-        <TruckInfoSection truck={truck} />
+        <TruckInfoSection truck={truck} onStatusChange={handleStatusChange} isUpdatingStatus={updateMutation.isPending} />
 
         {/* Checklist */}
         <TruckChecklistSection truckId={truckId!} />
