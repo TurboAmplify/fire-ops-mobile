@@ -46,9 +46,9 @@ export default function Dashboard() {
             Overview
           </h2>
           <div className="grid grid-cols-3 gap-3">
-            <StatCard icon={Flame} label="Active" value={activeCount} iconColor="text-destructive" />
-            <StatCard icon={Users} label="Crew" value={crewCount} iconColor="text-violet-500" />
-            <StatCard icon={Truck} label="Fleet" value={truckCount} iconColor="text-blue-500" />
+            <StatCard icon={Flame} label="Active" value={activeCount} iconColor="text-destructive" onClick={() => navigate("/incidents")} />
+            <StatCard icon={Users} label="Crew" value={crewCount} iconColor="text-violet-500" onClick={() => navigate("/crew")} />
+            <StatCard icon={Truck} label="Fleet" value={truckCount} iconColor="text-blue-500" onClick={() => navigate("/fleet")} />
           </div>
         </section>
 
