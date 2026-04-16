@@ -96,6 +96,8 @@ export default function BatchReceiptScan() {
         receipt_url: receiptUrl,
         expense_type: "company",
         status: "draft",
+        incident_id: attachment.incidentId,
+        incident_truck_id: attachment.incidentTruckId,
         organization_id: membership?.organizationId ?? null,
         submitted_by_user_id: user?.id ?? null,
       });
@@ -122,6 +124,8 @@ export default function BatchReceiptScan() {
           description: item.description,
           vendor: item.vendor,
           receipt_url: receiptUrl,
+          incident_id: attachment.incidentId,
+          incident_truck_id: attachment.incidentTruckId,
         },
       },
     });
@@ -141,6 +145,8 @@ export default function BatchReceiptScan() {
           receipt_url: receiptUrl,
           expense_type: "company",
           status: "draft",
+          incident_id: attachment.incidentId,
+          incident_truck_id: attachment.incidentTruckId,
           organization_id: membership?.organizationId ?? null,
           submitted_by_user_id: user?.id ?? null,
         });
