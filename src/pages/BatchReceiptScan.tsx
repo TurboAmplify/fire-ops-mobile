@@ -74,6 +74,8 @@ export default function BatchReceiptScan() {
         }))
       );
       setPhase("review");
+      // Prompt the user to attach this batch to an incident
+      setAttachSheetOpen(true);
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : "Failed to analyze receipts");
