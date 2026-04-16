@@ -1,36 +1,47 @@
 
+# Fleet Status + Incident Truck/Crew Flow Improvements
 
-# Fix Shift Ticket Date Mismatch
+## Issues observed
 
-## Problem
+1. **Fleet truck status can't be edited from the truck page.** The status badge in `TruckInfoSection` is read-only. Editing requires going to "Edit" full form.
+2. **Incident → Truck → Crew flow is buried.** On `IncidentDetail`, after expanding a truck, the Crew section is a collapsed accordion ("Crew") several rows down. No obvious primary CTA for the most common action: "Add crew to this truck."
+3. **Assign-truck picker on incidents is plain** — no photo, no quick context.
 
-The two 79 Fire shift tickets have personnel dates that are 1 day ahead of equipment dates:
+## Fix plan (3 small, safe changes)
 
-- Ticket 8046 (4/12): equipment date = 4/12, but personnel dates = 4/13. Should all be 4/12.
-- Ticket 4809 (4/13): equipment date = 4/13, but personnel dates = 4/14. Should all be 4/13.
+### 1. Tap-to-change status on Fleet truck detail (`TruckInfoSection.tsx`)
+- Make the status badge in the collapsible header a button that opens a small inline status picker (4 chips: Available, Deployed, Maintenance, Needs Attention).
+- Wire to existing `useUpdateTruck(id)` hook (already imported in the parent).
+- Show toast on success. No new files, no schema changes.
+- Pass an `onStatusChange` callback down from `FleetTruckDetail.tsx`.
 
-The crew assignments are correct (8046 = Dustin/Brandon/Kenna, 4809 = Dustin/Bobby/Nevaeh).
+### 2. Make the incident truck → crew flow obvious (`IncidentTruckList.tsx`)
+When a truck card is expanded:
+- Move **Crew** to be the **first** section after the status row (above shift tickets, details, etc.).
+- Replace the collapsed `SectionHeader` wrapper for Crew with an always-visible block that shows assigned crew + a prominent "Add Crew" button.
+- Keep the existing "No Crew" warning banner — it already triggers `autoOpen`.
+- Other sections (Shift Tickets, Truck Details, Resource Orders, Agreements, Shifts) stay as collapsibles below.
 
-**Root cause**: The `duplicateShiftTicket` function advances both equipment and personnel dates by +1 day. But the original ticket already had mismatched dates (personnel was 1 day ahead from initial creation), so the mismatch carried forward.
+Result: When you tap a truck on an incident, you immediately see crew (or an empty state with a big "Add Crew" button), then everything else.
 
-## What will be fixed
-
-### 1. Fix existing data (database update)
-Update the two tickets to correct personnel dates:
-- Ticket `8046eae0...`: set all personnel_entries dates to `2026-04-12`
-- Ticket `4809a412...`: set all personnel_entries dates to `2026-04-13`
-
-### 2. Fix the duplicate logic in code
-In `src/services/shift-tickets.ts` `duplicateShiftTicket()`: ensure personnel entry dates match the equipment entry dates after duplication (use the equipment date as the source of truth rather than independently advancing both).
-
-### 3. Fix the create logic
-In `src/pages/ShiftTicketCreate.tsx`: the equipment entry date isn't being set during initialization (it uses the default `getLocalDateString()` from `emptyEquipmentEntry()`), while personnel entries also use `getLocalDateString()`. These should always match. Add explicit equipment entry initialization with the same date.
+### 3. Tighten the assign-truck picker (`IncidentTruckList.tsx`)
+Small polish: show truck unit type / make under the name in the assign list so users pick the right one fast. No layout change.
 
 ## Files changed
 
 | File | Change |
-|------|--------|
-| DB migration | Update personnel dates on the two affected tickets |
-| `src/services/shift-tickets.ts` | Fix `duplicateShiftTicket` to sync personnel dates to equipment date |
-| `src/pages/ShiftTicketCreate.tsx` | Ensure initial equipment + personnel dates match |
+|---|---|
+| `src/components/fleet/TruckInfoSection.tsx` | Status badge → tap to open inline picker; accept `onStatusChange` prop |
+| `src/pages/FleetTruckDetail.tsx` | Wire `useUpdateTruck` and pass `onStatusChange` to `TruckInfoSection` |
+| `src/components/incidents/IncidentTruckList.tsx` | Reorder expanded sections so Crew is first and not collapsed; add subtitle to assign-truck rows |
 
+## What won't change
+- No DB schema changes.
+- No changes to crew assignment logic (`useAssignCrew` already works).
+- Existing status/crew/shift-ticket data is untouched.
+- No changes to routes, auth, or offline behavior.
+
+## What to test after
+- Open a truck in Fleet → tap status badge → pick new status → confirm it saves and the list updates.
+- Open an incident → expand a truck → confirm Crew is at the top with "Add Crew" visible → assign a crew member.
+- Try assigning a truck to an incident → confirm the picker shows truck name + unit/make.
