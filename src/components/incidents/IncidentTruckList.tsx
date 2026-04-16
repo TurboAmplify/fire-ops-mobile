@@ -230,6 +230,12 @@ function TruckCard({
             </div>
           )}
 
+          {/* Crew — always visible at top, primary action */}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Crew</p>
+            <TruckCrewSection incidentTruckId={it.id} autoOpen={autoOpenCrew || noCrewAssigned} />
+          </div>
+
           {/* OF-297 Shift Tickets */}
           <SectionHeader label="OF-297 Shift Tickets" defaultOpen={true}>
             <ShiftTicketSection
