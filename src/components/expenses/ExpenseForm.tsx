@@ -153,6 +153,26 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
         onSkip={() => { setCategory("other"); setFuelType(""); setShowFuelModal(false); }}
       />
 
+      <IncidentAttachSheet
+        open={showAttachSheet}
+        onOpenChange={setShowAttachSheet}
+        onConfirm={({ incidentId: incId, incidentTruckId: itId }) => {
+          if (itId) {
+            setScope("truck");
+            setIncidentId(incId ?? "");
+            setIncidentTruckId(itId);
+          } else if (incId) {
+            setScope("incident");
+            setIncidentId(incId);
+            setIncidentTruckId("");
+          } else {
+            setScope("company");
+            setIncidentId("");
+            setIncidentTruckId("");
+          }
+        }}
+      />
+
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Receipt photo — FIRST, photo-first flow */}
         <div className="space-y-2">
