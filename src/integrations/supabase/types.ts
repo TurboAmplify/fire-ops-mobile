@@ -122,6 +122,33 @@ export type Database = {
           },
         ]
       }
+      crew_truck_access: {
+        Row: {
+          granted_at: string
+          granted_by: string | null
+          id: string
+          organization_id: string
+          truck_id: string
+          user_id: string
+        }
+        Insert: {
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          organization_id: string
+          truck_id: string
+          user_id: string
+        }
+        Update: {
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          organization_id?: string
+          truck_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           amount: number
@@ -556,6 +583,8 @@ export type Database = {
           id: string
           inspection_alert_enabled: boolean
           name: string
+          seat_limit: number
+          tier: string
         }
         Insert: {
           created_at?: string
@@ -563,6 +592,8 @@ export type Database = {
           id?: string
           inspection_alert_enabled?: boolean
           name: string
+          seat_limit?: number
+          tier?: string
         }
         Update: {
           created_at?: string
@@ -570,6 +601,8 @@ export type Database = {
           id?: string
           inspection_alert_enabled?: boolean
           name?: string
+          seat_limit?: number
+          tier?: string
         }
         Relationships: []
       }
@@ -1358,6 +1391,14 @@ export type Database = {
       }
       get_user_crew_member_id: { Args: { _user_id: string }; Returns: string }
       get_user_org_ids: { Args: { _user_id: string }; Returns: string[] }
+      is_org_admin: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: boolean
+      }
+      user_can_access_truck: {
+        Args: { _truck_id: string; _user_id: string }
+        Returns: boolean
+      }
       user_has_org_role: {
         Args: { _org_id: string; _role: string; _user_id: string }
         Returns: boolean

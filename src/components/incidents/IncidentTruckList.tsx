@@ -83,7 +83,11 @@ export function IncidentTruckList({ incidentId, incidentName }: Props) {
       {showAssign && (
         <div className="rounded-xl bg-card p-3 space-y-2">
           {unassigned.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No trucks available to assign.</p>
+            <p className="text-sm text-muted-foreground">
+              {(allTrucks?.length ?? 0) === 0
+                ? "You don't have access to any trucks yet. Ask an admin to grant you truck access."
+                : "All your accessible trucks are already assigned."}
+            </p>
           ) : (
             unassigned.map((truck) => {
               const subtitle = [truck.unit_type, truck.make, truck.model].filter(Boolean).join(" ");
