@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { ClipboardCheck, AlertTriangle, CheckCircle2, ChevronRight, Loader2 } from "lucide-react";
 import { useInspectionDue, useLastInspection, useTruckInspections, useDefaultInspectionTemplate, useInspectionTemplateItems } from "@/hooks/useInspections";
 import { useOrganization } from "@/hooks/useOrganization";
+import { useOrgSettings } from "@/hooks/useOrgSettings";
 import { TruckInspectionRunner } from "./TruckInspectionRunner";
 
 interface Props {
@@ -25,12 +26,16 @@ function formatRelative(iso: string) {
 export function TruckInspectionSection({ truckId, truckName }: Props) {
   const { membership } = useOrganization();
   const orgId = membership?.organizationId;
+  const { data: orgSettings } = useOrgSettings();
   const { data: template } = useDefaultInspectionTemplate(orgId);
   const { data: templateItems } = useInspectionTemplateItems(template?.id);
   const { data: due, isLoading: loadingDue } = useInspectionDue(truckId);
   const { data: last } = useLastInspection(truckId);
   const { data: inspections, isLoading: loadingInspections } = useTruckInspections(truckId);
   const [runnerOpen, setRunnerOpen] = useState(false);
+
+  // Org admins can hide the entire walk-around feature
+  if (orgSettings && !orgSettings.walkaround_enabled) return null;
 
   const itemCount = templateItems?.length ?? 0;
   const recent = (inspections ?? []).slice(0, 5);

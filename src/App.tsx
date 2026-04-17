@@ -39,6 +39,7 @@ import Support from "./pages/Support";
 import Payroll from "./pages/Payroll";
 import More from "./pages/More";
 import NeedsList from "./pages/NeedsList";
+import AdminLogs from "./pages/AdminLogs";
 import NotFound from "./pages/NotFound";
 
 const App = () => (
@@ -82,6 +83,7 @@ const App = () => (
               <Route path="/payroll" element={<ProtectedRoute><Payroll /></ProtectedRoute>} />
               <Route path="/more" element={<ProtectedRoute><More /></ProtectedRoute>} />
               <Route path="/needs" element={<ProtectedRoute><NeedsList /></ProtectedRoute>} />
+              <Route path="/admin/logs" element={<ProtectedRoute><AdminLogs /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

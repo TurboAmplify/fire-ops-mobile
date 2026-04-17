@@ -75,14 +75,14 @@ export default function OrgSettings() {
 
   const orgId = membership?.organizationId;
 
-  // Fetch org-level inspection alert flag
+  // Fetch org-level feature flags
   const { data: orgRow } = useQuery({
     queryKey: ["org-row", orgId],
     enabled: !!orgId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("organizations")
-        .select("id, inspection_alert_enabled")
+        .select("id, inspection_alert_enabled, walkaround_enabled")
         .eq("id", orgId!)
         .maybeSingle();
       if (error) throw error;
@@ -101,6 +101,24 @@ export default function OrgSettings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["org-row", orgId] });
+      queryClient.invalidateQueries({ queryKey: ["org-settings", orgId] });
+      toast({ title: "Saved" });
+    },
+    onError: (err: any) => toast({ title: "Failed", description: err.message, variant: "destructive" }),
+  });
+
+  const toggleWalkaroundFeature = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      if (!orgId) throw new Error("No org");
+      const { error } = await supabase
+        .from("organizations")
+        .update({ walkaround_enabled: enabled } as any)
+        .eq("id", orgId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["org-row", orgId] });
+      queryClient.invalidateQueries({ queryKey: ["org-settings", orgId] });
       toast({ title: "Saved" });
     },
     onError: (err: any) => toast({ title: "Failed", description: err.message, variant: "destructive" }),
@@ -481,24 +499,45 @@ export default function OrgSettings() {
           </div>
 
           <div className="rounded-xl bg-card p-4 space-y-4">
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-sm font-medium">Daily walk-around alerts</p>
-                <p className="text-xs text-muted-foreground">
-                  Show a banner on the dashboard when a deployed truck&apos;s walk-around is due.
-                </p>
-              </div>
-              <Switch
-                checked={!!orgRow?.inspection_alert_enabled}
-                onCheckedChange={(v) => toggleAlert.mutate(v)}
-                disabled={toggleAlert.isPending}
-              />
-            </div>
-
+            {/* Master feature toggle (admin only) */}
             {isOwner && (
-              <div className="border-t pt-4">
-                <InspectionTemplateEditor />
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">Walk-around feature</p>
+                  <p className="text-xs text-muted-foreground">
+                    Turn the entire walk-around inspection feature on or off for everyone in your organization.
+                  </p>
+                </div>
+                <Switch
+                  checked={orgRow?.walkaround_enabled !== false}
+                  onCheckedChange={(v) => toggleWalkaroundFeature.mutate(v)}
+                  disabled={toggleWalkaroundFeature.isPending}
+                />
               </div>
+            )}
+
+            {orgRow?.walkaround_enabled !== false && (
+              <>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">Daily walk-around alerts</p>
+                    <p className="text-xs text-muted-foreground">
+                      Show a banner on the dashboard when a deployed truck&apos;s walk-around is due.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={!!orgRow?.inspection_alert_enabled}
+                    onCheckedChange={(v) => toggleAlert.mutate(v)}
+                    disabled={toggleAlert.isPending}
+                  />
+                </div>
+
+                {isOwner && (
+                  <div className="border-t pt-4">
+                    <InspectionTemplateEditor />
+                  </div>
+                )}
+              </>
             )}
           </div>
         </section>

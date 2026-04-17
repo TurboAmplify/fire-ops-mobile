@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { LayoutDashboard, FileText } from "lucide-react";
+import { LayoutDashboard, MoreHorizontal } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { getSelectedTabs, NAV_STORAGE_KEY } from "@/components/settings/NavBarCustomizer";
 import { ShiftTicketQuickAccess } from "@/components/shift-tickets/ShiftTicketQuickAccess";
@@ -45,6 +45,7 @@ export function BottomNav() {
   const allTabs: (Tab & { fixed?: boolean })[] = [
     { label: "Home", icon: LayoutDashboard, to: "/", fixed: true },
     ...middleTabs,
+    { label: "More", icon: MoreHorizontal, to: "/more", fixed: true },
   ];
 
   return (
@@ -68,7 +69,7 @@ export function BottomNav() {
             }
             return (
               <NavLink
-                key={tab.to}
+                key={tab.to + i}
                 to={tab.to}
                 end={tab.to === "/"}
                 className={({ isActive }) =>
