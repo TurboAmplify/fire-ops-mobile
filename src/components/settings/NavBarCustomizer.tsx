@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import {
-  Flame, Banknote, DollarSign, FileText, Users, Truck, ClipboardList, Package, GraduationCap, Siren, FileSpreadsheet,
+  Flame, Banknote, DollarSign, FileText, Users, Truck, ClipboardList, Package, GraduationCap, Siren, FileSpreadsheet, Check,
 } from "lucide-react";
 import {
   Dialog,
@@ -8,7 +8,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { toast } from "sonner";
 import type { LucideIcon } from "lucide-react";
 import { useAppMode, type ModuleFlags } from "@/lib/app-mode";
 import { useOrganization } from "@/hooks/useOrganization";
@@ -91,42 +90,57 @@ export function NavBarCustomizer({ open, onOpenChange }: Props) {
   const availableOptions = filterNavByMode(ALL_NAV_OPTIONS, modules, isAdmin);
 
   const [selected, setSelected] = useState<string[]>(getSelectedTabKeys);
+  const [savedFlash, setSavedFlash] = useState(false);
 
   useEffect(() => {
     if (open) setSelected(getSelectedTabKeys());
   }, [open]);
 
-  const toggle = (key: string) => {
-    setSelected((prev) => {
-      if (prev.includes(key)) {
-        if (prev.length <= 1) return prev;
-        return prev.filter((k) => k !== key);
-      }
-      if (prev.length >= 4) return prev;
-      return [...prev, key];
-    });
+  const persist = (next: string[]) => {
+    if (next.length < 1 || next.length > 4) return;
+    try {
+      localStorage.setItem(NAV_STORAGE_KEY, JSON.stringify(next));
+      window.dispatchEvent(new Event("nav-tabs-changed"));
+      setSavedFlash(true);
+      window.setTimeout(() => setSavedFlash(false), 1200);
+    } catch {
+      // ignore
+    }
   };
 
-  const handleSave = () => {
-    if (selected.length < 1 || selected.length > 4) return;
-    try {
-      localStorage.setItem(NAV_STORAGE_KEY, JSON.stringify(selected));
-      window.dispatchEvent(new Event("nav-tabs-changed"));
-      toast.success("Navigation updated");
-      setTimeout(() => onOpenChange(false), 0);
-    } catch {
-      toast.error("Failed to save navigation");
-    }
+  const toggle = (key: string) => {
+    setSelected((prev) => {
+      let next = prev;
+      if (prev.includes(key)) {
+        if (prev.length <= 1) return prev;
+        next = prev.filter((k) => k !== key);
+      } else {
+        if (prev.length >= 4) return prev;
+        next = [...prev, key];
+      }
+      persist(next);
+      return next;
+    });
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] max-h-[85vh] overflow-y-auto rounded-2xl p-4 sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-base">Customize Navigation</DialogTitle>
+          <div className="flex items-center justify-between gap-3">
+            <DialogTitle className="text-base">Customize Navigation</DialogTitle>
+            <span
+              className={`flex items-center gap-1 text-xs font-medium text-success transition-opacity ${
+                savedFlash ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              <Check className="h-3.5 w-3.5" />
+              Saved
+            </span>
+          </div>
         </DialogHeader>
         <p className="text-xs text-muted-foreground mb-3">
-          Choose up to 4 items for your bottom navigation bar. Home and More are always visible.
+          Choose up to 4 items for your bottom navigation bar. Changes save automatically. Home and More are always visible.
         </p>
         <div className="space-y-2">
           {availableOptions.map((opt) => {
@@ -158,13 +172,6 @@ export function NavBarCustomizer({ open, onOpenChange }: Props) {
             );
           })}
         </div>
-        <button
-          onClick={handleSave}
-          disabled={selected.length < 1 || selected.length > 4}
-          className="w-full mt-4 rounded-xl bg-primary py-3.5 text-sm font-semibold text-primary-foreground disabled:opacity-40 touch-target transition-all active:scale-[0.98]"
-        >
-          Save
-        </button>
       </DialogContent>
     </Dialog>
   );
