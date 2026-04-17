@@ -32,7 +32,7 @@ export default function IncidentFromAgreement() {
   const [selectedTruckId, setSelectedTruckId] = useState("");
 
   const createIncident = useCreateIncident();
-  const { data: trucks } = useAvailableTrucks();
+  const { data: trucks } = useAvailableTrucks(membership?.organizationId);
   const createAgreement = useCreateAgreement({});
   const [saving, setSaving] = useState(false);
 

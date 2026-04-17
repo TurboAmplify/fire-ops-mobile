@@ -16,10 +16,10 @@ export function useIncidentTrucks(incidentId: string) {
   });
 }
 
-export function useAvailableTrucks() {
+export function useAvailableTrucks(organizationId?: string) {
   return useQuery({
-    queryKey: ["trucks"],
-    queryFn: fetchAvailableTrucks,
+    queryKey: ["trucks", organizationId ?? "all"],
+    queryFn: () => fetchAvailableTrucks(organizationId),
   });
 }
 
