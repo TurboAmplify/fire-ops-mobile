@@ -301,6 +301,9 @@ export default function OrgSettings() {
             )}
             <p className="text-xs text-muted-foreground">
               Your role: {ROLE_LABELS[membership?.role ?? ""] ?? membership?.role}
+              {membership && (
+                <> · {membership.seatsUsed}/{membership.seatLimit} seats used</>
+              )}
             </p>
           </div>
           {isOwner && !editingName && (
