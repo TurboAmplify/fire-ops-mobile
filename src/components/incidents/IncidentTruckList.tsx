@@ -357,6 +357,44 @@ function TruckCard({
             <AgreementUpload incidentTruckId={it.id} label="Truck Agreements" />
           </SectionHeader>
 
+          {/* Remove from incident */}
+          <div className="pt-3 border-t border-border">
+            {!confirmRemove ? (
+              <button
+                onClick={onConfirmRemove}
+                className="flex items-center gap-2 text-sm font-medium text-destructive touch-target"
+              >
+                <X className="h-4 w-4" />
+                Remove from incident
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm text-destructive font-medium">
+                  Remove {it.trucks.name} from this incident?
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  This won't delete the truck, only its assignment. Shift tickets, expenses, or crew tied to this assignment may block removal.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={onRemove}
+                    disabled={removing}
+                    className="flex-1 rounded-xl bg-destructive py-2.5 text-sm font-bold text-destructive-foreground touch-target flex items-center justify-center gap-2"
+                  >
+                    {removing && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Yes, Remove
+                  </button>
+                  <button
+                    onClick={onCancelRemove}
+                    className="flex-1 rounded-xl bg-secondary py-2.5 text-sm font-bold text-secondary-foreground touch-target"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
         </div>
       )}
     </div>
