@@ -72,6 +72,42 @@ export type Database = {
           },
         ]
       }
+      call_responses: {
+        Row: {
+          cleared_at: string | null
+          created_at: string
+          crew_member_id: string
+          dispatched_at: string | null
+          id: string
+          incident_id: string
+          notes: string | null
+          on_scene_at: string | null
+          organization_id: string
+        }
+        Insert: {
+          cleared_at?: string | null
+          created_at?: string
+          crew_member_id: string
+          dispatched_at?: string | null
+          id?: string
+          incident_id: string
+          notes?: string | null
+          on_scene_at?: string | null
+          organization_id: string
+        }
+        Update: {
+          cleared_at?: string | null
+          created_at?: string
+          crew_member_id?: string
+          dispatched_at?: string | null
+          id?: string
+          incident_id?: string
+          notes?: string | null
+          on_scene_at?: string | null
+          organization_id?: string
+        }
+        Relationships: []
+      }
       crew_members: {
         Row: {
           active: boolean
@@ -84,6 +120,7 @@ export type Database = {
           organization_id: string | null
           phone: string | null
           profile_photo_url: string | null
+          qualifications: Json
           role: string
         }
         Insert: {
@@ -97,6 +134,7 @@ export type Database = {
           organization_id?: string | null
           phone?: string | null
           profile_photo_url?: string | null
+          qualifications?: Json
           role: string
         }
         Update: {
@@ -110,6 +148,7 @@ export type Database = {
           organization_id?: string | null
           phone?: string | null
           profile_photo_url?: string | null
+          qualifications?: Json
           role?: string
         }
         Relationships: [
@@ -581,31 +620,40 @@ export type Database = {
       }
       organizations: {
         Row: {
+          accepts_assignments: boolean
           created_at: string
           default_hw_rate: number | null
           id: string
           inspection_alert_enabled: boolean
+          modules_enabled: Json
           name: string
+          org_type: string
           seat_limit: number
           tier: string
           walkaround_enabled: boolean
         }
         Insert: {
+          accepts_assignments?: boolean
           created_at?: string
           default_hw_rate?: number | null
           id?: string
           inspection_alert_enabled?: boolean
+          modules_enabled?: Json
           name: string
+          org_type?: string
           seat_limit?: number
           tier?: string
           walkaround_enabled?: boolean
         }
         Update: {
+          accepts_assignments?: boolean
           created_at?: string
           default_hw_rate?: number | null
           id?: string
           inspection_alert_enabled?: boolean
+          modules_enabled?: Json
           name?: string
+          org_type?: string
           seat_limit?: number
           tier?: string
           walkaround_enabled?: boolean
@@ -965,6 +1013,45 @@ export type Database = {
           signer_name?: string | null
           signer_type?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      training_records: {
+        Row: {
+          certificate_url: string | null
+          completed_at: string | null
+          course_name: string
+          created_at: string
+          crew_member_id: string
+          expires_at: string | null
+          hours: number | null
+          id: string
+          notes: string | null
+          organization_id: string
+        }
+        Insert: {
+          certificate_url?: string | null
+          completed_at?: string | null
+          course_name: string
+          created_at?: string
+          crew_member_id: string
+          expires_at?: string | null
+          hours?: number | null
+          id?: string
+          notes?: string | null
+          organization_id: string
+        }
+        Update: {
+          certificate_url?: string | null
+          completed_at?: string | null
+          course_name?: string
+          created_at?: string
+          crew_member_id?: string
+          expires_at?: string | null
+          hours?: number | null
+          id?: string
+          notes?: string | null
+          organization_id?: string
         }
         Relationships: []
       }
@@ -1378,10 +1465,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      create_organization_with_owner: {
-        Args: { _name: string }
-        Returns: string
-      }
+      create_organization_with_owner:
+        | { Args: { _name: string }; Returns: string }
+        | {
+            Args: {
+              _accepts_assignments?: boolean
+              _name: string
+              _org_type?: string
+            }
+            Returns: string
+          }
       delete_user_data: { Args: { _user_id: string }; Returns: undefined }
       get_auth_email: { Args: never; Returns: string }
       get_org_from_incident: { Args: { _incident_id: string }; Returns: string }

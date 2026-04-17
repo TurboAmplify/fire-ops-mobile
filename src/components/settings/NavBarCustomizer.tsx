@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import {
-  Flame, Banknote, DollarSign, FileText, Users, Truck, ClipboardList, Package,
+  Flame, Banknote, DollarSign, FileText, Users, Truck, ClipboardList, Package, GraduationCap, Siren, FileSpreadsheet,
 } from "lucide-react";
 import {
   Dialog,
@@ -10,6 +10,8 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import type { LucideIcon } from "lucide-react";
+import { useAppMode, type ModuleFlags } from "@/lib/app-mode";
+import { useOrganization } from "@/hooks/useOrganization";
 
 export const NAV_STORAGE_KEY = "fireops-nav-tabs";
 
@@ -18,19 +20,26 @@ export interface NavTabOption {
   label: string;
   icon: LucideIcon;
   to: string;
+  /** If set, this tab requires the given module to be enabled. */
+  module?: keyof ModuleFlags;
+  /** If true, only admins see this tab. */
+  adminOnly?: boolean;
 }
 
 export const ALL_NAV_OPTIONS: NavTabOption[] = [
   { key: "incidents", label: "Incidents", icon: Flame, to: "/incidents" },
-  { key: "payroll", label: "Payroll", icon: Banknote, to: "/payroll" },
+  { key: "payroll", label: "Payroll", icon: Banknote, to: "/payroll", module: "payroll", adminOnly: true },
   { key: "expenses", label: "Expenses", icon: DollarSign, to: "/expenses" },
-  { key: "shift-tickets", label: "Shift Tickets", icon: FileText, to: "/shift-tickets" },
+  { key: "shift-tickets", label: "Shift Tickets", icon: FileText, to: "/shift-tickets", module: "shiftTickets" },
   { key: "crew", label: "Crew", icon: Users, to: "/crew" },
   { key: "fleet", label: "Fleet", icon: Truck, to: "/fleet" },
   { key: "needs", label: "Needs List", icon: ClipboardList, to: "/needs" },
+  { key: "training", label: "Training", icon: GraduationCap, to: "/training", module: "training" },
+  { key: "run-reports", label: "Run Reports", icon: Siren, to: "/run-reports", module: "runReport" },
+  { key: "ctr", label: "Crew Time Report", icon: FileSpreadsheet, to: "/ctr", module: "ctr" },
 ];
 
-export const DEFAULT_TAB_KEYS = ["incidents", "payroll", "expenses", "shift-tickets"];
+export const DEFAULT_TAB_KEYS = ["incidents", "expenses", "shift-tickets", "crew"];
 
 export function getSelectedTabKeys(): string[] {
   try {
@@ -43,9 +52,32 @@ export function getSelectedTabKeys(): string[] {
   return DEFAULT_TAB_KEYS;
 }
 
-export function getSelectedTabs(): NavTabOption[] {
+/** Filter the master nav list by the active modules + admin role. */
+export function filterNavByMode(
+  options: NavTabOption[],
+  modules: ModuleFlags,
+  isAdmin: boolean,
+): NavTabOption[] {
+  return options.filter((o) => {
+    if (o.module && !modules[o.module]) return false;
+    if (o.adminOnly && !isAdmin) return false;
+    return true;
+  });
+}
+
+/** Hook: returns the user's chosen nav tabs that are visible under the current mode. */
+export function useVisibleSelectedTabs(): NavTabOption[] {
+  const { modules } = useAppMode();
+  const { isAdmin } = useOrganization();
   const keys = getSelectedTabKeys();
-  return keys.map((k) => ALL_NAV_OPTIONS.find((o) => o.key === k)!).filter(Boolean);
+  return keys
+    .map((k) => ALL_NAV_OPTIONS.find((o) => o.key === k))
+    .filter((o): o is NavTabOption => !!o)
+    .filter((o) => {
+      if (o.module && !modules[o.module]) return false;
+      if (o.adminOnly && !isAdmin) return false;
+      return true;
+    });
 }
 
 interface Props {
@@ -54,6 +86,10 @@ interface Props {
 }
 
 export function NavBarCustomizer({ open, onOpenChange }: Props) {
+  const { modules } = useAppMode();
+  const { isAdmin } = useOrganization();
+  const availableOptions = filterNavByMode(ALL_NAV_OPTIONS, modules, isAdmin);
+
   const [selected, setSelected] = useState<string[]>(getSelectedTabKeys);
 
   useEffect(() => {
@@ -63,10 +99,10 @@ export function NavBarCustomizer({ open, onOpenChange }: Props) {
   const toggle = (key: string) => {
     setSelected((prev) => {
       if (prev.includes(key)) {
-        if (prev.length <= 1) return prev; // keep at least 1
+        if (prev.length <= 1) return prev;
         return prev.filter((k) => k !== key);
       }
-      if (prev.length >= 4) return prev; // max 4
+      if (prev.length >= 4) return prev;
       return [...prev, key];
     });
   };
@@ -75,12 +111,10 @@ export function NavBarCustomizer({ open, onOpenChange }: Props) {
     if (selected.length < 1 || selected.length > 4) return;
     try {
       localStorage.setItem(NAV_STORAGE_KEY, JSON.stringify(selected));
-      // Fire event so BottomNav rebuilds immediately
       window.dispatchEvent(new Event("nav-tabs-changed"));
       toast.success("Navigation updated");
-      // Close after the state has committed
       setTimeout(() => onOpenChange(false), 0);
-    } catch (err: any) {
+    } catch {
       toast.error("Failed to save navigation");
     }
   };
@@ -92,10 +126,10 @@ export function NavBarCustomizer({ open, onOpenChange }: Props) {
           <DialogTitle className="text-base">Customize Navigation</DialogTitle>
         </DialogHeader>
         <p className="text-xs text-muted-foreground mb-3">
-          Choose up to 4 items for your bottom navigation bar. Home is always visible.
+          Choose up to 4 items for your bottom navigation bar. Home and More are always visible.
         </p>
         <div className="space-y-2">
-          {ALL_NAV_OPTIONS.map((opt) => {
+          {availableOptions.map((opt) => {
             const isSelected = selected.includes(opt.key);
             const atMax = selected.length >= 4 && !isSelected;
             return (

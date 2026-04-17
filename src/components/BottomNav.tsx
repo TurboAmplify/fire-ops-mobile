@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { LayoutDashboard, MoreHorizontal } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
-import { getSelectedTabs, NAV_STORAGE_KEY } from "@/components/settings/NavBarCustomizer";
+import { useVisibleSelectedTabs } from "@/components/settings/NavBarCustomizer";
 import { ShiftTicketQuickAccess } from "@/components/shift-tickets/ShiftTicketQuickAccess";
 import type { LucideIcon } from "lucide-react";
 
@@ -12,28 +12,14 @@ interface Tab {
   action?: "shift-tickets";
 }
 
-function buildTabs(): Tab[] {
-  const userTabs = getSelectedTabs();
-  return userTabs.map((t) => {
-    if (t.key === "shift-tickets") {
-      return { label: t.label, icon: t.icon, to: "#", action: "shift-tickets" as const };
-    }
-    return { label: t.label, icon: t.icon, to: t.to };
-  });
-}
-
 export function BottomNav() {
-  const [middleTabs, setMiddleTabs] = useState<Tab[]>(() => buildTabs());
+  const visibleTabs = useVisibleSelectedTabs();
   const [showTickets, setShowTickets] = useState(false);
   const location = useLocation();
-
-  // Re-read tabs on every route change (catches navigation back from Settings)
-  useEffect(() => {
-    setMiddleTabs(buildTabs());
-  }, [location.pathname]);
+  const [bump, setBump] = useState(0);
 
   useEffect(() => {
-    const refresh = () => setMiddleTabs(buildTabs());
+    const refresh = () => setBump((n) => n + 1);
     window.addEventListener("nav-tabs-changed", refresh);
     window.addEventListener("storage", refresh);
     return () => {
@@ -41,6 +27,16 @@ export function BottomNav() {
       window.removeEventListener("storage", refresh);
     };
   }, []);
+
+  const middleTabs: Tab[] = useMemo(
+    () =>
+      visibleTabs.map((t) =>
+        t.key === "shift-tickets"
+          ? { label: t.label, icon: t.icon, to: "#", action: "shift-tickets" as const }
+          : { label: t.label, icon: t.icon, to: t.to },
+      ),
+    [visibleTabs, location.pathname, bump],
+  );
 
   const allTabs: (Tab & { fixed?: boolean })[] = [
     { label: "Home", icon: LayoutDashboard, to: "/", fixed: true },

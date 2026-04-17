@@ -40,6 +40,10 @@ import Payroll from "./pages/Payroll";
 import More from "./pages/More";
 import NeedsList from "./pages/NeedsList";
 import AdminLogs from "./pages/AdminLogs";
+import Training from "./pages/Training";
+import RunReport from "./pages/RunReport";
+import CrewTimeReport from "./pages/CrewTimeReport";
+import { ModuleGate, AdminGate } from "@/components/ModuleGate";
 import NotFound from "./pages/NotFound";
 
 const App = () => (
@@ -80,10 +84,13 @@ const App = () => (
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
-              <Route path="/payroll" element={<ProtectedRoute><Payroll /></ProtectedRoute>} />
+              <Route path="/payroll" element={<ProtectedRoute><AdminGate><ModuleGate module="payroll"><Payroll /></ModuleGate></AdminGate></ProtectedRoute>} />
               <Route path="/more" element={<ProtectedRoute><More /></ProtectedRoute>} />
               <Route path="/needs" element={<ProtectedRoute><NeedsList /></ProtectedRoute>} />
-              <Route path="/admin/logs" element={<ProtectedRoute><AdminLogs /></ProtectedRoute>} />
+              <Route path="/training" element={<ProtectedRoute><ModuleGate module="training"><Training /></ModuleGate></ProtectedRoute>} />
+              <Route path="/run-reports" element={<ProtectedRoute><ModuleGate module="runReport"><RunReport /></ModuleGate></ProtectedRoute>} />
+              <Route path="/ctr" element={<ProtectedRoute><ModuleGate module="ctr"><CrewTimeReport /></ModuleGate></ProtectedRoute>} />
+              <Route path="/admin/logs" element={<ProtectedRoute><AdminGate><AdminLogs /></AdminGate></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

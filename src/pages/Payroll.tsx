@@ -1,7 +1,8 @@
 import { AppShell } from "@/components/AppShell";
 import { useCrewMembers } from "@/hooks/useCrewMembers";
 import { useIncidents } from "@/hooks/useIncidents";
-import { Loader2, ChevronLeft, ChevronRight, Clock, DollarSign, Users } from "lucide-react";
+import { useOrganization } from "@/hooks/useOrganization";
+import { Loader2, ChevronLeft, ChevronRight, Clock, DollarSign, Users, Lock } from "lucide-react";
 import { useState, useMemo } from "react";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, parseISO, isWithinInterval } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -64,6 +65,7 @@ interface CrewPayrollLine {
 }
 
 export default function Payroll() {
+  const { isAdmin } = useOrganization();
   const [weekStart, setWeekStart] = useState(() =>
     startOfWeek(new Date(), { weekStartsOn: 1 })
   );
@@ -178,6 +180,22 @@ export default function Payroll() {
 
   const prevWeek = () => setWeekStart((w) => subWeeks(w, 1));
   const nextWeek = () => setWeekStart((w) => addWeeks(w, 1));
+
+  if (!isAdmin) {
+    return (
+      <AppShell title="Payroll">
+        <div className="flex flex-col items-center justify-center py-20 px-6 text-center space-y-3">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
+            <Lock className="h-7 w-7 text-muted-foreground" />
+          </div>
+          <h2 className="text-lg font-bold">Admin only</h2>
+          <p className="text-sm text-muted-foreground max-w-sm">
+            Payroll is restricted to organization admins. Contact your admin if you need access.
+          </p>
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell title="Payroll">
