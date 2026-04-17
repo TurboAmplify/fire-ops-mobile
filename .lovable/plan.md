@@ -1,85 +1,90 @@
 
 
-# Cycle A: Vehicle Walk-Around Inspections
+# Roles, Truck Access, and Multi-Tenant Seats
 
-## Decisions locked in
-- **Reset cadence**: end of shift. A walk-around is "due" again once the previous shift on that truck ends (or at local midnight if no shift exists yet).
-- **Who can complete**: any authenticated user in the org who has access to that incident/truck.
+Yes — this makes sense and fits cleanly on top of what's already built. The multi-tenant foundation (organizations, members, invites) is in place. We're adding **a proper role model**, **per-crew truck access**, and **seat limits**. Billing tiers come later — we just need the seat plumbing now.
 
-## Scope (Cycle A only)
+## What changes
 
-Build the inspection feature end-to-end. Inventory, Owner View, and App Mode toggle come in Cycle B.
+### 1. Roles — simplify to two
+Today `organization_members.role` is free text (`owner`, `admin`, `member`, etc.). Lock it to:
+- **`admin`** — full access to everything in the org (owners are admins).
+- **`crew`** — restricted to trucks they've been granted access to.
 
-## 1. Database migration
+Migrate any existing `owner`/`member` rows to `admin`/`crew`.
 
-New tables (all org-scoped, RLS modeled on existing tables):
+### 2. Per-crew truck access
+New table **`crew_truck_access`**:
+- `id, organization_id, user_id, truck_id, granted_by, granted_at`
+- Unique on `(user_id, truck_id)`
 
-- **`inspection_templates`** — org-level named templates  
-  `id, organization_id, name, is_default, created_at`
-- **`inspection_template_items`** — items per template  
-  `id, template_id, label, sort_order, created_at`
-- **`truck_inspections`** — one row per completed walk-around  
-  `id, truck_id, organization_id, incident_id (nullable), shift_id (nullable), template_id, performed_by_user_id, performed_by_name, performed_at, status (pass|issues|partial), notes`
-- **`truck_inspection_results`** — per-item results  
-  `id, inspection_id, item_label, status (ok|issue|na), notes, photo_url`
+Helper function `user_can_access_truck(_user_id, _truck_id)`:
+- Returns true if user is `admin` in that truck's org, OR has a row in `crew_truck_access`.
 
-Schema add:
-- **`organizations.inspection_alert_enabled`** boolean default true
-- **`trucks.inspection_template_id`** uuid nullable (per-truck override)
+Then update RLS on truck-scoped tables (`trucks`, `incident_trucks`, `incident_truck_crew`, `shifts`, `shift_crew`, `shift_tickets`, `truck_inspections`, `truck_documents`, `truck_photos`, `truck_service_logs`, `truck_checklist_items`) so that:
+- **Admins** see everything in their org (current behavior).
+- **Crew** see only rows tied to trucks they have access to.
 
-Data migration:
-- For each org with rows in `truck_checklist_items`, create one default `inspection_templates` row and copy distinct labels into `inspection_template_items`. Existing `truck_checklist_items` table is left in place (read-only) until Cycle B confirms nothing references it; then drop.
+Incidents themselves stay org-visible (so crew can see the incident exists), but on the incident page they only see their assigned trucks.
 
-RLS: same pattern as existing tables — `organization_id IN (get_user_org_ids(auth.uid()))`. For `truck_inspection_results`, gate via parent inspection's org.
+### 3. Resource-order upload → create incident (both roles)
+Both admins and crew can upload a resource order. The truck picker in that flow only shows:
+- All org trucks for admins.
+- Only accessible trucks for crew.
 
-## 2. Services + hooks
+No new screens — we filter the existing `useAvailableTrucks()` hook.
 
-- `src/services/inspections.ts` — CRUD for templates, template items, inspections, results; helpers: `getLastInspection(truckId)`, `isInspectionDueForTruck(truckId)`.
-- `src/hooks/useInspections.ts` — React Query hooks mirroring service.
+### 4. Seats (multi-tenant readiness)
+Add to `organizations`:
+- `seat_limit` integer, default 5
+- `tier` text, default `'free'` (placeholder for future billing)
 
-"Due" logic:
-- Find latest `truck_inspections.performed_at` for truck.
-- Find latest `shifts.end_time` for truck's `incident_trucks` rows.
-- Due if no inspection exists OR last inspection is older than the most recent completed shift's end (or older than local midnight if no shifts).
+Behavior:
+- When an admin sends an invite, count `organization_members` + pending `organization_invites` for that org. If `>= seat_limit`, block with a clear message: "Seat limit reached (5/5). Upgrade your plan to add more crew."
+- Owner/admin invite flow already exists — we just gate it.
 
-## 3. UI components
+This makes the app billing-ready without wiring Stripe today. When you're ready, the tier just maps to a higher `seat_limit`.
 
-- **`src/components/fleet/TruckInspectionSection.tsx`** (replaces `TruckChecklistSection` on truck detail)  
-  Shows: status pill ("Walk-around due" amber / "Completed today by [name] at [time]" green), template item count, big "Start Walk-Around" button, recent inspections list (last 5 with who/when/status).
-- **`src/components/fleet/TruckInspectionRunner.tsx`** — full-screen sheet  
-  One item at a time or scroll list; each item has 3 large tap targets: **OK / Issue / N/A**. "Issue" expands inline note + optional photo. Sticky "Submit" button at bottom shows progress (e.g. "12/18 — 2 issues").
-- **`src/components/fleet/InspectionTemplateEditor.tsx`** — accessed from Org Settings; add/remove/reorder items; mark default template.
+### 5. Admin UI — Truck Access manager
+On **Org Settings** → new section **"Crew Access"**:
+- List org members (crew only).
+- Tap a crew member → see trucks → toggle access on/off (chips).
+- Mobile-friendly, big tap targets, no modal stacking.
 
-## 4. Wiring
+Plus on **Fleet → Truck detail** (admin only): a "Who has access" row showing which crew can use this truck, with quick add/remove.
 
-- `src/pages/FleetTruckDetail.tsx` — swap `TruckChecklistSection` → `TruckInspectionSection`.
-- `src/pages/Dashboard.tsx` — add "Walk-around due" banner listing trucks currently on active incidents that are due (tap → opens that truck).
-- `src/pages/OrgSettings.tsx` — add "Inspection Templates" link + toggle for `inspection_alert_enabled`.
-
-## 5. What stays untouched
-
-- `truck_checklist_items` table and existing `TruckChecklistSection.tsx` file remain until Cycle B (zero risk of data loss).
-- All other modules (incidents, shifts, expenses, crew) unchanged.
-- Auth, RLS pattern, offline queue, routes — unchanged.
+### 6. What stays the same
+- Org setup, invite flow, login — unchanged surface.
+- Incident, shift, expense, inspection logic — unchanged.
+- Existing data — preserved (role values migrated, no truck access rows = admins still see all, crew see none until granted).
 
 ## Files
 
 | File | Change |
 |---|---|
-| DB migration | New 4 tables, 2 column adds, data copy from existing checklist |
-| `src/services/inspections.ts` | New |
-| `src/hooks/useInspections.ts` | New |
-| `src/components/fleet/TruckInspectionSection.tsx` | New |
-| `src/components/fleet/TruckInspectionRunner.tsx` | New |
-| `src/components/fleet/InspectionTemplateEditor.tsx` | New |
-| `src/pages/FleetTruckDetail.tsx` | Swap section |
-| `src/pages/Dashboard.tsx` | Add due banner |
-| `src/pages/OrgSettings.tsx` | Add template editor entry + alert toggle |
+| DB migration | New `crew_truck_access` table + indexes; `seat_limit`/`tier` on `organizations`; `user_can_access_truck` function; rewrite RLS on truck-scoped tables; migrate role values |
+| `src/services/crew-access.ts` | New — list/grant/revoke truck access |
+| `src/hooks/useCrewAccess.ts` | New — query/mutation hooks |
+| `src/services/organizations.ts` (or new) | Seat-limit check before sending invite |
+| `src/services/incident-trucks.ts` | `fetchAvailableTrucks` already uses RLS — verify it filters correctly for crew |
+| `src/components/settings/CrewAccessManager.tsx` | New — admin-only UI in Org Settings |
+| `src/components/fleet/TruckAccessSection.tsx` | New — per-truck access row on detail page (admin only) |
+| `src/pages/OrgSettings.tsx` | Add "Crew Access" section + show seats used (e.g. "3 of 5 seats used") |
+| `src/hooks/useOrganization.tsx` | Expose `role`, `isAdmin`, `seatLimit`, `seatsUsed` |
+| `src/components/incidents/IncidentTruckList.tsx` | Hide assign-truck button for crew if no accessible trucks; show empty-state message |
+
+## Risks / things to watch
+- **RLS rewrite is the biggest change.** I'll keep the existing org-scoped policies as the admin path and add a crew-scoped OR clause — no policy gets stricter for admins.
+- **Existing rows survive**: any current member becomes `admin` (safest default — preserves current behavior). You'll then demote specific people to `crew` and grant them truck access.
+- **Seat enforcement is invite-time only** (not a hard block on existing members) — keeps things forgiving.
 
 ## Test after build
-- On a truck with no inspections, Dashboard shows "Walk-around due" if truck is on active incident.
-- Tap "Start Walk-Around" → mark items OK/Issue/N/A → add a photo to one issue → submit → see "Completed by [you] at [time]".
-- Wait for shift to end (or end one) → status flips back to "due".
-- Edit template in Org Settings → new item appears in next walk-around.
-- Existing checklist data appears as the default template items.
+- Admin sees all trucks; crew sees only granted ones across Fleet, Incidents, Shifts.
+- Admin grants truck to crew → crew immediately sees it on next refresh.
+- Crew uploads a resource order → only their accessible trucks appear in picker.
+- Try to invite a 6th member at seat_limit=5 → blocked with clear message.
+- Existing data still loads unchanged for admins.
+
+## One question before I start
+Should a crew member who is **assigned via `incident_truck_crew`** to a truck automatically gain access to that truck (auto-grant), or must an admin explicitly grant access first even if they're already assigned?
 
