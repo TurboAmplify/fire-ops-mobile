@@ -3,11 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 export type InspectionItemStatus = "ok" | "issue" | "na";
 export type InspectionStatus = "pass" | "issues" | "partial";
 
+export type TemplateType = "walkaround" | "inventory";
+
 export interface InspectionTemplate {
   id: string;
   organization_id: string;
   name: string;
   is_default: boolean;
+  template_type: TemplateType;
   created_at: string;
 }
 
@@ -42,35 +45,53 @@ export interface TruckInspectionResult {
 }
 
 // ---- Templates ----
-export async function listTemplates(orgId: string): Promise<InspectionTemplate[]> {
-  const { data, error } = await supabase
+export async function listTemplates(orgId: string, type?: TemplateType): Promise<InspectionTemplate[]> {
+  let q = supabase
     .from("inspection_templates")
     .select("*")
-    .eq("organization_id", orgId)
+    .eq("organization_id", orgId);
+  if (type) q = q.eq("template_type", type);
+  const { data, error } = await q
     .order("is_default", { ascending: false })
     .order("created_at", { ascending: true });
   if (error) throw error;
   return (data ?? []) as InspectionTemplate[];
 }
 
-export async function getDefaultTemplate(orgId: string): Promise<InspectionTemplate | null> {
+export async function getDefaultTemplate(orgId: string, type: TemplateType = "walkaround"): Promise<InspectionTemplate | null> {
+  // Prefer the default flagged template; otherwise the first one of that type.
+  const { data: def } = await supabase
+    .from("inspection_templates")
+    .select("*")
+    .eq("organization_id", orgId)
+    .eq("template_type", type)
+    .eq("is_default", true)
+    .maybeSingle();
+  if (def) return def as InspectionTemplate;
+
   const { data, error } = await supabase
     .from("inspection_templates")
     .select("*")
     .eq("organization_id", orgId)
-    .eq("is_default", true)
+    .eq("template_type", type)
+    .order("created_at", { ascending: true })
+    .limit(1)
     .maybeSingle();
   if (error) throw error;
   return (data ?? null) as InspectionTemplate | null;
 }
 
-export async function createTemplate(orgId: string, name: string, isDefault = false): Promise<InspectionTemplate> {
+export async function createTemplate(orgId: string, name: string, isDefault = false, templateType: TemplateType = "walkaround"): Promise<InspectionTemplate> {
   if (isDefault) {
-    await supabase.from("inspection_templates").update({ is_default: false }).eq("organization_id", orgId);
+    await supabase
+      .from("inspection_templates")
+      .update({ is_default: false })
+      .eq("organization_id", orgId)
+      .eq("template_type", templateType);
   }
   const { data, error } = await supabase
     .from("inspection_templates")
-    .insert({ organization_id: orgId, name, is_default: isDefault })
+    .insert({ organization_id: orgId, name, is_default: isDefault, template_type: templateType })
     .select()
     .single();
   if (error) throw error;

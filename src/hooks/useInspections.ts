@@ -14,29 +14,30 @@ import {
   updateTemplate,
   updateTemplateItem,
   type SubmitInspectionInput,
+  type TemplateType,
 } from "@/services/inspections";
 
 export const inspectionKeys = {
-  templates: (orgId: string) => ["inspection-templates", orgId] as const,
-  defaultTemplate: (orgId: string) => ["inspection-templates", "default", orgId] as const,
+  templates: (orgId: string, type?: TemplateType) => ["inspection-templates", orgId, type ?? "all"] as const,
+  defaultTemplate: (orgId: string, type: TemplateType) => ["inspection-templates", "default", orgId, type] as const,
   templateItems: (templateId: string) => ["inspection-template-items", templateId] as const,
   truckInspections: (truckId: string) => ["truck-inspections", truckId] as const,
   lastInspection: (truckId: string) => ["truck-inspections", "last", truckId] as const,
   inspectionDue: (truckId: string) => ["truck-inspections", "due", truckId] as const,
 };
 
-export function useInspectionTemplates(orgId: string | undefined) {
+export function useInspectionTemplates(orgId: string | undefined, type?: TemplateType) {
   return useQuery({
-    queryKey: inspectionKeys.templates(orgId ?? ""),
-    queryFn: () => listTemplates(orgId!),
+    queryKey: inspectionKeys.templates(orgId ?? "", type),
+    queryFn: () => listTemplates(orgId!, type),
     enabled: !!orgId,
   });
 }
 
-export function useDefaultInspectionTemplate(orgId: string | undefined) {
+export function useDefaultInspectionTemplate(orgId: string | undefined, type: TemplateType = "walkaround") {
   return useQuery({
-    queryKey: inspectionKeys.defaultTemplate(orgId ?? ""),
-    queryFn: () => getDefaultTemplate(orgId!),
+    queryKey: inspectionKeys.defaultTemplate(orgId ?? "", type),
+    queryFn: () => getDefaultTemplate(orgId!, type),
     enabled: !!orgId,
   });
 }
@@ -86,17 +87,18 @@ export function useSubmitInspection() {
   });
 }
 
+function invalidateTemplates(qc: ReturnType<typeof useQueryClient>, orgId?: string) {
+  if (!orgId) return;
+  qc.invalidateQueries({ queryKey: ["inspection-templates", orgId] });
+  qc.invalidateQueries({ queryKey: ["inspection-templates"] });
+}
+
 export function useCreateTemplate(orgId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ name, isDefault }: { name: string; isDefault?: boolean }) =>
-      createTemplate(orgId!, name, isDefault),
-    onSuccess: () => {
-      if (orgId) {
-        qc.invalidateQueries({ queryKey: inspectionKeys.templates(orgId) });
-        qc.invalidateQueries({ queryKey: inspectionKeys.defaultTemplate(orgId) });
-      }
-    },
+    mutationFn: ({ name, isDefault, templateType }: { name: string; isDefault?: boolean; templateType?: TemplateType }) =>
+      createTemplate(orgId!, name, isDefault, templateType),
+    onSuccess: () => invalidateTemplates(qc, orgId),
   });
 }
 
@@ -105,12 +107,7 @@ export function useUpdateTemplate(orgId: string | undefined) {
   return useMutation({
     mutationFn: ({ id, patch }: { id: string; patch: Parameters<typeof updateTemplate>[1] }) =>
       updateTemplate(id, patch, orgId),
-    onSuccess: () => {
-      if (orgId) {
-        qc.invalidateQueries({ queryKey: inspectionKeys.templates(orgId) });
-        qc.invalidateQueries({ queryKey: inspectionKeys.defaultTemplate(orgId) });
-      }
-    },
+    onSuccess: () => invalidateTemplates(qc, orgId),
   });
 }
 
@@ -118,12 +115,7 @@ export function useDeleteTemplate(orgId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => deleteTemplate(id),
-    onSuccess: () => {
-      if (orgId) {
-        qc.invalidateQueries({ queryKey: inspectionKeys.templates(orgId) });
-        qc.invalidateQueries({ queryKey: inspectionKeys.defaultTemplate(orgId) });
-      }
-    },
+    onSuccess: () => invalidateTemplates(qc, orgId),
   });
 }
 
