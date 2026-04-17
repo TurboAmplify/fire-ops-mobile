@@ -78,6 +78,37 @@ export default function OrgSettings() {
 
   const orgId = membership?.organizationId;
 
+  // Fetch org-level inspection alert flag
+  const { data: orgRow } = useQuery({
+    queryKey: ["org-row", orgId],
+    enabled: !!orgId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("organizations")
+        .select("id, inspection_alert_enabled")
+        .eq("id", orgId!)
+        .maybeSingle();
+      if (error) throw error;
+      return data as any;
+    },
+  });
+
+  const toggleAlert = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      if (!orgId) throw new Error("No org");
+      const { error } = await supabase
+        .from("organizations")
+        .update({ inspection_alert_enabled: enabled })
+        .eq("id", orgId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["org-row", orgId] });
+      toast({ title: "Saved" });
+    },
+    onError: (err: any) => toast({ title: "Failed", description: err.message, variant: "destructive" }),
+  });
+
   // Fetch members
   const { data: members = [], isLoading: membersLoading } = useQuery({
     queryKey: ["org-members", orgId],
