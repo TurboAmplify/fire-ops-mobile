@@ -18,10 +18,14 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+type TabType = "walkaround" | "inventory";
+
 export function InspectionTemplateEditor() {
   const { membership } = useOrganization();
   const orgId = membership?.organizationId;
-  const { data: templates, isLoading } = useInspectionTemplates(orgId);
+  const [tab, setTab] = useState<TabType>("walkaround");
+
+  const { data: templates, isLoading } = useInspectionTemplates(orgId, tab);
   const createTemplate = useCreateTemplate(orgId);
   const updateTemplate = useUpdateTemplate(orgId);
   const deleteTemplate = useDeleteTemplate(orgId);
@@ -40,6 +44,12 @@ export function InspectionTemplateEditor() {
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; label: string } | null>(null);
   const [confirmDeleteTpl, setConfirmDeleteTpl] = useState<{ id: string; name: string } | null>(null);
 
+  // Reset selection when switching tabs
+  const handleTabChange = (next: TabType) => {
+    setTab(next);
+    setSelectedId(null);
+  };
+
   const handleAddItem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newItemLabel.trim() || !active) return;
@@ -55,7 +65,7 @@ export function InspectionTemplateEditor() {
     const name = newTplName.trim();
     if (!name) return;
     try {
-      const t = await createTemplate.mutateAsync({ name, isDefault: !templates?.length });
+      const t = await createTemplate.mutateAsync({ name, isDefault: !templates?.length, templateType: tab });
       setSelectedId((t as any).id);
       setNewTplName("");
       toast.success("Template created");
@@ -99,9 +109,31 @@ export function InspectionTemplateEditor() {
 
   return (
     <div className="space-y-4">
+      {/* Tabs: Walk-Around / Inventory */}
+      <div className="flex gap-1 rounded-lg bg-muted p-1">
+        <button
+          onClick={() => handleTabChange("walkaround")}
+          className={`flex-1 rounded-md py-2 text-xs font-semibold transition-all touch-target ${
+            tab === "walkaround" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
+          }`}
+        >
+          Walk-Around
+        </button>
+        <button
+          onClick={() => handleTabChange("inventory")}
+          className={`flex-1 rounded-md py-2 text-xs font-semibold transition-all touch-target ${
+            tab === "inventory" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
+          }`}
+        >
+          Inventory
+        </button>
+      </div>
+
       {/* Template list */}
       <div className="space-y-2">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Templates</p>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          {tab === "walkaround" ? "Walk-Around Templates" : "Inventory Templates"}
+        </p>
         {(templates ?? []).length === 0 && (
           <p className="text-sm text-muted-foreground">No templates yet — create your first below.</p>
         )}
