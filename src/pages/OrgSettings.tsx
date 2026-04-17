@@ -41,25 +41,22 @@ import {
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { InspectionTemplateEditor } from "@/components/fleet/InspectionTemplateEditor";
+import { CrewAccessManager } from "@/components/settings/CrewAccessManager";
 
 const ROLE_LABELS: Record<string, string> = {
-  owner: "Owner",
-  crew_boss: "Crew Boss",
-  crew_member: "Crew Member",
+  admin: "Admin",
+  crew: "Crew",
 };
 
 const ROLE_ICONS: Record<string, React.ElementType> = {
-  owner: Shield,
-  crew_boss: Flame,
-  crew_member: Wrench,
+  admin: Shield,
+  crew: Wrench,
 };
 
 function roleBadgeVariant(role: string) {
   switch (role) {
-    case "owner":
+    case "admin":
       return "default" as const;
-    case "crew_boss":
-      return "secondary" as const;
     default:
       return "outline" as const;
   }
