@@ -238,7 +238,7 @@ export function TruckInspectionRunner({ open, onOpenChange, truckId, truckName, 
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
               <>
-                Submit Walk-Around
+                {labels.submit}
                 {items.length > 0 && (
                   <span className="ml-2 opacity-80 text-sm">
                     {completed}/{items.length}
