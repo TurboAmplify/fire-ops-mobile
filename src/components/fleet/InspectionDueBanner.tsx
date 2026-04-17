@@ -20,6 +20,14 @@ export function InspectionDueBanner() {
     enabled: !!orgId,
     staleTime: 60_000,
     queryFn: async (): Promise<DueTruck[]> => {
+      // Respect org-level alert toggle
+      const { data: org } = await supabase
+        .from("organizations")
+        .select("inspection_alert_enabled")
+        .eq("id", orgId!)
+        .maybeSingle();
+      if (org && (org as any).inspection_alert_enabled === false) return [];
+
       // 1) load active incidents in the org
       const { data: incidents } = await supabase
         .from("incidents")
