@@ -10,6 +10,7 @@ import { useTrucks } from "@/hooks/useFleet";
 import { useCrewMembers } from "@/hooks/useCrewMembers";
 import { useNeedsList } from "@/hooks/useNeedsList";
 import { ShiftTicketQuickAccess } from "@/components/shift-tickets/ShiftTicketQuickAccess";
+import { InspectionDueBanner } from "@/components/fleet/InspectionDueBanner";
 import type { LucideIcon } from "lucide-react";
 
 export default function Dashboard() {
@@ -40,7 +41,10 @@ export default function Dashboard() {
       </div>
 
       <div className="px-4 pt-4 space-y-3 pb-6">
-        {/* Hero Stats */}
+        {/* Inspection alerts */}
+        <InspectionDueBanner />
+
+
         <section>
           <h2 className="mb-3 text-[10px] font-semibold text-muted-foreground/80 uppercase tracking-[0.15em] px-0.5">
             Overview

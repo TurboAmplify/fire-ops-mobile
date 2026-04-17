@@ -353,6 +353,62 @@ export type Database = {
           },
         ]
       }
+      inspection_template_items: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          sort_order: number
+          template_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          sort_order?: number
+          template_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          sort_order?: number
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspection_template_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "inspection_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inspection_templates: {
+        Row: {
+          created_at: string
+          id: string
+          is_default: boolean
+          name: string
+          organization_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name: string
+          organization_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          organization_id?: string
+        }
+        Relationships: []
+      }
       needs_list_items: {
         Row: {
           category: string
@@ -498,18 +554,21 @@ export type Database = {
           created_at: string
           default_hw_rate: number | null
           id: string
+          inspection_alert_enabled: boolean
           name: string
         }
         Insert: {
           created_at?: string
           default_hw_rate?: number | null
           id?: string
+          inspection_alert_enabled?: boolean
           name: string
         }
         Update: {
           created_at?: string
           default_hw_rate?: number | null
           id?: string
+          inspection_alert_enabled?: boolean
           name?: string
         }
         Relationships: []
@@ -972,6 +1031,91 @@ export type Database = {
           },
         ]
       }
+      truck_inspection_results: {
+        Row: {
+          id: string
+          inspection_id: string
+          item_label: string
+          notes: string | null
+          photo_url: string | null
+          status: string
+        }
+        Insert: {
+          id?: string
+          inspection_id: string
+          item_label: string
+          notes?: string | null
+          photo_url?: string | null
+          status?: string
+        }
+        Update: {
+          id?: string
+          inspection_id?: string
+          item_label?: string
+          notes?: string | null
+          photo_url?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "truck_inspection_results_inspection_id_fkey"
+            columns: ["inspection_id"]
+            isOneToOne: false
+            referencedRelation: "truck_inspections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      truck_inspections: {
+        Row: {
+          id: string
+          incident_id: string | null
+          notes: string | null
+          organization_id: string
+          performed_at: string
+          performed_by_name: string | null
+          performed_by_user_id: string | null
+          shift_id: string | null
+          status: string
+          template_id: string | null
+          truck_id: string
+        }
+        Insert: {
+          id?: string
+          incident_id?: string | null
+          notes?: string | null
+          organization_id: string
+          performed_at?: string
+          performed_by_name?: string | null
+          performed_by_user_id?: string | null
+          shift_id?: string | null
+          status?: string
+          template_id?: string | null
+          truck_id: string
+        }
+        Update: {
+          id?: string
+          incident_id?: string | null
+          notes?: string | null
+          organization_id?: string
+          performed_at?: string
+          performed_by_name?: string | null
+          performed_by_user_id?: string | null
+          shift_id?: string | null
+          status?: string
+          template_id?: string | null
+          truck_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "truck_inspections_truck_id_fkey"
+            columns: ["truck_id"]
+            isOneToOne: false
+            referencedRelation: "trucks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       truck_photos: {
         Row: {
           caption: string | null
@@ -1094,6 +1238,7 @@ export type Database = {
           fuel_type: string | null
           gvwr: number | null
           id: string
+          inspection_template_id: string | null
           insurance_expiry: string | null
           last_oil_change_date: string | null
           last_oil_change_mileage: number | null
@@ -1125,6 +1270,7 @@ export type Database = {
           fuel_type?: string | null
           gvwr?: number | null
           id?: string
+          inspection_template_id?: string | null
           insurance_expiry?: string | null
           last_oil_change_date?: string | null
           last_oil_change_mileage?: number | null
@@ -1156,6 +1302,7 @@ export type Database = {
           fuel_type?: string | null
           gvwr?: number | null
           id?: string
+          inspection_template_id?: string | null
           insurance_expiry?: string | null
           last_oil_change_date?: string | null
           last_oil_change_mileage?: number | null
@@ -1200,7 +1347,15 @@ export type Database = {
       get_auth_email: { Args: never; Returns: string }
       get_org_from_incident: { Args: { _incident_id: string }; Returns: string }
       get_org_from_incident_truck: { Args: { _it_id: string }; Returns: string }
+      get_org_from_inspection_template: {
+        Args: { _template_id: string }
+        Returns: string
+      }
       get_org_from_shift: { Args: { _shift_id: string }; Returns: string }
+      get_org_from_truck_inspection: {
+        Args: { _inspection_id: string }
+        Returns: string
+      }
       get_user_crew_member_id: { Args: { _user_id: string }; Returns: string }
       get_user_org_ids: { Args: { _user_id: string }; Returns: string[] }
       user_has_org_role: {
