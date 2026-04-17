@@ -28,11 +28,12 @@ export async function fetchIncidentTrucks(incidentId: string) {
   return data as IncidentTruckWithTruck[];
 }
 
-export async function fetchAvailableTrucks() {
-  const { data, error } = await supabase
-    .from("trucks")
-    .select("*")
-    .order("name");
+export async function fetchAvailableTrucks(organizationId?: string) {
+  let query = supabase.from("trucks").select("*").order("name");
+  if (organizationId) {
+    query = query.eq("organization_id", organizationId);
+  }
+  const { data, error } = await query;
   if (error) throw error;
   return data;
 }
