@@ -1,90 +1,63 @@
 
 
-# Roles, Truck Access, and Multi-Tenant Seats
+# Cycle B-lite: Inventory Split + Nav Persistence Fix
 
-Yes — this makes sense and fits cleanly on top of what's already built. The multi-tenant foundation (organizations, members, invites) is in place. We're adding **a proper role model**, **per-crew truck access**, and **seat limits**. Billing tiers come later — we just need the seat plumbing now.
+## Three issues to fix
+
+### 1. Walk-around template is bloated with inventory items (96 items!)
+Items like "100ft 1.5\" hose (x6)", "Chainsaw + fuel", "PPE gear on board", "Fire extinguisher (x2)" are **inventory** (counted gear), not walk-around safety checks. They were merged from old `truck_checklist_items` data.
+
+**Fix**: Split into two templates per org:
+- **Walk-Around Inspection** — ~25 safety items (tires, lights, fluids, brakes, mirrors, etc.)
+- **Inventory Check** — equipment counts (hoses, tools, PPE, supplies)
+
+I'll auto-classify the existing 96 items by keyword and rebuild as two clean templates.
+
+### 2. No inventory list UI
+Add an **Inventory Section** on the truck detail page using the same inspection plumbing — just a different template type. New column `inspection_templates.template_type` (`walkaround` | `inventory`), default `walkaround`. Then:
+- `TruckInspectionSection` filters to walkaround templates.
+- New `TruckInventorySection` filters to inventory templates.
+- Both use the same `TruckInspectionRunner` (already supports OK/Issue/N/A — for inventory we'll reuse: OK = on truck, Issue = missing/damaged, N/A = not applicable).
+- Inventory has no "due" alert (it's not time-based — checked when needed).
+
+### 3. Nav bar preferences not saving
+Looking at `BottomNav.tsx` + `NavBarCustomizer.tsx`: localStorage-based, dispatches `nav-tabs-changed` event. Likely culprits:
+- `getSelectedTabKeys()` accepts arrays of length 1-4, but if the user picks 5+ it silently rejects.
+- Save handler runs even when `selected.length > 4` is invalid.
+- No feedback if save fails.
+
+Actually re-reading the code: `toggle()` already caps at 4. The save button is disabled outside 1-4. The mechanism *should* work.
+
+Real bug possibilities:
+- **Localstorage write succeeding but `nav-tabs-changed` event firing before BottomNav mounts the listener** — unlikely since BottomNav is always mounted.
+- **The dialog is closed before save commits** — possible if user taps backdrop.
+- **Most likely**: `selected` state in NavBarCustomizer initializes from `getSelectedTabKeys()` but on Settings re-mount, the dialog already had stale state.
+
+I'll: (a) confirm save with a toast, (b) ensure save commits before dialog closes, (c) re-read state every time dialog opens (already done via useEffect — good), (d) add the "inventory" tab option to the nav choices.
 
 ## What changes
 
-### 1. Roles — simplify to two
-Today `organization_members.role` is free text (`owner`, `admin`, `member`, etc.). Lock it to:
-- **`admin`** — full access to everything in the org (owners are admins).
-- **`crew`** — restricted to trucks they've been granted access to.
-
-Migrate any existing `owner`/`member` rows to `admin`/`crew`.
-
-### 2. Per-crew truck access
-New table **`crew_truck_access`**:
-- `id, organization_id, user_id, truck_id, granted_by, granted_at`
-- Unique on `(user_id, truck_id)`
-
-Helper function `user_can_access_truck(_user_id, _truck_id)`:
-- Returns true if user is `admin` in that truck's org, OR has a row in `crew_truck_access`.
-
-Then update RLS on truck-scoped tables (`trucks`, `incident_trucks`, `incident_truck_crew`, `shifts`, `shift_crew`, `shift_tickets`, `truck_inspections`, `truck_documents`, `truck_photos`, `truck_service_logs`, `truck_checklist_items`) so that:
-- **Admins** see everything in their org (current behavior).
-- **Crew** see only rows tied to trucks they have access to.
-
-Incidents themselves stay org-visible (so crew can see the incident exists), but on the incident page they only see their assigned trucks.
-
-### 3. Resource-order upload → create incident (both roles)
-Both admins and crew can upload a resource order. The truck picker in that flow only shows:
-- All org trucks for admins.
-- Only accessible trucks for crew.
-
-No new screens — we filter the existing `useAvailableTrucks()` hook.
-
-### 4. Seats (multi-tenant readiness)
-Add to `organizations`:
-- `seat_limit` integer, default 5
-- `tier` text, default `'free'` (placeholder for future billing)
-
-Behavior:
-- When an admin sends an invite, count `organization_members` + pending `organization_invites` for that org. If `>= seat_limit`, block with a clear message: "Seat limit reached (5/5). Upgrade your plan to add more crew."
-- Owner/admin invite flow already exists — we just gate it.
-
-This makes the app billing-ready without wiring Stripe today. When you're ready, the tier just maps to a higher `seat_limit`.
-
-### 5. Admin UI — Truck Access manager
-On **Org Settings** → new section **"Crew Access"**:
-- List org members (crew only).
-- Tap a crew member → see trucks → toggle access on/off (chips).
-- Mobile-friendly, big tap targets, no modal stacking.
-
-Plus on **Fleet → Truck detail** (admin only): a "Who has access" row showing which crew can use this truck, with quick add/remove.
-
-### 6. What stays the same
-- Org setup, invite flow, login — unchanged surface.
-- Incident, shift, expense, inspection logic — unchanged.
-- Existing data — preserved (role values migrated, no truck access rows = admins still see all, crew see none until granted).
-
-## Files
-
 | File | Change |
 |---|---|
-| DB migration | New `crew_truck_access` table + indexes; `seat_limit`/`tier` on `organizations`; `user_can_access_truck` function; rewrite RLS on truck-scoped tables; migrate role values |
-| `src/services/crew-access.ts` | New — list/grant/revoke truck access |
-| `src/hooks/useCrewAccess.ts` | New — query/mutation hooks |
-| `src/services/organizations.ts` (or new) | Seat-limit check before sending invite |
-| `src/services/incident-trucks.ts` | `fetchAvailableTrucks` already uses RLS — verify it filters correctly for crew |
-| `src/components/settings/CrewAccessManager.tsx` | New — admin-only UI in Org Settings |
-| `src/components/fleet/TruckAccessSection.tsx` | New — per-truck access row on detail page (admin only) |
-| `src/pages/OrgSettings.tsx` | Add "Crew Access" section + show seats used (e.g. "3 of 5 seats used") |
-| `src/hooks/useOrganization.tsx` | Expose `role`, `isAdmin`, `seatLimit`, `seatsUsed` |
-| `src/components/incidents/IncidentTruckList.tsx` | Hide assign-truck button for crew if no accessible trucks; show empty-state message |
+| DB migration | Add `inspection_templates.template_type`, classify existing items into walk-around vs inventory, create separate Inventory Check template per org with the inventory items, trim walk-around template down |
+| `src/services/inspections.ts` | Add `templateType` filter to `getDefaultTemplate`, expose `fetchTemplates(orgId, type)` |
+| `src/hooks/useInspections.ts` | Pass through `templateType` |
+| `src/components/fleet/TruckInspectionSection.tsx` | Filter to walkaround only |
+| `src/components/fleet/TruckInventorySection.tsx` | New — mirrors inspection section but for inventory |
+| `src/components/fleet/InspectionTemplateEditor.tsx` | Add tabs: Walk-Around / Inventory |
+| `src/components/fleet/TruckInspectionRunner.tsx` | Accept `mode` prop ("walkaround" | "inventory") to relabel buttons (OK/Missing/N/A for inventory) |
+| `src/pages/FleetTruckDetail.tsx` | Add `<TruckInventorySection />` below inspection section |
+| `src/components/settings/NavBarCustomizer.tsx` | Add "Inventory" tab option; show save toast; ensure save commits |
+| `src/components/BottomNav.tsx` | No change needed (already responsive to event) |
 
-## Risks / things to watch
-- **RLS rewrite is the biggest change.** I'll keep the existing org-scoped policies as the admin path and add a crew-scoped OR clause — no policy gets stricter for admins.
-- **Existing rows survive**: any current member becomes `admin` (safest default — preserves current behavior). You'll then demote specific people to `crew` and grant them truck access.
-- **Seat enforcement is invite-time only** (not a hard block on existing members) — keeps things forgiving.
+## What's NOT changing
+- Existing inspection logic/RLS — untouched.
+- All other modules.
+- The `truck_checklist_items` legacy table — still untouched (will drop in Cycle C).
 
-## Test after build
-- Admin sees all trucks; crew sees only granted ones across Fleet, Incidents, Shifts.
-- Admin grants truck to crew → crew immediately sees it on next refresh.
-- Crew uploads a resource order → only their accessible trucks appear in picker.
-- Try to invite a 6th member at seat_limit=5 → blocked with clear message.
-- Existing data still loads unchanged for admins.
-
-## One question before I start
-Should a crew member who is **assigned via `incident_truck_crew`** to a truck automatically gain access to that truck (auto-grant), or must an admin explicitly grant access first even if they're already assigned?
+## Test after
+- Open a truck → see Walk-Around section with ~25 safety items + new Inventory section with the gear list.
+- Run an inventory check → mark items OK/Missing → submit → see the log entry.
+- Open Settings → Customize Nav Bar → pick 4 tabs → save → confirm bottom nav updates immediately.
+- Refresh app → nav choices persist.
 
