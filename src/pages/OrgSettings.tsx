@@ -75,14 +75,14 @@ export default function OrgSettings() {
 
   const orgId = membership?.organizationId;
 
-  // Fetch org-level inspection alert flag
+  // Fetch org-level feature flags
   const { data: orgRow } = useQuery({
     queryKey: ["org-row", orgId],
     enabled: !!orgId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("organizations")
-        .select("id, inspection_alert_enabled")
+        .select("id, inspection_alert_enabled, walkaround_enabled")
         .eq("id", orgId!)
         .maybeSingle();
       if (error) throw error;
@@ -101,6 +101,24 @@ export default function OrgSettings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["org-row", orgId] });
+      queryClient.invalidateQueries({ queryKey: ["org-settings", orgId] });
+      toast({ title: "Saved" });
+    },
+    onError: (err: any) => toast({ title: "Failed", description: err.message, variant: "destructive" }),
+  });
+
+  const toggleWalkaroundFeature = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      if (!orgId) throw new Error("No org");
+      const { error } = await supabase
+        .from("organizations")
+        .update({ walkaround_enabled: enabled } as any)
+        .eq("id", orgId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["org-row", orgId] });
+      queryClient.invalidateQueries({ queryKey: ["org-settings", orgId] });
       toast({ title: "Saved" });
     },
     onError: (err: any) => toast({ title: "Failed", description: err.message, variant: "destructive" }),
