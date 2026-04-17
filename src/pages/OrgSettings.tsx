@@ -63,13 +63,13 @@ function roleBadgeVariant(role: string) {
 }
 
 export default function OrgSettings() {
-  const { membership, refetch: refetchOrg } = useOrganization();
+  const { membership, refetch: refetchOrg, isAdmin: orgIsAdmin } = useOrganization();
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState("crew_member");
+  const [inviteRole, setInviteRole] = useState("crew");
   const [editingName, setEditingName] = useState(false);
   const [orgName, setOrgName] = useState("");
 
@@ -150,6 +150,13 @@ export default function OrgSettings() {
     }) => {
       if (!orgId || !user) throw new Error("Not authenticated");
 
+      // Seat-limit check
+      if (membership && membership.seatsUsed >= membership.seatLimit) {
+        throw new Error(
+          `Seat limit reached (${membership.seatsUsed}/${membership.seatLimit}). Upgrade your plan to add more crew.`
+        );
+      }
+
       const normalizedEmail = email.toLowerCase().trim();
       const currentUserEmail = user.email?.toLowerCase().trim();
 
@@ -214,9 +221,10 @@ export default function OrgSettings() {
             : `Invitation sent to ${email}`,
       });
       setInviteEmail("");
-      setInviteRole("crew_member");
+      setInviteRole("crew");
       setInviteOpen(false);
       queryClient.invalidateQueries({ queryKey: ["org-invites", orgId] });
+      refetchOrg();
     },
     onError: (err: any) => {
       const description =
@@ -239,7 +247,7 @@ export default function OrgSettings() {
     sendInvite.mutate({ email: inviteEmail, role: inviteRole });
   };
 
-  const isOwner = membership?.role === "owner";
+  const isOwner = orgIsAdmin;
 
   const handleSaveOrgName = async () => {
     const trimmed = orgName.trim();
@@ -433,17 +441,14 @@ export default function OrgSettings() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="owner">Owner</SelectItem>
-                      <SelectItem value="crew_boss">Crew Boss</SelectItem>
-                      <SelectItem value="crew_member">Crew Member</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="crew">Crew</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    {inviteRole === "owner"
-                      ? "Full access to manage the organization"
-                      : inviteRole === "crew_boss"
-                      ? "Can manage incidents, crews, and operations"
-                      : "Can view and log time and expenses"}
+                    {inviteRole === "admin"
+                      ? "Full access to manage everything in the organization."
+                      : "Restricted to trucks an admin grants them access to."}
                   </p>
                 </div>
                 <Button
