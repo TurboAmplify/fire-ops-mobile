@@ -37,7 +37,10 @@ import {
   Pencil,
   Check,
   X,
+  ClipboardCheck,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { InspectionTemplateEditor } from "@/components/fleet/InspectionTemplateEditor";
 
 const ROLE_LABELS: Record<string, string> = {
   owner: "Owner",
