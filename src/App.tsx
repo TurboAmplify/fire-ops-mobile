@@ -62,8 +62,6 @@ const App = () => (
               <Route path="/incidents/from-agreement" element={<ProtectedRoute><IncidentFromAgreement /></ProtectedRoute>} />
               <Route path="/incidents/:incidentId" element={<ProtectedRoute><IncidentDetail /></ProtectedRoute>} />
               <Route path="/incidents/:incidentId/edit" element={<ProtectedRoute><IncidentEdit /></ProtectedRoute>} />
-              <Route path="/incidents/:incidentId/trucks/:incidentTruckId/shifts/new" element={<ProtectedRoute><ShiftCreate /></ProtectedRoute>} />
-              <Route path="/incidents/:incidentId/trucks/:incidentTruckId/shifts/:shiftId" element={<ProtectedRoute><ShiftDetail /></ProtectedRoute>} />
               <Route path="/incidents/:incidentId/trucks/:incidentTruckId/shift-ticket/new" element={<ProtectedRoute><ShiftTicketCreate /></ProtectedRoute>} />
               <Route path="/incidents/:incidentId/trucks/:incidentTruckId/shift-ticket/:ticketId" element={<ProtectedRoute><ShiftTicketEdit /></ProtectedRoute>} />
               <Route path="/crew" element={<ProtectedRoute><Crew /></ProtectedRoute>} />
