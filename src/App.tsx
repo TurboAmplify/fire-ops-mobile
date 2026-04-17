@@ -18,8 +18,6 @@ import IncidentCreate from "./pages/IncidentCreate";
 import IncidentFromAgreement from "./pages/IncidentFromAgreement";
 import IncidentDetail from "./pages/IncidentDetail";
 import IncidentEdit from "./pages/IncidentEdit";
-import ShiftCreate from "./pages/ShiftCreate";
-import ShiftDetail from "./pages/ShiftDetail";
 import ShiftTicketCreate from "./pages/ShiftTicketCreate";
 import ShiftTicketEdit from "./pages/ShiftTicketEdit";
 import Crew from "./pages/Crew";
