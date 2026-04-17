@@ -109,7 +109,7 @@ export function TruckInspectionRunner({ open, onOpenChange, truckId, truckName, 
       <SheetContent side="bottom" className="h-[95vh] p-0 flex flex-col">
         <SheetHeader className="px-4 py-3 border-b">
           <div className="flex items-center justify-between">
-            <SheetTitle className="text-base">Walk-Around · {truckName}</SheetTitle>
+            <SheetTitle className="text-base">{labels.title} · {truckName}</SheetTitle>
             <button onClick={() => onOpenChange(false)} className="touch-target text-muted-foreground">
               <X className="h-5 w-5" />
             </button>
@@ -149,14 +149,14 @@ export function TruckInspectionRunner({ open, onOpenChange, truckId, truckName, 
                   active={item.status === "ok"}
                   onClick={() => setStatus(idx, "ok")}
                   icon={CheckCircle2}
-                  label="OK"
+                  label={labels.ok}
                   activeClass="bg-success/15 text-success border-success/40"
                 />
                 <StatusButton
                   active={item.status === "issue"}
                   onClick={() => setStatus(idx, "issue")}
                   icon={AlertTriangle}
-                  label="Issue"
+                  label={labels.issue}
                   activeClass="bg-destructive/15 text-destructive border-destructive/40"
                 />
                 <StatusButton
