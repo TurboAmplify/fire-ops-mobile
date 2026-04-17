@@ -39,15 +39,16 @@ export async function fetchAvailableTrucks(organizationId?: string) {
 }
 
 export async function assignTruckToIncident(incidentId: string, truckId: string): Promise<IncidentTruck> {
-  const { data: existing, error: existingError } = await supabase
+  const { data: existingRows, error: existingError } = await supabase
     .from("incident_trucks")
     .select("*")
     .eq("incident_id", incidentId)
     .eq("truck_id", truckId)
-    .maybeSingle();
+    .order("assigned_at", { ascending: false })
+    .limit(1);
 
   if (existingError) throw existingError;
-  if (existing) return existing as IncidentTruck;
+  if (existingRows?.[0]) return existingRows[0] as IncidentTruck;
 
   const { error } = await supabase
     .from("incident_trucks")
