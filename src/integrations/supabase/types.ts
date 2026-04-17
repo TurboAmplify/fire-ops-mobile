@@ -419,6 +419,7 @@ export type Database = {
           is_default: boolean
           name: string
           organization_id: string
+          template_type: string
         }
         Insert: {
           created_at?: string
@@ -426,6 +427,7 @@ export type Database = {
           is_default?: boolean
           name: string
           organization_id: string
+          template_type?: string
         }
         Update: {
           created_at?: string
@@ -433,6 +435,7 @@ export type Database = {
           is_default?: boolean
           name?: string
           organization_id?: string
+          template_type?: string
         }
         Relationships: []
       }

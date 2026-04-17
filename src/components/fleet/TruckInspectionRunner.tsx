@@ -18,6 +18,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   truckId: string;
   truckName: string;
+  mode?: "walkaround" | "inventory";
 }
 
 interface ItemState {
@@ -28,13 +29,17 @@ interface ItemState {
   uploading?: boolean;
 }
 
-export function TruckInspectionRunner({ open, onOpenChange, truckId, truckName }: Props) {
+export function TruckInspectionRunner({ open, onOpenChange, truckId, truckName, mode = "walkaround" }: Props) {
   const { membership } = useOrganization();
   const { user } = useAuth();
   const orgId = membership?.organizationId;
-  const { data: template } = useDefaultInspectionTemplate(orgId);
+  const { data: template } = useDefaultInspectionTemplate(orgId, mode);
   const { data: templateItems, isLoading } = useInspectionTemplateItems(template?.id);
   const submit = useSubmitInspection();
+
+  const labels = mode === "inventory"
+    ? { ok: "On Truck", issue: "Missing", title: "Inventory", submit: "Submit Inventory", successDone: "Inventory complete", successIssues: (n: number) => `Submitted with ${n} missing` }
+    : { ok: "OK", issue: "Issue", title: "Walk-Around", submit: "Submit Walk-Around", successDone: "Walk-around complete", successIssues: (n: number) => `Submitted with ${n} issue${n > 1 ? "s" : ""}` };
 
   const [items, setItems] = useState<ItemState[]>([]);
   const [overallNotes, setOverallNotes] = useState("");
@@ -92,7 +97,7 @@ export function TruckInspectionRunner({ open, onOpenChange, truckId, truckName }
           photo_url: i.photo_url,
         })),
       });
-      toast.success(issues === 0 ? "Walk-around complete" : `Submitted with ${issues} issue${issues > 1 ? "s" : ""}`);
+      toast.success(issues === 0 ? labels.successDone : labels.successIssues(issues));
       onOpenChange(false);
     } catch (err: any) {
       toast.error(err?.message ?? "Failed to submit");
@@ -104,7 +109,7 @@ export function TruckInspectionRunner({ open, onOpenChange, truckId, truckName }
       <SheetContent side="bottom" className="h-[95vh] p-0 flex flex-col">
         <SheetHeader className="px-4 py-3 border-b">
           <div className="flex items-center justify-between">
-            <SheetTitle className="text-base">Walk-Around · {truckName}</SheetTitle>
+            <SheetTitle className="text-base">{labels.title} · {truckName}</SheetTitle>
             <button onClick={() => onOpenChange(false)} className="touch-target text-muted-foreground">
               <X className="h-5 w-5" />
             </button>
@@ -144,14 +149,14 @@ export function TruckInspectionRunner({ open, onOpenChange, truckId, truckName }
                   active={item.status === "ok"}
                   onClick={() => setStatus(idx, "ok")}
                   icon={CheckCircle2}
-                  label="OK"
+                  label={labels.ok}
                   activeClass="bg-success/15 text-success border-success/40"
                 />
                 <StatusButton
                   active={item.status === "issue"}
                   onClick={() => setStatus(idx, "issue")}
                   icon={AlertTriangle}
-                  label="Issue"
+                  label={labels.issue}
                   activeClass="bg-destructive/15 text-destructive border-destructive/40"
                 />
                 <StatusButton
@@ -233,7 +238,7 @@ export function TruckInspectionRunner({ open, onOpenChange, truckId, truckName }
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
               <>
-                Submit Walk-Around
+                {labels.submit}
                 {items.length > 0 && (
                   <span className="ml-2 opacity-80 text-sm">
                     {completed}/{items.length}

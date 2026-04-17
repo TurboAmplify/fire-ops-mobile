@@ -8,6 +8,7 @@ import { TruckInfoSection } from "@/components/fleet/TruckInfoSection";
 import { TruckPhotoSection } from "@/components/fleet/TruckPhotoSection";
 import { TruckDocumentSection } from "@/components/fleet/TruckDocumentSection";
 import { TruckInspectionSection } from "@/components/fleet/TruckInspectionSection";
+import { TruckInventorySection } from "@/components/fleet/TruckInventorySection";
 import { TruckServiceLogSection } from "@/components/fleet/TruckServiceLogSection";
 import { TruckAccessSection } from "@/components/fleet/TruckAccessSection";
 import {
@@ -103,6 +104,9 @@ export default function FleetTruckDetail() {
 
         {/* Walk-Around Inspection */}
         <TruckInspectionSection truckId={truckId!} truckName={truck.name} />
+
+        {/* Inventory Check */}
+        <TruckInventorySection truckId={truckId!} truckName={truck.name} />
 
         {/* Additional Photos */}
         <TruckPhotoSection truckId={truckId!} />
