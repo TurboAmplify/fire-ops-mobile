@@ -36,7 +36,7 @@ function SectionHeader({ label, defaultOpen = false, children }: { label: string
 export function IncidentTruckList({ incidentId, incidentName }: Props) {
   const { membership } = useOrganization();
   const { data: incidentTrucks, isLoading } = useIncidentTrucks(incidentId);
-  const { data: allTrucks } = useAvailableTrucks();
+  const { data: allTrucks } = useAvailableTrucks(membership?.organizationId);
   const assignMutation = useAssignTruck(incidentId);
   const statusMutation = useUpdateTruckStatus(incidentId);
   const removeMutation = useRemoveTruck(incidentId);
