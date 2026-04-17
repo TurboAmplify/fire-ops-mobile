@@ -87,15 +87,14 @@ export default function IncidentFromAgreement() {
         start_date: startDate,
       });
 
-      // 2. Assign truck if selected
+      // 2. Assign truck if selected (use service so we get the id back AND invalidate cache)
       let incidentTruckId: string | null = null;
       if (selectedTruckId) {
-        const { data, error } = await (await import("@/integrations/supabase/client")).supabase
-          .from("incident_trucks")
-          .insert({ incident_id: incident.id, truck_id: selectedTruckId })
-          .select()
-          .single();
-        if (!error && data) incidentTruckId = data.id;
+        const { assignTruckToIncident } = await import("@/services/incident-trucks");
+        const { queryClient } = await import("@/lib/query-client");
+        const newIt = await assignTruckToIncident(incident.id, selectedTruckId);
+        incidentTruckId = newIt.id;
+        queryClient.invalidateQueries({ queryKey: ["incident-trucks", incident.id] });
       }
 
       // 3. Create agreement record
