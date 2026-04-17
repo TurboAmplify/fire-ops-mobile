@@ -1,99 +1,52 @@
 
 
-# Org Type (Contractor / VFD / State Agency) + Payroll Lock-Down
+# Two fixes: Drop "Shifts" from contractor flow + truly fix nav-bar persistence
 
-## Updated for VFD reality
-VFDs run two modes of work: **local calls** (initial attack, structure, EMS — short, no paperwork) and **assignment work** (deployed on a resource order to a federal/state incident — they bill for it, just like contractors). Both must be supported in the same VFD app — they shouldn't have to switch org types.
+## Fix 1 — Remove "Shifts" entirely (use Shift Tickets only)
 
-## Part 1 — Lock Payroll to admins
+The contractor flow has both a "Shifts" section AND a "Shift Tickets" section on every incident truck. Shifts duplicate the timekeeping that Shift Tickets (OF-297) already capture. Remove Shifts everywhere.
 
-- `Payroll.tsx` — guard with `!isAdmin` → "Not authorized" view.
-- `App.tsx` — admin guard on `/payroll` route.
-- `NavBarCustomizer.tsx` + `More.tsx` — filter "Payroll" out for crew.
+**Changes**
+- `src/components/incidents/IncidentTruckList.tsx` — delete the "Shifts" `SectionHeader` block (lines ~333-346) and the `ShiftList` import.
+- `src/App.tsx` — delete `/incidents/:incidentId/trucks/:incidentTruckId/shifts/new` and `/shifts/:shiftId` routes; delete `ShiftCreate` and `ShiftDetail` imports.
+- Delete files (no longer referenced): `src/components/shifts/ShiftList.tsx`, `src/pages/ShiftCreate.tsx`, `src/pages/ShiftDetail.tsx`, `src/pages/Time.tsx` (uses `useAllShifts` only).
+- Keep `src/services/shifts.ts`, `src/hooks/useShifts.ts`, and the `shifts` / `shift_crew` DB tables for now — they're harmless and removing them is risky cleanup we can do later.
 
-## Part 2 — Three org types
+## Fix 2 — Nav bar resets every time
 
-### Org type = baseline defaults, not a hard cage
-`org_type` sets which modules are **on by default** and what **labels** to use. Admin can flip individual modules in Org Settings. So a VFD that takes assignments just leaves Resource Orders + Shift Tickets enabled.
+**Root cause:** the customizer requires the user to tap a separate "Save" button. If they close the dialog any other way (backdrop tap, Escape, Android back gesture, or just walking away), nothing is written to localStorage. On refresh they see defaults again and assume it "reset."
 
-| Module | Contractor | VFD (default) | VFD (assignment-capable) | State Agency |
-|---|---|---|---|---|
-| Resource Order upload | On | **Off** | **On** (admin enables) | On |
-| OF-297 Shift Tickets | On | **Off** | **On** (admin enables) | Optional |
-| Run Report (NFIRS-lite) | Off | **On** | On | Off |
-| Crew Time Report (CTR) | Off | Off | Off | On |
-| Payroll (hourly+H&W) | On | Off | **On if assignment work** | Off |
-| Training Log | Off | On | On | On |
-| Walk-Around / Inventory / Fleet / Crew / Expenses / Needs | On | On | On | On |
+**Fix — auto-save on every change, no Save button needed.**
+- `src/components/settings/NavBarCustomizer.tsx`:
+  - Remove the Save button entirely.
+  - In `toggle()`, after computing the new selection, write to localStorage and dispatch `nav-tabs-changed` immediately (only if length is 1-4, which `toggle` already enforces).
+  - Show a small inline "Saved" indicator in the dialog header instead of a toast on save.
+  - Keep dialog open until user dismisses it.
+- `src/components/BottomNav.tsx` — keep the existing event listener / bump pattern (it works once the write actually happens).
+- `src/pages/More.tsx` — already reads on every render via `getSelectedTabKeys()`. To make it react to changes while the More page is open, add the same `nav-tabs-changed` listener + bump pattern.
 
-Key change from prior plan: VFDs get **all the contractor revenue tools available** — they're just hidden by default. One toggle in Org Settings ("Accepts assignment work / resource orders") flips Resource Orders + Shift Tickets + Payroll on together.
-
-### Terminology per type
-- Contractor: Crew, Fleet, Shift Ticket
-- VFD: Members, Apparatus, Run Report (assignment work still uses "Shift Ticket" label)
-- State Agency: Personnel, Apparatus, CTR
-
-### DB changes
-- `organizations.org_type` text default `'contractor'`, check in `('contractor','vfd','state_agency')`.
-- `organizations.modules_enabled` jsonb default `{}` for per-module overrides.
-- `organizations.accepts_assignments` boolean default false (VFD convenience flag — flips RO + ShiftTickets + Payroll on).
-- New table `training_records` (id, org_id, crew_member_id, course_name, completed_at, expires_at, hours, certificate_url).
-- New table `call_responses` (id, org_id, incident_id, crew_member_id, dispatched_at, on_scene_at, cleared_at) — VFD run-report attendance.
-- `crew_members.qualifications` jsonb (Red Card / VFD certs).
-- Update `create_organization_with_owner` to accept `_org_type` param.
-
-### Onboarding
-3-card picker in `OrgSetup.tsx`:
-1. Contractor — wildland firefighting business
-2. Volunteer Fire Department — local response + optional assignments
-3. State / Local Agency — agency or government crew
-
-If VFD is selected, second screen asks: "Does your department take resource-order assignments?" → flips `accepts_assignments`.
-
-### App-mode framework
-`src/lib/app-mode.ts`:
-```ts
-export const MODE_CONFIG = {
-  contractor: { modules: { resourceOrders: true, shiftTickets: true, payroll: true, runReport: false, ctr: false, training: false, callResponses: false }, terms: {...} },
-  vfd:        { modules: { resourceOrders: false, shiftTickets: false, payroll: false, runReport: true, ctr: false, training: true, callResponses: true }, terms: {...} },
-  state_agency: { modules: { resourceOrders: true, shiftTickets: false, payroll: false, runReport: false, ctr: true, training: true, callResponses: false }, terms: {...} },
-};
-// useAppMode() merges base config + accepts_assignments overrides + modules_enabled overrides
-```
-`accepts_assignments=true` for a VFD merges in `{ resourceOrders: true, shiftTickets: true, payroll: true }`.
-
-### Wiring
-- `BottomNav` / `NavBarCustomizer` / `More` filter nav by `modules_enabled`.
-- Disabled-module routes redirect to `/`.
-- `IncidentDetail` hides ResourceOrderSection / ShiftTicketSection if disabled.
-- `CrewMemberForm` shows qualifications field for VFD/state.
-- Labels read from `terms`.
-
-### What we DON'T build this cycle
-- Run Report and CTR forms ship as **stub pages** ("Coming soon — basic version next cycle"). Framework + flags are live so we can ship the form next cycle without touching anything else.
-- Training Log ships as **basic CRUD list** so VFD/state can use it immediately.
-- Existing orgs default to `contractor` — zero behavior change.
+**Why this works for sure:** every tap on a nav choice writes immediately. There's no separate "commit" step to forget. localStorage persists across refresh. The bottom nav and More page both subscribe to the change event.
 
 ## Files
 
 | File | Change |
 |---|---|
-| DB migration | `org_type`, `modules_enabled`, `accepts_assignments`, `training_records`, `call_responses`, `crew_members.qualifications`, update `create_organization_with_owner` |
-| `src/lib/app-mode.ts` | New — config + `useAppMode()` |
-| `src/pages/OrgSetup.tsx` | Org-type picker + VFD assignment-question step |
-| `src/pages/Payroll.tsx` + `src/App.tsx` | Admin guard |
-| `src/components/BottomNav.tsx` | Filter by modules |
-| `src/components/settings/NavBarCustomizer.tsx` + `src/pages/More.tsx` | Filter options |
-| `src/pages/OrgSettings.tsx` | Show org type + per-module toggles + "Accepts assignment work" switch (VFD only) |
-| `src/services/training.ts` + `src/hooks/useTraining.ts` + `src/pages/Training.tsx` | New — basic CRUD UI |
-| `src/pages/RunReport.tsx` + `src/pages/CrewTimeReport.tsx` | Stub pages with "Coming soon" |
-| `src/components/incidents/*` | Hide RO / ShiftTicket sections per modules |
-| `src/components/crew/CrewMemberForm.tsx` | Qualifications field (VFD/state only) |
+| `src/components/incidents/IncidentTruckList.tsx` | Drop Shifts section + import |
+| `src/App.tsx` | Drop 2 shift routes + 2 imports |
+| `src/components/shifts/ShiftList.tsx` | Delete |
+| `src/pages/ShiftCreate.tsx` | Delete |
+| `src/pages/ShiftDetail.tsx` | Delete |
+| `src/pages/Time.tsx` | Delete |
+| `src/components/settings/NavBarCustomizer.tsx` | Auto-save on toggle; remove Save button; inline "Saved" indicator |
+| `src/pages/More.tsx` | Subscribe to `nav-tabs-changed` so list updates live |
 
-## Test after build
-- New org → pick VFD → confirm RO/ShiftTickets/Payroll hidden by default; Run Report + Training visible.
-- Toggle "Accepts assignment work" in Org Settings → RO/ShiftTickets/Payroll appear immediately.
-- Pick State Agency → CTR + Training visible, Payroll hidden.
-- Existing contractor org → no change at all.
-- Crew user → Payroll invisible everywhere, no `/payroll` access.
+## What's NOT changing
+- Shift Tickets (OF-297) flow — fully intact, this is the only timekeeping path going forward.
+- DB tables `shifts` / `shift_crew` — left in place; can drop in a later cleanup migration.
+- The org-mode framework, payroll lock-down, Training, etc. — untouched.
+
+## Test after
+- Open an incident truck card → confirm only Resource Orders / Agreements / Truck Info / Crew sections (no "Shifts").
+- Settings → Customize Nav Bar → tap any tab → see it highlight + "Saved" indicator → close dialog by tapping backdrop → refresh page → bottom nav still shows the new selection.
+- Repeat with 4 tabs selected; deselect one → bottom nav updates immediately.
 
