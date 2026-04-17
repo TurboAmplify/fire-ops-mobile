@@ -1,16 +1,19 @@
 import { AppShell } from "@/components/AppShell";
 import { useNavigate } from "react-router-dom";
 import { Settings, ChevronRight, Shield, BarChart3 } from "lucide-react";
-import { ALL_NAV_OPTIONS, getSelectedTabKeys } from "@/components/settings/NavBarCustomizer";
+import { ALL_NAV_OPTIONS, getSelectedTabKeys, filterNavByMode } from "@/components/settings/NavBarCustomizer";
 import { useOrganization } from "@/hooks/useOrganization";
+import { useAppMode } from "@/lib/app-mode";
 
 export default function More() {
   const navigate = useNavigate();
   const { isAdmin } = useOrganization();
+  const { modules } = useAppMode();
 
-  // Show items NOT already in the bottom nav favorites
+  // Show items NOT already in the bottom nav favorites, filtered by mode + role
   const selectedKeys = new Set(getSelectedTabKeys());
-  const nonFavorites = ALL_NAV_OPTIONS.filter((o) => !selectedKeys.has(o.key));
+  const visible = filterNavByMode(ALL_NAV_OPTIONS, modules, isAdmin);
+  const nonFavorites = visible.filter((o) => !selectedKeys.has(o.key));
 
   return (
     <AppShell title="More">
