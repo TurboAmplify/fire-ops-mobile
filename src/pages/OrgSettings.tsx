@@ -465,6 +465,38 @@ export default function OrgSettings() {
             </DialogContent>
           </Dialog>
         )}
+
+        {/* Inspections */}
+        <section className="space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+              <ClipboardCheck className="h-3.5 w-3.5" />
+              Walk-Around Inspections
+            </h2>
+          </div>
+
+          <div className="rounded-xl bg-card p-4 space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium">Daily walk-around alerts</p>
+                <p className="text-xs text-muted-foreground">
+                  Show a banner on the dashboard when a deployed truck&apos;s walk-around is due.
+                </p>
+              </div>
+              <Switch
+                checked={!!orgRow?.inspection_alert_enabled}
+                onCheckedChange={(v) => toggleAlert.mutate(v)}
+                disabled={toggleAlert.isPending}
+              />
+            </div>
+
+            {isOwner && (
+              <div className="border-t pt-4">
+                <InspectionTemplateEditor />
+              </div>
+            )}
+          </div>
+        </section>
       </div>
     </AppShell>
   );
