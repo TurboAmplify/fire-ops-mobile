@@ -147,11 +147,46 @@ export function IncidentTruckList({ incidentId, incidentName }: Props) {
           incidentId={incidentId}
           incidentName={incidentName}
           organizationId={membership?.organizationId}
+          confirmRemove={confirmRemoveId === it.id}
+          onConfirmRemove={() => setConfirmRemoveId(it.id)}
+          onCancelRemove={() => setConfirmRemoveId(null)}
+          onRemove={() => handleRemove(it)}
+          removing={removeMutation.isPending && confirmRemoveId === it.id}
         />
       ))}
     </section>
   );
 }
+
+function TruckCard({
+  it,
+  isExpanded,
+  onToggle,
+  onStatusChange,
+  statusMutation,
+  incidentId,
+  incidentName,
+  organizationId,
+  confirmRemove,
+  onConfirmRemove,
+  onCancelRemove,
+  onRemove,
+  removing,
+}: {
+  it: IncidentTruckWithTruck;
+  isExpanded: boolean;
+  onToggle: () => void;
+  onStatusChange: (it: IncidentTruckWithTruck, status: IncidentTruckStatus) => void;
+  statusMutation: ReturnType<typeof useUpdateTruckStatus>;
+  incidentId: string;
+  incidentName?: string;
+  organizationId?: string;
+  confirmRemove: boolean;
+  onConfirmRemove: () => void;
+  onCancelRemove: () => void;
+  onRemove: () => void;
+  removing: boolean;
+}) {
 
 function TruckCard({
   it,
