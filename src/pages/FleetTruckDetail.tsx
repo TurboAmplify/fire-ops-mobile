@@ -9,6 +9,7 @@ import { TruckPhotoSection } from "@/components/fleet/TruckPhotoSection";
 import { TruckDocumentSection } from "@/components/fleet/TruckDocumentSection";
 import { TruckInspectionSection } from "@/components/fleet/TruckInspectionSection";
 import { TruckServiceLogSection } from "@/components/fleet/TruckServiceLogSection";
+import { TruckAccessSection } from "@/components/fleet/TruckAccessSection";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -111,6 +112,9 @@ export default function FleetTruckDetail() {
 
         {/* Service & Maintenance */}
         <TruckServiceLogSection truckId={truckId!} />
+
+        {/* Crew Access (admin only) */}
+        <TruckAccessSection truckId={truckId!} />
       </div>
 
       {/* Delete truck confirmation */}
