@@ -502,6 +502,22 @@ export default function OrgSettings() {
             )}
           </div>
         </section>
+
+        {/* Crew Truck Access (admin only) */}
+        {isOwner && (
+          <section className="space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                <Wrench className="h-3.5 w-3.5" />
+                Crew Truck Access
+              </h2>
+            </div>
+            <p className="px-1 text-xs text-muted-foreground">
+              Choose which trucks each crew member can see and use. Admins always see all trucks.
+            </p>
+            <CrewAccessManager />
+          </section>
+        )}
       </div>
     </AppShell>
   );
