@@ -9,8 +9,6 @@ import { TruckCrewSection } from "./TruckCrewSection";
 import { ResourceOrderSection } from "./ResourceOrderSection";
 import { AgreementUpload } from "./AgreementUpload";
 import { ShiftTicketSection } from "@/components/shift-tickets/ShiftTicketSection";
-import { useOrganization } from "@/hooks/useOrganization";
-import { useAppMode } from "@/lib/app-mode";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const truckStatuses: IncidentTruckStatus[] = ["assigned", "active", "demobed", "completed"];
@@ -18,6 +16,7 @@ const truckStatuses: IncidentTruckStatus[] = ["assigned", "active", "demobed", "
 interface Props {
   incidentId: string;
   incidentName?: string;
+  organizationId?: string | null;
 }
 
 function SectionHeader({ label, defaultOpen = false, children }: { label: string; defaultOpen?: boolean; children: React.ReactNode }) {
@@ -33,10 +32,9 @@ function SectionHeader({ label, defaultOpen = false, children }: { label: string
   );
 }
 
-export function IncidentTruckList({ incidentId, incidentName }: Props) {
-  const { membership } = useOrganization();
+export function IncidentTruckList({ incidentId, incidentName, organizationId }: Props) {
   const { data: incidentTrucks, isLoading } = useIncidentTrucks(incidentId);
-  const { data: allTrucks } = useAvailableTrucks(membership?.organizationId);
+  const { data: allTrucks } = useAvailableTrucks(organizationId ?? undefined);
   const assignMutation = useAssignTruck(incidentId);
   const statusMutation = useUpdateTruckStatus(incidentId);
   const removeMutation = useRemoveTruck(incidentId);
@@ -52,8 +50,8 @@ export function IncidentTruckList({ incidentId, incidentName }: Props) {
       await assignMutation.mutateAsync(truckId);
       toast.success("Truck assigned");
       setShowAssign(false);
-    } catch {
-      toast.error("Failed to assign truck");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to assign truck");
     }
   };
 
@@ -146,7 +144,7 @@ export function IncidentTruckList({ incidentId, incidentName }: Props) {
           statusMutation={statusMutation}
           incidentId={incidentId}
           incidentName={incidentName}
-          organizationId={membership?.organizationId}
+          organizationId={organizationId ?? undefined}
           confirmRemove={confirmRemoveId === it.id}
           onConfirmRemove={() => setConfirmRemoveId(it.id)}
           onCancelRemove={() => setConfirmRemoveId(null)}

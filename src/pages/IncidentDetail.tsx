@@ -158,7 +158,11 @@ export default function IncidentDetail() {
         <AgreementUpload incidentId={incident.id} label="Incident Agreements" />
 
         {/* Assigned Trucks */}
-        <IncidentTruckList incidentId={incident.id} incidentName={incident.name} />
+        <IncidentTruckList
+          incidentId={incident.id}
+          incidentName={incident.name}
+          organizationId={incident.organization_id}
+        />
 
         {/* Delete zone */}
         <div className="pt-4 border-t border-border">
