@@ -39,8 +39,10 @@ export function IncidentTruckList({ incidentId, incidentName }: Props) {
   const { data: allTrucks } = useAvailableTrucks();
   const assignMutation = useAssignTruck(incidentId);
   const statusMutation = useUpdateTruckStatus(incidentId);
+  const removeMutation = useRemoveTruck(incidentId);
   const [showAssign, setShowAssign] = useState(false);
   const [expandedTruck, setExpandedTruck] = useState<string | null>(null);
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
 
   const assignedTruckIds = new Set(incidentTrucks?.map((it) => it.truck_id));
   const unassigned = allTrucks?.filter((t) => !assignedTruckIds.has(t.id)) ?? [];
@@ -61,6 +63,17 @@ export function IncidentTruckList({ incidentId, incidentName }: Props) {
       toast.success(`${it.trucks.name} → ${TRUCK_STATUS_LABELS[status]}`);
     } catch {
       toast.error("Failed to update status");
+    }
+  };
+
+  const handleRemove = async (it: IncidentTruckWithTruck) => {
+    try {
+      await removeMutation.mutateAsync(it.id);
+      toast.success(`${it.trucks.name} removed from incident`);
+      setConfirmRemoveId(null);
+      if (expandedTruck === it.id) setExpandedTruck(null);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to remove. Truck may have shift tickets or other data attached.");
     }
   };
 
