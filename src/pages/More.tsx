@@ -4,13 +4,22 @@ import { Settings, ChevronRight, Shield, BarChart3 } from "lucide-react";
 import { ALL_NAV_OPTIONS, getSelectedTabKeys, filterNavByMode } from "@/components/settings/NavBarCustomizer";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useAppMode } from "@/lib/app-mode";
+import { useEffect, useState } from "react";
 
 export default function More() {
   const navigate = useNavigate();
   const { isAdmin } = useOrganization();
   const { modules } = useAppMode();
+  const [bump, setBump] = useState(0);
 
-  // Show items NOT already in the bottom nav favorites, filtered by mode + role
+  useEffect(() => {
+    const handler = () => setBump((n) => n + 1);
+    window.addEventListener("nav-tabs-changed", handler);
+    return () => window.removeEventListener("nav-tabs-changed", handler);
+  }, []);
+
+  // Re-read on every render; bump forces re-render on change
+  void bump;
   const selectedKeys = new Set(getSelectedTabKeys());
   const visible = filterNavByMode(ALL_NAV_OPTIONS, modules, isAdmin);
   const nonFavorites = visible.filter((o) => !selectedKeys.has(o.key));
