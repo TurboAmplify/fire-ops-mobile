@@ -6,17 +6,22 @@ interface OrgMembership {
   organizationId: string;
   organizationName: string;
   role: string;
+  seatLimit: number;
+  tier: string;
+  seatsUsed: number;
 }
 
 interface OrganizationContextType {
   membership: OrgMembership | null;
   loading: boolean;
+  isAdmin: boolean;
   refetch: () => Promise<void>;
 }
 
 const OrganizationContext = createContext<OrganizationContextType>({
   membership: null,
   loading: true,
+  isAdmin: false,
   refetch: async () => {},
 });
 
@@ -35,7 +40,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     try {
       const { data, error } = await supabase
         .from("organization_members")
-        .select("organization_id, role, organizations(name)")
+        .select("organization_id, role, organizations(name, seat_limit, tier)")
         .eq("user_id", user.id)
         .limit(1)
         .maybeSingle();
@@ -43,11 +48,29 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
 
       if (data) {
-        const orgName = (data as any).organizations?.name ?? "";
+        const org = (data as any).organizations ?? {};
+        const orgId = data.organization_id;
+
+        // Count seats used = members + pending invites
+        const [{ count: memberCount }, { count: inviteCount }] = await Promise.all([
+          supabase
+            .from("organization_members")
+            .select("id", { count: "exact", head: true })
+            .eq("organization_id", orgId),
+          supabase
+            .from("organization_invites")
+            .select("id", { count: "exact", head: true })
+            .eq("organization_id", orgId)
+            .eq("status", "pending"),
+        ]);
+
         setMembership({
-          organizationId: data.organization_id,
-          organizationName: orgName,
+          organizationId: orgId,
+          organizationName: org.name ?? "",
           role: data.role,
+          seatLimit: org.seat_limit ?? 5,
+          tier: org.tier ?? "free",
+          seatsUsed: (memberCount ?? 0) + (inviteCount ?? 0),
         });
       } else {
         setMembership(null);
@@ -65,9 +88,11 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     fetchMembership();
   }, [user?.id]);
 
+  const isAdmin = membership?.role === "admin";
+
   return (
     <OrganizationContext.Provider
-      value={{ membership, loading, refetch: fetchMembership }}
+      value={{ membership, loading, isAdmin, refetch: fetchMembership }}
     >
       {children}
     </OrganizationContext.Provider>
