@@ -1,7 +1,8 @@
 import { AppShell } from "@/components/AppShell";
 import { useCrewMembers } from "@/hooks/useCrewMembers";
 import { useIncidents } from "@/hooks/useIncidents";
-import { Loader2, ChevronLeft, ChevronRight, Clock, DollarSign, Users } from "lucide-react";
+import { useOrganization } from "@/hooks/useOrganization";
+import { Loader2, ChevronLeft, ChevronRight, Clock, DollarSign, Users, Lock } from "lucide-react";
 import { useState, useMemo } from "react";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, parseISO, isWithinInterval } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
