@@ -588,6 +588,7 @@ export type Database = {
           name: string
           seat_limit: number
           tier: string
+          walkaround_enabled: boolean
         }
         Insert: {
           created_at?: string
@@ -597,6 +598,7 @@ export type Database = {
           name: string
           seat_limit?: number
           tier?: string
+          walkaround_enabled?: boolean
         }
         Update: {
           created_at?: string
@@ -606,6 +608,7 @@ export type Database = {
           name?: string
           seat_limit?: number
           tier?: string
+          walkaround_enabled?: boolean
         }
         Relationships: []
       }
