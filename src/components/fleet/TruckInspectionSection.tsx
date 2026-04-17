@@ -28,14 +28,14 @@ export function TruckInspectionSection({ truckId, truckName }: Props) {
   const orgId = membership?.organizationId;
   const { data: orgSettings } = useOrgSettings();
   const { data: template } = useDefaultInspectionTemplate(orgId);
-
-  // Org admins can hide the entire walk-around feature
-  if (orgSettings && !orgSettings.walkaround_enabled) return null;
   const { data: templateItems } = useInspectionTemplateItems(template?.id);
   const { data: due, isLoading: loadingDue } = useInspectionDue(truckId);
   const { data: last } = useLastInspection(truckId);
   const { data: inspections, isLoading: loadingInspections } = useTruckInspections(truckId);
   const [runnerOpen, setRunnerOpen] = useState(false);
+
+  // Org admins can hide the entire walk-around feature
+  if (orgSettings && !orgSettings.walkaround_enabled) return null;
 
   const itemCount = templateItems?.length ?? 0;
   const recent = (inspections ?? []).slice(0, 5);
