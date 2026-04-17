@@ -499,24 +499,45 @@ export default function OrgSettings() {
           </div>
 
           <div className="rounded-xl bg-card p-4 space-y-4">
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-sm font-medium">Daily walk-around alerts</p>
-                <p className="text-xs text-muted-foreground">
-                  Show a banner on the dashboard when a deployed truck&apos;s walk-around is due.
-                </p>
-              </div>
-              <Switch
-                checked={!!orgRow?.inspection_alert_enabled}
-                onCheckedChange={(v) => toggleAlert.mutate(v)}
-                disabled={toggleAlert.isPending}
-              />
-            </div>
-
+            {/* Master feature toggle (admin only) */}
             {isOwner && (
-              <div className="border-t pt-4">
-                <InspectionTemplateEditor />
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">Walk-around feature</p>
+                  <p className="text-xs text-muted-foreground">
+                    Turn the entire walk-around inspection feature on or off for everyone in your organization.
+                  </p>
+                </div>
+                <Switch
+                  checked={orgRow?.walkaround_enabled !== false}
+                  onCheckedChange={(v) => toggleWalkaroundFeature.mutate(v)}
+                  disabled={toggleWalkaroundFeature.isPending}
+                />
               </div>
+            )}
+
+            {orgRow?.walkaround_enabled !== false && (
+              <>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">Daily walk-around alerts</p>
+                    <p className="text-xs text-muted-foreground">
+                      Show a banner on the dashboard when a deployed truck&apos;s walk-around is due.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={!!orgRow?.inspection_alert_enabled}
+                    onCheckedChange={(v) => toggleAlert.mutate(v)}
+                    disabled={toggleAlert.isPending}
+                  />
+                </div>
+
+                {isOwner && (
+                  <div className="border-t pt-4">
+                    <InspectionTemplateEditor />
+                  </div>
+                )}
+              </>
             )}
           </div>
         </section>
