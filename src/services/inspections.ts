@@ -98,9 +98,20 @@ export async function createTemplate(orgId: string, name: string, isDefault = fa
   return data as InspectionTemplate;
 }
 
-export async function updateTemplate(id: string, patch: Partial<Pick<InspectionTemplate, "name" | "is_default">>, orgId?: string) {
+export async function updateTemplate(id: string, patch: Partial<Pick<InspectionTemplate, "name" | "is_default" | "template_type">>, orgId?: string) {
   if (patch.is_default && orgId) {
-    await supabase.from("inspection_templates").update({ is_default: false }).eq("organization_id", orgId);
+    // Get the type of this template so we only clear defaults of the same type
+    const { data: existing } = await supabase
+      .from("inspection_templates")
+      .select("template_type")
+      .eq("id", id)
+      .maybeSingle();
+    const t = (existing as any)?.template_type ?? "walkaround";
+    await supabase
+      .from("inspection_templates")
+      .update({ is_default: false })
+      .eq("organization_id", orgId)
+      .eq("template_type", t);
   }
   const { error } = await supabase.from("inspection_templates").update(patch).eq("id", id);
   if (error) throw error;

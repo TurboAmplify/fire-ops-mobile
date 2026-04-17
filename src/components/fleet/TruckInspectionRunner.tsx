@@ -18,6 +18,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   truckId: string;
   truckName: string;
+  mode?: "walkaround" | "inventory";
 }
 
 interface ItemState {
@@ -28,13 +29,17 @@ interface ItemState {
   uploading?: boolean;
 }
 
-export function TruckInspectionRunner({ open, onOpenChange, truckId, truckName }: Props) {
+export function TruckInspectionRunner({ open, onOpenChange, truckId, truckName, mode = "walkaround" }: Props) {
   const { membership } = useOrganization();
   const { user } = useAuth();
   const orgId = membership?.organizationId;
-  const { data: template } = useDefaultInspectionTemplate(orgId);
+  const { data: template } = useDefaultInspectionTemplate(orgId, mode);
   const { data: templateItems, isLoading } = useInspectionTemplateItems(template?.id);
   const submit = useSubmitInspection();
+
+  const labels = mode === "inventory"
+    ? { ok: "On Truck", issue: "Missing", title: "Inventory", submit: "Submit Inventory", successDone: "Inventory complete", successIssues: (n: number) => `Submitted with ${n} missing` }
+    : { ok: "OK", issue: "Issue", title: "Walk-Around", submit: "Submit Walk-Around", successDone: "Walk-around complete", successIssues: (n: number) => `Submitted with ${n} issue${n > 1 ? "s" : ""}` };
 
   const [items, setItems] = useState<ItemState[]>([]);
   const [overallNotes, setOverallNotes] = useState("");
@@ -92,7 +97,7 @@ export function TruckInspectionRunner({ open, onOpenChange, truckId, truckName }
           photo_url: i.photo_url,
         })),
       });
-      toast.success(issues === 0 ? "Walk-around complete" : `Submitted with ${issues} issue${issues > 1 ? "s" : ""}`);
+      toast.success(issues === 0 ? labels.successDone : labels.successIssues(issues));
       onOpenChange(false);
     } catch (err: any) {
       toast.error(err?.message ?? "Failed to submit");
