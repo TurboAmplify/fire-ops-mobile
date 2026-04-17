@@ -6,7 +6,6 @@ import { Truck as TruckIcon, Plus, Loader2, ChevronDown, ChevronRight, AlertTria
 import { useState } from "react";
 import { toast } from "sonner";
 import { TruckCrewSection } from "./TruckCrewSection";
-import { ShiftList } from "@/components/shifts/ShiftList";
 import { ResourceOrderSection } from "./ResourceOrderSection";
 import { AgreementUpload } from "./AgreementUpload";
 import { ShiftTicketSection } from "@/components/shift-tickets/ShiftTicketSection";
