@@ -1,8 +1,8 @@
-import { useIncidentTrucks, useAvailableTrucks, useAssignTruck, useUpdateTruckStatus } from "@/hooks/useIncidentTrucks";
+import { useIncidentTrucks, useAvailableTrucks, useAssignTruck, useUpdateTruckStatus, useRemoveTruck } from "@/hooks/useIncidentTrucks";
 import { useIncidentTruckCrew } from "@/hooks/useIncidentTruckCrew";
 import { TRUCK_STATUS_LABELS } from "@/services/incident-trucks";
 import type { IncidentTruckStatus, IncidentTruckWithTruck } from "@/services/incident-trucks";
-import { Truck as TruckIcon, Plus, Loader2, ChevronDown, ChevronRight, AlertTriangle } from "lucide-react";
+import { Truck as TruckIcon, Plus, Loader2, ChevronDown, ChevronRight, AlertTriangle, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { TruckCrewSection } from "./TruckCrewSection";
@@ -39,8 +39,10 @@ export function IncidentTruckList({ incidentId, incidentName }: Props) {
   const { data: allTrucks } = useAvailableTrucks();
   const assignMutation = useAssignTruck(incidentId);
   const statusMutation = useUpdateTruckStatus(incidentId);
+  const removeMutation = useRemoveTruck(incidentId);
   const [showAssign, setShowAssign] = useState(false);
   const [expandedTruck, setExpandedTruck] = useState<string | null>(null);
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
 
   const assignedTruckIds = new Set(incidentTrucks?.map((it) => it.truck_id));
   const unassigned = allTrucks?.filter((t) => !assignedTruckIds.has(t.id)) ?? [];
@@ -61,6 +63,17 @@ export function IncidentTruckList({ incidentId, incidentName }: Props) {
       toast.success(`${it.trucks.name} → ${TRUCK_STATUS_LABELS[status]}`);
     } catch {
       toast.error("Failed to update status");
+    }
+  };
+
+  const handleRemove = async (it: IncidentTruckWithTruck) => {
+    try {
+      await removeMutation.mutateAsync(it.id);
+      toast.success(`${it.trucks.name} removed from incident`);
+      setConfirmRemoveId(null);
+      if (expandedTruck === it.id) setExpandedTruck(null);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to remove. Truck may have shift tickets or other data attached.");
     }
   };
 
@@ -134,6 +147,11 @@ export function IncidentTruckList({ incidentId, incidentName }: Props) {
           incidentId={incidentId}
           incidentName={incidentName}
           organizationId={membership?.organizationId}
+          confirmRemove={confirmRemoveId === it.id}
+          onConfirmRemove={() => setConfirmRemoveId(it.id)}
+          onCancelRemove={() => setConfirmRemoveId(null)}
+          onRemove={() => handleRemove(it)}
+          removing={removeMutation.isPending && confirmRemoveId === it.id}
         />
       ))}
     </section>
@@ -149,6 +167,11 @@ function TruckCard({
   incidentId,
   incidentName,
   organizationId,
+  confirmRemove,
+  onConfirmRemove,
+  onCancelRemove,
+  onRemove,
+  removing,
 }: {
   it: IncidentTruckWithTruck;
   isExpanded: boolean;
@@ -158,6 +181,11 @@ function TruckCard({
   incidentId: string;
   incidentName?: string;
   organizationId?: string;
+  confirmRemove: boolean;
+  onConfirmRemove: () => void;
+  onCancelRemove: () => void;
+  onRemove: () => void;
+  removing: boolean;
 }) {
   // Always fetch crew so we can show warning on collapsed card too
   const { data: crew } = useIncidentTruckCrew(it.id);
@@ -328,6 +356,44 @@ function TruckCard({
           <SectionHeader label="Agreements">
             <AgreementUpload incidentTruckId={it.id} label="Truck Agreements" />
           </SectionHeader>
+
+          {/* Remove from incident */}
+          <div className="pt-3 border-t border-border">
+            {!confirmRemove ? (
+              <button
+                onClick={onConfirmRemove}
+                className="flex items-center gap-2 text-sm font-medium text-destructive touch-target"
+              >
+                <X className="h-4 w-4" />
+                Remove from incident
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm text-destructive font-medium">
+                  Remove {it.trucks.name} from this incident?
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  This won't delete the truck, only its assignment. Shift tickets, expenses, or crew tied to this assignment may block removal.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={onRemove}
+                    disabled={removing}
+                    className="flex-1 rounded-xl bg-destructive py-2.5 text-sm font-bold text-destructive-foreground touch-target flex items-center justify-center gap-2"
+                  >
+                    {removing && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Yes, Remove
+                  </button>
+                  <button
+                    onClick={onCancelRemove}
+                    className="flex-1 rounded-xl bg-secondary py-2.5 text-sm font-bold text-secondary-foreground touch-target"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
 
         </div>
       )}

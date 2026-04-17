@@ -37,10 +37,21 @@ export async function fetchAvailableTrucks() {
   return data;
 }
 
-export async function assignTruckToIncident(incidentId: string, truckId: string) {
+export async function assignTruckToIncident(incidentId: string, truckId: string): Promise<IncidentTruck> {
+  const { data, error } = await supabase
+    .from("incident_trucks")
+    .insert({ incident_id: incidentId, truck_id: truckId })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as IncidentTruck;
+}
+
+export async function removeTruckFromIncident(id: string): Promise<void> {
   const { error } = await supabase
     .from("incident_trucks")
-    .insert({ incident_id: incidentId, truck_id: truckId });
+    .delete()
+    .eq("id", id);
   if (error) throw error;
 }
 
