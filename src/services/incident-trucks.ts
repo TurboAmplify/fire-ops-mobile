@@ -39,13 +39,33 @@ export async function fetchAvailableTrucks(organizationId?: string) {
 }
 
 export async function assignTruckToIncident(incidentId: string, truckId: string): Promise<IncidentTruck> {
-  const { data, error } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from("incident_trucks")
-    .insert({ incident_id: incidentId, truck_id: truckId })
-    .select()
-    .single();
+    .select("*")
+    .eq("incident_id", incidentId)
+    .eq("truck_id", truckId)
+    .maybeSingle();
+
+  if (existingError) throw existingError;
+  if (existing) return existing as IncidentTruck;
+
+  const { error } = await supabase
+    .from("incident_trucks")
+    .insert({ incident_id: incidentId, truck_id: truckId });
+
   if (error) throw error;
-  return data as IncidentTruck;
+
+  const { data: inserted, error: insertedError } = await supabase
+    .from("incident_trucks")
+    .select("*")
+    .eq("incident_id", incidentId)
+    .eq("truck_id", truckId)
+    .order("assigned_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (insertedError) throw insertedError;
+  return inserted as IncidentTruck;
 }
 
 export async function removeTruckFromIncident(id: string): Promise<void> {
