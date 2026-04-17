@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import {
-  Flame, Banknote, DollarSign, FileText, Users, Truck, ClipboardList,
+  Flame, Banknote, DollarSign, FileText, Users, Truck, ClipboardList, Package,
 } from "lucide-react";
 import {
   Dialog,
@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { toast } from "sonner";
 import type { LucideIcon } from "lucide-react";
 
 export const NAV_STORAGE_KEY = "fireops-nav-tabs";
@@ -26,7 +27,6 @@ export const ALL_NAV_OPTIONS: NavTabOption[] = [
   { key: "shift-tickets", label: "Shift Tickets", icon: FileText, to: "/shift-tickets" },
   { key: "crew", label: "Crew", icon: Users, to: "/crew" },
   { key: "fleet", label: "Fleet", icon: Truck, to: "/fleet" },
-  
   { key: "needs", label: "Needs List", icon: ClipboardList, to: "/needs" },
 ];
 
@@ -72,9 +72,17 @@ export function NavBarCustomizer({ open, onOpenChange }: Props) {
   };
 
   const handleSave = () => {
-    localStorage.setItem(NAV_STORAGE_KEY, JSON.stringify(selected));
-    window.dispatchEvent(new Event("nav-tabs-changed"));
-    onOpenChange(false);
+    if (selected.length < 1 || selected.length > 4) return;
+    try {
+      localStorage.setItem(NAV_STORAGE_KEY, JSON.stringify(selected));
+      // Fire event so BottomNav rebuilds immediately
+      window.dispatchEvent(new Event("nav-tabs-changed"));
+      toast.success("Navigation updated");
+      // Close after the state has committed
+      setTimeout(() => onOpenChange(false), 0);
+    } catch (err: any) {
+      toast.error("Failed to save navigation");
+    }
   };
 
   return (
