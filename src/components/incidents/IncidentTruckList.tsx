@@ -187,26 +187,6 @@ function TruckCard({
   onRemove: () => void;
   removing: boolean;
 }) {
-
-function TruckCard({
-  it,
-  isExpanded,
-  onToggle,
-  onStatusChange,
-  statusMutation,
-  incidentId,
-  incidentName,
-  organizationId,
-}: {
-  it: IncidentTruckWithTruck;
-  isExpanded: boolean;
-  onToggle: () => void;
-  onStatusChange: (it: IncidentTruckWithTruck, status: IncidentTruckStatus) => void;
-  statusMutation: ReturnType<typeof useUpdateTruckStatus>;
-  incidentId: string;
-  incidentName?: string;
-  organizationId?: string;
-}) {
   // Always fetch crew so we can show warning on collapsed card too
   const { data: crew } = useIncidentTruckCrew(it.id);
   const activeCrew = crew?.filter((c) => c.is_active) ?? [];
