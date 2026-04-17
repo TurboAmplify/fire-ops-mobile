@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,7 +8,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-/** Download a file and return a data URL the AI gateway accepts. */
 async function toDataUrl(fileUrl: string): Promise<{ url: string }> {
   const res = await fetch(fileUrl);
   if (!res.ok) throw new Error(`Failed to download file: ${res.status}`);
@@ -16,7 +16,6 @@ async function toDataUrl(fileUrl: string): Promise<{ url: string }> {
   const bytes = new Uint8Array(await res.arrayBuffer());
   const b64 = base64Encode(bytes);
 
-  // Determine MIME from content-type header or file extension
   let mime = contentType.split(";")[0].trim();
   if (!mime || mime === "application/octet-stream") {
     const lower = fileUrl.toLowerCase();
@@ -25,16 +24,47 @@ async function toDataUrl(fileUrl: string): Promise<{ url: string }> {
     else if (lower.includes(".jpg") || lower.includes(".jpeg")) mime = "image/jpeg";
     else if (lower.includes(".webp")) mime = "image/webp";
     else if (lower.includes(".gif")) mime = "image/gif";
-    else mime = "application/pdf"; // default for agreement docs
+    else mime = "application/pdf";
   }
 
   return { url: `data:${mime};base64,${b64}` };
+}
+
+function isAllowedFileUrl(fileUrl: string): boolean {
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+    const allowedHost = new URL(supabaseUrl).host;
+    const u = new URL(fileUrl);
+    if (u.protocol !== "https:" && u.protocol !== "http:") return false;
+    if (u.host !== allowedHost) return false;
+    return u.pathname.startsWith("/storage/v1/");
+  } catch {
+    return false;
+  }
 }
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const { data: claimsData, error: authError } = await supabase.auth.getClaims(authHeader.replace("Bearer ", ""));
+    if (authError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { fileUrl, fileName } = await req.json();
     if (!fileUrl) {
       return new Response(JSON.stringify({ error: "fileUrl is required" }), {
@@ -42,11 +72,15 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    if (!isAllowedFileUrl(fileUrl)) {
+      return new Response(JSON.stringify({ error: "fileUrl must be a Supabase Storage URL" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    // Convert file to data URL so PDFs and images both work
     const dataUrl = await toDataUrl(fileUrl);
 
     const prompt = `You are a document parser for wildland firefighting agreements and contracts.
