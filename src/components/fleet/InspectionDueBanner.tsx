@@ -20,13 +20,13 @@ export function InspectionDueBanner() {
     enabled: !!orgId,
     staleTime: 60_000,
     queryFn: async (): Promise<DueTruck[]> => {
-      // Respect org-level alert toggle
+      // Respect org-level toggles: hide if either feature OR alerts are off
       const { data: org } = await supabase
         .from("organizations")
-        .select("inspection_alert_enabled")
+        .select("inspection_alert_enabled, walkaround_enabled")
         .eq("id", orgId!)
         .maybeSingle();
-      if (org && (org as any).inspection_alert_enabled === false) return [];
+      if (org && ((org as any).walkaround_enabled === false || (org as any).inspection_alert_enabled === false)) return [];
 
       // 1) load active incidents in the org
       const { data: incidents } = await supabase
