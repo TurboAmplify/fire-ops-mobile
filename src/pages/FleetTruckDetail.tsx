@@ -7,7 +7,7 @@ import { TruckHeroPhoto } from "@/components/fleet/TruckHeroPhoto";
 import { TruckInfoSection } from "@/components/fleet/TruckInfoSection";
 import { TruckPhotoSection } from "@/components/fleet/TruckPhotoSection";
 import { TruckDocumentSection } from "@/components/fleet/TruckDocumentSection";
-import { TruckChecklistSection } from "@/components/fleet/TruckChecklistSection";
+import { TruckInspectionSection } from "@/components/fleet/TruckInspectionSection";
 import { TruckServiceLogSection } from "@/components/fleet/TruckServiceLogSection";
 import {
   AlertDialog,
@@ -100,8 +100,8 @@ export default function FleetTruckDetail() {
         {/* Collapsible Info Section */}
         <TruckInfoSection truck={truck} onStatusChange={handleStatusChange} isUpdatingStatus={updateMutation.isPending} />
 
-        {/* Checklist */}
-        <TruckChecklistSection truckId={truckId!} />
+        {/* Walk-Around Inspection */}
+        <TruckInspectionSection truckId={truckId!} truckName={truck.name} />
 
         {/* Additional Photos */}
         <TruckPhotoSection truckId={truckId!} />
