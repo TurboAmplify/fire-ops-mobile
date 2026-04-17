@@ -75,6 +75,22 @@ export default function IncidentCreate() {
         location: location.trim(),
         start_date: parsedExtras.reporting_date || getLocalDateString(),
       });
+
+      // Clean up the orphaned RO file from storage — it was only used for parsing.
+      // The user can re-upload and attach it to a specific truck on the incident detail page.
+      if (uploadedFileUrl) {
+        try {
+          const { supabase } = await import("@/integrations/supabase/client");
+          // Extract path after the bucket name in the public URL
+          const match = uploadedFileUrl.match(/\/resource-orders\/(.+)$/);
+          if (match?.[1]) {
+            await supabase.storage.from("resource-orders").remove([match[1]]);
+          }
+        } catch {
+          // Non-fatal — file cleanup is best-effort
+        }
+      }
+
       toast.success("Incident created");
       navigate(`/incidents/${incident.id}`);
     } catch {
