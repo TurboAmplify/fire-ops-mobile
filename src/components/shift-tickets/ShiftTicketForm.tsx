@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { toast } from "sonner";
 import { Plus, Loader2, FileText, Save, Download, AlertTriangle, Copy } from "lucide-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
@@ -144,17 +145,29 @@ export function ShiftTicketForm({
     return () => window.removeEventListener("beforeunload", handler);
   }, [isDirty]);
 
-  // Auto-save draft 3 seconds after first edit (new tickets only)
+  // M2-H1: Auto-save draft 3 seconds after first edit (new tickets only).
+  // Use ref to always call latest handleSave without re-triggering effect.
+  const handleSaveRef = useRef<(silent?: boolean) => Promise<void>>();
   useEffect(() => {
     if (!isDirty || hasAutoSaved || ticket?.id) return;
     autoSaveTimerRef.current = setTimeout(() => {
-      handleSave(true);
+      handleSaveRef.current?.(true);
       setHasAutoSaved(true);
     }, 3000);
     return () => {
-      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
+      }
     };
   }, [isDirty, hasAutoSaved, ticket?.id]);
+
+  // Clear timer on unmount as a final safety net
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  }, []);
 
   // Navigation guard state (replaces useBlocker which requires data router)
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
@@ -195,6 +208,8 @@ export function ShiftTicketForm({
   const buildSavePayload = (): Partial<ShiftTicket> => {
     const persistedContractorSigUrl = getPersistedSignatureUrl(contractorSigUrl);
     const persistedSupervisorSigUrl = getPersistedSignatureUrl(supervisorSigUrl);
+    // M2-M4: Auto-promote status to "final" once both signatures are persisted.
+    const isFinal = !!(persistedContractorSigUrl && persistedSupervisorSigUrl);
     return {
       incident_truck_id: incidentTruckId,
       organization_id: organizationId,
@@ -222,7 +237,7 @@ export function ShiftTicketForm({
       supervisor_resource_order: supervisorRO || null,
       supervisor_signature_url: persistedSupervisorSigUrl,
       supervisor_signed_at: persistedSupervisorSigUrl ? new Date().toISOString() : null,
-      status: "draft",
+      status: isFinal ? "final" : "draft",
     };
   };
 
@@ -235,6 +250,9 @@ export function ShiftTicketForm({
       // Error handled by parent
     }
   };
+
+  // Keep ref in sync so the auto-save effect always calls the latest handleSave.
+  handleSaveRef.current = handleSave;
 
   const handleSignatureSave = async (blob: Blob, metadata: SignatureMetadata, sigTypeOverride?: "contractor" | "supervisor") => {
     const sigType = sigTypeOverride || sigModal;
@@ -281,13 +299,17 @@ export function ShiftTicketForm({
       setIsDirty(false);
       showSuccess("Signature saved");
     } catch {
-      showSuccess("Failed to save signature");
+      // M2-H3: Show failure as an error toast, not the green success overlay.
+      toast.error("Failed to save signature");
     } finally {
       setUploadingSig(false);
     }
   };
 
-  // Upload pending sigs once ticket has an ID
+  // M2-H2: Upload pending sigs once ticket has an ID.
+  // Use a ref for onSave so this effect doesn't retrigger on every parent re-render.
+  const onSaveRef = useRef(onSave);
+  useEffect(() => { onSaveRef.current = onSave; }, [onSave]);
   useEffect(() => {
     if (!ticket?.id || Object.keys(pendingSigs).length === 0) return;
     const uploadPending = async () => {
