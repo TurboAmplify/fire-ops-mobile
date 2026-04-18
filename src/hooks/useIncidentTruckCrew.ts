@@ -14,10 +14,11 @@ export function useIncidentTruckCrew(incidentTruckId: string) {
   });
 }
 
-export function useAvailableCrewMembers() {
+export function useAvailableCrewMembers(organizationId?: string | null) {
   return useQuery({
-    queryKey: ["crew-members"],
-    queryFn: fetchAvailableCrewMembers,
+    queryKey: ["crew-members", organizationId ?? "any"],
+    queryFn: () => fetchAvailableCrewMembers(organizationId),
+    enabled: organizationId !== undefined,
   });
 }
 

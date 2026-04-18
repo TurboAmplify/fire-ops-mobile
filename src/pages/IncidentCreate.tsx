@@ -98,12 +98,35 @@ export default function IncidentCreate() {
     }
   };
 
+  // Best-effort cleanup of orphaned uploaded RO file when user cancels mid-flow
+  const cleanupOrphanedUpload = async () => {
+    if (!uploadedFileUrl) return;
+    try {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const match = uploadedFileUrl.match(/\/resource-orders\/(.+)$/);
+      if (match?.[1]) {
+        await supabase.storage.from("resource-orders").remove([match[1]]);
+      }
+    } catch {
+      // best-effort
+    }
+  };
+
+  const handleCancel = async () => {
+    if (step === "form" && !uploadedFileUrl) {
+      setStep("choose");
+      return;
+    }
+    await cleanupOrphanedUpload();
+    navigate(-1);
+  };
+
   return (
     <AppShell
       title="New Incident"
       headerRight={
         <button
-          onClick={() => step === "form" && !uploadedFileUrl ? setStep("choose") : navigate(-1)}
+          onClick={handleCancel}
           className="flex items-center gap-1 text-sm font-medium text-primary touch-target"
         >
           {step === "form" && !uploadedFileUrl ? "Back" : "Cancel"}

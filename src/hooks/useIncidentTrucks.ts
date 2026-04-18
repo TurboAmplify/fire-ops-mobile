@@ -18,8 +18,9 @@ export function useIncidentTrucks(incidentId: string) {
 
 export function useAvailableTrucks(organizationId?: string) {
   return useQuery({
-    queryKey: ["trucks", organizationId ?? "all"],
+    queryKey: ["trucks", organizationId ?? "none"],
     queryFn: () => fetchAvailableTrucks(organizationId),
+    enabled: !!organizationId,
   });
 }
 
