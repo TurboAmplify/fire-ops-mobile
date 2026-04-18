@@ -258,7 +258,7 @@ export default function IncidentFromAgreement() {
                 {trucks?.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name}
-                    {matchedTruck?.id === t.id ? " ✓ detected" : ""}
+                    {matchedTruck?.id === t.id ? " (detected)" : ""}
                   </option>
                 ))}
               </select>

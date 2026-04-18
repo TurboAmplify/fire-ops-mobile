@@ -69,6 +69,32 @@ export default function IncidentEdit() {
     );
   }
 
+  if (!incident) {
+    return (
+      <AppShell
+        title="Edit Incident"
+        headerRight={
+          <button onClick={() => navigate(-1)} className="text-sm font-medium text-primary touch-target">
+            Back
+          </button>
+        }
+      >
+        <div className="flex flex-col items-center justify-center gap-3 py-20 px-6 text-center">
+          <p className="text-base font-medium">Incident not found</p>
+          <p className="text-sm text-muted-foreground">
+            It may have been removed or you no longer have access.
+          </p>
+          <button
+            onClick={() => navigate("/incidents")}
+            className="mt-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground touch-target"
+          >
+            Back to Incidents
+          </button>
+        </div>
+      </AppShell>
+    );
+  }
+
   const inputClass =
     "w-full rounded-xl border bg-card px-4 py-3 text-base outline-none focus:ring-2 focus:ring-ring touch-target";
 
