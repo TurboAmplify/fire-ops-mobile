@@ -337,19 +337,21 @@ export function ShiftTicketForm({
 
       try {
         if (Object.keys(sigUpdates).length > 0) {
-          await Promise.resolve(onSave({ ...buildSavePayload(), ...sigUpdates }));
+          await Promise.resolve(onSaveRef.current({ ...buildSavePayload(), ...sigUpdates }));
           setIsDirty(false);
         }
         showSuccess("Signatures uploaded");
       } catch {
-        // Error handled by parent
+        toast.error("Failed to upload signatures");
       } finally {
         setUploadingSig(false);
       }
     };
 
     uploadPending();
-  }, [ticket?.id, pendingSigs, onSave]);
+    // Intentionally exclude onSave/buildSavePayload — handled via ref to prevent re-trigger loops.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ticket?.id, pendingSigs]);
 
   const updateEquipment = (i: number, entry: EquipmentEntry) => {
     const next = [...equipmentEntries];
