@@ -93,12 +93,17 @@ export async function duplicateShiftTicket(
   sourceTicket: ShiftTicket,
   organizationId: string
 ): Promise<ShiftTicket> {
-  // Advance all dates by 1 day
+  // M2-M8: Advance dates by 1 day using UTC arithmetic to avoid DST shifts
   const advanceDate = (dateStr: string) => {
     if (!dateStr) return dateStr;
-    const d = new Date(dateStr + "T00:00:00");
-    d.setDate(d.getDate() + 1);
-    return d.toISOString().split("T")[0];
+    const [y, m, d] = dateStr.split("-").map(Number);
+    if (!y || !m || !d) return dateStr;
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    dt.setUTCDate(dt.getUTCDate() + 1);
+    const yy = dt.getUTCFullYear();
+    const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(dt.getUTCDate()).padStart(2, "0");
+    return `${yy}-${mm}-${dd}`;
   };
 
   const newEquipment = (sourceTicket.equipment_entries as EquipmentEntry[]).map((e) => ({

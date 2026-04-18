@@ -25,15 +25,16 @@ export function CrewSyncCard({ equipmentEntries, personnelEntries, setPersonnelE
   const [perDiemL, setPerDiemL] = useState(false);
   const [perDiemD, setPerDiemD] = useState(false);
 
+  // M2-M1: Sync local toggles when first personnel entry changes (e.g. after ticket load)
+  const first = personnelEntries[0];
   useEffect(() => {
-    const first = personnelEntries[0];
     if (first) {
       setLodging(first.lodging || false);
       setPerDiemB(first.per_diem_b || false);
       setPerDiemL(first.per_diem_l || false);
       setPerDiemD(first.per_diem_d || false);
     }
-  }, []);
+  }, [first?.lodging, first?.per_diem_b, first?.per_diem_l, first?.per_diem_d]);
 
   useEffect(() => {
     setHasLunch(eqTotal > 8);

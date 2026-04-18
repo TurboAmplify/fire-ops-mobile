@@ -229,11 +229,11 @@ export function OF297FormPreview({
             ) : (
               <button
                 onClick={onTapToSign}
-                disabled={uploadingSig || !supervisorName.trim() || !supervisorRO.trim()}
+                disabled={uploadingSig || !supervisorName.trim()}
                 className="w-full border-2 border-dashed border-gray-400 rounded py-4 text-[11px] text-gray-500 touch-target disabled:opacity-40 active:bg-gray-50"
               >
-                {!supervisorName.trim() || !supervisorRO.trim()
-                  ? "Enter name & RO# above to sign"
+                {!supervisorName.trim()
+                  ? "Enter supervisor name above to sign"
                   : "Tap to sign"}
               </button>
             )}
