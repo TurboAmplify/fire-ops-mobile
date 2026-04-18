@@ -18,12 +18,16 @@ export async function fetchIncidentTruckCrew(incidentTruckId: string) {
   return data as IncidentTruckCrewWithMember[];
 }
 
-export async function fetchAvailableCrewMembers() {
-  const { data, error } = await supabase
+export async function fetchAvailableCrewMembers(organizationId?: string | null) {
+  let query = supabase
     .from("crew_members")
     .select("*")
     .eq("active", true)
     .order("name");
+  if (organizationId) {
+    query = query.eq("organization_id", organizationId);
+  }
+  const { data, error } = await query;
   if (error) throw error;
   return data;
 }

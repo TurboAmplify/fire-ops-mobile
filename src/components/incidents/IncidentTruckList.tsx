@@ -263,7 +263,11 @@ function TruckCard({
           {/* Crew — always visible at top, primary action */}
           <div className="space-y-2">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Crew</p>
-            <TruckCrewSection incidentTruckId={it.id} autoOpen={autoOpenCrew || noCrewAssigned} />
+            <TruckCrewSection
+              incidentTruckId={it.id}
+              autoOpen={autoOpenCrew || noCrewAssigned}
+              organizationId={organizationId}
+            />
           </div>
 
           {/* OF-297 Shift Tickets */}

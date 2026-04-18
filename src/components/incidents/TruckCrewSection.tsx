@@ -16,11 +16,12 @@ import {
 interface Props {
   incidentTruckId: string;
   autoOpen?: boolean;
+  organizationId?: string | null;
 }
 
-export function TruckCrewSection({ incidentTruckId, autoOpen = false }: Props) {
+export function TruckCrewSection({ incidentTruckId, autoOpen = false, organizationId }: Props) {
   const { data: crew, isLoading } = useIncidentTruckCrew(incidentTruckId);
-  const { data: allCrew } = useAvailableCrewMembers();
+  const { data: allCrew } = useAvailableCrewMembers(organizationId);
   const assignMutation = useAssignCrew(incidentTruckId);
   const releaseMutation = useReleaseCrew(incidentTruckId);
   const [showAssign, setShowAssign] = useState(autoOpen);
