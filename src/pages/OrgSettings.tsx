@@ -410,15 +410,28 @@ export default function OrgSettings() {
                     key={inv.id}
                     className="flex items-center gap-3 px-4 py-3.5"
                   >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-warning/15">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-warning/15 shrink-0">
                       <Clock className="h-4 w-4 text-warning" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">{inv.email}</p>
                       <p className="text-xs text-muted-foreground">
-                        Expires{" "}
-                        {new Date(inv.expires_at).toLocaleDateString()}
+                        Expires {new Date(inv.expires_at).toLocaleDateString()}
                       </p>
+                      {inv.invite_code && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(inv.invite_code);
+                            toast({ title: "Copied", description: `Invite code ${inv.invite_code} copied.` });
+                          }}
+                          className="mt-1 inline-flex items-center gap-1 rounded-md bg-secondary px-2 py-0.5 font-mono text-xs tracking-wider text-foreground active:bg-accent"
+                          title="Tap to copy"
+                        >
+                          {inv.invite_code}
+                          <ClipboardCheck className="h-3 w-3" />
+                        </button>
+                      )}
                     </div>
                     <Badge variant={roleBadgeVariant(inv.role)}>
                       {ROLE_LABELS[inv.role] ?? inv.role}
