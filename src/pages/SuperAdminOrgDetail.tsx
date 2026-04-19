@@ -55,6 +55,8 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
 
 export default function SuperAdminOrgDetail() {
   const { orgId } = useParams<{ orgId: string }>();
+  const navigate = useNavigate();
+  const { startViewAs } = useImpersonation();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["super-admin", "org", orgId],
@@ -65,6 +67,19 @@ export default function SuperAdminOrgDetail() {
       return data as unknown as OrgDetail | null;
     },
   });
+
+  const handleViewAs = async () => {
+    if (!orgId) return;
+    try {
+      await startViewAs(orgId, data?.name);
+      toast.success(`Viewing as ${data?.name ?? "organization"} (read-only)`);
+      navigate("/");
+    } catch (err) {
+      toast.error("Failed to start view-as", {
+        description: err instanceof Error ? err.message : undefined,
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
