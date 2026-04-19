@@ -1,99 +1,67 @@
 
 
-User is currently landing on `/org-setup` but expects to see the Login page first (with hero background). The flow they want:
+User picked Option B: a self-add button on the Super Admin → Org Detail page. Looking at the existing code:
 
-**Sign in** → goes to their org (or `/super-admin` if platform admin) — already works.
-**Sign up (no invite)** → `/org-setup` to create their org — already works.
-**Sign up (with invite code)** → bypass `/org-setup`, auto-join the inviting org.
+- `SuperAdminOrgDetail.tsx` already has the org context, members list, and a "View as this org" button — natural place to add this.
+- `is_real_org_member()` already exists; once I'm a real member, the existing `guard_platform_admin_write` trigger lets me write to that org without any other changes.
+- `platform_admin_audit` + `admin_log_action` RPC already exist for audit logging.
+- `organization_members` insert RLS requires `is_org_admin` OR a valid invite — platform admins satisfy `is_org_admin` via the function definition, so a direct insert works. But to keep it clean, audited, and self-contained, I'll add a dedicated SECURITY DEFINER RPC.
 
-Let me verify what exists.
+Plan stays small: 1 RPC + 1 button + 1 mutation.
 
-Findings from existing code (already read in context):
-- `Login.tsx` has login/signup/forgot — no invite code field yet.
-- `organization_invites` table exists (seen in `useOrganization.tsx` — counted for seat usage).
-- `ProtectedRoute` sends users with no membership to `/org-setup`. Platform admins are exempt.
-- The user reports landing on `/org-setup` when they expect `/login`. That means they're authenticated but have no membership — which is correct behavior post-removal from Dry Lightning. They're the super admin. They should land on `/super-admin`, not `/org-setup`.
+---
 
-So there are actually **two issues**:
+# Self-add to org as platform admin support
 
-1. **Bug**: Super admin (just removed from Dry Lightning) is landing on `/org-setup` instead of `/super-admin`. The recent ProtectedRoute change should handle this — need to check why it isn't. Likely the `usePlatformAdmin` check or `isImpersonating` flag isn't returning what we expect on this route, OR the redirect was only added at `"/"` and `/org-setup` is its own route that doesn't run that check.
+## What you'll get
 
-2. **Feature**: Sign-up needs an optional invite-code field. With code → join existing org, skip `/org-setup`. Without code → existing flow (`/org-setup`).
+On the Super Admin → Org Detail page, next to the existing "View as this org" button, a new **"Add me as admin"** button (with a confirm dialog asking for an optional reason). One click and:
+1. You're inserted into `organization_members` as `admin` for that org.
+2. The action is logged to `platform_admin_audit` with the reason.
+3. You can now write to that org normally — uploads, edits, everything works.
+4. Page refreshes so the members list shows you immediately.
 
-Need to inspect a few files to confirm before planning.
-<lov-tool-use id="toolu_vrtx_01DnmAG4hjJwnt3w8btLfV78" name="code--view" integration-id="code" data="{\"file_path\": \"src/App.tsx\"}">
-</lov-tool-use>
+When you're already a member, the button changes to **"Remove me from this org"** so cleanup is one click too (also audited).
 
-<lov-tool-use id="toolu_vrtx_01ANBp9HQxa1eiPJNZmTgauE" name="code--view" integration-id="code" data="{\"file_path\": \"src/pages/OrgSetup.tsx\"}">
-</lov-tool-use>
+## Backend (1 migration)
 
-<lov-tool-use id="toolu_vrtx_01TyHoqUqyWgNhZbEPNhSR5h" name="code--search_files" integration-id="code" data="{\"query\": \"organization_invites\", \"include_patterns\": \"*.ts,*.tsx,*.sql\"}">
-</lov-tool-use>
+New SECURITY DEFINER RPCs, callable only by platform admins:
 
-<lov-tool-use id="toolu_vrtx_013QiWGfRwYMD1CvgZUL7L6o" name="code--view" integration-id="code" data="{\"file_path\": \"src/App.tsx\"}">
-</lov-tool-use>
+- `admin_self_add_to_org(_org_id uuid, _reason text)` 
+  - Verifies caller is platform admin (else `42501`)
+  - Inserts `organization_members(org_id, auth.uid(), 'admin')` if not already present
+  - Inserts `platform_admin_audit` row with `action='self_add_to_org'`, target_id, reason
+  - Returns the new membership id
 
-<lov-tool-use id="toolu_vrtx_019s8gZhyHTxxTuh634WGYKN" name="code--view" integration-id="code" data="{\"file_path\": \"src/pages/OrgSetup.tsx\"}">
-</lov-tool-use>
+- `admin_self_remove_from_org(_org_id uuid, _reason text)`
+  - Verifies caller is platform admin
+  - Deletes own row from `organization_members` for that org
+  - Logs to `platform_admin_audit` with `action='self_remove_from_org'`
 
-<lov-tool-use id="toolu_vrtx_01Tv7TVtSWXHvvR5onbkZNDk" name="code--search_files" integration-id="code" data="{\"query\": \"organization_invites\", \"include_patterns\": \"*.ts,*.tsx,*.sql\"}">
-</lov-tool-use>
+Both run as SECURITY DEFINER so RLS doesn't get in the way, and both write audit rows in the same transaction so there's no way to add/remove without a record.
 
-<lov-tool-use id="toolu_vrtx_01A2g79xVV9WEYZB12viX3Db" name="code--exec" integration-id="code" data="{\"command\": \"psql -c \\\"\\\\d organization_invites\\\" 2>&1 | head -40\", \"user_facing_description\": \"Checking invite table schema\"}">
-</lov-tool-use>
-Got it. Current setup uses **email-matched invites** (no code/token entry by user). User wants an explicit invite-code flow. Let me check `token`.
+## Frontend (1 file: `src/pages/SuperAdminOrgDetail.tsx`)
 
-The schema already has a `token` column — perfect for code-based invites. Now I have enough to plan.
+- Detect "am I already a member?" by checking if `auth.uid()` appears in `data.members`.
+- Add a button in the header (alongside "View as this org"):
+  - If not a member: `"Add me as admin"` (default variant, primary color)
+  - If already a member: `"Remove me from org"` (outline variant, destructive color)
+- Click opens a small AlertDialog asking for an optional reason ("Helping customer fix duplicate incident") before submitting.
+- On success: toast, invalidate the org detail query so the members list refreshes.
+- On error: toast with the message.
 
-<lov-plan>
+## Why this is safe
 
-## Goal
+- Every add/remove is a platform-admin-only RPC with audit trail (actor, time, reason).
+- You become a real member, so the existing `guard_platform_admin_write` trigger already allows your writes — no new bypass logic.
+- All your actions while a member appear in normal org audit/activity logs under your name (not impersonated).
+- Reversible in one click.
+- No new attack surface: anyone who is already a platform admin could already do this manually via SQL; this just makes it one click and forces an audit record.
 
-Restructure the auth landing experience:
-1. **Login page** = first thing users see (already exists, just needs to be the default).
-2. **Sign up** offers a toggle: "I have an invite code" vs "Set up a new team."
-3. **With invite code** → join the inviting org directly, skip OrgSetup.
-4. **Without invite code** → after signup, go to OrgSetup to create a new org.
-5. **Sign in** → land on their existing org (current behavior).
+## Files
 
-The current bug: you're on `/org-setup` because you have no membership and `ProtectedRoute` doesn't redirect platform admins early enough on `/org-setup` (only on `/`). So the page fires before the platform-admin guard kicks in.
+- New migration: add the two RPCs + grants
+- Edit: `src/pages/SuperAdminOrgDetail.tsx` (button + dialog + mutation)
 
-## Plan
-
-### 1. Fix platform-admin landing
-`OrgSetup.tsx` doesn't check platform admin status. Add: if `isPlatformAdmin && !membership && !isImpersonating`, redirect to `/super-admin`. That fixes the immediate issue you're seeing.
-
-### 2. Add invite-code flow
-
-**Schema** — `organization_invites` already has a `token` (uuid) column. We'll use a shorter, human-friendly code instead. Add a migration:
-- New column `invite_code text` (8-char alphanumeric, unique, generated on insert via trigger).
-- Keep existing `email` + `token` columns for the email-link flow (still works).
-- Add RPC `accept_invite_by_code(_code text)` (SECURITY DEFINER): validates code, checks not expired, inserts `organization_members` row for the calling user, marks invite `accepted`. Returns the org id.
-
-**Why a code in addition to email match?** Right now invites only work if the invitee signs up with the exact email the admin entered. A code lets anyone with the code join — useful when emails don't match, or for shareable team codes.
-
-### 3. Update Login/Signup UI (`src/pages/Login.tsx`)
-
-Add a new mode `signup-invited`. The signup screen gets a small toggle:
-- **"I have an invite code"** → shows email + password + invite code field. After signup, calls `accept_invite_by_code` and routes to `/`.
-- **"I'm starting a new team"** (default) → current signup behavior, then routes to `/org-setup`.
-
-Sign-in unchanged. Already lands on `/` which routes to their org dashboard.
-
-### 4. Update `OrgSettings.tsx` invite UI
-
-When admin sends an invite, surface the generated `invite_code` so they can share it (e.g., copy-to-clipboard chip on the pending invites list). Keeps the existing email field for record-keeping.
-
-### 5. Files touched
-
-- `supabase/migrations/<new>.sql` — add `invite_code` column + generator trigger + `accept_invite_by_code` RPC.
-- `src/pages/Login.tsx` — add invite-code field + post-signup branching.
-- `src/pages/OrgSetup.tsx` — early redirect for platform admins; keep existing email-match invite acceptance as a fallback.
-- `src/pages/OrgSettings.tsx` — show the invite code on pending invites for easy sharing.
-
-### 6. Open questions
-
-1. **Code format**: 8-char uppercase alphanumeric (e.g. `K7M2X9PQ`)? Or shorter 6-char? Or a word-style code like `fox-river-42`?
-2. **One code per invite or one shared org code?** Per-invite (current model, tied to a specific email/role) is more secure and lets admins revoke individual codes. A single shared org code is simpler but anyone with it can join until you rotate it. Recommend per-invite.
-3. **Should the invite code path require the email to match too**, or is the code alone enough? Recommend: code alone is enough (lower friction); admin still controls who gets the code.
+That's it. After you approve, I'll implement and you can test on Dry Lightning.
 
