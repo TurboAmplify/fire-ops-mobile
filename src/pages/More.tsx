@@ -1,14 +1,16 @@
 import { AppShell } from "@/components/AppShell";
 import { useNavigate } from "react-router-dom";
-import { Settings, ChevronRight, Shield, BarChart3, ClipboardList } from "lucide-react";
+import { Settings, ChevronRight, Shield, BarChart3, ClipboardList, ShieldCheck } from "lucide-react";
 import { ALL_NAV_OPTIONS, getSelectedTabKeys, filterNavByMode } from "@/components/settings/NavBarCustomizer";
 import { useOrganization } from "@/hooks/useOrganization";
+import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
 import { useAppMode } from "@/lib/app-mode";
 import { useEffect, useState } from "react";
 
 export default function More() {
   const navigate = useNavigate();
   const { isAdmin } = useOrganization();
+  const { isPlatformAdmin } = usePlatformAdmin();
   const { modules } = useAppMode();
   const [bump, setBump] = useState(0);
 
