@@ -135,7 +135,6 @@ export default function Login() {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" style={{ backgroundSize: '100% 120%' }} />
         <div className="absolute bottom-4 left-0 right-0 px-6 flex flex-col items-center">
-          <img src={fireLogo} alt="FireOps HQ" className="h-16 w-16 mb-3" width={512} height={512} />
           <h1 className="text-2xl font-extrabold text-white tracking-tight">FireOps HQ</h1>
           <p className="text-sm text-white/50 mt-0.5">Wildfire Operations Management</p>
         </div>
