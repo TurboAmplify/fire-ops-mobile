@@ -16,15 +16,17 @@ import type { LucideIcon } from "lucide-react";
 export default function Dashboard() {
   const [showTickets, setShowTickets] = useState(false);
   const navigate = useNavigate();
-  const { data: incidents } = useIncidents();
-  const { data: trucks } = useTrucks();
-  const { data: crew } = useCrewMembers();
-  const { data: needsItems } = useNeedsList();
+  const { data: incidents, isLoading: loadingIncidents, error: incidentsError } = useIncidents();
+  const { data: trucks, isLoading: loadingTrucks, error: trucksError } = useTrucks();
+  const { data: crew, isLoading: loadingCrew, error: crewError } = useCrewMembers();
+  const { data: needsItems, isLoading: loadingNeeds } = useNeedsList();
 
   const activeIncidents = incidents?.filter((i) => i.status === "active") ?? [];
   const activeCount = activeIncidents.length;
   const truckCount = trucks?.length ?? 0;
   const crewCount = crew?.filter((c) => c.active).length ?? 0;
+
+  const overviewError = incidentsError || trucksError || crewError;
 
   const unpurchasedNeeds = (needsItems ?? []).filter((n: any) => !n.is_purchased);
 
@@ -49,11 +51,18 @@ export default function Dashboard() {
           <h2 className="mb-3 text-[10px] font-semibold text-muted-foreground/80 uppercase tracking-[0.15em] px-0.5">
             Overview
           </h2>
-          <div className="grid grid-cols-3 gap-3">
-            <StatCard icon={Flame} label="Active" value={activeCount} iconColor="text-destructive" onClick={() => navigate("/incidents")} />
-            <StatCard icon={Users} label="Crew" value={crewCount} iconColor="text-violet-500" onClick={() => navigate("/crew")} />
-            <StatCard icon={Truck} label="Fleet" value={truckCount} iconColor="text-blue-500" onClick={() => navigate("/fleet")} />
-          </div>
+          {overviewError ? (
+            <div className="rounded-2xl glass-tile p-4 text-center">
+              <p className="text-xs text-destructive font-medium">Couldn't load overview.</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Pull to refresh or check your connection.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-3">
+              <StatCard icon={Flame} label="Active" value={activeCount} loading={loadingIncidents} iconColor="text-destructive" onClick={() => navigate("/incidents")} />
+              <StatCard icon={Users} label="Crew" value={crewCount} loading={loadingCrew} iconColor="text-violet-500" onClick={() => navigate("/crew")} />
+              <StatCard icon={Truck} label="Fleet" value={truckCount} loading={loadingTrucks} iconColor="text-blue-500" onClick={() => navigate("/fleet")} />
+            </div>
+          )}
         </section>
 
         {/* Active Incidents - vertical stacked list */}
@@ -69,7 +78,11 @@ export default function Dashboard() {
             )}
           </div>
 
-          {activeIncidents.length === 0 ? (
+          {loadingIncidents ? (
+            <div className="rounded-2xl glass-tile p-5">
+              <div className="h-3 w-32 bg-muted/60 rounded animate-pulse mx-auto" />
+            </div>
+          ) : activeIncidents.length === 0 ? (
             <div className="rounded-2xl glass-tile p-5 text-center">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 mx-auto mb-2">
                 <Flame className="h-5 w-5 text-emerald-500" strokeWidth={1.75} />
@@ -127,7 +140,11 @@ export default function Dashboard() {
             </Link>
           </div>
 
-          {unpurchasedNeeds.length === 0 ? (
+          {loadingNeeds ? (
+            <div className="rounded-2xl glass-tile p-5">
+              <div className="h-3 w-24 bg-muted/60 rounded animate-pulse mx-auto" />
+            </div>
+          ) : unpurchasedNeeds.length === 0 ? (
             <div className="rounded-2xl glass-tile p-5 text-center">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 mx-auto mb-2">
                 <CheckCircle2 className="h-5 w-5 text-emerald-500" strokeWidth={1.75} />
@@ -175,14 +192,18 @@ function QuickAction({ icon: Icon, label, iconBg, iconColor, onClick }: { icon: 
   );
 }
 
-function StatCard({ icon: Icon, label, value, iconColor, onClick }: { icon: LucideIcon; label: string; value: number; iconColor: string; onClick?: () => void }) {
+function StatCard({ icon: Icon, label, value, loading, iconColor, onClick }: { icon: LucideIcon; label: string; value: number; loading?: boolean; iconColor: string; onClick?: () => void }) {
   return (
     <button
       onClick={onClick}
       className="rounded-2xl glass-tile p-2.5 flex flex-col items-center gap-0.5 transition-all duration-150 active:scale-[0.97] active:opacity-80 touch-target"
     >
       <Icon className={`h-3.5 w-3.5 ${iconColor}`} strokeWidth={1.75} />
-      <span className="text-base font-bold leading-tight">{value}</span>
+      {loading ? (
+        <span className="h-5 w-6 my-0.5 rounded bg-muted/60 animate-pulse" />
+      ) : (
+        <span className="text-base font-bold leading-tight">{value}</span>
+      )}
       <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">{label}</span>
     </button>
   );
