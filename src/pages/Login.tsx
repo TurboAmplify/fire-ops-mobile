@@ -21,6 +21,8 @@ export default function Login() {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
+  const [hasInviteCode, setHasInviteCode] = useState(false);
+  const [inviteCode, setInviteCode] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -65,15 +67,43 @@ export default function Login() {
         toast({ title: "Check your email", description: "Password reset link sent." });
         setMode("login");
       } else if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
+        // If they have an invite code, normalize and validate it before creating the account
+        const normalizedCode = hasInviteCode
+          ? inviteCode.toUpperCase().replace(/[^A-Z0-9]/g, "")
+          : "";
+        if (hasInviteCode && normalizedCode.length < 6) {
+          throw new Error("Enter the invite code your team admin gave you.");
+        }
+
+        const { data: signUpData, error } = await supabase.auth.signUp({
           email: cleanEmail,
           password,
           options: { emailRedirectTo: window.location.origin },
         });
         if (error) throw error;
+
+        // If signup auto-confirms (no email verification), session is present and
+        // we can immediately accept the invite. Otherwise, the code is preserved
+        // server-side and the user can finish via the email confirmation link.
+        if (hasInviteCode && signUpData.session) {
+          const { error: rpcError } = await supabase.rpc(
+            "accept_invite_by_code" as any,
+            { _code: normalizedCode } as any,
+          );
+          if (rpcError) throw rpcError;
+          toast({
+            title: "Welcome aboard",
+            description: "You've joined your team.",
+          });
+          // ProtectedRoute will route to the org dashboard now that membership exists
+          return;
+        }
+
         toast({
           title: "Account created",
-          description: "Check your email to verify your account before signing in.",
+          description: hasInviteCode
+            ? "Verify your email, then sign in to join your team."
+            : "Check your email to verify your account before signing in.",
         });
         setMode("login");
       } else {
@@ -155,6 +185,39 @@ export default function Login() {
                   autoComplete={mode === "signup" ? "new-password" : "current-password"}
                   className="h-12 rounded-xl bg-secondary border-border text-[15px] placeholder:text-muted-foreground/50"
                 />
+              </div>
+            )}
+
+            {mode === "signup" && (
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setHasInviteCode((v) => !v)}
+                  className="text-xs font-medium text-primary"
+                >
+                  {hasInviteCode ? "I'm starting a new team instead" : "I have an invite code"}
+                </button>
+                {hasInviteCode && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="invite-code" className="text-xs font-medium text-muted-foreground">
+                      Invite Code
+                    </Label>
+                    <Input
+                      id="invite-code"
+                      value={inviteCode}
+                      onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                      placeholder="e.g. K7M2X9PQ"
+                      autoCapitalize="characters"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      maxLength={12}
+                      className="h-12 rounded-xl bg-secondary border-border text-[15px] tracking-widest font-mono placeholder:text-muted-foreground/50 placeholder:font-sans placeholder:tracking-normal"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Ask your team admin for this code.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 

@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useOrganization } from "@/hooks/useOrganization";
+import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
+import { useImpersonation } from "@/hooks/useImpersonation";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Flame, Building2, ArrowRight, Users, Briefcase, Shield, Landmark, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -42,6 +44,8 @@ type Step = "type" | "details";
 export default function OrgSetup() {
   const { user, loading: authLoading } = useAuth();
   const { membership, loading: orgLoading, refetch } = useOrganization();
+  const { isPlatformAdmin, loading: paLoading } = usePlatformAdmin();
+  const { isImpersonating } = useImpersonation();
   const { toast } = useToast();
   const [companyName, setCompanyName] = useState("");
   const [orgType, setOrgType] = useState<OrgType>("contractor");
@@ -85,7 +89,7 @@ export default function OrgSetup() {
     })();
   }, [user?.id]);
 
-  if (authLoading || orgLoading || checkingInvite) {
+  if (authLoading || orgLoading || paLoading || checkingInvite) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -95,6 +99,9 @@ export default function OrgSetup() {
 
   if (!user) return <Navigate to="/login" replace />;
   if (membership) return <Navigate to="/" replace />;
+  // Platform admins without an org membership belong on the super-admin
+  // dashboard, not the team-setup flow (unless actively impersonating).
+  if (isPlatformAdmin && !isImpersonating) return <Navigate to="/super-admin" replace />;
 
   const handleAcceptInvite = async () => {
     if (!pendingInvite || !user) return;

@@ -581,6 +581,7 @@ export type Database = {
           email: string
           expires_at: string
           id: string
+          invite_code: string
           invited_by: string
           organization_id: string
           role: string
@@ -592,6 +593,7 @@ export type Database = {
           email: string
           expires_at?: string
           id?: string
+          invite_code: string
           invited_by: string
           organization_id: string
           role: string
@@ -603,6 +605,7 @@ export type Database = {
           email?: string
           expires_at?: string
           id?: string
+          invite_code?: string
           invited_by?: string
           organization_id?: string
           role?: string
@@ -1591,6 +1594,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_invite_by_code: { Args: { _code: string }; Returns: string }
       admin_get_organization: { Args: { _org_id: string }; Returns: Json }
       admin_list_audit: {
         Args: { _limit?: number }
@@ -1666,6 +1670,7 @@ export type Database = {
             Returns: string
           }
       delete_user_data: { Args: { _user_id: string }; Returns: undefined }
+      generate_invite_code: { Args: never; Returns: string }
       get_auth_email: { Args: never; Returns: string }
       get_org_from_incident: { Args: { _incident_id: string }; Returns: string }
       get_org_from_incident_truck: { Args: { _it_id: string }; Returns: string }
