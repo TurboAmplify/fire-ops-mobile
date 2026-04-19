@@ -108,12 +108,49 @@ export type Database = {
         }
         Relationships: []
       }
+      crew_compensation: {
+        Row: {
+          crew_member_id: string
+          hourly_rate: number | null
+          hw_rate: number | null
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          crew_member_id: string
+          hourly_rate?: number | null
+          hw_rate?: number | null
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          crew_member_id?: string
+          hourly_rate?: number | null
+          hw_rate?: number | null
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crew_compensation_crew_member_id_fkey"
+            columns: ["crew_member_id"]
+            isOneToOne: true
+            referencedRelation: "crew_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crew_compensation_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crew_members: {
         Row: {
           active: boolean
           created_at: string
-          hourly_rate: number | null
-          hw_rate: number | null
           id: string
           name: string
           notes: string | null
@@ -126,8 +163,6 @@ export type Database = {
         Insert: {
           active?: boolean
           created_at?: string
-          hourly_rate?: number | null
-          hw_rate?: number | null
           id?: string
           name: string
           notes?: string | null
@@ -140,8 +175,6 @@ export type Database = {
         Update: {
           active?: boolean
           created_at?: string
-          hourly_rate?: number | null
-          hw_rate?: number | null
           id?: string
           name?: string
           notes?: string | null
@@ -1547,6 +1580,10 @@ export type Database = {
       }
       user_has_org_role: {
         Args: { _org_id: string; _role: string; _user_id: string }
+        Returns: boolean
+      }
+      validate_inspection_photo_path: {
+        Args: { _path: string; _user_id: string }
         Returns: boolean
       }
     }
