@@ -103,17 +103,53 @@ export function TutorialOverlay() {
               key={step.id}
               className="flex flex-col items-center text-center max-w-full animate-fade-in"
             >
-              {/* Hero illustration tile */}
-              <div
-                className={cn(
-                  "relative flex h-28 w-full max-w-xs items-center justify-center rounded-3xl overflow-hidden mb-5 bg-gradient-to-br border",
-                  step.gradient,
-                )}
-              >
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-background/80 backdrop-blur-sm shadow-sm">
-                  <Icon className={cn("h-8 w-8", step.iconColor)} strokeWidth={1.75} />
+              {/* Hero: phone-frame screenshot with highlight, OR icon tile */}
+              {step.screenshot ? (
+                <>
+                  <div
+                    className={cn(
+                      "relative w-full max-w-[200px] aspect-[9/19.5] rounded-[1.75rem] overflow-hidden mb-2 border-4 border-foreground/15 shadow-xl bg-background",
+                    )}
+                  >
+                    <img
+                      src={step.screenshot}
+                      alt={`${step.title} screen preview`}
+                      className="absolute inset-0 h-full w-full object-cover object-top"
+                      loading="lazy"
+                    />
+                    {step.highlight && (
+                      <div
+                        className="pointer-events-none absolute rounded-md ring-2 ring-primary animate-pulse"
+                        style={{
+                          top: step.highlight.top,
+                          left: step.highlight.left,
+                          width: step.highlight.width,
+                          height: step.highlight.height,
+                          boxShadow:
+                            "0 0 0 9999px hsl(var(--background) / 0.55), 0 0 18px 2px hsl(var(--primary) / 0.6)",
+                        }}
+                        aria-hidden="true"
+                      />
+                    )}
+                  </div>
+                  {step.highlight?.label && (
+                    <p className="mb-4 text-[11px] font-medium text-primary uppercase tracking-wider">
+                      {step.highlight.label}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <div
+                  className={cn(
+                    "relative flex h-28 w-full max-w-xs items-center justify-center rounded-3xl overflow-hidden mb-5 bg-gradient-to-br border",
+                    step.gradient,
+                  )}
+                >
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-background/80 backdrop-blur-sm shadow-sm">
+                    <Icon className={cn("h-8 w-8", step.iconColor)} strokeWidth={1.75} />
+                  </div>
                 </div>
-              </div>
+              )}
 
               <h2 className="text-xl font-bold tracking-tight mb-2 break-words">
                 {displayTitle}

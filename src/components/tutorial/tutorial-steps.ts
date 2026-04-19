@@ -12,6 +12,16 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+export interface TutorialHighlight {
+  /** Percent strings ("12%") for absolute positioning over the screenshot. */
+  top: string;
+  left: string;
+  width: string;
+  height: string;
+  /** Caption rendered under the screenshot, e.g. "Tap here to create an incident". */
+  label?: string;
+}
+
 export interface TutorialStep {
   id: string;
   icon: LucideIcon;
@@ -32,6 +42,10 @@ export interface TutorialStep {
   adminOnly?: boolean;
   /** Marker for the special interactive checklist step. */
   kind?: "checklist";
+  /** Optional screenshot path under /public, e.g. "/tutorial/incidents.png". */
+  screenshot?: string;
+  /** Optional highlight overlay drawn on top of the screenshot. */
+  highlight?: TutorialHighlight;
 }
 
 export const TUTORIAL_STEPS: TutorialStep[] = [
@@ -60,8 +74,18 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
       "Quick actions for the most common tasks",
       "Shopping needs surface here too",
     ],
+    proTip: "The bottom nav is your fastest way around — tap and hold on More to see everything.",
     route: "/",
     ctaLabel: "Show me",
+    screenshot: "/tutorial/dashboard.png",
+    highlight: {
+      // Quick Actions row
+      top: "37%",
+      left: "3%",
+      width: "94%",
+      height: "12%",
+      label: "Quick actions sit front and center",
+    },
   },
   {
     id: "incidents",
@@ -75,9 +99,18 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
       "Assign multiple trucks per incident",
       "Drives shift tickets and expenses",
     ],
-    proTip: "Got an Emergency Equipment Rental Agreement PDF? Upload it and we'll auto-create the incident.",
+    proTip: "Tap any incident to assign trucks and crew, then jump straight into shift tickets.",
     route: "/incidents",
     ctaLabel: "Open Incidents",
+    screenshot: "/tutorial/incidents.png",
+    highlight: {
+      // "+ New" button top-right
+      top: "1.5%",
+      left: "76%",
+      width: "22%",
+      height: "5.5%",
+      label: "Tap +New to start an incident",
+    },
   },
   {
     id: "shift-tickets",
@@ -94,6 +127,15 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     proTip: "Drafts save automatically — you won't lose work if you lose signal mid-ticket.",
     route: "/shift-tickets/log",
     ctaLabel: "View Ticket Log",
+    screenshot: "/tutorial/shift-tickets.png",
+    highlight: {
+      // First ticket row
+      top: "15%",
+      left: "3%",
+      width: "94%",
+      height: "11%",
+      label: "Tap any ticket to edit, sign, or export",
+    },
   },
   {
     id: "crew",
@@ -107,8 +149,18 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
       "Track training and certifications",
       "Quick contact by tap-to-call",
     ],
+    proTip: "Tap a crew member's phone number to call directly from the field.",
     route: "/crew",
     ctaLabel: "Open Crew",
+    screenshot: "/tutorial/crew.png",
+    highlight: {
+      // "+ Add" button
+      top: "1.5%",
+      left: "76%",
+      width: "22%",
+      height: "5.5%",
+      label: "Tap +Add to add a crew member",
+    },
   },
   {
     id: "fleet",
@@ -122,9 +174,18 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
       "Service log with mileage tracking",
       "Document storage (registration, insurance)",
     ],
-    proTip: "Snap a photo of the VIN plate and AI fills in make, model, and year automatically.",
+    proTip: "Tap a truck card to see inspections, service log, photos, and documents in one place.",
     route: "/fleet",
     ctaLabel: "Open Fleet",
+    screenshot: "/tutorial/fleet.png",
+    highlight: {
+      // First truck card
+      top: "15%",
+      left: "3%",
+      width: "94%",
+      height: "14%",
+      label: "Tap a truck to dive into details",
+    },
   },
   {
     id: "expenses",
@@ -141,6 +202,15 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     proTip: "Use Batch Scan after a long shift — drop in 20 receipts and let the AI do the data entry.",
     route: "/expenses",
     ctaLabel: "Open Expenses",
+    screenshot: "/tutorial/expenses.png",
+    highlight: {
+      // "Scan" button
+      top: "1.5%",
+      left: "55%",
+      width: "20%",
+      height: "5.5%",
+      label: "Tap Scan to capture receipts with the camera",
+    },
   },
   {
     id: "needs",
@@ -154,8 +224,18 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
       "Tag to a specific truck or person",
       "Check off as items are bought",
     ],
+    proTip: "Tag items to a truck so the buyer knows where everything goes.",
     route: "/needs",
     ctaLabel: "Open Needs",
+    screenshot: "/tutorial/needs.png",
+    highlight: {
+      // "+ Add" button
+      top: "1.5%",
+      left: "76%",
+      width: "22%",
+      height: "5.5%",
+      label: "Tap +Add to put something on the list",
+    },
   },
   {
     id: "offline",
