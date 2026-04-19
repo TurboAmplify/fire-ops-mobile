@@ -10,7 +10,7 @@ size accepted by App Store Connect (covers iPhone 15/16 Pro Max).
 | `screenshot-3-fleet.png` | Track Your Fleet At A Glance | Know what's in service, deployed, or ready |
 | `screenshot-4-offline.png` | No Signal? No Problem. | Works offline. Syncs automatically when you're back. |
 | `screenshot-5-incidents.png` | Track Fires In Real Time | Acres, containment, and crew assignments |
-| `screenshot-6-expenses.png` | Scan Receipts. Skip The Paperwork. | Capture and organize expenses in seconds |
+| `screenshot-6-expenses.png` | AI Reads Your Receipts | Snap a photo. We auto-fill the rest. (AI Powered) |
 | `screenshot-7-shift-tickets.png` | Complete OF-297s On Site | Capture shifts and signatures in the field |
 | `screenshot-8-audience.png` | Built for Fire Crews in the Field | Contractors • VFDs • Agencies |
 
