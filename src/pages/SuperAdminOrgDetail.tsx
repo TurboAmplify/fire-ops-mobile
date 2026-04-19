@@ -1,5 +1,5 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -59,6 +59,7 @@ export default function SuperAdminOrgDetail() {
   const { orgId } = useParams<{ orgId: string }>();
   const navigate = useNavigate();
   const { startViewAs } = useImpersonation();
+  const queryClient = useQueryClient();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["super-admin", "org", orgId],
@@ -74,6 +75,8 @@ export default function SuperAdminOrgDetail() {
     if (!orgId) return;
     try {
       await startViewAs(orgId, data?.name);
+      // Drop any cached data from prior context so org-scoped queries refetch
+      queryClient.clear();
       toast.success(`Viewing as ${data?.name ?? "organization"} (read-only)`);
       navigate("/");
     } catch (err) {

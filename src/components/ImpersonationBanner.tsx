@@ -1,11 +1,22 @@
 import { useImpersonation } from "@/hooks/useImpersonation";
 import { ShieldAlert, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function ImpersonationBanner() {
   const { isImpersonating, target, stopViewAs } = useImpersonation();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   if (!isImpersonating || !target) return null;
+
+  const handleExit = async () => {
+    await stopViewAs();
+    // Clear all cached org-scoped data so we don't briefly show stale rows
+    queryClient.clear();
+    navigate("/super-admin", { replace: true });
+  };
 
   return (
     <div
@@ -27,7 +38,7 @@ export function ImpersonationBanner() {
           variant="secondary"
           className="h-7 gap-1 px-2 text-xs"
           onClick={() => {
-            void stopViewAs();
+            void handleExit();
           }}
         >
           <X className="h-3.5 w-3.5" aria-hidden="true" />

@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useImpersonation } from "@/hooks/useImpersonation";
 
 interface OrgMembership {
   organizationId: string;
@@ -27,12 +28,14 @@ const OrganizationContext = createContext<OrganizationContextType>({
 
 export function OrganizationProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const [membership, setMembership] = useState<OrgMembership | null>(null);
+  const { isImpersonating, target } = useImpersonation();
+  const [realMembership, setRealMembership] = useState<OrgMembership | null>(null);
+  const [impersonatedMembership, setImpersonatedMembership] = useState<OrgMembership | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchMembership = async () => {
     if (!user) {
-      setMembership(null);
+      setRealMembership(null);
       setLoading(false);
       return;
     }
@@ -64,7 +67,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
             .eq("status", "pending"),
         ]);
 
-        setMembership({
+        setRealMembership({
           organizationId: orgId,
           organizationName: org.name ?? "",
           role: data.role,
@@ -73,11 +76,11 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
           seatsUsed: (memberCount ?? 0) + (inviteCount ?? 0),
         });
       } else {
-        setMembership(null);
+        setRealMembership(null);
       }
     } catch (err) {
       console.error("Failed to fetch org membership:", err);
-      setMembership(null);
+      setRealMembership(null);
     } finally {
       setLoading(false);
     }
@@ -87,6 +90,53 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     fetchMembership();
   }, [user?.id]);
+
+  // When impersonating, build a synthetic membership for the target org so all
+  // org-scoped queries/mutations transparently target the impersonated org.
+  useEffect(() => {
+    if (!isImpersonating || !target) {
+      setImpersonatedMembership(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from("organizations")
+          .select("name, seat_limit, tier")
+          .eq("id", target.organizationId)
+          .maybeSingle();
+        if (cancelled) return;
+        setImpersonatedMembership({
+          organizationId: target.organizationId,
+          organizationName: data?.name ?? target.organizationName ?? "",
+          role: "admin", // platform admin acts as org admin while viewing
+          seatLimit: data?.seat_limit ?? 0,
+          tier: data?.tier ?? "free",
+          seatsUsed: 0,
+        });
+      } catch {
+        if (!cancelled) {
+          setImpersonatedMembership({
+            organizationId: target.organizationId,
+            organizationName: target.organizationName ?? "",
+            role: "admin",
+            seatLimit: 0,
+            tier: "free",
+            seatsUsed: 0,
+          });
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isImpersonating, target?.organizationId, target?.organizationName]);
+
+  const membership = useMemo(
+    () => (isImpersonating ? impersonatedMembership : realMembership),
+    [isImpersonating, impersonatedMembership, realMembership],
+  );
 
   const isAdmin = membership?.role === "admin";
 
