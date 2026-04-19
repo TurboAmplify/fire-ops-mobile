@@ -147,7 +147,7 @@ export default function OrgSettings() {
       if (!orgId) return [];
       const { data, error } = await supabase
         .from("organization_invites")
-        .select("id, email, role, status, created_at, expires_at")
+        .select("id, email, role, status, created_at, expires_at, invite_code")
         .eq("organization_id", orgId)
         .eq("status", "pending")
         .order("created_at", { ascending: false });
