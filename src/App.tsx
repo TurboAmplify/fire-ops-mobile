@@ -57,8 +57,8 @@ import NotFound from "./pages/NotFound";
 const App = () => (
   <PersistQueryClientProvider client={queryClient} persistOptions={{ persister: asyncPersister, maxAge: 1000 * 60 * 60 * 24 }}>
     <AuthProvider>
-      <OrganizationProvider>
-        <ImpersonationProvider>
+      <ImpersonationProvider>
+        <OrganizationProvider>
         <TooltipProvider>
           <Toaster />
           <Sonner />
