@@ -67,15 +67,43 @@ export default function Login() {
         toast({ title: "Check your email", description: "Password reset link sent." });
         setMode("login");
       } else if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
+        // If they have an invite code, normalize and validate it before creating the account
+        const normalizedCode = hasInviteCode
+          ? inviteCode.toUpperCase().replace(/[^A-Z0-9]/g, "")
+          : "";
+        if (hasInviteCode && normalizedCode.length < 6) {
+          throw new Error("Enter the invite code your team admin gave you.");
+        }
+
+        const { data: signUpData, error } = await supabase.auth.signUp({
           email: cleanEmail,
           password,
           options: { emailRedirectTo: window.location.origin },
         });
         if (error) throw error;
+
+        // If signup auto-confirms (no email verification), session is present and
+        // we can immediately accept the invite. Otherwise, the code is preserved
+        // server-side and the user can finish via the email confirmation link.
+        if (hasInviteCode && signUpData.session) {
+          const { error: rpcError } = await supabase.rpc(
+            "accept_invite_by_code" as any,
+            { _code: normalizedCode } as any,
+          );
+          if (rpcError) throw rpcError;
+          toast({
+            title: "Welcome aboard",
+            description: "You've joined your team.",
+          });
+          // ProtectedRoute will route to the org dashboard now that membership exists
+          return;
+        }
+
         toast({
           title: "Account created",
-          description: "Check your email to verify your account before signing in.",
+          description: hasInviteCode
+            ? "Verify your email, then sign in to join your team."
+            : "Check your email to verify your account before signing in.",
         });
         setMode("login");
       } else {
