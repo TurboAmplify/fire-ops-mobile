@@ -25,11 +25,13 @@ export type ShiftCrewEntry = {
   standby_stop?: string | null;
 };
 
-export async function fetchAllShifts() {
-  const { data, error } = await supabase
+export async function fetchAllShifts(orgId?: string | null) {
+  let query = supabase
     .from("shifts")
     .select("*, incident_trucks!inner(id, incident_id, trucks(id, name, make, model, vin, plate, unit_type), incidents:incidents!incident_trucks_incident_id_fkey(id, name))")
     .order("date", { ascending: false });
+  if (orgId) query = query.eq("incident_trucks.incidents.organization_id", orgId);
+  const { data, error } = await query;
   if (error) throw error;
   return data as unknown as ShiftWithRelations[];
 }

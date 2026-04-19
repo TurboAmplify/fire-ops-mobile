@@ -68,11 +68,13 @@ export type ExpenseWithRelations = Expense & {
   incident_trucks: { id: string; trucks: { id: string; name: string } } | null;
 };
 
-export async function fetchExpenses() {
-  const { data, error } = await supabase
+export async function fetchExpenses(orgId?: string | null) {
+  let query = supabase
     .from("expenses")
     .select("*, incidents:incident_id(id, name), incident_trucks:incident_truck_id(id, trucks(id, name))")
     .order("date", { ascending: false });
+  if (orgId) query = query.eq("organization_id", orgId);
+  const { data, error } = await query;
   if (error) throw error;
   return data as ExpenseWithRelations[];
 }

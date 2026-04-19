@@ -5,11 +5,10 @@ export type CrewMember = Tables<"crew_members">;
 export type CrewMemberInsert = TablesInsert<"crew_members">;
 export type CrewMemberUpdate = TablesUpdate<"crew_members">;
 
-export async function fetchCrewMembers() {
-  const { data, error } = await supabase
-    .from("crew_members")
-    .select("*")
-    .order("name");
+export async function fetchCrewMembers(orgId?: string | null) {
+  let query = supabase.from("crew_members").select("*").order("name");
+  if (orgId) query = query.eq("organization_id", orgId);
+  const { data, error } = await query;
   if (error) throw error;
   return data;
 }

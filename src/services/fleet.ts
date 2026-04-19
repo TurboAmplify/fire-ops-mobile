@@ -14,11 +14,10 @@ export const TRUCK_STATUS_LABELS: Record<TruckStatus, string> = {
   needs_attention: "Needs Attention",
 };
 
-export async function fetchTrucks() {
-  const { data, error } = await supabase
-    .from("trucks")
-    .select("*")
-    .order("name");
+export async function fetchTrucks(orgId?: string | null) {
+  let query = supabase.from("trucks").select("*").order("name");
+  if (orgId) query = query.eq("organization_id", orgId);
+  const { data, error } = await query;
   if (error) throw error;
   return data;
 }

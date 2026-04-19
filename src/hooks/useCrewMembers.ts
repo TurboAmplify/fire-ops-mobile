@@ -11,9 +11,12 @@ import type { CrewMemberInsert, CrewMemberUpdate } from "@/services/crew";
 import { useOrganization } from "@/hooks/useOrganization";
 
 export function useCrewMembers() {
+  const { membership } = useOrganization();
+  const orgId = membership?.organizationId ?? null;
   return useQuery({
-    queryKey: ["crew_members"],
-    queryFn: fetchCrewMembers,
+    queryKey: ["crew_members", orgId],
+    queryFn: () => fetchCrewMembers(orgId),
+    enabled: !!orgId,
   });
 }
 
