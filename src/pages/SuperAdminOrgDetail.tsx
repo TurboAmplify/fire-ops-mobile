@@ -1,10 +1,12 @@
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, ChevronLeft, Building2 } from "lucide-react";
+import { Loader2, ChevronLeft, Building2, Eye } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
+import { useImpersonation } from "@/hooks/useImpersonation";
+import { toast } from "sonner";
 
 type OrgDetail = {
   id: string;
@@ -55,6 +57,8 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
 
 export default function SuperAdminOrgDetail() {
   const { orgId } = useParams<{ orgId: string }>();
+  const navigate = useNavigate();
+  const { startViewAs } = useImpersonation();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["super-admin", "org", orgId],
@@ -65,6 +69,19 @@ export default function SuperAdminOrgDetail() {
       return data as unknown as OrgDetail | null;
     },
   });
+
+  const handleViewAs = async () => {
+    if (!orgId) return;
+    try {
+      await startViewAs(orgId, data?.name);
+      toast.success(`Viewing as ${data?.name ?? "organization"} (read-only)`);
+      navigate("/");
+    } catch (err) {
+      toast.error("Failed to start view-as", {
+        description: err instanceof Error ? err.message : undefined,
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -78,12 +95,22 @@ export default function SuperAdminOrgDetail() {
           <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
             <Building2 className="h-4 w-4 text-primary" />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h1 className="truncate text-lg font-semibold leading-tight">
               {data?.name ?? "Organization"}
             </h1>
             <p className="truncate font-mono text-xs text-muted-foreground">{orgId}</p>
           </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5"
+            disabled={!data}
+            onClick={handleViewAs}
+          >
+            <Eye className="h-4 w-4" />
+            View as this org
+          </Button>
         </div>
       </header>
 
