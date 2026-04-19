@@ -10,6 +10,7 @@ import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TutorialProvider } from "@/hooks/useTutorial";
 import { TutorialOverlay } from "@/components/tutorial/TutorialOverlay";
+import { TutorialMiniBar } from "@/components/tutorial/TutorialMiniBar";
 import { queryClient, asyncPersister } from "@/lib/query-client";
 import "@/lib/offline-queue";
 import Login from "./pages/Login";
@@ -68,6 +69,7 @@ const App = () => (
             <TutorialProvider>
             <ImpersonationBanner />
             <TutorialOverlay />
+            <TutorialMiniBar />
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/reset-password" element={<ResetPassword />} />

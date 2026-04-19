@@ -23,11 +23,7 @@ export default function Dashboard() {
   const { data: crew, isLoading: loadingCrew, error: crewError } = useCrewMembers();
   const { data: needsItems, isLoading: loadingNeeds } = useNeedsList();
   const { isPlatformAdmin } = usePlatformAdmin();
-  const { start: startTutorial, maybeAutoStart } = useTutorial();
-
-  useEffect(() => {
-    void maybeAutoStart();
-  }, [maybeAutoStart]);
+  const { start: startTutorial } = useTutorial();
 
   const activeIncidents = incidents?.filter((i) => i.status === "active") ?? [];
   const activeCount = activeIncidents.length;
