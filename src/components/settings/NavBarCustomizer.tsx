@@ -29,7 +29,7 @@ export const ALL_NAV_OPTIONS: NavTabOption[] = [
   { key: "incidents", label: "Incidents", icon: Flame, to: "/incidents" },
   { key: "payroll", label: "Payroll", icon: Banknote, to: "/payroll", module: "payroll", adminOnly: true },
   { key: "expenses", label: "Expenses", icon: DollarSign, to: "/expenses" },
-  { key: "shift-tickets", label: "Shift Tickets", icon: FileText, to: "/shift-tickets", module: "shiftTickets" },
+  { key: "shift-tickets", label: "Shift Tickets", icon: FileText, to: "/shift-tickets/log", module: "shiftTickets" },
   { key: "crew", label: "Crew", icon: Users, to: "/crew" },
   { key: "fleet", label: "Fleet", icon: Truck, to: "/fleet" },
   { key: "needs", label: "Needs List", icon: ClipboardList, to: "/needs" },
