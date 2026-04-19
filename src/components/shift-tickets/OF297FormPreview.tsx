@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import type { ShiftTicket, EquipmentEntry, PersonnelEntry } from "@/services/shift-tickets";
+import { SignedImage } from "@/components/ui/SignedImage";
 
 interface OF297FormPreviewProps {
   ticket: Partial<ShiftTicket>;
@@ -197,7 +198,7 @@ export function OF297FormPreview({
             <p className="text-[10px]">{ticket.contractor_rep_name || ""}</p>
             <span className="text-[8px] font-bold block">32. Signature</span>
             {contractorSigUrl ? (
-              <img src={contractorSigUrl} alt="Contractor signature" className="h-10 max-w-full object-contain" />
+              <SignedImage src={contractorSigUrl} alt="Contractor signature" className="h-10 max-w-full object-contain" />
             ) : (
               <div className="h-10 border-b border-black" />
             )}
@@ -223,7 +224,7 @@ export function OF297FormPreview({
             <span className="text-[8px] font-bold block">34. Signature</span>
             {supervisorSigUrl ? (
               <div className="space-y-1">
-                <img src={supervisorSigUrl} alt="Supervisor signature" className="h-10 max-w-full object-contain" />
+                <SignedImage src={supervisorSigUrl} alt="Supervisor signature" className="h-10 max-w-full object-contain" />
                 <button onClick={onClearSignature} className="text-[10px] text-red-600 touch-target">Clear</button>
               </div>
             ) : (

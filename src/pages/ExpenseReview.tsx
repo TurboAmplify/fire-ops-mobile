@@ -5,6 +5,7 @@ import { useExpenses, useUpdateExpense } from "@/hooks/useExpenses";
 import { CATEGORY_ICON_MAP, CATEGORY_LABELS } from "@/services/expenses";
 import type { ExpenseCategory } from "@/services/expenses";
 import { ExpenseStatusBadge } from "@/components/expenses/ExpenseStatusBadge";
+import { SignedImage } from "@/components/ui/SignedImage";
 import { useAuth } from "@/hooks/useAuth";
 import { useOrganization } from "@/hooks/useOrganization";
 import { toast } from "sonner";
@@ -107,7 +108,7 @@ export default function ExpenseReview() {
                 {/* Receipt thumbnail */}
                 {exp.receipt_url && (
                   <div className="px-4 pb-2">
-                    <img
+                    <SignedImage
                       src={exp.receipt_url}
                       alt="Receipt"
                       className="w-full max-h-32 object-contain rounded-lg bg-secondary"
