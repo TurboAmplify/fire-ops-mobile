@@ -3,7 +3,8 @@ import { useRecentShiftTickets } from "@/hooks/useShiftTickets";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Clock, FileText, Pencil, FileDown, Loader2, ArrowUp, ArrowDown, ArrowUpDown, Trash2, AlertTriangle, Eye } from "lucide-react";
+import { CheckCircle2, Clock, FileText, Pencil, FileDown, Loader2, ArrowUp, ArrowDown, ArrowUpDown, Trash2, AlertTriangle, Eye, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { PersonnelEntry, ShiftTicket } from "@/services/shift-tickets";
 import { deleteShiftTicket } from "@/services/shift-tickets";
 import { useQueryClient } from "@tanstack/react-query";
@@ -61,9 +62,29 @@ function summarizePerDiem(entries: PersonnelEntry[]): string {
   return parts.length ? parts.join(" + ") : "—";
 }
 
+// "Lunch" in the log = a 30-min unpaid lunch break taken on shift.
+// On the form this is the "Lunch" chip in CrewSyncCard which writes
+// "30-min lunch at HHMM" into the entry remarks. It is intentionally
+// separate from the Per Diem "L" meal allowance.
 function lunchStatus(entries: PersonnelEntry[]): { label: string; tone: "ok" | "muted" } {
-  const anyLunch = (entries ?? []).some((e) => e.per_diem_l);
+  const anyLunch = (entries ?? []).some(
+    (e) => /30-?min lunch/i.test(e.remarks || "") || e.per_diem_l
+  );
   return anyLunch ? { label: "Lunch", tone: "ok" } : { label: "No lunch", tone: "muted" };
+}
+
+function isFinalizable(t: { contractor_rep_signed_at: string | null; supervisor_signed_at: string | null }): boolean {
+  return !!(t.contractor_rep_signed_at && t.supervisor_signed_at);
+}
+
+function statusReason(t: { status: string; contractor_rep_signed_at: string | null; supervisor_signed_at: string | null }): string {
+  if (t.status === "final") return "Both signatures captured — ticket is final.";
+  const missing: string[] = [];
+  if (!t.contractor_rep_signed_at) missing.push("contractor");
+  if (!t.supervisor_signed_at) missing.push("supervisor");
+  return missing.length === 0
+    ? "Save the ticket to mark it final."
+    : `Awaiting ${missing.join(" & ")} signature${missing.length > 1 ? "s" : ""} to finalize.`;
 }
 
 function crewSummary(entries: PersonnelEntry[]): string {
@@ -248,9 +269,28 @@ export default function ShiftTicketLog() {
   return (
     <AppShell title="Shift Ticket Log">
       <div className="p-4 space-y-4">
-        <p className="text-sm text-muted-foreground">
-          All shift tickets across incidents. Tap a row for actions.
-        </p>
+        <div className="flex items-start gap-2 text-sm text-muted-foreground">
+          <p className="flex-1">
+            All shift tickets across incidents. Tap a row for actions.
+          </p>
+          <TooltipProvider delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="What does Draft vs Final mean?"
+                  className="touch-target inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+                >
+                  <Info className="h-3.5 w-3.5" />
+                  Draft vs Final
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" align="end" className="max-w-[260px] text-xs">
+                A ticket becomes <span className="font-semibold">Final</span> automatically once both the contractor and supervisor signatures are captured. Until then it stays a <span className="font-semibold">Draft</span>.
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
 
         {isLoading && (
           <div className="rounded-2xl bg-card card-shadow p-6 text-center text-sm text-muted-foreground">
@@ -493,6 +533,9 @@ export default function ShiftTicketLog() {
                   {selected.ticket.status}
                 </Badge>
               </div>
+              <p className="text-[11px] text-muted-foreground leading-snug -mt-1">
+                {statusReason(selected.ticket)}
+              </p>
             </div>
           )}
           <div className="grid gap-2 pt-2">
