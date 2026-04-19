@@ -1,8 +1,17 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "sonner";
-import { Plus, Loader2, FileText, Save, Download, AlertTriangle, Copy } from "lucide-react";
+import { Plus, Loader2, FileText, Save, Download, AlertTriangle, Copy, Lock, Unlock } from "lucide-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { getLocalDateString } from "@/lib/local-date";
 import { AppShell } from "@/components/AppShell";
 import { useAvailableCrewMembers } from "@/hooks/useIncidentTruckCrew";
@@ -15,6 +24,13 @@ import { OF297FormPreview } from "./OF297FormPreview";
 import { UnsavedChangesDialog } from "./UnsavedChangesDialog";
 import { SuccessOverlay } from "@/components/ui/SuccessOverlay";
 import { uploadSignature, computeHours, buildRemarksString, insertSignatureAuditLog } from "@/services/shift-tickets";
+import {
+  diffTicket,
+  hasAnySignature,
+  insertAuditEntries,
+  isLocked as auditIsLocked,
+} from "@/services/shift-ticket-audit";
+import { useAuth } from "@/hooks/useAuth";
 import type { ShiftTicket, EquipmentEntry, PersonnelEntry } from "@/services/shift-tickets";
 import type { IncidentTruckCrewWithMember } from "@/services/incident-truck-crew";
 
