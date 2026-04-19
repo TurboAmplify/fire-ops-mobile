@@ -18,7 +18,14 @@ import { generateOF297Pdf } from "@/components/shift-tickets/generateOF297Pdf";
 
 function formatDateSafe(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
+  // YYYY-MM-DD strings must be parsed as LOCAL dates, not UTC,
+  // otherwise `new Date("2026-04-12")` becomes 4/11 in US timezones.
+  const ymd = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
   try {
+    if (ymd) {
+      const [, y, m, d] = ymd;
+      return format(new Date(Number(y), Number(m) - 1, Number(d)), "M/d/yy");
+    }
     return format(new Date(dateStr), "M/d/yy");
   } catch {
     return dateStr;
