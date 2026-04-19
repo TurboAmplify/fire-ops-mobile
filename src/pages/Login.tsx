@@ -188,6 +188,39 @@ export default function Login() {
               </div>
             )}
 
+            {mode === "signup" && (
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setHasInviteCode((v) => !v)}
+                  className="text-xs font-medium text-primary"
+                >
+                  {hasInviteCode ? "I'm starting a new team instead" : "I have an invite code"}
+                </button>
+                {hasInviteCode && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="invite-code" className="text-xs font-medium text-muted-foreground">
+                      Invite Code
+                    </Label>
+                    <Input
+                      id="invite-code"
+                      value={inviteCode}
+                      onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                      placeholder="e.g. K7M2X9PQ"
+                      autoCapitalize="characters"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      maxLength={12}
+                      className="h-12 rounded-xl bg-secondary border-border text-[15px] tracking-widest font-mono placeholder:text-muted-foreground/50 placeholder:font-sans placeholder:tracking-normal"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Ask your team admin for this code.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
             <Button
               type="submit"
               className="w-full h-12 rounded-xl text-[15px] font-bold fire-gradient border-0 text-white touch-target"
