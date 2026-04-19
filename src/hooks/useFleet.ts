@@ -26,11 +26,15 @@ import {
   deleteTruckHeroPhoto,
 } from "@/services/fleet";
 import type { TruckInsert, TruckUpdate } from "@/services/fleet";
+import { useOrganization } from "@/hooks/useOrganization";
 
 export function useTrucks() {
+  const { membership } = useOrganization();
+  const orgId = membership?.organizationId ?? null;
   return useQuery({
-    queryKey: ["trucks"],
-    queryFn: fetchTrucks,
+    queryKey: ["trucks", orgId],
+    queryFn: () => fetchTrucks(orgId),
+    enabled: !!orgId,
   });
 }
 

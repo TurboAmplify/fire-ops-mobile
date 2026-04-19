@@ -10,9 +10,12 @@ import type { IncidentInsert, IncidentUpdate } from "@/services/incidents";
 import { useOrganization } from "@/hooks/useOrganization";
 
 export function useIncidents() {
+  const { membership } = useOrganization();
+  const orgId = membership?.organizationId ?? null;
   return useQuery({
-    queryKey: ["incidents"],
-    queryFn: fetchIncidents,
+    queryKey: ["incidents", orgId],
+    queryFn: () => fetchIncidents(orgId),
+    enabled: !!orgId,
   });
 }
 

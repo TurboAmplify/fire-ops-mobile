@@ -6,11 +6,15 @@ import {
   fetchAllShifts,
 } from "@/services/shifts";
 import type { ShiftInsert, ShiftCrewEntry } from "@/services/shifts";
+import { useOrganization } from "@/hooks/useOrganization";
 
 export function useAllShifts() {
+  const { membership } = useOrganization();
+  const orgId = membership?.organizationId ?? null;
   return useQuery({
-    queryKey: ["all-shifts"],
-    queryFn: fetchAllShifts,
+    queryKey: ["all-shifts", orgId],
+    queryFn: () => fetchAllShifts(orgId),
+    enabled: !!orgId,
   });
 }
 

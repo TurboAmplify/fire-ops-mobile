@@ -15,10 +15,12 @@ export function useExpenses() {
   const { user } = useAuth();
   const role = membership?.role;
   const userId = user?.id;
+  const orgId = membership?.organizationId ?? null;
 
   return useQuery({
-    queryKey: ["expenses", role, userId],
-    queryFn: fetchExpenses,
+    queryKey: ["expenses", orgId, role, userId],
+    queryFn: () => fetchExpenses(orgId),
+    enabled: !!orgId,
     select: (data) => {
       // Owner sees all org expenses; others see only their own
       if (role === "owner") return data;
