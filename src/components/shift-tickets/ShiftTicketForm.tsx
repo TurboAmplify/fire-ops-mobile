@@ -5,6 +5,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "
 import { Button } from "@/components/ui/button";
 import { getLocalDateString } from "@/lib/local-date";
 import { AppShell } from "@/components/AppShell";
+import { useAvailableCrewMembers } from "@/hooks/useIncidentTruckCrew";
 import { SignaturePicker } from "./SignaturePicker";
 import type { SignatureMetadata } from "./SignaturePicker";
 import { EquipmentEntryRow } from "./EquipmentEntryRow";
@@ -117,6 +118,34 @@ export function ShiftTicketForm({
 
   // Supervisor sheet
   const [showSupervisorSheet, setShowSupervisorSheet] = useState(false);
+  const { data: availableCrewMembers = [] } = useAvailableCrewMembers(organizationId || undefined);
+
+  const selectedCrewNames = new Set(
+    personnelEntries
+      .map((entry) => entry.operator_name.trim().toLowerCase())
+      .filter(Boolean)
+  );
+
+  const pickerOptions = [
+    ...(crewRoster ?? [])
+      .filter((member) => member.is_active)
+      .map((member) => ({
+        key: `assignment-${member.id}`,
+        name: member.crew_members?.name || "",
+        role: member.role_on_assignment || member.crew_members?.role || "",
+        source: "Assigned to this truck",
+      })),
+    ...availableCrewMembers.map((member) => ({
+      key: `member-${member.id}`,
+      name: member.name || "",
+      role: member.role || "",
+      source: "Organization crew",
+    })),
+  ].filter((option, index, all) => {
+    const normalizedName = option.name.trim().toLowerCase();
+    if (!normalizedName || selectedCrewNames.has(normalizedName)) return false;
+    return all.findIndex((candidate) => candidate.name.trim().toLowerCase() === normalizedName) === index;
+  });
 
   // ── Dirty tracking & auto-save ──
   const [isDirty, setIsDirty] = useState(false);
@@ -574,7 +603,7 @@ export function ShiftTicketForm({
               )}
             </h3>
             <button type="button" onClick={() => {
-              if (crewRoster && crewRoster.length > 0) {
+              if (pickerOptions.length > 0 || availableCrewMembers.length > 0 || (crewRoster?.length ?? 0) > 0) {
                 setShowCrewPicker(!showCrewPicker);
               } else {
                 setPersonnelEntries((prev) => [...prev, emptyPersonnelEntry()]);
@@ -587,19 +616,17 @@ export function ShiftTicketForm({
           </div>
 
           {/* Crew roster picker */}
-          {showCrewPicker && crewRoster && crewRoster.length > 0 && (
+          {showCrewPicker && (pickerOptions.length > 0 || availableCrewMembers.length > 0 || (crewRoster?.length ?? 0) > 0) && (
             <div className="rounded-xl border border-border bg-card p-2 space-y-1">
               <p className="text-[11px] font-medium text-muted-foreground px-1">Select crew member</p>
-              {crewRoster
-                .filter((c) => c.is_active && !personnelEntries.some((pe) => pe.operator_name === c.crew_members?.name))
-                .map((c) => (
+              {pickerOptions.map((option) => (
                   <button
-                    key={c.id}
+                    key={option.key}
                     type="button"
                     onClick={() => {
                       const newEntry: PersonnelEntry = {
                         ...emptyPersonnelEntry(),
-                        operator_name: c.crew_members?.name || "",
+                        operator_name: option.name,
                       };
                       setPersonnelEntries((prev) => [...prev, newEntry]);
                       markDirty();
@@ -609,19 +636,19 @@ export function ShiftTicketForm({
                   >
                     <div className="w-8 h-8 rounded-full bg-primary/15 text-primary flex items-center justify-center text-xs font-bold">
                       {(() => {
-                        const name = c.crew_members?.name || "";
+                        const name = option.name;
                         const parts = name.trim().split(/\s+/);
                         return parts.length >= 2 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : name.slice(0, 2).toUpperCase();
                       })()}
                     </div>
                     <div>
-                      <p className="text-sm font-medium">{c.crew_members?.name}</p>
-                      {c.crew_members?.role && <p className="text-[11px] text-muted-foreground">{c.crew_members.role}</p>}
+                      <p className="text-sm font-medium">{option.name}</p>
+                      <p className="text-[11px] text-muted-foreground">{option.role || option.source}</p>
                     </div>
                   </button>
                 ))}
-              {crewRoster.filter((c) => c.is_active && !personnelEntries.some((pe) => pe.operator_name === c.crew_members?.name)).length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-2">All crew members already added</p>
+              {pickerOptions.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-2">No more crew members available to add</p>
               )}
               <button
                 type="button"
