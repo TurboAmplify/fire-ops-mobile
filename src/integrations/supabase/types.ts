@@ -1695,6 +1695,10 @@ export type Database = {
         Returns: boolean
       }
       is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_real_org_member: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: boolean
+      }
       user_can_access_truck: {
         Args: { _truck_id: string; _user_id: string }
         Returns: boolean
