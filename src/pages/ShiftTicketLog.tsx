@@ -577,13 +577,15 @@ export default function ShiftTicketLog() {
               )}
               <span className="flex-1">Download PDF</span>
             </button>
-            <button
-              onClick={openDeleteDialog}
-              className="flex items-center gap-3 rounded-xl bg-destructive/10 px-4 py-3 text-left text-sm font-medium text-destructive active:bg-destructive/20 transition-colors touch-target"
-            >
-              <Trash2 className="h-4 w-4" />
-              <span className="flex-1">Delete ticket</span>
-            </button>
+            {isAdmin && (
+              <button
+                onClick={openDeleteDialog}
+                className="flex items-center gap-3 rounded-xl bg-destructive/10 px-4 py-3 text-left text-sm font-medium text-destructive active:bg-destructive/20 transition-colors touch-target"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span className="flex-1">Delete ticket</span>
+              </button>
+            )}
           </div>
         </DialogContent>
       </Dialog>
