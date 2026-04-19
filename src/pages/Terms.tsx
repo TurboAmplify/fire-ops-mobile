@@ -12,7 +12,7 @@ export default function Terms() {
 
         <div className="rounded-xl bg-card p-4 space-y-4 text-sm leading-relaxed text-muted-foreground">
           <p>
-            <strong className="text-foreground">Effective Date:</strong> March 29, 2026
+            <strong className="text-foreground">Effective Date:</strong> April 19, 2026
           </p>
 
           <p>
