@@ -77,43 +77,40 @@ export default function Fleet() {
             )}
             {filtered.map((truck) => {
               const photoUrl = (truck as any).photo_url;
+              const subtitle = [truck.unit_type, truck.make, truck.model].filter(Boolean).join(" · ");
               return (
                 <Link
                   key={truck.id}
                   to={`/fleet/${truck.id}`}
-                  className="block rounded-2xl bg-card card-shadow transition-all duration-150 active:scale-[0.98] active:shadow-none overflow-hidden"
+                  className="flex items-stretch gap-3 rounded-2xl bg-card card-shadow p-2.5 transition-all duration-150 active:scale-[0.98] active:shadow-none"
                 >
-                  {photoUrl ? (
-                    <div className="aspect-[16/7] w-full overflow-hidden">
+                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-accent">
+                    {photoUrl ? (
                       <SignedImage
                         src={photoUrl}
                         alt={truck.name}
-                        className="w-full h-full object-cover"
+                        className="h-full w-full object-cover"
                         loading="lazy"
                       />
-                    </div>
-                  ) : null}
-                  <div className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        {!photoUrl && (
-                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent shrink-0">
-                            <TruckIcon className="h-5 w-5 text-accent-foreground" />
-                          </div>
-                        )}
-                        <div className="min-w-0">
-                          <p className="font-semibold text-[15px]">{truck.name}</p>
-                          {(truck.unit_type || truck.make) && (
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              {[truck.unit_type, truck.make, truck.model].filter(Boolean).join(" · ")}
-                            </p>
-                          )}
-                        </div>
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center">
+                        <TruckIcon className="h-7 w-7 text-accent-foreground/60" />
                       </div>
+                    )}
+                  </div>
+                  <div className="flex min-w-0 flex-1 flex-col justify-center py-1 pr-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="truncate font-semibold text-[15px] leading-tight">{truck.name}</p>
                       <StatusBadge status={truck.status as TruckStatus} />
                     </div>
-                    {truck.notes && (
-                      <p className="mt-2 text-xs text-muted-foreground line-clamp-1">{truck.notes}</p>
+                    {subtitle && (
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">{subtitle}</p>
+                    )}
+                    {truck.plate && (
+                      <p className="mt-0.5 truncate text-[11px] text-muted-foreground/80">
+                        Plate {truck.plate}
+                        {truck.year ? ` · ${truck.year}` : ""}
+                      </p>
                     )}
                   </div>
                 </Link>
