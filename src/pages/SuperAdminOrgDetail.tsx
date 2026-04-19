@@ -95,12 +95,22 @@ export default function SuperAdminOrgDetail() {
           <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
             <Building2 className="h-4 w-4 text-primary" />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h1 className="truncate text-lg font-semibold leading-tight">
               {data?.name ?? "Organization"}
             </h1>
             <p className="truncate font-mono text-xs text-muted-foreground">{orgId}</p>
           </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5"
+            disabled={!data}
+            onClick={handleViewAs}
+          >
+            <Eye className="h-4 w-4" />
+            View as this org
+          </Button>
         </div>
       </header>
 
