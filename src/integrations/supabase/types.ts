@@ -797,6 +797,48 @@ export type Database = {
           },
         ]
       }
+      shift_ticket_audit: {
+        Row: {
+          actor_name: string | null
+          actor_user_id: string | null
+          event_type: string
+          field_name: string | null
+          id: string
+          new_value: string | null
+          occurred_at: string
+          old_value: string | null
+          organization_id: string
+          reason: string | null
+          shift_ticket_id: string
+        }
+        Insert: {
+          actor_name?: string | null
+          actor_user_id?: string | null
+          event_type: string
+          field_name?: string | null
+          id?: string
+          new_value?: string | null
+          occurred_at?: string
+          old_value?: string | null
+          organization_id: string
+          reason?: string | null
+          shift_ticket_id: string
+        }
+        Update: {
+          actor_name?: string | null
+          actor_user_id?: string | null
+          event_type?: string
+          field_name?: string | null
+          id?: string
+          new_value?: string | null
+          occurred_at?: string
+          old_value?: string | null
+          organization_id?: string
+          reason?: string | null
+          shift_ticket_id?: string
+        }
+        Relationships: []
+      }
       shift_tickets: {
         Row: {
           agreement_number: string | null
