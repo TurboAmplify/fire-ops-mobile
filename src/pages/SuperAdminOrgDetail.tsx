@@ -1,10 +1,12 @@
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, ChevronLeft, Building2 } from "lucide-react";
+import { Loader2, ChevronLeft, Building2, Eye } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
+import { useImpersonation } from "@/hooks/useImpersonation";
+import { toast } from "sonner";
 
 type OrgDetail = {
   id: string;
