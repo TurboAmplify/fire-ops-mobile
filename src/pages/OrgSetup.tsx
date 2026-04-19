@@ -89,7 +89,7 @@ export default function OrgSetup() {
     })();
   }, [user?.id]);
 
-  if (authLoading || orgLoading || checkingInvite) {
+  if (authLoading || orgLoading || paLoading || checkingInvite) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -99,6 +99,9 @@ export default function OrgSetup() {
 
   if (!user) return <Navigate to="/login" replace />;
   if (membership) return <Navigate to="/" replace />;
+  // Platform admins without an org membership belong on the super-admin
+  // dashboard, not the team-setup flow (unless actively impersonating).
+  if (isPlatformAdmin && !isImpersonating) return <Navigate to="/super-admin" replace />;
 
   const handleAcceptInvite = async () => {
     if (!pendingInvite || !user) return;
