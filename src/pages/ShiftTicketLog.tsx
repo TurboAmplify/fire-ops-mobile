@@ -122,6 +122,7 @@ export default function ShiftTicketLog() {
   const { data: tickets, isLoading } = useRecentShiftTickets(200);
   const [selected, setSelected] = useState<SelectedTicket | null>(null);
   const [downloadLoading, setDownloadLoading] = useState(false);
+  const [auditLoading, setAuditLoading] = useState(false);
   const [viewLoading, setViewLoading] = useState(false);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [pdfPreviewTitle, setPdfPreviewTitle] = useState<string>("");
