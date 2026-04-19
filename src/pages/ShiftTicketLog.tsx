@@ -533,6 +533,9 @@ export default function ShiftTicketLog() {
                   {selected.ticket.status}
                 </Badge>
               </div>
+              <p className="text-[11px] text-muted-foreground leading-snug -mt-1">
+                {statusReason(selected.ticket)}
+              </p>
             </div>
           )}
           <div className="grid gap-2 pt-2">
