@@ -1574,6 +1574,30 @@ export type Database = {
           tier: string
         }[]
       }
+      admin_list_users: {
+        Args: { _limit?: number; _search?: string }
+        Returns: {
+          created_at: string
+          email: string
+          full_name: string
+          last_sign_in_at: string
+          org_count: number
+          organizations: Json
+          user_id: string
+        }[]
+      }
+      admin_recent_activity: {
+        Args: { _days?: number }
+        Returns: {
+          actor_email: string
+          event_type: string
+          occurred_at: string
+          organization_id: string
+          organization_name: string
+          subtitle: string
+          title: string
+        }[]
+      }
       create_organization_with_owner:
         | { Args: { _name: string }; Returns: string }
         | {

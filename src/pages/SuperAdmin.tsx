@@ -15,14 +15,14 @@ const sections = [
     description: "Search users, see org memberships",
     icon: Users,
     to: "/super-admin/users",
-    ready: false,
+    ready: true,
   },
   {
     title: "Activity feed",
     description: "Signups, org creations, invites accepted",
     icon: Activity,
     to: "/super-admin/activity",
-    ready: false,
+    ready: true,
   },
   {
     title: "Errors",
