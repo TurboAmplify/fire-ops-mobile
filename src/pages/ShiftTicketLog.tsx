@@ -202,6 +202,10 @@ export default function ShiftTicketLog() {
 
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
+    if (!isAdmin) {
+      toast.error("Only organization admins can delete shift tickets");
+      return;
+    }
     if (deleteConfirmText.trim().toLowerCase() !== "delete") return;
     setDeleteLoading(true);
     try {
