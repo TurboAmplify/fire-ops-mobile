@@ -4,6 +4,7 @@ import { OfflineBanner } from "./OfflineBanner";
 import { ChevronLeft } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import fireLogo from "@/assets/fire-logo.png";
+import { useAppBackground } from "@/hooks/useAppBackground";
 
 interface AppShellProps {
   children: ReactNode;
@@ -16,12 +17,22 @@ interface AppShellProps {
 export function AppShell({ children, title, headerRight, showBack, onBack }: AppShellProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { src: bgSrc, variant } = useAppBackground();
 
   const isNested = showBack ?? (location.pathname.split("/").filter(Boolean).length > 1);
   const isHome = location.pathname === "/";
+  const showBackdrop = variant !== "hero";
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="relative flex min-h-screen flex-col bg-background">
+      {showBackdrop && (
+        <div
+          aria-hidden
+          className="pointer-events-none fixed inset-0 z-0 bg-cover bg-center opacity-[0.12] dark:opacity-20"
+          style={{ backgroundImage: `url(${bgSrc})` }}
+        />
+      )}
+      <div className="relative z-10 flex min-h-screen flex-col">
       {title && (
         <>
           <header className={`fixed top-0 left-0 right-0 z-50 safe-area-top ${
