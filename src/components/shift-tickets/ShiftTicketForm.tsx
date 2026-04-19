@@ -990,6 +990,34 @@ export function ShiftTicketForm({
         />
       )}
 
+      {/* Unlock dialog (admin override) */}
+      <Dialog open={showUnlockDialog} onOpenChange={(o) => !o && !unlockSubmitting && setShowUnlockDialog(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Unlock className="h-4 w-4" /> Unlock Final Ticket</DialogTitle>
+            <DialogDescription>
+              This ticket has been signed by the supervisor and is locked. Unlocking will allow edits, but every change will be permanently recorded in the audit trail along with your reason.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-muted-foreground">Reason for unlocking</label>
+            <Textarea
+              value={unlockReason}
+              onChange={(e) => setUnlockReason(e.target.value)}
+              placeholder="e.g. Correcting a typo in equipment hours after supervisor sign-off"
+              rows={3}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUnlockDialog(false)} disabled={unlockSubmitting}>Cancel</Button>
+            <Button onClick={handleUnlockConfirm} disabled={unlockSubmitting || unlockReason.trim().length < 4}>
+              {unlockSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Unlock for Editing"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Unsaved changes guard */}
       <UnsavedChangesDialog
         open={showLeaveDialog}
