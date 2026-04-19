@@ -16,10 +16,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, ChevronLeft, Building2, Eye, UserPlus, UserMinus } from "lucide-react";
+import { Loader2, ChevronLeft, Building2, Eye, UserPlus, UserMinus, Settings as SettingsIcon, ShieldCheck } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { useImpersonation } from "@/hooks/useImpersonation";
 import { useAuth } from "@/hooks/useAuth";
+import { useOrganization } from "@/hooks/useOrganization";
 import { toast } from "sonner";
 
 type OrgDetail = {
@@ -74,6 +75,7 @@ export default function SuperAdminOrgDetail() {
   const navigate = useNavigate();
   const { startViewAs } = useImpersonation();
   const { user } = useAuth();
+  const { setActiveOrgId, refetch: refetchMemberships } = useOrganization();
   const queryClient = useQueryClient();
   const [membershipDialog, setMembershipDialog] = useState<null | "add" | "remove">(null);
   const [reason, setReason] = useState("");
