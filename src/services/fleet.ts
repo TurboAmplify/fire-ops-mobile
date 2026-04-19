@@ -445,3 +445,38 @@ export async function deleteTruckHeroPhoto(truckId: string) {
     .eq("id", truckId);
   if (error) throw error;
 }
+
+// --- AI Photo Parsing ---
+
+export type ParsedTruckPhoto = {
+  vin?: string | null;
+  license_plate?: string | null;
+  year?: number | null;
+  make?: string | null;
+  model?: string | null;
+  registration_expires?: string | null;
+  detected_document_type?: "vin_plate" | "registration" | "license_plate" | "vehicle" | "other";
+};
+
+export async function parseTruckPhoto(fileUrl: string): Promise<ParsedTruckPhoto> {
+  const { data, error } = await supabase.functions.invoke("parse-truck-photo", {
+    body: { fileUrl },
+  });
+  if (error) {
+    // Surface friendly error from edge function body if present
+    const msg = (error as any)?.context?.body
+      ? await (error as any).context.text?.().catch(() => null)
+      : null;
+    throw new Error(msg || error.message || "Failed to scan photo");
+  }
+  return (data?.parsed ?? {}) as ParsedTruckPhoto;
+}
+
+export const DOCUMENT_TYPE_TO_LABEL: Record<string, string> = {
+  vin_plate: "VIN Plate",
+  registration: "Registration",
+  license_plate: "Plate",
+  vehicle: "Exterior",
+  other: "Other",
+};
+
