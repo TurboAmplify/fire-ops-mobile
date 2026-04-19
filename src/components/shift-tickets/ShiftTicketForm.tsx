@@ -1,8 +1,17 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "sonner";
-import { Plus, Loader2, FileText, Save, Download, AlertTriangle, Copy } from "lucide-react";
+import { Plus, Loader2, FileText, Save, Download, AlertTriangle, Copy, Lock, Unlock } from "lucide-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { getLocalDateString } from "@/lib/local-date";
 import { AppShell } from "@/components/AppShell";
 import { useAvailableCrewMembers } from "@/hooks/useIncidentTruckCrew";
@@ -15,6 +24,13 @@ import { OF297FormPreview } from "./OF297FormPreview";
 import { UnsavedChangesDialog } from "./UnsavedChangesDialog";
 import { SuccessOverlay } from "@/components/ui/SuccessOverlay";
 import { uploadSignature, computeHours, buildRemarksString, insertSignatureAuditLog } from "@/services/shift-tickets";
+import {
+  diffTicket,
+  hasAnySignature,
+  insertAuditEntries,
+  isLocked as auditIsLocked,
+} from "@/services/shift-ticket-audit";
+import { useAuth } from "@/hooks/useAuth";
 import type { ShiftTicket, EquipmentEntry, PersonnelEntry } from "@/services/shift-tickets";
 import type { IncidentTruckCrewWithMember } from "@/services/incident-truck-crew";
 
@@ -31,6 +47,8 @@ interface ShiftTicketFormProps {
   exportingPdf?: boolean;
   warnings?: string[];
   crewRoster?: IncidentTruckCrewWithMember[];
+  /** True when the signed-in user is an org admin. Required for unlocking a final ticket. */
+  isAdmin?: boolean;
 }
 
 const emptyEquipmentEntry = (): EquipmentEntry => ({
@@ -75,7 +93,9 @@ export function ShiftTicketForm({
   exportingPdf,
   warnings,
   crewRoster,
+  isAdmin = false,
 }: ShiftTicketFormProps) {
+  const { user } = useAuth();
   // Header fields
   const [agreementNumber, setAgreementNumber] = useState("");
   const [contractorName, setContractorName] = useState("");
@@ -154,6 +174,17 @@ export function ShiftTicketForm({
 
   // ── Success overlay ──
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // ── Lock & audit state ──
+  // A ticket is locked once the supervisor signature is captured.
+  // Admins can unlock with a written reason; the unlock + every subsequent
+  // save are written to the immutable shift_ticket_audit table.
+  const ticketLocked = !!ticket && auditIsLocked(ticket as Record<string, unknown>);
+  const [unlockedThisSession, setUnlockedThisSession] = useState(false);
+  const [unlockReason, setUnlockReason] = useState("");
+  const [showUnlockDialog, setShowUnlockDialog] = useState(false);
+  const [unlockSubmitting, setUnlockSubmitting] = useState(false);
+  const editingLocked = ticketLocked && !unlockedThisSession;
 
   const showSuccess = useCallback((msg: string) => {
     setSuccessMsg(msg);
@@ -237,8 +268,10 @@ export function ShiftTicketForm({
   const buildSavePayload = (): Partial<ShiftTicket> => {
     const persistedContractorSigUrl = getPersistedSignatureUrl(contractorSigUrl);
     const persistedSupervisorSigUrl = getPersistedSignatureUrl(supervisorSigUrl);
-    // M2-M4: Auto-promote status to "final" once both signatures are persisted.
-    const isFinal = !!(persistedContractorSigUrl && persistedSupervisorSigUrl);
+    // Lock model: Final = supervisor signature captured. Contractor sig alone
+    // keeps the ticket in Draft status. Re-locking happens automatically on
+    // every save while the supervisor sig is still present.
+    const isFinal = !!persistedSupervisorSigUrl;
     return {
       incident_truck_id: incidentTruckId,
       organization_id: organizationId,
@@ -270,13 +303,100 @@ export function ShiftTicketForm({
     };
   };
 
+  const writeAuditForSave = async (
+    payload: Partial<ShiftTicket>,
+    opts: { isOverrideEdit: boolean }
+  ) => {
+    if (!ticket?.id || !organizationId) return;
+    // Only audit changes once a signature exists. Before any signature, the
+    // ticket is considered editable working state.
+    if (!hasAnySignature(ticket as Record<string, unknown>)) return;
+
+    const diffs = diffTicket(
+      ticket as Record<string, unknown>,
+      payload as Record<string, unknown>
+    );
+    if (diffs.length === 0) return;
+
+    const actor_user_id = user?.id ?? null;
+    const actor_name = (user?.user_metadata as { full_name?: string } | undefined)?.full_name ?? user?.email ?? null;
+
+    const entries = diffs.map((d) => ({
+      shift_ticket_id: ticket.id!,
+      organization_id: organizationId,
+      event_type: opts.isOverrideEdit ? ("override_edit" as const) : d.event_type,
+      field_name: d.field_name ?? null,
+      old_value: d.old_value ?? null,
+      new_value: d.new_value ?? null,
+      reason: opts.isOverrideEdit ? unlockReason || null : null,
+      actor_user_id,
+      actor_name,
+    }));
+
+    await insertAuditEntries(entries);
+  };
+
   const handleSave = async (silent = false) => {
+    if (editingLocked) {
+      toast.error("This ticket is locked. An admin must unlock it before saving changes.");
+      return;
+    }
+    const payload = buildSavePayload();
     try {
-      await Promise.resolve(onSave(buildSavePayload()));
+      await writeAuditForSave(payload, { isOverrideEdit: !!unlockedThisSession });
+      await Promise.resolve(onSave(payload));
       setIsDirty(false);
-      if (!silent) showSuccess("Saved");
+
+      // Re-lock automatically if supervisor sig is still present after save
+      if (unlockedThisSession && payload.status === "final") {
+        await insertAuditEntries([
+          {
+            shift_ticket_id: ticket!.id!,
+            organization_id: organizationId,
+            event_type: "relocked",
+            actor_user_id: user?.id ?? null,
+            actor_name:
+              (user?.user_metadata as { full_name?: string } | undefined)?.full_name ??
+              user?.email ??
+              null,
+          },
+        ]);
+        setUnlockedThisSession(false);
+        setUnlockReason("");
+      }
+
+      if (!silent) showSuccess(payload.status === "final" ? "Saved & locked" : "Saved");
     } catch {
       // Error handled by parent
+    }
+  };
+
+  const handleUnlockConfirm = async () => {
+    if (!ticket?.id || !organizationId) return;
+    if (unlockReason.trim().length < 4) {
+      toast.error("Please enter a reason for unlocking (4+ characters)");
+      return;
+    }
+    setUnlockSubmitting(true);
+    try {
+      await insertAuditEntries([
+        {
+          shift_ticket_id: ticket.id,
+          organization_id: organizationId,
+          event_type: "unlocked",
+          reason: unlockReason.trim(),
+          actor_user_id: user?.id ?? null,
+          actor_name:
+            (user?.user_metadata as { full_name?: string } | undefined)?.full_name ??
+            user?.email ??
+            null,
+        },
+      ]);
+      setUnlockedThisSession(true);
+      setShowUnlockDialog(false);
+      showSuccess("Ticket unlocked for editing");
+    } finally {
+      setUnlockSubmitting(false);
     }
   };
 
@@ -777,12 +897,35 @@ export function ShiftTicketForm({
         </section>
       </div>
 
+      {/* ── Lock banner ── */}
+      {ticketLocked && (
+        <div className="fixed bottom-[calc(7rem+env(safe-area-inset-bottom))] left-0 right-0 px-3 z-40">
+          <div className="flex items-center gap-2 rounded-xl border border-warning/40 bg-warning/10 px-3 py-2">
+            <Lock className="h-4 w-4 text-warning shrink-0" />
+            <p className="flex-1 text-[11px] font-medium text-warning leading-tight">
+              {unlockedThisSession
+                ? "Unlocked for editing — changes will be logged in the audit trail."
+                : "This ticket is FINAL and locked. Supervisor signature is on file."}
+            </p>
+            {!unlockedThisSession && isAdmin && (
+              <button
+                type="button"
+                onClick={() => setShowUnlockDialog(true)}
+                className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-warning text-warning-foreground px-2 py-1 text-[11px] font-semibold touch-target"
+              >
+                <Unlock className="h-3 w-3" /> Unlock
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── Bottom Action Bar (above BottomNav) ── */}
       <div className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom))] left-0 right-0 border-t border-border bg-background/95 backdrop-blur-md p-3 flex gap-2 z-40">
-        <button onClick={() => handleSave(false)} disabled={saving}
+        <button onClick={() => handleSave(false)} disabled={saving || editingLocked}
           className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground touch-target disabled:opacity-40 active:scale-[0.98]">
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          Save Draft
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : editingLocked ? <Lock className="h-4 w-4" /> : <Save className="h-4 w-4" />}
+          {editingLocked ? "Locked" : ticketLocked && unlockedThisSession ? "Save & Re-lock" : "Save Draft"}
         </button>
         {ticket?.id && (
           <>
@@ -846,6 +989,34 @@ export function ShiftTicketForm({
           uploadingSig={uploadingSig}
         />
       )}
+
+      {/* Unlock dialog (admin override) */}
+      <Dialog open={showUnlockDialog} onOpenChange={(o) => !o && !unlockSubmitting && setShowUnlockDialog(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Unlock className="h-4 w-4" /> Unlock Final Ticket</DialogTitle>
+            <DialogDescription>
+              This ticket has been signed by the supervisor and is locked. Unlocking will allow edits, but every change will be permanently recorded in the audit trail along with your reason.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-muted-foreground">Reason for unlocking</label>
+            <Textarea
+              value={unlockReason}
+              onChange={(e) => setUnlockReason(e.target.value)}
+              placeholder="e.g. Correcting a typo in equipment hours after supervisor sign-off"
+              rows={3}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUnlockDialog(false)} disabled={unlockSubmitting}>Cancel</Button>
+            <Button onClick={handleUnlockConfirm} disabled={unlockSubmitting || unlockReason.trim().length < 4}>
+              {unlockSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Unlock for Editing"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Unsaved changes guard */}
       <UnsavedChangesDialog
