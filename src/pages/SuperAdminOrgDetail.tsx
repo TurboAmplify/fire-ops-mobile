@@ -107,6 +107,8 @@ export default function SuperAdminOrgDetail() {
           : `Removed from ${data?.name ?? "organization"}`,
       );
       queryClient.invalidateQueries({ queryKey: ["super-admin", "org", orgId] });
+      // Refresh the multi-org membership list so the new org shows up immediately
+      refetchMemberships();
       setMembershipDialog(null);
       setReason("");
     },
@@ -130,6 +132,14 @@ export default function SuperAdminOrgDetail() {
         description: err instanceof Error ? err.message : undefined,
       });
     }
+  };
+
+  const handleEditOrg = () => {
+    if (!orgId) return;
+    setActiveOrgId(orgId);
+    // Drop cached org-scoped data so OrgSettings reflects the newly-active org
+    queryClient.invalidateQueries();
+    navigate("/org-settings");
   };
 
   return (
