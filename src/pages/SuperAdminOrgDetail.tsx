@@ -148,16 +148,40 @@ export default function SuperAdminOrgDetail() {
             </h1>
             <p className="truncate font-mono text-xs text-muted-foreground">{orgId}</p>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1.5"
-            disabled={!data}
-            onClick={handleViewAs}
-          >
-            <Eye className="h-4 w-4" />
-            View as this org
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {isMember ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                disabled={!data}
+                onClick={() => setMembershipDialog("remove")}
+              >
+                <UserMinus className="h-4 w-4" />
+                Remove me from org
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                className="gap-1.5"
+                disabled={!data}
+                onClick={() => setMembershipDialog("add")}
+              >
+                <UserPlus className="h-4 w-4" />
+                Add me as admin
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              disabled={!data}
+              onClick={handleViewAs}
+            >
+              <Eye className="h-4 w-4" />
+              View as this org
+            </Button>
+          </div>
         </div>
       </header>
 
