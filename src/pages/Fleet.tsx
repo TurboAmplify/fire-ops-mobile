@@ -4,6 +4,7 @@ import { Plus, Loader2, Truck as TruckIcon } from "lucide-react";
 import { useTrucks } from "@/hooks/useFleet";
 import { TRUCK_STATUS_LABELS, type TruckStatus } from "@/services/fleet";
 import { useState } from "react";
+import { SignedImage } from "@/components/ui/SignedImage";
 
 const filters: (TruckStatus | "all")[] = ["all", "available", "deployed", "maintenance"];
 
@@ -84,7 +85,7 @@ export default function Fleet() {
                 >
                   {photoUrl ? (
                     <div className="aspect-[16/7] w-full overflow-hidden">
-                      <img
+                      <SignedImage
                         src={photoUrl}
                         alt={truck.name}
                         className="w-full h-full object-cover"

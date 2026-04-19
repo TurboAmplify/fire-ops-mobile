@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getViewableUrl } from "@/lib/storage-url";
 
 export interface ResourceOrder {
   id: string;
@@ -24,9 +25,11 @@ export async function fetchResourceOrders(incidentTruckId: string): Promise<Reso
 }
 
 export async function uploadResourceOrderFile(file: File, organizationId?: string): Promise<string> {
+  if (!organizationId) {
+    throw new Error("Cannot upload resource order without an organization");
+  }
   const ext = file.name.split(".").pop() || "pdf";
-  const prefix = organizationId ? `${organizationId}/` : "";
-  const path = `${prefix}${crypto.randomUUID()}.${ext}`;
+  const path = `${organizationId}/${crypto.randomUUID()}.${ext}`;
   const { error } = await supabase.storage.from("resource-orders").upload(path, file);
   if (error) throw error;
   const { data } = supabase.storage.from("resource-orders").getPublicUrl(path);
@@ -65,8 +68,9 @@ export async function updateResourceOrderParsed(
 }
 
 export async function parseResourceOrderAI(fileUrl: string, fileName: string): Promise<Record<string, any>> {
+  const resolved = (await getViewableUrl(fileUrl)) ?? fileUrl;
   const { data, error } = await supabase.functions.invoke("parse-resource-order", {
-    body: { fileUrl, fileName },
+    body: { fileUrl: resolved, fileName },
   });
   if (error) throw error;
   return data?.parsed || {};

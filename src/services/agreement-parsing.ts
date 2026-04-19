@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getViewableUrl } from "@/lib/storage-url";
 
 export interface ParsedAgreement {
   incident_name?: string;
@@ -17,17 +18,20 @@ export interface ParsedAgreement {
 }
 
 export async function parseAgreementAI(fileUrl: string, fileName: string): Promise<ParsedAgreement> {
+  const resolved = (await getViewableUrl(fileUrl)) ?? fileUrl;
   const { data, error } = await supabase.functions.invoke("parse-agreement", {
-    body: { fileUrl, fileName },
+    body: { fileUrl: resolved, fileName },
   });
   if (error) throw error;
   return data?.parsed || {};
 }
 
 export async function uploadAgreementForParsing(file: File, organizationId?: string): Promise<{ fileUrl: string; fileName: string }> {
+  if (!organizationId) {
+    throw new Error("Cannot upload agreement without an organization");
+  }
   const ext = file.name.split(".").pop() || "pdf";
-  const prefix = organizationId ? `${organizationId}/` : "";
-  const path = `${prefix}${crypto.randomUUID()}.${ext}`;
+  const path = `${organizationId}/${crypto.randomUUID()}.${ext}`;
   const { error } = await supabase.storage.from("agreements").upload(path, file);
   if (error) throw error;
   const { data } = supabase.storage.from("agreements").getPublicUrl(path);

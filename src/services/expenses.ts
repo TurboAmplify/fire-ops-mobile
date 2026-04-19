@@ -114,9 +114,11 @@ export async function deleteExpense(id: string) {
 }
 
 export async function uploadReceipt(file: File, organizationId?: string): Promise<string> {
+  if (!organizationId) {
+    throw new Error("Cannot upload receipt without an organization");
+  }
   const ext = file.name.split(".").pop() || "jpg";
-  const prefix = organizationId ? `${organizationId}/` : "";
-  const path = `${prefix}${crypto.randomUUID()}.${ext}`;
+  const path = `${organizationId}/${crypto.randomUUID()}.${ext}`;
   const { error } = await supabase.storage.from("receipts").upload(path, file);
   if (error) throw error;
   const { data } = supabase.storage.from("receipts").getPublicUrl(path);

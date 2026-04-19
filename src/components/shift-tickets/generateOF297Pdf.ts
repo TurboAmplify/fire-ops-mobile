@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { parseStorageUrl } from "@/lib/storage-url";
 import type { ShiftTicket, EquipmentEntry, PersonnelEntry } from "@/services/shift-tickets";
 
 // Dynamically import jspdf to keep bundle small
@@ -8,6 +9,10 @@ async function getJsPdf() {
 }
 
 function getSignatureStoragePath(url: string): string | null {
+  // Handles both legacy public-form and new signed-form signature URLs
+  const parsed = parseStorageUrl(url);
+  if (parsed?.bucket === "signatures") return parsed.path;
+  // Legacy fallback for any odd URL shape
   const marker = "/storage/v1/object/public/signatures/";
   const markerIndex = url.indexOf(marker);
   if (markerIndex === -1) return null;
