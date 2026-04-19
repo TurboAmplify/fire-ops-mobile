@@ -897,12 +897,35 @@ export function ShiftTicketForm({
         </section>
       </div>
 
+      {/* ── Lock banner ── */}
+      {ticketLocked && (
+        <div className="fixed bottom-[calc(7rem+env(safe-area-inset-bottom))] left-0 right-0 px-3 z-40">
+          <div className="flex items-center gap-2 rounded-xl border border-warning/40 bg-warning/10 px-3 py-2">
+            <Lock className="h-4 w-4 text-warning shrink-0" />
+            <p className="flex-1 text-[11px] font-medium text-warning leading-tight">
+              {unlockedThisSession
+                ? "Unlocked for editing — changes will be logged in the audit trail."
+                : "This ticket is FINAL and locked. Supervisor signature is on file."}
+            </p>
+            {!unlockedThisSession && isAdmin && (
+              <button
+                type="button"
+                onClick={() => setShowUnlockDialog(true)}
+                className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-warning text-warning-foreground px-2 py-1 text-[11px] font-semibold touch-target"
+              >
+                <Unlock className="h-3 w-3" /> Unlock
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── Bottom Action Bar (above BottomNav) ── */}
       <div className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom))] left-0 right-0 border-t border-border bg-background/95 backdrop-blur-md p-3 flex gap-2 z-40">
-        <button onClick={() => handleSave(false)} disabled={saving}
+        <button onClick={() => handleSave(false)} disabled={saving || editingLocked}
           className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground touch-target disabled:opacity-40 active:scale-[0.98]">
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          Save Draft
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : editingLocked ? <Lock className="h-4 w-4" /> : <Save className="h-4 w-4" />}
+          {editingLocked ? "Locked" : ticketLocked && unlockedThisSession ? "Save & Re-lock" : "Save Draft"}
         </button>
         {ticket?.id && (
           <>
