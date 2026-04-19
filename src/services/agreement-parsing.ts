@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getViewableUrl } from "@/lib/storage-url";
 
 export interface ParsedAgreement {
   incident_name?: string;
@@ -17,8 +18,9 @@ export interface ParsedAgreement {
 }
 
 export async function parseAgreementAI(fileUrl: string, fileName: string): Promise<ParsedAgreement> {
+  const resolved = (await getViewableUrl(fileUrl)) ?? fileUrl;
   const { data, error } = await supabase.functions.invoke("parse-agreement", {
-    body: { fileUrl, fileName },
+    body: { fileUrl: resolved, fileName },
   });
   if (error) throw error;
   return data?.parsed || {};

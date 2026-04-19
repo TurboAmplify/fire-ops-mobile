@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getViewableUrl } from "@/lib/storage-url";
 
 export interface ResourceOrder {
   id: string;
@@ -65,8 +66,9 @@ export async function updateResourceOrderParsed(
 }
 
 export async function parseResourceOrderAI(fileUrl: string, fileName: string): Promise<Record<string, any>> {
+  const resolved = (await getViewableUrl(fileUrl)) ?? fileUrl;
   const { data, error } = await supabase.functions.invoke("parse-resource-order", {
-    body: { fileUrl, fileName },
+    body: { fileUrl: resolved, fileName },
   });
   if (error) throw error;
   return data?.parsed || {};
