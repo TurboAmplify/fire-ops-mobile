@@ -322,6 +322,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "incident_truck_crew_crew_member_id_fkey"
+            columns: ["crew_member_id"]
+            isOneToOne: false
+            referencedRelation: "crew_members_sensitive"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "incident_truck_crew_incident_truck_id_fkey"
             columns: ["incident_truck_id"]
             isOneToOne: false
@@ -527,6 +534,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "needs_list_items_crew_member_id_fkey"
+            columns: ["crew_member_id"]
+            isOneToOne: false
+            referencedRelation: "crew_members_sensitive"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "needs_list_items_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -687,6 +701,13 @@ export type Database = {
             referencedRelation: "crew_members"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "profiles_crew_member_id_fkey"
+            columns: ["crew_member_id"]
+            isOneToOne: false
+            referencedRelation: "crew_members_sensitive"
+            referencedColumns: ["id"]
+          },
         ]
       }
       resource_orders: {
@@ -786,6 +807,13 @@ export type Database = {
             columns: ["crew_member_id"]
             isOneToOne: false
             referencedRelation: "crew_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_crew_crew_member_id_fkey"
+            columns: ["crew_member_id"]
+            isOneToOne: false
+            referencedRelation: "crew_members_sensitive"
             referencedColumns: ["id"]
           },
           {
@@ -1504,7 +1532,38 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      crew_members_sensitive: {
+        Row: {
+          hourly_rate: number | null
+          hw_rate: number | null
+          id: string | null
+          organization_id: string | null
+          phone: string | null
+        }
+        Insert: {
+          hourly_rate?: number | null
+          hw_rate?: number | null
+          id?: string | null
+          organization_id?: string | null
+          phone?: string | null
+        }
+        Update: {
+          hourly_rate?: number | null
+          hw_rate?: number | null
+          id?: string | null
+          organization_id?: string | null
+          phone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crew_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       create_organization_with_owner:
