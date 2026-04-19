@@ -161,6 +161,17 @@ export default function SuperAdminOrgDetail() {
             <p className="truncate font-mono text-xs text-muted-foreground">{orgId}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {isMember && (
+              <Button
+                size="sm"
+                className="gap-1.5"
+                disabled={!data}
+                onClick={handleEditOrg}
+              >
+                <SettingsIcon className="h-4 w-4" />
+                Edit org settings
+              </Button>
+            )}
             {isMember ? (
               <Button
                 size="sm"
@@ -170,7 +181,7 @@ export default function SuperAdminOrgDetail() {
                 onClick={() => setMembershipDialog("remove")}
               >
                 <UserMinus className="h-4 w-4" />
-                Remove me from org
+                Leave org
               </Button>
             ) : (
               <Button
@@ -222,6 +233,28 @@ export default function SuperAdminOrgDetail() {
 
         {data && (
           <>
+            {isMember && (
+              <Card className="border-primary/30 bg-primary/5">
+                <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15">
+                      <ShieldCheck className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">You are a real admin of this org</p>
+                      <p className="text-xs text-muted-foreground">
+                        All changes you make here appear under your name in the org's audit log.
+                      </p>
+                    </div>
+                  </div>
+                  <Button size="sm" variant="outline" className="gap-1.5 sm:self-center" onClick={handleEditOrg}>
+                    <SettingsIcon className="h-4 w-4" />
+                    Open org settings
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <StatCard label="Tier" value={data.tier} />
               <StatCard label="Seats" value={`${data.members.length} / ${data.seat_limit}`} />
