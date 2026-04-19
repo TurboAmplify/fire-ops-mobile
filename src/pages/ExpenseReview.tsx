@@ -107,7 +107,7 @@ export default function ExpenseReview() {
                 {/* Receipt thumbnail */}
                 {exp.receipt_url && (
                   <div className="px-4 pb-2">
-                    <img
+                    <SignedImage
                       src={exp.receipt_url}
                       alt="Receipt"
                       className="w-full max-h-32 object-contain rounded-lg bg-secondary"

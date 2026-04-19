@@ -12,6 +12,7 @@ import {
 import { uploadInspectionPhoto, type InspectionItemStatus } from "@/services/inspections";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useAuth } from "@/hooks/useAuth";
+import { SignedImage } from "@/components/ui/SignedImage";
 
 interface Props {
   open: boolean;
@@ -178,7 +179,7 @@ export function TruckInspectionRunner({ open, onOpenChange, truckId, truckName, 
                   />
                   {item.photo_url ? (
                     <div className="relative">
-                      <img src={item.photo_url} alt="Issue" className="rounded-lg max-h-40 object-cover w-full" />
+                      <SignedImage src={item.photo_url} alt="Issue" className="rounded-lg max-h-40 object-cover w-full" />
                       <button
                         onClick={() =>
                           setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, photo_url: null } : it)))

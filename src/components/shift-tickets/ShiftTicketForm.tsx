@@ -23,6 +23,7 @@ import { CrewSyncCard } from "./CrewSyncCard";
 import { OF297FormPreview } from "./OF297FormPreview";
 import { UnsavedChangesDialog } from "./UnsavedChangesDialog";
 import { SuccessOverlay } from "@/components/ui/SuccessOverlay";
+import { SignedImage } from "@/components/ui/SignedImage";
 import { uploadSignature, computeHours, buildRemarksString, insertSignatureAuditLog } from "@/services/shift-tickets";
 import {
   diffTicket,
