@@ -127,15 +127,10 @@ export default function ShiftTicketCreate() {
 
   const updateMutation = useUpdateShiftTicket(ticket?.id || "", incidentTruckId || "");
 
-  // Warnings
+  // Warnings (resource orders are optional — only warn about missing crew)
   const warnings: string[] = [];
   if (initialized && activeCrew.length === 0) {
     warnings.push("No crew currently assigned to this truck for this incident.");
-  }
-  if (initialized && (!resourceOrders || resourceOrders.length === 0)) {
-    warnings.push("No resource orders found for this truck assignment.");
-  } else if (initialized && !resourceOrders?.some((ro) => ro.parsed_at)) {
-    warnings.push("Resource Order missing linked incident data. Fields may need manual entry.");
   }
 
   const handleSave = async (data: Partial<ShiftTicket>) => {

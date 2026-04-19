@@ -682,14 +682,27 @@ export function ShiftTicketForm({
           })()}
           {/* Expanded detail for selected crew member */}
           {expandedPersonnelIndex !== null && personnelEntries[expandedPersonnelIndex] && (
-            <PersonnelEntryRow
-              entry={personnelEntries[expandedPersonnelIndex]}
-              index={expandedPersonnelIndex}
-              collapsed={false}
-              onToggle={() => setExpandedPersonnelIndex(null)}
-              onChange={(idx, updated) => { setPersonnelEntries((prev) => prev.map((e, j) => (j === idx ? updated : e))); markDirty(); }}
-              onRemove={(idx) => { if (personnelEntries.length > 1) { setPersonnelEntries((prev) => prev.filter((_, j) => j !== idx)); setExpandedPersonnelIndex(null); markDirty(); } }}
-            />
+            <div className="space-y-2">
+              <PersonnelEntryRow
+                entry={personnelEntries[expandedPersonnelIndex]}
+                index={expandedPersonnelIndex}
+                collapsed={false}
+                onToggle={() => setExpandedPersonnelIndex(null)}
+                onChange={(idx, updated) => { setPersonnelEntries((prev) => prev.map((e, j) => (j === idx ? updated : e))); markDirty(); }}
+                onRemove={(idx) => { if (personnelEntries.length > 1) { setPersonnelEntries((prev) => prev.filter((_, j) => j !== idx)); setExpandedPersonnelIndex(null); markDirty(); } }}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setPersonnelEntries((prev) => prev.filter((_, j) => j !== expandedPersonnelIndex));
+                  setExpandedPersonnelIndex(null);
+                  markDirty();
+                }}
+                className="w-full rounded-xl border border-destructive/40 bg-destructive/5 py-2.5 text-sm font-semibold text-destructive touch-target active:bg-destructive/10"
+              >
+                Remove from this ticket
+              </button>
+            </div>
           )}
         </section>
 
