@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
@@ -9,6 +10,12 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import heroBg from "@/assets/hero-bg.jpg";
 import fireLogo from "@/assets/fire-logo.png";
+
+const emailSchema = z.string().trim().email("Enter a valid email").max(255, "Email too long");
+const passwordSchema = z
+  .string()
+  .min(8, "Password must be at least 8 characters")
+  .max(72, "Password too long");
 
 export default function Login() {
   const { user, loading: authLoading } = useAuth();
