@@ -3,7 +3,7 @@ import { useRecentShiftTickets } from "@/hooks/useShiftTickets";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Clock, FileText, Pencil, FileDown, Loader2 } from "lucide-react";
+import { CheckCircle2, Clock, FileText, Pencil, FileDown, Loader2, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import type { PersonnelEntry, ShiftTicket } from "@/services/shift-tickets";
 import { useState } from "react";
 import {
