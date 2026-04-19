@@ -13,7 +13,7 @@ import { format, isBefore } from "date-fns";
 
 export default function Training() {
   const { terms } = useAppMode();
-  const { data: records, isLoading } = useTrainingRecords();
+  const { data: records, isLoading, error } = useTrainingRecords();
   const { data: crew } = useCrewMembers();
   const createMutation = useCreateTrainingRecord();
   const deleteMutation = useDeleteTrainingRecord();
@@ -76,6 +76,11 @@ export default function Training() {
         {isLoading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : error ? (
+          <div className="py-12 text-center space-y-1">
+            <p className="text-sm text-destructive">Failed to load training records.</p>
+            <p className="text-xs text-muted-foreground">Check your connection and try again.</p>
           </div>
         ) : !records || records.length === 0 ? (
           <div className="py-12 text-center space-y-2">

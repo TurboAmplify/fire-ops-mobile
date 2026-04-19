@@ -73,11 +73,12 @@ export default function Payroll() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [incidentFilter, setIncidentFilter] = useState("all");
 
-  const { data: shiftTickets, isLoading: loadingTickets } = useAllShiftTickets();
-  const { data: crewMembers, isLoading: loadingCrew } = useCrewMembers();
+  const { data: shiftTickets, isLoading: loadingTickets, error: ticketsError } = useAllShiftTickets();
+  const { data: crewMembers, isLoading: loadingCrew, error: crewError } = useCrewMembers();
   const { data: incidents } = useIncidents();
 
   const isLoading = loadingTickets || loadingCrew;
+  const loadError = ticketsError || crewError;
 
   // Build payroll lines from shift ticket personnel entries
   const payrollLines = useMemo((): CrewPayrollLine[] => {
@@ -242,8 +243,16 @@ export default function Payroll() {
           </div>
         )}
 
+        {/* Error */}
+        {!isLoading && loadError && (
+          <div className="py-12 text-center space-y-1">
+            <p className="text-sm text-destructive">Failed to load payroll data.</p>
+            <p className="text-xs text-muted-foreground">Check your connection and try again.</p>
+          </div>
+        )}
+
         {/* Crew payroll list */}
-        {!isLoading && (
+        {!isLoading && !loadError && (
           <div className="space-y-2">
             {payrollLines.length === 0 && (
               <div className="py-12 text-center space-y-2">

@@ -119,7 +119,7 @@ export default function ShiftTicketLog() {
   const qc = useQueryClient();
   const { isAdmin } = useOrganization();
   // refetchOnMount + refetchOnWindowFocus ensure changes from the edit page show up on return
-  const { data: tickets, isLoading } = useRecentShiftTickets(200);
+  const { data: tickets, isLoading, error } = useRecentShiftTickets(200);
   const [selected, setSelected] = useState<SelectedTicket | null>(null);
   const [downloadLoading, setDownloadLoading] = useState(false);
   const [auditLoading, setAuditLoading] = useState(false);
@@ -319,12 +319,20 @@ export default function ShiftTicketLog() {
         </div>
 
         {isLoading && (
-          <div className="rounded-2xl bg-card card-shadow p-6 text-center text-sm text-muted-foreground">
-            Loading…
+          <div className="rounded-2xl bg-card card-shadow p-8 flex justify-center">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         )}
 
-        {!isLoading && (!tickets || tickets.length === 0) && (
+        {!isLoading && error && (
+          <div className="rounded-2xl bg-card card-shadow p-8 text-center space-y-1">
+            <AlertTriangle className="h-7 w-7 text-destructive/70 mx-auto mb-1" />
+            <p className="text-sm font-medium text-destructive">Couldn't load shift tickets.</p>
+            <p className="text-xs text-muted-foreground">Check your connection and pull to refresh.</p>
+          </div>
+        )}
+
+        {!isLoading && !error && (!tickets || tickets.length === 0) && (
           <div className="rounded-2xl bg-card card-shadow p-8 text-center">
             <FileText className="h-8 w-8 text-muted-foreground/50 mx-auto mb-2" />
             <p className="text-sm font-medium">No shift tickets yet</p>
