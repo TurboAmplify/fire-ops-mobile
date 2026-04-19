@@ -139,7 +139,7 @@ export default function SuperAdminOrgDetail() {
     setActiveOrgId(orgId);
     // Drop cached org-scoped data so OrgSettings reflects the newly-active org
     queryClient.invalidateQueries();
-    navigate("/org-settings");
+    navigate("/settings/organization");
   };
 
   return (
