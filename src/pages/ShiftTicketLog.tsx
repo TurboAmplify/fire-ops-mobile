@@ -441,13 +441,60 @@ export default function ShiftTicketLog() {
       </div>
 
       <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent className="sm:max-w-sm max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Shift Ticket</DialogTitle>
             <DialogDescription>
               {selected ? `${selected.truckName} — ${selected.dateLabel}` : ""}
             </DialogDescription>
           </DialogHeader>
+          {selected && (
+            <div className="rounded-xl bg-muted/40 p-3 text-sm space-y-2">
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground">Crew</span>
+                <span className="text-right font-medium">
+                  {crewSummary(selected.ticket.personnel_entries)}
+                </span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground">Lunch</span>
+                <span className="text-right font-medium">
+                  {lunchStatus(selected.ticket.personnel_entries).tone === "ok" ? "Yes" : "No"}
+                </span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground">Per diem</span>
+                <span className="text-right font-medium">
+                  {summarizePerDiem(selected.ticket.personnel_entries)}
+                </span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground">Contractor sig</span>
+                <span className="text-right font-medium">
+                  {selected.ticket.contractor_rep_signed_at
+                    ? formatTime(selected.ticket.contractor_rep_signed_at)
+                    : "Pending"}
+                </span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground">Supervisor sig</span>
+                <span className="text-right font-medium">
+                  {selected.ticket.supervisor_signed_at
+                    ? formatTime(selected.ticket.supervisor_signed_at)
+                    : "Pending"}
+                </span>
+              </div>
+              <div className="flex justify-between gap-3 items-center">
+                <span className="text-muted-foreground">Status</span>
+                <Badge
+                  variant={selected.ticket.status === "final" ? "default" : "outline"}
+                  className="capitalize font-normal"
+                >
+                  {selected.ticket.status}
+                </Badge>
+              </div>
+            </div>
+          )}
           <div className="grid gap-2 pt-2">
             <button
               onClick={handleEdit}
