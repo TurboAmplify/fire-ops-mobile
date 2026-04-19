@@ -338,17 +338,44 @@ export default function ShiftTicketLog() {
             </button>
             <button
               onClick={handleViewPdf}
-              disabled={pdfLoading}
+              disabled={viewLoading}
               className="flex items-center gap-3 rounded-xl bg-secondary px-4 py-3 text-left text-sm font-medium active:bg-secondary/70 transition-colors disabled:opacity-50 touch-target"
             >
-              {pdfLoading ? (
+              {viewLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              ) : (
+                <Eye className="h-4 w-4 text-primary" />
+              )}
+              <span className="flex-1">View PDF</span>
+            </button>
+            <button
+              onClick={handleDownloadPdf}
+              disabled={downloadLoading}
+              className="flex items-center gap-3 rounded-xl bg-secondary px-4 py-3 text-left text-sm font-medium active:bg-secondary/70 transition-colors disabled:opacity-50 touch-target"
+            >
+              {downloadLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin text-primary" />
               ) : (
                 <FileDown className="h-4 w-4 text-primary" />
               )}
-              <span className="flex-1">View / download PDF</span>
+              <span className="flex-1">Download PDF</span>
             </button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!pdfPreviewUrl} onOpenChange={(open) => !open && closePdfPreview()}>
+        <DialogContent className="max-w-4xl w-[95vw] h-[90vh] p-0 flex flex-col gap-0">
+          <DialogHeader className="px-4 py-3 border-b">
+            <DialogTitle className="text-base truncate pr-8">{pdfPreviewTitle || "Shift Ticket PDF"}</DialogTitle>
+          </DialogHeader>
+          {pdfPreviewUrl && (
+            <iframe
+              src={pdfPreviewUrl}
+              title="Shift Ticket PDF"
+              className="flex-1 w-full bg-muted"
+            />
+          )}
         </DialogContent>
       </Dialog>
     </AppShell>
