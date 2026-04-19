@@ -1680,6 +1680,14 @@ export type Database = {
           title: string
         }[]
       }
+      admin_self_add_to_org: {
+        Args: { _org_id: string; _reason?: string }
+        Returns: string
+      }
+      admin_self_remove_from_org: {
+        Args: { _org_id: string; _reason?: string }
+        Returns: undefined
+      }
       create_organization_with_owner:
         | { Args: { _name: string }; Returns: string }
         | {
