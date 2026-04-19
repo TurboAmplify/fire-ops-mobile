@@ -16,7 +16,7 @@ export function useIncidentTruckCrew(incidentTruckId: string) {
 
 export function useAvailableCrewMembers(organizationId?: string | null) {
   return useQuery({
-    queryKey: ["crew-members", organizationId ?? "any"],
+    queryKey: ["crew_members", organizationId ?? "any"],
     queryFn: () => fetchAvailableCrewMembers(organizationId),
     enabled: organizationId !== undefined,
   });
