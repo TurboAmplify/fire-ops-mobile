@@ -181,6 +181,25 @@ export default function ShiftTicketLog() {
     }
   };
 
+  const handleDownloadAuditPdf = async () => {
+    if (!selected) return;
+    setAuditLoading(true);
+    try {
+      const [{ generateAuditTrailPdf }, { fetchShiftTicketAudit }] = await Promise.all([
+        import("@/components/shift-tickets/generateAuditTrailPdf"),
+        import("@/services/shift-ticket-audit"),
+      ]);
+      const audit = await fetchShiftTicketAudit(selected.ticket.id);
+      await generateAuditTrailPdf(selected.ticket, audit);
+      setSelected(null);
+    } catch (err) {
+      console.error("Audit PDF generation failed:", err);
+      toast.error("Failed to generate audit trail PDF");
+    } finally {
+      setAuditLoading(false);
+    }
+  };
+
   const closePdfPreview = () => {
     if (pdfPreviewUrl) URL.revokeObjectURL(pdfPreviewUrl);
     setPdfPreviewUrl(null);
