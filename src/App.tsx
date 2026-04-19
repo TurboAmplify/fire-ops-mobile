@@ -47,6 +47,8 @@ import { PlatformAdminGate } from "@/components/PlatformAdminGate";
 import SuperAdmin from "./pages/SuperAdmin";
 import SuperAdminOrgs from "./pages/SuperAdminOrgs";
 import SuperAdminOrgDetail from "./pages/SuperAdminOrgDetail";
+import SuperAdminUsers from "./pages/SuperAdminUsers";
+import SuperAdminActivity from "./pages/SuperAdminActivity";
 import NotFound from "./pages/NotFound";
 
 const App = () => (
@@ -96,6 +98,8 @@ const App = () => (
               <Route path="/super-admin" element={<ProtectedRoute><PlatformAdminGate><SuperAdmin /></PlatformAdminGate></ProtectedRoute>} />
               <Route path="/super-admin/organizations" element={<ProtectedRoute><PlatformAdminGate><SuperAdminOrgs /></PlatformAdminGate></ProtectedRoute>} />
               <Route path="/super-admin/organizations/:orgId" element={<ProtectedRoute><PlatformAdminGate><SuperAdminOrgDetail /></PlatformAdminGate></ProtectedRoute>} />
+              <Route path="/super-admin/users" element={<ProtectedRoute><PlatformAdminGate><SuperAdminUsers /></PlatformAdminGate></ProtectedRoute>} />
+              <Route path="/super-admin/activity" element={<ProtectedRoute><PlatformAdminGate><SuperAdminActivity /></PlatformAdminGate></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
