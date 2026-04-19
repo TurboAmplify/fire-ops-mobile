@@ -75,6 +75,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
     const prev = target;
     sessionStorage.removeItem(STORAGE_KEY);
     setTarget(null);
+    qc.clear();
     if (prev) {
       await logPlatformAction("view_as_stop", {
         targetType: "organization",
@@ -82,7 +83,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
         payload: { organization_name: prev.organizationName },
       });
     }
-  }, [target]);
+  }, [target, qc]);
 
   return (
     <ImpersonationContext.Provider
