@@ -5,6 +5,7 @@ import { STATUS_LABELS, STATUS_COLORS, TYPE_LABELS } from "@/services/incidents"
 import type { IncidentStatus } from "@/services/incidents";
 import { ArrowLeft, MapPin, Calendar, Flame, TrendingUp, Loader2, Pencil, Trash2 } from "lucide-react";
 import { IncidentTruckList } from "@/components/incidents/IncidentTruckList";
+import { IncidentDailyCrewGrid } from "@/components/incidents/IncidentDailyCrewGrid";
 import { AgreementUpload } from "@/components/incidents/AgreementUpload";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -163,6 +164,9 @@ export default function IncidentDetail() {
           incidentName={incident.name}
           organizationId={incident.organization_id}
         />
+
+        {/* Daily Crew */}
+        <IncidentDailyCrewGrid incidentId={incident.id} />
 
         {/* Delete zone */}
         <div className="pt-4 border-t border-border">
