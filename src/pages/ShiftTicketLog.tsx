@@ -269,9 +269,28 @@ export default function ShiftTicketLog() {
   return (
     <AppShell title="Shift Ticket Log">
       <div className="p-4 space-y-4">
-        <p className="text-sm text-muted-foreground">
-          All shift tickets across incidents. Tap a row for actions.
-        </p>
+        <div className="flex items-start gap-2 text-sm text-muted-foreground">
+          <p className="flex-1">
+            All shift tickets across incidents. Tap a row for actions.
+          </p>
+          <TooltipProvider delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="What does Draft vs Final mean?"
+                  className="touch-target inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+                >
+                  <Info className="h-3.5 w-3.5" />
+                  Draft vs Final
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" align="end" className="max-w-[260px] text-xs">
+                A ticket becomes <span className="font-semibold">Final</span> automatically once both the contractor and supervisor signatures are captured. Until then it stays a <span className="font-semibold">Draft</span>.
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
 
         {isLoading && (
           <div className="rounded-2xl bg-card card-shadow p-6 text-center text-sm text-muted-foreground">
