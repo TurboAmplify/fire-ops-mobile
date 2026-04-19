@@ -5,6 +5,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import { OrganizationProvider } from "@/hooks/useOrganization";
+import { ImpersonationProvider } from "@/hooks/useImpersonation";
+import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { queryClient, asyncPersister } from "@/lib/query-client";
 import "@/lib/offline-queue";
@@ -56,10 +58,12 @@ const App = () => (
   <PersistQueryClientProvider client={queryClient} persistOptions={{ persister: asyncPersister, maxAge: 1000 * 60 * 60 * 24 }}>
     <AuthProvider>
       <OrganizationProvider>
+        <ImpersonationProvider>
         <TooltipProvider>
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <ImpersonationBanner />
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/reset-password" element={<ResetPassword />} />
@@ -106,6 +110,7 @@ const App = () => (
             </Routes>
           </BrowserRouter>
         </TooltipProvider>
+        </ImpersonationProvider>
       </OrganizationProvider>
     </AuthProvider>
   </PersistQueryClientProvider>
