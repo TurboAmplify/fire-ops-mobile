@@ -27,11 +27,13 @@ export const TYPE_LABELS: Record<IncidentType, string> = {
   other: "Other",
 };
 
-export async function fetchIncidents() {
-  const { data, error } = await supabase
+export async function fetchIncidents(orgId?: string | null) {
+  let query = supabase
     .from("incidents")
     .select("*")
     .order("created_at", { ascending: false });
+  if (orgId) query = query.eq("organization_id", orgId);
+  const { data, error } = await query;
   if (error) throw error;
   return data;
 }
