@@ -86,7 +86,7 @@ export default function Crew() {
                     {/* Avatar */}
                     <div className="h-12 w-12 rounded-full overflow-hidden bg-accent shrink-0 border-2 border-primary/10">
                       {photoUrl ? (
-                        <img src={photoUrl} alt={m.name} className="w-full h-full object-cover" loading="lazy" />
+                        <SignedImage src={photoUrl} alt={m.name} className="w-full h-full object-cover" loading="lazy" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
                           <span className="text-sm font-bold text-accent-foreground">

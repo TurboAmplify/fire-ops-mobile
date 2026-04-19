@@ -84,7 +84,7 @@ export default function Fleet() {
                 >
                   {photoUrl ? (
                     <div className="aspect-[16/7] w-full overflow-hidden">
-                      <img
+                      <SignedImage
                         src={photoUrl}
                         alt={truck.name}
                         className="w-full h-full object-cover"

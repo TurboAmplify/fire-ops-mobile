@@ -12,6 +12,7 @@ import { useState } from "react";
 import { Loader2, Camera, Sparkles, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { useOrganization } from "@/hooks/useOrganization";
+import { SignedImage } from "@/components/ui/SignedImage";
 
 const categories: ExpenseCategory[] = ["fuel", "ppe", "food", "lodging", "equipment", "other"];
 const scopes: AttachmentScope[] = ["company", "incident", "truck"];
@@ -195,7 +196,7 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
             <input type="file" accept="image/*" capture="environment" onChange={handlePhoto} className="hidden" />
           </label>
           {receiptUrl && !parsing && (
-            <img src={receiptUrl} alt="Receipt preview" className="w-full max-h-40 object-contain rounded-lg bg-secondary" />
+            <SignedImage src={receiptUrl} alt="Receipt preview" className="w-full max-h-40 object-contain rounded-lg bg-secondary" />
           )}
           {parsing && (
             <div className="flex items-center gap-2 rounded-xl bg-primary/5 border border-primary/20 p-3">
