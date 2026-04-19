@@ -16,10 +16,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, ChevronLeft, Building2, Eye, UserPlus, UserMinus } from "lucide-react";
+import { Loader2, ChevronLeft, Building2, Eye, UserPlus, UserMinus, Settings as SettingsIcon, ShieldCheck } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { useImpersonation } from "@/hooks/useImpersonation";
 import { useAuth } from "@/hooks/useAuth";
+import { useOrganization } from "@/hooks/useOrganization";
 import { toast } from "sonner";
 
 type OrgDetail = {
@@ -74,6 +75,7 @@ export default function SuperAdminOrgDetail() {
   const navigate = useNavigate();
   const { startViewAs } = useImpersonation();
   const { user } = useAuth();
+  const { setActiveOrgId, refetch: refetchMemberships } = useOrganization();
   const queryClient = useQueryClient();
   const [membershipDialog, setMembershipDialog] = useState<null | "add" | "remove">(null);
   const [reason, setReason] = useState("");
@@ -105,6 +107,8 @@ export default function SuperAdminOrgDetail() {
           : `Removed from ${data?.name ?? "organization"}`,
       );
       queryClient.invalidateQueries({ queryKey: ["super-admin", "org", orgId] });
+      // Refresh the multi-org membership list so the new org shows up immediately
+      refetchMemberships();
       setMembershipDialog(null);
       setReason("");
     },
@@ -130,6 +134,14 @@ export default function SuperAdminOrgDetail() {
     }
   };
 
+  const handleEditOrg = () => {
+    if (!orgId) return;
+    setActiveOrgId(orgId);
+    // Drop cached org-scoped data so OrgSettings reflects the newly-active org
+    queryClient.invalidateQueries();
+    navigate("/org-settings");
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
@@ -149,6 +161,17 @@ export default function SuperAdminOrgDetail() {
             <p className="truncate font-mono text-xs text-muted-foreground">{orgId}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {isMember && (
+              <Button
+                size="sm"
+                className="gap-1.5"
+                disabled={!data}
+                onClick={handleEditOrg}
+              >
+                <SettingsIcon className="h-4 w-4" />
+                Edit org settings
+              </Button>
+            )}
             {isMember ? (
               <Button
                 size="sm"
@@ -158,7 +181,7 @@ export default function SuperAdminOrgDetail() {
                 onClick={() => setMembershipDialog("remove")}
               >
                 <UserMinus className="h-4 w-4" />
-                Remove me from org
+                Leave org
               </Button>
             ) : (
               <Button
@@ -210,6 +233,28 @@ export default function SuperAdminOrgDetail() {
 
         {data && (
           <>
+            {isMember && (
+              <Card className="border-primary/30 bg-primary/5">
+                <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15">
+                      <ShieldCheck className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">You are a real admin of this org</p>
+                      <p className="text-xs text-muted-foreground">
+                        All changes you make here appear under your name in the org's audit log.
+                      </p>
+                    </div>
+                  </div>
+                  <Button size="sm" variant="outline" className="gap-1.5 sm:self-center" onClick={handleEditOrg}>
+                    <SettingsIcon className="h-4 w-4" />
+                    Open org settings
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <StatCard label="Tier" value={data.tier} />
               <StatCard label="Seats" value={`${data.members.length} / ${data.seat_limit}`} />
