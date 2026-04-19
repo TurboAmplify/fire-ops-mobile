@@ -117,6 +117,7 @@ type SortDir = "asc" | "desc";
 export default function ShiftTicketLog() {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { isAdmin } = useOrganization();
   // refetchOnMount + refetchOnWindowFocus ensure changes from the edit page show up on return
   const { data: tickets, isLoading } = useRecentShiftTickets(200);
   const [selected, setSelected] = useState<SelectedTicket | null>(null);
