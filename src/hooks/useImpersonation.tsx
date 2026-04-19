@@ -105,18 +105,8 @@ export function useIsImpersonating() {
   return useImpersonation().isImpersonating;
 }
 
-/**
- * Throw if currently in view-as (read-only) mode. Use at the top of every
- * mutation in service files to prevent writes while impersonating.
- */
-export function assertNotImpersonating() {
-  try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      throw new Error("Read-only: super admin view-as mode is active. Exit view-as to make changes.");
-    }
-  } catch (err) {
-    if (err instanceof Error && err.message.startsWith("Read-only:")) throw err;
-    // sessionStorage unavailable — allow
-  }
-}
+// Note: read-only enforcement for platform admins viewing foreign orgs is
+// handled at the database layer by guard_platform_admin_write triggers on
+// every business table. The client cannot bypass it. There is intentionally
+// no client-side assert helper because it would create false confidence —
+// the DB is the source of truth.
