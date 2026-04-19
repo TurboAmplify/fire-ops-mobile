@@ -1,7 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, Building2, Users, Activity, AlertTriangle, FileText } from "lucide-react";
+import { Shield, Building2, Users, Activity, AlertTriangle, FileText, ChevronDown } from "lucide-react";
 import { Link } from "react-router-dom";
 import { BackgroundSwitcher } from "@/components/settings/BackgroundSwitcher";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const sections = [
   {
