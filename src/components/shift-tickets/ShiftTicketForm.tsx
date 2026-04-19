@@ -93,7 +93,9 @@ export function ShiftTicketForm({
   exportingPdf,
   warnings,
   crewRoster,
+  isAdmin = false,
 }: ShiftTicketFormProps) {
+  const { user } = useAuth();
   // Header fields
   const [agreementNumber, setAgreementNumber] = useState("");
   const [contractorName, setContractorName] = useState("");
