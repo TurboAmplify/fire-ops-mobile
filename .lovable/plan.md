@@ -1,64 +1,61 @@
 
 
-The current tutorial is functional but basic — 10 generic info cards in a bottom sheet. Let me make it actually useful.
+## Plan: screenshot-based tutorial steps + fixed pro tips
 
-## What's weak today
+### 1. Capture screenshots
+Use browser at 390×844 to grab clean shots of the key screens (logged in as a user with sample data):
+- Dashboard, Incidents, Shift Ticket Log, Crew, Fleet, Expenses, Needs
 
-- All 10 steps look identical (icon + title + paragraph). Boring, easy to skip.
-- "Take me there" navigates away and **kills the tutorial** — user loses their place.
-- No sense of progress beyond dots. No "you're almost done."
-- Auto-starts on Dashboard only — if a new user lands elsewhere first (deep link from invite email, etc.) they never see it.
-- No segmentation — a crew member sees the same admin-flavored tour as the org owner.
-- No "what to do next" — tour ends with "Got it" and dumps you back where you were.
+Save as `public/tutorial/{id}.png` (~80KB each, ~600KB total).
 
-## What I'll improve
+Welcome / Offline / Checklist steps stay icon-only — no specific screen.
 
-### 1. Richer step content
-- Add a **"What you can do here"** bullet list to each feature step (3 short bullets instead of one paragraph). Scannable, not a wall of text.
-- Add a **"Pro tip"** callout on key steps (e.g. Fleet: "Snap the VIN plate — AI fills in make/model/year").
-- Replace generic icon tile with a **larger feature illustration area** using the icon + a soft gradient background matching the feature's color.
+### 2. Extend step schema (`tutorial-steps.ts`)
+Add optional fields:
+```ts
+screenshot?: string;       // "/tutorial/incidents.png"
+highlight?: {              // % positioned overlay
+  top: string; left: string;
+  width: string; height: string;
+  label?: string;          // caption under screenshot
+};
+```
 
-### 2. "Take me there" without losing the tutorial
-- Instead of `navigate()` closing the sheet, navigate **and keep the tutorial minimized** as a small floating "Resume tour (4/10)" pill at the bottom of the screen.
-- Tap the pill → reopens the sheet on the next step.
-- This lets users actually *see* the screen being described while the tour is active.
+### 3. Render in `TutorialOverlay.tsx`
+When `screenshot` present, replace the icon tile with a phone-frame container:
+- Max-width 240px, aspect 9/19.5, rounded-2xl, border, shadow
+- `<img>` fills frame
+- Highlight `<div>` absolutely positioned with pulsing ring + spotlight cutout (`box-shadow: 0 0 0 9999px rgba(0,0,0,0.45) inset` on a sibling mask)
+- Caption ("Tap here to create an incident") below frame
 
-### 3. Smarter first-run flow
-- Auto-start works from **any** route (not just Dashboard) — move the `maybeAutoStart()` call into `TutorialProvider` itself so it fires once per session regardless of landing page.
-- Add a **"Welcome, [name]"** personalization to step 1 using the user's profile.
-- Add a final **"Setup checklist"** step replacing the generic "Replay anytime" card:
-  - [ ] Add your first crew member → links to /crew
-  - [ ] Add your first truck → links to /fleet
-  - [ ] Create your first incident → links to /incidents/new
-  - Each row checks itself off if data already exists (queries existing hooks).
+Falls back to existing icon tile when no screenshot (welcome/offline/checklist).
 
-### 4. Role-aware step ordering
-- If user is org `admin` or `owner`: full 10-step tour.
-- If user is `member`: skip "Org Settings" mention, lead with Shift Tickets + Crew + Expenses (what they actually do daily).
-- Pull role from existing `useOrganization().membership.role`.
+### 4. Rewrite pro tips against real features
+Audit each against actual code, then rewrite:
 
-### 5. Better progress + polish
-- Replace dots with a thin top **progress bar** (uses existing `Progress` component) — clearer "X% through."
-- Add subtle slide-in animation between steps (Framer Motion is already in deps via shadcn).
-- "Skip" → confirmation: "Skip the tour? You can replay it anytime from Settings." Prevents accidental skips.
+| Step | New pro tip |
+|------|-------------|
+| Incidents | (remove agreement-PDF tip) → "Tap any incident to assign trucks and crew, then jump straight into shift tickets." |
+| Shift Tickets | Keep — drafts auto-save is real |
+| Fleet | Verify `parse-truck-photo` works; if yes keep VIN tip, if no replace with "Daily inspections use templates you customize per truck type." |
+| Expenses | Keep — Batch Scan is real |
+| Crew | Add: "Tap a phone number to call directly from the field." |
 
-### 6. Discoverability after completion
-- After completion, show a one-time toast: "Tour complete. Replay anytime from the ? button on the Dashboard."
-- Keep the existing `?` header button + Settings entry.
+I'll read `services/agreements.ts`, `parse-truck-photo/index.ts`, and the Crew components to confirm before finalizing tip copy.
 
-## Out of scope (ask if you want)
+### 5. Highlight coordinates per screen
+Rough targets (refined after capture):
+- Dashboard → bottom nav "Incidents" tab
+- Incidents → "+" FAB
+- Shift Tickets → "New ticket" button
+- Crew → "+" FAB
+- Fleet → first truck card / "+" FAB
+- Expenses → "Scan receipt" button
+- Needs → "+" add item button
 
-- Inline coach marks pinned to specific UI elements (fragile on mobile, you already vetoed this).
-- Video clips — keeps bundle small.
-- Per-page contextual "first time on this screen" hints (separate "tips" system, larger lift).
+### Files
 
-## Files
-
-- Edit: `src/components/tutorial/tutorial-steps.ts` — add `bullets?: string[]`, `proTip?: string`, `gradient` per step; reorder logic helper for role
-- Edit: `src/components/tutorial/TutorialOverlay.tsx` — render bullets + pro tip, progress bar, skip confirmation, slide animation
-- Edit: `src/hooks/useTutorial.tsx` — add `minimize()` / `resume()` state, move auto-start into provider, role-aware step list, post-completion toast
-- New: `src/components/tutorial/TutorialMiniBar.tsx` — floating "Resume tour" pill
-- New: `src/components/tutorial/SetupChecklistStep.tsx` — final interactive checklist step (queries crew/trucks/incidents counts)
-- Edit: `src/App.tsx` — mount `<TutorialMiniBar />` alongside overlay
-- Edit: `src/pages/Dashboard.tsx` — remove the now-redundant `maybeAutoStart` call (moves into provider)
+- New: `public/tutorial/dashboard.png`, `incidents.png`, `shift-tickets.png`, `crew.png`, `fleet.png`, `expenses.png`, `needs.png`
+- Edit: `src/components/tutorial/tutorial-steps.ts` — add screenshot/highlight fields, rewrite pro tips
+- Edit: `src/components/tutorial/TutorialOverlay.tsx` — render phone-frame + highlight overlay when screenshot present
 
