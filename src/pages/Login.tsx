@@ -42,8 +42,22 @@ export default function Login() {
     setLoading(true);
 
     try {
+      // Validate inputs before hitting auth
+      const emailResult = emailSchema.safeParse(email);
+      if (!emailResult.success) {
+        throw new Error(emailResult.error.issues[0]?.message ?? "Invalid email");
+      }
+      const cleanEmail = emailResult.data;
+
+      if (mode !== "forgot") {
+        const passwordResult = passwordSchema.safeParse(password);
+        if (!passwordResult.success) {
+          throw new Error(passwordResult.error.issues[0]?.message ?? "Invalid password");
+        }
+      }
+
       if (mode === "forgot") {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
           redirectTo: `${window.location.origin}/reset-password`,
         });
         if (error) throw error;
@@ -51,7 +65,7 @@ export default function Login() {
         setMode("login");
       } else if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
-          email,
+          email: cleanEmail,
           password,
           options: { emailRedirectTo: window.location.origin },
         });
@@ -62,7 +76,7 @@ export default function Login() {
         });
         setMode("login");
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
         if (error) throw error;
       }
     } catch (err: any) {
