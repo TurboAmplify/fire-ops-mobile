@@ -402,6 +402,13 @@ export default function ShiftTicketLog() {
               )}
               <span className="flex-1">Download PDF</span>
             </button>
+            <button
+              onClick={openDeleteDialog}
+              className="flex items-center gap-3 rounded-xl bg-destructive/10 px-4 py-3 text-left text-sm font-medium text-destructive active:bg-destructive/20 transition-colors touch-target"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="flex-1">Delete ticket</span>
+            </button>
           </div>
         </DialogContent>
       </Dialog>
@@ -418,6 +425,62 @@ export default function ShiftTicketLog() {
               className="flex-1 w-full bg-muted"
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && closeDeleteDialog()}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Delete shift ticket?
+            </DialogTitle>
+            <DialogDescription>
+              {deleteTarget
+                ? `This will permanently delete the shift ticket for ${deleteTarget.truckName} on ${deleteTarget.dateLabel}. This action cannot be undone.`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 pt-1">
+            <label className="text-sm font-medium">
+              Type <span className="font-mono font-bold">delete</span> to confirm:
+            </label>
+            <Input
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder="delete"
+              autoFocus
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              disabled={deleteLoading}
+            />
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={closeDeleteDialog} disabled={deleteLoading}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={
+                deleteLoading || deleteConfirmText.trim().toLowerCase() !== "delete"
+              }
+            >
+              {deleteLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Deleting…
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete permanently
+                </>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </AppShell>
