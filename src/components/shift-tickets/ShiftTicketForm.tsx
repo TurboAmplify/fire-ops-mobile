@@ -175,6 +175,17 @@ export function ShiftTicketForm({
   // ── Success overlay ──
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  // ── Lock & audit state ──
+  // A ticket is locked once the supervisor signature is captured.
+  // Admins can unlock with a written reason; the unlock + every subsequent
+  // save are written to the immutable shift_ticket_audit table.
+  const ticketLocked = !!ticket && auditIsLocked(ticket as Record<string, unknown>);
+  const [unlockedThisSession, setUnlockedThisSession] = useState(false);
+  const [unlockReason, setUnlockReason] = useState("");
+  const [showUnlockDialog, setShowUnlockDialog] = useState(false);
+  const [unlockSubmitting, setUnlockSubmitting] = useState(false);
+  const editingLocked = ticketLocked && !unlockedThisSession;
+
   const showSuccess = useCallback((msg: string) => {
     setSuccessMsg(msg);
   }, []);
