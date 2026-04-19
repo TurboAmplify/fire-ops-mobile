@@ -84,12 +84,26 @@ type SelectedTicket = {
   dateLabel: string;
 };
 
+type SortKey = "date" | "truck" | "crew" | "lunch" | "perDiem" | "contractor" | "supervisor" | "status";
+type SortDir = "asc" | "desc";
+
 export default function ShiftTicketLog() {
   const navigate = useNavigate();
   // refetchOnMount + refetchOnWindowFocus ensure changes from the edit page show up on return
   const { data: tickets, isLoading } = useRecentShiftTickets(200);
   const [selected, setSelected] = useState<SelectedTicket | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>("date");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "date" ? "desc" : "asc");
+    }
+  };
 
   const handleEdit = () => {
     if (!selected?.incidentId) {
@@ -113,6 +127,53 @@ export default function ShiftTicketLog() {
     } finally {
       setPdfLoading(false);
     }
+  };
+
+  const sortedTickets = (() => {
+    if (!tickets) return tickets;
+    const dir = sortDir === "asc" ? 1 : -1;
+    const cmp = (a: string | number, b: string | number) =>
+      a < b ? -1 * dir : a > b ? 1 * dir : 0;
+    const keyFor = (t: (typeof tickets)[number]): string | number => {
+      switch (sortKey) {
+        case "date":
+          return ticketDate(t);
+        case "truck":
+          return (t.incident_trucks?.trucks?.name ?? "").toLowerCase();
+        case "crew":
+          return crewSummary(t.personnel_entries).toLowerCase();
+        case "lunch":
+          return lunchStatus(t.personnel_entries).tone === "ok" ? 1 : 0;
+        case "perDiem":
+          return summarizePerDiem(t.personnel_entries).toLowerCase();
+        case "contractor":
+          return t.contractor_rep_signed_at ?? "";
+        case "supervisor":
+          return t.supervisor_signed_at ?? "";
+        case "status":
+          return t.status ?? "";
+      }
+    };
+    return [...tickets].sort((a, b) => cmp(keyFor(a), keyFor(b)));
+  })();
+
+  const SortHeader = ({ label, k }: { label: string; k: SortKey }) => {
+    const active = sortKey === k;
+    const Icon = !active ? ArrowUpDown : sortDir === "asc" ? ArrowUp : ArrowDown;
+    return (
+      <th className="text-left font-semibold px-3 py-2.5 whitespace-nowrap">
+        <button
+          type="button"
+          onClick={() => toggleSort(k)}
+          className={`inline-flex items-center gap-1 uppercase tracking-wider text-[11px] ${
+            active ? "text-foreground" : "text-muted-foreground"
+          } hover:text-foreground transition-colors`}
+        >
+          {label}
+          <Icon className="h-3 w-3" />
+        </button>
+      </th>
+    );
   };
 
   return (
