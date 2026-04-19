@@ -18,7 +18,10 @@ export function CrewSyncCard({ equipmentEntries, personnelEntries, setPersonnelE
   const eqDate = primary?.date || "";
   const eqTotal = computeHours(eqStart, eqStop);
 
-  const [hasLunch, setHasLunch] = useState(false);
+  // Lunch defaults to TRUE — every shift gets a 30-min lunch unless the user
+  // explicitly untaps it. If a saved ticket already has personnel entries,
+  // restore the lunch state from the first entry's remarks string.
+  const [hasLunch, setHasLunch] = useState(true);
   const [lunchTime, setLunchTime] = useState("1200");
   const [lodging, setLodging] = useState(false);
   const [perDiemB, setPerDiemB] = useState(false);
@@ -33,12 +36,17 @@ export function CrewSyncCard({ equipmentEntries, personnelEntries, setPersonnelE
       setPerDiemB(first.per_diem_b || false);
       setPerDiemL(first.per_diem_l || false);
       setPerDiemD(first.per_diem_d || false);
+      // Restore lunch from saved remarks. If a saved entry has no "30-min lunch"
+      // marker, the user previously turned it off — respect that choice.
+      const lunchMatch = first.remarks?.match(/30-?min lunch at (\d{4})/i);
+      if (lunchMatch) {
+        setHasLunch(true);
+        setLunchTime(lunchMatch[1]);
+      } else if (first.remarks) {
+        setHasLunch(false);
+      }
     }
-  }, [first?.lodging, first?.per_diem_b, first?.per_diem_l, first?.per_diem_d]);
-
-  useEffect(() => {
-    setHasLunch(eqTotal > 8);
-  }, [eqTotal]);
+  }, [first?.lodging, first?.per_diem_b, first?.per_diem_l, first?.per_diem_d, first?.remarks]);
 
   const crewTotal = hasLunch ? Math.round((eqTotal - 0.5) * 10) / 10 : eqTotal;
 
