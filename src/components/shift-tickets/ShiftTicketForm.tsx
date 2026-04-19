@@ -303,13 +303,100 @@ export function ShiftTicketForm({
     };
   };
 
+  const writeAuditForSave = async (
+    payload: Partial<ShiftTicket>,
+    opts: { isOverrideEdit: boolean }
+  ) => {
+    if (!ticket?.id || !organizationId) return;
+    // Only audit changes once a signature exists. Before any signature, the
+    // ticket is considered editable working state.
+    if (!hasAnySignature(ticket as Record<string, unknown>)) return;
+
+    const diffs = diffTicket(
+      ticket as Record<string, unknown>,
+      payload as Record<string, unknown>
+    );
+    if (diffs.length === 0) return;
+
+    const actor_user_id = user?.id ?? null;
+    const actor_name = (user?.user_metadata as { full_name?: string } | undefined)?.full_name ?? user?.email ?? null;
+
+    const entries = diffs.map((d) => ({
+      shift_ticket_id: ticket.id!,
+      organization_id: organizationId,
+      event_type: opts.isOverrideEdit ? ("override_edit" as const) : d.event_type,
+      field_name: d.field_name ?? null,
+      old_value: d.old_value ?? null,
+      new_value: d.new_value ?? null,
+      reason: opts.isOverrideEdit ? unlockReason || null : null,
+      actor_user_id,
+      actor_name,
+    }));
+
+    await insertAuditEntries(entries);
+  };
+
   const handleSave = async (silent = false) => {
+    if (editingLocked) {
+      toast.error("This ticket is locked. An admin must unlock it before saving changes.");
+      return;
+    }
+    const payload = buildSavePayload();
     try {
-      await Promise.resolve(onSave(buildSavePayload()));
+      await writeAuditForSave(payload, { isOverrideEdit: !!unlockedThisSession });
+      await Promise.resolve(onSave(payload));
       setIsDirty(false);
-      if (!silent) showSuccess("Saved");
+
+      // Re-lock automatically if supervisor sig is still present after save
+      if (unlockedThisSession && payload.status === "final") {
+        await insertAuditEntries([
+          {
+            shift_ticket_id: ticket!.id!,
+            organization_id: organizationId,
+            event_type: "relocked",
+            actor_user_id: user?.id ?? null,
+            actor_name:
+              (user?.user_metadata as { full_name?: string } | undefined)?.full_name ??
+              user?.email ??
+              null,
+          },
+        ]);
+        setUnlockedThisSession(false);
+        setUnlockReason("");
+      }
+
+      if (!silent) showSuccess(payload.status === "final" ? "Saved & locked" : "Saved");
     } catch {
       // Error handled by parent
+    }
+  };
+
+  const handleUnlockConfirm = async () => {
+    if (!ticket?.id || !organizationId) return;
+    if (unlockReason.trim().length < 4) {
+      toast.error("Please enter a reason for unlocking (4+ characters)");
+      return;
+    }
+    setUnlockSubmitting(true);
+    try {
+      await insertAuditEntries([
+        {
+          shift_ticket_id: ticket.id,
+          organization_id: organizationId,
+          event_type: "unlocked",
+          reason: unlockReason.trim(),
+          actor_user_id: user?.id ?? null,
+          actor_name:
+            (user?.user_metadata as { full_name?: string } | undefined)?.full_name ??
+            user?.email ??
+            null,
+        },
+      ]);
+      setUnlockedThisSession(true);
+      setShowUnlockDialog(false);
+      showSuccess("Ticket unlocked for editing");
+    } finally {
+      setUnlockSubmitting(false);
     }
   };
 
