@@ -2,7 +2,7 @@ import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import {
   Flame, Plus, ScanLine, ChevronRight, Settings,
-  Truck, Users, ClipboardList, CheckCircle2,
+  Truck, Users, ClipboardList, CheckCircle2, ShieldCheck,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useIncidents } from "@/hooks/useIncidents";
@@ -11,6 +11,7 @@ import { useCrewMembers } from "@/hooks/useCrewMembers";
 import { useNeedsList } from "@/hooks/useNeedsList";
 import { ShiftTicketQuickAccess } from "@/components/shift-tickets/ShiftTicketQuickAccess";
 import { InspectionDueBanner } from "@/components/fleet/InspectionDueBanner";
+import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
 import type { LucideIcon } from "lucide-react";
 
 export default function Dashboard() {
@@ -20,6 +21,7 @@ export default function Dashboard() {
   const { data: trucks, isLoading: loadingTrucks, error: trucksError } = useTrucks();
   const { data: crew, isLoading: loadingCrew, error: crewError } = useCrewMembers();
   const { data: needsItems, isLoading: loadingNeeds } = useNeedsList();
+  const { isPlatformAdmin } = usePlatformAdmin();
 
   const activeIncidents = incidents?.filter((i) => i.status === "active") ?? [];
   const activeCount = activeIncidents.length;
@@ -32,9 +34,21 @@ export default function Dashboard() {
 
   return (
     <AppShell title="FireOps HQ" headerRight={
-      <button onClick={() => navigate("/settings")} className="flex items-center justify-center h-9 w-9 rounded-full active:bg-secondary transition-colors">
-        <Settings className="h-5 w-5 text-muted-foreground" strokeWidth={1.75} />
-      </button>
+      <>
+        {isPlatformAdmin && (
+          <button
+            onClick={() => navigate("/super-admin")}
+            className="flex items-center gap-1 h-8 px-2.5 rounded-full bg-primary/15 text-primary text-[11px] font-semibold active:bg-primary/25 transition-colors"
+            aria-label="Super Admin"
+          >
+            <ShieldCheck className="h-3.5 w-3.5" strokeWidth={2} />
+            <span>Super</span>
+          </button>
+        )}
+        <button onClick={() => navigate("/settings")} className="flex items-center justify-center h-9 w-9 rounded-full active:bg-secondary transition-colors">
+          <Settings className="h-5 w-5 text-muted-foreground" strokeWidth={1.75} />
+        </button>
+      </>
     }>
       {/* Subtle mesh gradient background */}
       <div className="fixed inset-0 pointer-events-none -z-10">

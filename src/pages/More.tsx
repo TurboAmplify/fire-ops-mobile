@@ -1,14 +1,16 @@
 import { AppShell } from "@/components/AppShell";
 import { useNavigate } from "react-router-dom";
-import { Settings, ChevronRight, Shield, BarChart3, ClipboardList } from "lucide-react";
+import { Settings, ChevronRight, Shield, BarChart3, ClipboardList, ShieldCheck } from "lucide-react";
 import { ALL_NAV_OPTIONS, getSelectedTabKeys, filterNavByMode } from "@/components/settings/NavBarCustomizer";
 import { useOrganization } from "@/hooks/useOrganization";
+import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
 import { useAppMode } from "@/lib/app-mode";
 import { useEffect, useState } from "react";
 
 export default function More() {
   const navigate = useNavigate();
   const { isAdmin } = useOrganization();
+  const { isPlatformAdmin } = usePlatformAdmin();
   const { modules } = useAppMode();
   const [bump, setBump] = useState(0);
 
@@ -27,6 +29,29 @@ export default function More() {
   return (
     <AppShell title="More">
       <div className="p-4 space-y-5">
+        {isPlatformAdmin && (
+          <section className="space-y-2">
+            <h2 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
+              Platform
+            </h2>
+            <div className="rounded-2xl bg-card overflow-hidden divide-y divide-border/60 card-shadow">
+              <button
+                onClick={() => navigate("/super-admin")}
+                className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors active:bg-secondary/50 touch-target"
+              >
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 shrink-0">
+                  <ShieldCheck className="h-[18px] w-[18px] text-primary" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">Super Admin</p>
+                  <p className="text-[11px] text-muted-foreground">Orgs, users, activity across the platform</p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
+              </button>
+            </div>
+          </section>
+        )}
+
         <section className="space-y-2">
           <h2 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
             Logs
