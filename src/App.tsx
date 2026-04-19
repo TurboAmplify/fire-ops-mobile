@@ -8,6 +8,8 @@ import { OrganizationProvider } from "@/hooks/useOrganization";
 import { ImpersonationProvider } from "@/hooks/useImpersonation";
 import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { TutorialProvider } from "@/hooks/useTutorial";
+import { TutorialOverlay } from "@/components/tutorial/TutorialOverlay";
 import { queryClient, asyncPersister } from "@/lib/query-client";
 import "@/lib/offline-queue";
 import Login from "./pages/Login";
@@ -63,7 +65,9 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <TutorialProvider>
             <ImpersonationBanner />
+            <TutorialOverlay />
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/reset-password" element={<ResetPassword />} />
@@ -108,6 +112,7 @@ const App = () => (
               <Route path="/super-admin/audit" element={<ProtectedRoute><PlatformAdminGate><SuperAdminAudit /></PlatformAdminGate></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </TutorialProvider>
           </BrowserRouter>
         </TooltipProvider>
         </OrganizationProvider>

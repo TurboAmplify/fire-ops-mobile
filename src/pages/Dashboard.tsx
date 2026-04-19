@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import {
   Flame, Plus, ScanLine, ChevronRight, Settings,
-  Truck, Users, ClipboardList, CheckCircle2, ShieldCheck,
+  Truck, Users, ClipboardList, CheckCircle2, ShieldCheck, HelpCircle,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useIncidents } from "@/hooks/useIncidents";
@@ -12,6 +12,7 @@ import { useNeedsList } from "@/hooks/useNeedsList";
 import { ShiftTicketQuickAccess } from "@/components/shift-tickets/ShiftTicketQuickAccess";
 import { InspectionDueBanner } from "@/components/fleet/InspectionDueBanner";
 import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
+import { useTutorial } from "@/hooks/useTutorial";
 import type { LucideIcon } from "lucide-react";
 
 export default function Dashboard() {
@@ -22,6 +23,11 @@ export default function Dashboard() {
   const { data: crew, isLoading: loadingCrew, error: crewError } = useCrewMembers();
   const { data: needsItems, isLoading: loadingNeeds } = useNeedsList();
   const { isPlatformAdmin } = usePlatformAdmin();
+  const { start: startTutorial, maybeAutoStart } = useTutorial();
+
+  useEffect(() => {
+    void maybeAutoStart();
+  }, [maybeAutoStart]);
 
   const activeIncidents = incidents?.filter((i) => i.status === "active") ?? [];
   const activeCount = activeIncidents.length;
@@ -45,6 +51,13 @@ export default function Dashboard() {
             <span>Super</span>
           </button>
         )}
+        <button
+          onClick={startTutorial}
+          className="flex items-center justify-center h-9 w-9 rounded-full active:bg-secondary transition-colors"
+          aria-label="Replay tutorial"
+        >
+          <HelpCircle className="h-5 w-5 text-muted-foreground" strokeWidth={1.75} />
+        </button>
         <button onClick={() => navigate("/settings")} className="flex items-center justify-center h-9 w-9 rounded-full active:bg-secondary transition-colors">
           <Settings className="h-5 w-5 text-muted-foreground" strokeWidth={1.75} />
         </button>

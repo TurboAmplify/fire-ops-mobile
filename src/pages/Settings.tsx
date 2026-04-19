@@ -19,16 +19,19 @@ import {
   SlidersHorizontal,
   Trash2,
   Loader2,
+  PlayCircle,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { NavBarCustomizer } from "@/components/settings/NavBarCustomizer";
+import { useTutorial } from "@/hooks/useTutorial";
 
 export default function Settings() {
   const { user, signOut } = useAuth();
   const { membership } = useOrganization();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const { start: startTutorial } = useTutorial();
   const [showNavCustomizer, setShowNavCustomizer] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -126,6 +129,20 @@ export default function Settings() {
           <div className="rounded-2xl bg-card overflow-hidden divide-y divide-border/60 card-shadow">
             <InfoRow icon={Info} label="App Version" value="1.0.0" />
             <InfoRow icon={Flame} label="FireOps HQ" value="Field Operations" />
+          </div>
+        </section>
+
+        {/* Help */}
+        <section className="space-y-2">
+          <h2 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
+            Help
+          </h2>
+          <div className="rounded-2xl bg-card overflow-hidden divide-y divide-border/60 card-shadow">
+            <LinkRow
+              icon={PlayCircle}
+              label="Replay Tutorial"
+              onClick={startTutorial}
+            />
           </div>
         </section>
 

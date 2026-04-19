@@ -774,18 +774,21 @@ export type Database = {
           crew_member_id: string | null
           full_name: string | null
           id: string
+          tutorial_completed_at: string | null
         }
         Insert: {
           created_at?: string
           crew_member_id?: string | null
           full_name?: string | null
           id: string
+          tutorial_completed_at?: string | null
         }
         Update: {
           created_at?: string
           crew_member_id?: string | null
           full_name?: string | null
           id?: string
+          tutorial_completed_at?: string | null
         }
         Relationships: [
           {
