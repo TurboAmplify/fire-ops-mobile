@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { generateOF297Pdf, generateOF297PdfBlob } from "@/components/shift-tickets/generateOF297Pdf";
+import { useOrganization } from "@/hooks/useOrganization";
 
 function formatDateSafe(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
@@ -116,6 +117,7 @@ type SortDir = "asc" | "desc";
 export default function ShiftTicketLog() {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { isAdmin } = useOrganization();
   // refetchOnMount + refetchOnWindowFocus ensure changes from the edit page show up on return
   const { data: tickets, isLoading } = useRecentShiftTickets(200);
   const [selected, setSelected] = useState<SelectedTicket | null>(null);
@@ -200,6 +202,10 @@ export default function ShiftTicketLog() {
 
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
+    if (!isAdmin) {
+      toast.error("Only organization admins can delete shift tickets");
+      return;
+    }
     if (deleteConfirmText.trim().toLowerCase() !== "delete") return;
     setDeleteLoading(true);
     try {
@@ -571,13 +577,15 @@ export default function ShiftTicketLog() {
               )}
               <span className="flex-1">Download PDF</span>
             </button>
-            <button
-              onClick={openDeleteDialog}
-              className="flex items-center gap-3 rounded-xl bg-destructive/10 px-4 py-3 text-left text-sm font-medium text-destructive active:bg-destructive/20 transition-colors touch-target"
-            >
-              <Trash2 className="h-4 w-4" />
-              <span className="flex-1">Delete ticket</span>
-            </button>
+            {isAdmin && (
+              <button
+                onClick={openDeleteDialog}
+                className="flex items-center gap-3 rounded-xl bg-destructive/10 px-4 py-3 text-left text-sm font-medium text-destructive active:bg-destructive/20 transition-colors touch-target"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span className="flex-1">Delete ticket</span>
+              </button>
+            )}
           </div>
         </DialogContent>
       </Dialog>
