@@ -43,6 +43,8 @@ import Training from "./pages/Training";
 import RunReport from "./pages/RunReport";
 import CrewTimeReport from "./pages/CrewTimeReport";
 import { ModuleGate, AdminGate } from "@/components/ModuleGate";
+import { PlatformAdminGate } from "@/components/PlatformAdminGate";
+import SuperAdmin from "./pages/SuperAdmin";
 import NotFound from "./pages/NotFound";
 
 const App = () => (
@@ -89,6 +91,7 @@ const App = () => (
               <Route path="/run-reports" element={<ProtectedRoute><ModuleGate module="runReport"><RunReport /></ModuleGate></ProtectedRoute>} />
               <Route path="/ctr" element={<ProtectedRoute><ModuleGate module="ctr"><CrewTimeReport /></ModuleGate></ProtectedRoute>} />
               <Route path="/admin/logs" element={<ProtectedRoute><AdminGate><AdminLogs /></AdminGate></ProtectedRoute>} />
+              <Route path="/super-admin" element={<ProtectedRoute><PlatformAdminGate><SuperAdmin /></PlatformAdminGate></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
