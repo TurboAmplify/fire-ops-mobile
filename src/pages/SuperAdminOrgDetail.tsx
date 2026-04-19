@@ -73,7 +73,10 @@ export default function SuperAdminOrgDetail() {
   const { orgId } = useParams<{ orgId: string }>();
   const navigate = useNavigate();
   const { startViewAs } = useImpersonation();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [membershipDialog, setMembershipDialog] = useState<null | "add" | "remove">(null);
+  const [reason, setReason] = useState("");
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["super-admin", "org", orgId],
@@ -82,6 +85,33 @@ export default function SuperAdminOrgDetail() {
       const { data, error } = await supabase.rpc("admin_get_organization", { _org_id: orgId! });
       if (error) throw error;
       return data as unknown as OrgDetail | null;
+    },
+  });
+
+  const isMember = !!user?.id && !!data?.members.some((m) => m.user_id === user.id);
+
+  const membershipMutation = useMutation({
+    mutationFn: async ({ action, reason }: { action: "add" | "remove"; reason: string }) => {
+      if (!orgId) throw new Error("No organization");
+      const trimmed = reason.trim() || null;
+      const rpc = action === "add" ? "admin_self_add_to_org" : "admin_self_remove_from_org";
+      const { error } = await supabase.rpc(rpc, { _org_id: orgId, _reason: trimmed });
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => {
+      toast.success(
+        vars.action === "add"
+          ? `Added to ${data?.name ?? "organization"} as admin`
+          : `Removed from ${data?.name ?? "organization"}`,
+      );
+      queryClient.invalidateQueries({ queryKey: ["super-admin", "org", orgId] });
+      setMembershipDialog(null);
+      setReason("");
+    },
+    onError: (err) => {
+      toast.error("Action failed", {
+        description: err instanceof Error ? err.message : undefined,
+      });
     },
   });
 
