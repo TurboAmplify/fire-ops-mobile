@@ -94,6 +94,7 @@ type SortDir = "asc" | "desc";
 
 export default function ShiftTicketLog() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   // refetchOnMount + refetchOnWindowFocus ensure changes from the edit page show up on return
   const { data: tickets, isLoading } = useRecentShiftTickets(200);
   const [selected, setSelected] = useState<SelectedTicket | null>(null);
@@ -103,6 +104,9 @@ export default function ShiftTicketLog() {
   const [pdfPreviewTitle, setPdfPreviewTitle] = useState<string>("");
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [deleteTarget, setDeleteTarget] = useState<SelectedTicket | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
