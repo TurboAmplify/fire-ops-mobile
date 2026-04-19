@@ -27,9 +27,11 @@ export async function parseAgreementAI(fileUrl: string, fileName: string): Promi
 }
 
 export async function uploadAgreementForParsing(file: File, organizationId?: string): Promise<{ fileUrl: string; fileName: string }> {
+  if (!organizationId) {
+    throw new Error("Cannot upload agreement without an organization");
+  }
   const ext = file.name.split(".").pop() || "pdf";
-  const prefix = organizationId ? `${organizationId}/` : "";
-  const path = `${prefix}${crypto.randomUUID()}.${ext}`;
+  const path = `${organizationId}/${crypto.randomUUID()}.${ext}`;
   const { error } = await supabase.storage.from("agreements").upload(path, file);
   if (error) throw error;
   const { data } = supabase.storage.from("agreements").getPublicUrl(path);
