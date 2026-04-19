@@ -24,17 +24,15 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" replace />;
   }
 
-  // Platform admins: default landing is /super-admin (unless impersonating).
-  // Hitting "/" with no membership shouldn't bounce them to org-setup.
-  if (isPlatformAdmin && !isImpersonating) {
+  // Platform admins without any org membership: send them to /super-admin
+  // when they hit "/", and allow free navigation elsewhere. Platform admins
+  // who ARE members of an org should land on the normal Dashboard so the
+  // "Home" button behaves like it does for any other admin.
+  if (isPlatformAdmin && !isImpersonating && !membership) {
     if (location.pathname === "/") {
       return <Navigate to="/super-admin" replace />;
     }
-    // Platform admin without an org membership: allow them to navigate
-    // anywhere instead of forcing org-setup.
-    if (!membership) {
-      return <>{children}</>;
-    }
+    return <>{children}</>;
   }
 
   if (!membership) {
