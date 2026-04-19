@@ -1619,6 +1619,10 @@ export type Database = {
     }
     Functions: {
       accept_invite_by_code: { Args: { _code: string }; Returns: string }
+      admin_delete_organization: {
+        Args: { _org_id: string; _reason: string }
+        Returns: undefined
+      }
       admin_get_organization: { Args: { _org_id: string }; Returns: Json }
       admin_list_audit: {
         Args: { _limit?: number }
