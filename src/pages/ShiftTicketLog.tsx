@@ -3,8 +3,10 @@ import { useRecentShiftTickets } from "@/hooks/useShiftTickets";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Clock, FileText, Pencil, FileDown, Loader2, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { CheckCircle2, Clock, FileText, Pencil, FileDown, Loader2, ArrowUp, ArrowDown, ArrowUpDown, Trash2, AlertTriangle, Eye } from "lucide-react";
 import type { PersonnelEntry, ShiftTicket } from "@/services/shift-tickets";
+import { deleteShiftTicket } from "@/services/shift-tickets";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   Dialog,
@@ -12,10 +14,12 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { generateOF297Pdf, generateOF297PdfBlob } from "@/components/shift-tickets/generateOF297Pdf";
-import { Eye } from "lucide-react";
 
 function formatDateSafe(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
@@ -90,6 +94,7 @@ type SortDir = "asc" | "desc";
 
 export default function ShiftTicketLog() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   // refetchOnMount + refetchOnWindowFocus ensure changes from the edit page show up on return
   const { data: tickets, isLoading } = useRecentShiftTickets(200);
   const [selected, setSelected] = useState<SelectedTicket | null>(null);
@@ -99,6 +104,9 @@ export default function ShiftTicketLog() {
   const [pdfPreviewTitle, setPdfPreviewTitle] = useState<string>("");
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [deleteTarget, setDeleteTarget] = useState<SelectedTicket | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -154,6 +162,40 @@ export default function ShiftTicketLog() {
     if (pdfPreviewUrl) URL.revokeObjectURL(pdfPreviewUrl);
     setPdfPreviewUrl(null);
     setPdfPreviewTitle("");
+  };
+
+  const openDeleteDialog = () => {
+    if (!selected) return;
+    setDeleteTarget(selected);
+    setDeleteConfirmText("");
+    setSelected(null);
+  };
+
+  const closeDeleteDialog = () => {
+    if (deleteLoading) return;
+    setDeleteTarget(null);
+    setDeleteConfirmText("");
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    if (deleteConfirmText.trim().toLowerCase() !== "delete") return;
+    setDeleteLoading(true);
+    try {
+      await deleteShiftTicket(deleteTarget.ticket.id);
+      await qc.invalidateQueries({ queryKey: ["shift-tickets-recent"] });
+      await qc.invalidateQueries({
+        queryKey: ["shift-tickets", deleteTarget.ticket.incident_truck_id],
+      });
+      toast.success("Shift ticket deleted");
+      setDeleteTarget(null);
+      setDeleteConfirmText("");
+    } catch (err) {
+      console.error("Delete failed:", err);
+      toast.error("Failed to delete shift ticket");
+    } finally {
+      setDeleteLoading(false);
+    }
   };
 
   const sortedTickets = (() => {
@@ -360,6 +402,13 @@ export default function ShiftTicketLog() {
               )}
               <span className="flex-1">Download PDF</span>
             </button>
+            <button
+              onClick={openDeleteDialog}
+              className="flex items-center gap-3 rounded-xl bg-destructive/10 px-4 py-3 text-left text-sm font-medium text-destructive active:bg-destructive/20 transition-colors touch-target"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="flex-1">Delete ticket</span>
+            </button>
           </div>
         </DialogContent>
       </Dialog>
@@ -376,6 +425,62 @@ export default function ShiftTicketLog() {
               className="flex-1 w-full bg-muted"
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && closeDeleteDialog()}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Delete shift ticket?
+            </DialogTitle>
+            <DialogDescription>
+              {deleteTarget
+                ? `This will permanently delete the shift ticket for ${deleteTarget.truckName} on ${deleteTarget.dateLabel}. This action cannot be undone.`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 pt-1">
+            <label className="text-sm font-medium">
+              Type <span className="font-mono font-bold">delete</span> to confirm:
+            </label>
+            <Input
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder="delete"
+              autoFocus
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              disabled={deleteLoading}
+            />
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={closeDeleteDialog} disabled={deleteLoading}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={
+                deleteLoading || deleteConfirmText.trim().toLowerCase() !== "delete"
+              }
+            >
+              {deleteLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Deleting…
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete permanently
+                </>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </AppShell>
