@@ -47,6 +47,8 @@ interface ShiftTicketFormProps {
   exportingPdf?: boolean;
   warnings?: string[];
   crewRoster?: IncidentTruckCrewWithMember[];
+  /** True when the signed-in user is an org admin. Required for unlocking a final ticket. */
+  isAdmin?: boolean;
 }
 
 const emptyEquipmentEntry = (): EquipmentEntry => ({
