@@ -203,20 +203,20 @@ export default function ShiftTicketLog() {
           <div className="rounded-2xl bg-card card-shadow overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-muted/40 text-[11px] uppercase tracking-wider text-muted-foreground">
+                <thead className="bg-muted/40">
                   <tr>
-                    <th className="text-left font-semibold px-3 py-2.5 whitespace-nowrap">Date</th>
-                    <th className="text-left font-semibold px-3 py-2.5 whitespace-nowrap">Truck</th>
-                    <th className="text-left font-semibold px-3 py-2.5">Crew</th>
-                    <th className="text-left font-semibold px-3 py-2.5 whitespace-nowrap">Lunch</th>
-                    <th className="text-left font-semibold px-3 py-2.5 whitespace-nowrap">Per Diem</th>
-                    <th className="text-left font-semibold px-3 py-2.5 whitespace-nowrap">Contractor Sig</th>
-                    <th className="text-left font-semibold px-3 py-2.5 whitespace-nowrap">Supervisor Sig</th>
-                    <th className="text-left font-semibold px-3 py-2.5 whitespace-nowrap">Status</th>
+                    <SortHeader label="Date" k="date" />
+                    <SortHeader label="Truck" k="truck" />
+                    <SortHeader label="Crew" k="crew" />
+                    <SortHeader label="Lunch" k="lunch" />
+                    <SortHeader label="Per Diem" k="perDiem" />
+                    <SortHeader label="Contractor Sig" k="contractor" />
+                    <SortHeader label="Supervisor Sig" k="supervisor" />
+                    <SortHeader label="Status" k="status" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
-                  {tickets.map((t) => {
+                  {(sortedTickets ?? []).map((t) => {
                     const dateStr = ticketDate(t);
                     const dateLabel = formatDateSafe(dateStr);
                     const lunch = lunchStatus(t.personnel_entries);
