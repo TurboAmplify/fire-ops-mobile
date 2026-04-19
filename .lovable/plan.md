@@ -1,69 +1,38 @@
 
 
-# Tutorial / onboarding tour
+You're now a real admin of Dry Lightning. Here's the situation and what I'd add.
 
-## What you'll get
+## What you can do RIGHT NOW (no code changes needed)
 
-A **mobile-first guided tour** that runs automatically the first time a user logs in, and is always available from Settings → "Replay Tutorial" and a small "?" button on the Dashboard header.
+Since you're a real `admin` member, RLS already lets you:
+- Edit org name, tier, seat limit, modules, accepts_assignments → via `OrgSettings` page
+- Manage members and invites
+- Edit/create incidents, trucks, crew, expenses, shift tickets, etc. — anywhere in the app
 
-The tour is a series of full-screen-friendly **bottom-sheet cards** (not a tooltip overlay — those break on mobile and require horizontal positioning). Each step shows:
-- A title + short description (1-2 sentences)
-- A small icon/illustration matching the feature
-- "Skip", "Back", "Next" buttons + a progress dots indicator
-- Optional "Take me there" button that navigates to the relevant screen
+**To get there:** the `OrgSettings` page lives at `/org-settings`, but right now it loads `useOrganization()` which returns whichever org you're a member of. Since you're a member of Dry Lightning now, just navigate to **More → Settings → Org Settings** (or `/org-settings`) and you'll be editing Dry Lightning.
 
-Steps cover the core flow:
-1. **Welcome** — "FireOps HQ helps you run incidents, crews, and expenses from the field."
-2. **Dashboard** — Active incidents, stats, quick actions
-3. **Incidents** — Create incidents, assign trucks/crew
-4. **Shift Tickets** — Daily OF-297 tickets per truck
-5. **Crew** — Manage personnel, contacts, roles
-6. **Fleet** — Trucks, photos, inspections, AI VIN scan
-7. **Expenses** — Receipts, scan with AI, categorize
-8. **Needs List** — Track what crews need on the fire
-9. **Offline** — App works without signal, syncs when back
-10. **Settings & Replay** — Where to find help and replay the tour anytime
+If you're a member of multiple orgs, this is where it gets messy — `useOrganization` picks the first one (`limit(1)`), which may not be Dry Lightning. I'll check if that's a problem for you.
 
-Each step is a single card; no horizontal scroll, no tooltip pointing at off-screen elements, safe-area aware.
+## What's missing — quick wins to add
 
-## How "first login" detection works
+The Super Admin → Org Detail page should make this obvious instead of making you guess. I'd add:
 
-- `tutorial_completed_at` boolean stored in `profiles` table (per-user, syncs across devices).
-- Plus a `localStorage` fallback so the tour can be dismissed instantly without a network round-trip.
-- On Dashboard mount: if user is signed in, has an org, and `tutorial_completed_at` is null → auto-open the tour after a 600ms delay (lets the page settle).
-- Marking complete: writes both `localStorage` and the profile column.
+1. **"Edit this org" button** on `SuperAdminOrgDetail` (next to the existing self-add/view-as buttons) that:
+   - If you're a member of this org → navigates to `/org-settings` and ensures the active org context is this one
+   - If you're not a member → prompts you to self-add first
 
-## How "available anytime" works
+2. **Active org switcher** (small) — if a platform admin is a member of >1 org, let them pick which one `useOrganization` returns. Today it's just "first one wins" which is fragile now that admins can join multiple orgs.
 
-- Settings page → new "Replay Tutorial" row under a new **Help** section (above Legal & Support).
-- Dashboard header → new small `?` icon button (next to the Super Admin chip) that opens the tour from step 1.
-- Both call the same `useTutorial().start()` function.
-
-## Mobile-first guarantees
-
-- Card uses existing `Sheet` component (`side="bottom"`), already used elsewhere — proven safe-area + keyboard behavior.
-- Content is `max-w-full px-4`, all text wraps, no fixed widths.
-- Buttons are full-width stacked on narrow screens, no horizontal scroll possible.
-- No element pointers / no tooltip-attached-to-DOM-node logic (those are fragile on mobile and cause horizontal overflow when the target scrolls off-screen).
-
-## Backend (1 small migration)
-
-- Add `tutorial_completed_at timestamptz` column to `profiles` (nullable, default null).
-- No RLS changes needed — existing profile policies cover it (user can read/update own row).
+3. **Inline note on the org detail page** — small banner: "You are a member of this org as `admin`. [Edit org settings] [Leave org]" so the state is obvious.
 
 ## Files
 
-- New migration: add `profiles.tutorial_completed_at`
-- New: `src/hooks/useTutorial.tsx` — Provider + hook (state, open/close, mark complete, persist)
-- New: `src/components/tutorial/TutorialOverlay.tsx` — The Sheet-based step UI
-- New: `src/components/tutorial/tutorial-steps.ts` — The step content array (icon, title, body, optional route)
-- Edited: `src/App.tsx` — Wrap routes with `TutorialProvider`, mount `<TutorialOverlay />` once
-- Edited: `src/pages/Dashboard.tsx` — Auto-trigger on first visit + add `?` help button to header
-- Edited: `src/pages/Settings.tsx` — Add "Help" section with "Replay Tutorial" row
+- Edit: `src/pages/SuperAdminOrgDetail.tsx` — add member-state banner + "Edit org settings" button + "Leave org" button (calls existing `admin_self_remove_from_org` RPC)
+- Edit: `src/hooks/useOrganization.tsx` — when a user has multiple memberships, prefer one stored in `localStorage` (`fireops_active_org_id`); fall back to first
+- Optional: small org switcher in Settings if multi-org membership is detected
 
-## Out of scope (ask if you want these)
+## Out of scope (ask if you want)
 
-- Per-feature contextual tooltips (e.g. coach mark on the "Scan Receipt" button the first time a user lands on Expenses) — possible later as a separate "tips" layer.
-- Video walkthrough — text + icons only for v1, keeps file size down.
-- Role-specific tour variations (admin vs crew member) — single tour for everyone in v1.
+- A full "switch org" dropdown in the top nav
+- Audit log of admin edits to org settings (separate from existing platform_admin_audit)
 
