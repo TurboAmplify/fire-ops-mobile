@@ -93,7 +93,10 @@ export default function ShiftTicketLog() {
   // refetchOnMount + refetchOnWindowFocus ensure changes from the edit page show up on return
   const { data: tickets, isLoading } = useRecentShiftTickets(200);
   const [selected, setSelected] = useState<SelectedTicket | null>(null);
-  const [pdfLoading, setPdfLoading] = useState(false);
+  const [downloadLoading, setDownloadLoading] = useState(false);
+  const [viewLoading, setViewLoading] = useState(false);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [pdfPreviewTitle, setPdfPreviewTitle] = useState<string>("");
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
@@ -118,7 +121,24 @@ export default function ShiftTicketLog() {
 
   const handleViewPdf = async () => {
     if (!selected) return;
-    setPdfLoading(true);
+    setViewLoading(true);
+    try {
+      const { blob, fileName } = await generateOF297PdfBlob(selected.ticket);
+      const url = URL.createObjectURL(blob);
+      setPdfPreviewUrl(url);
+      setPdfPreviewTitle(fileName);
+      setSelected(null);
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+      toast.error("Failed to generate PDF");
+    } finally {
+      setViewLoading(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!selected) return;
+    setDownloadLoading(true);
     try {
       await generateOF297Pdf(selected.ticket);
       setSelected(null);
@@ -126,8 +146,14 @@ export default function ShiftTicketLog() {
       console.error("PDF generation failed:", err);
       toast.error("Failed to generate PDF");
     } finally {
-      setPdfLoading(false);
+      setDownloadLoading(false);
     }
+  };
+
+  const closePdfPreview = () => {
+    if (pdfPreviewUrl) URL.revokeObjectURL(pdfPreviewUrl);
+    setPdfPreviewUrl(null);
+    setPdfPreviewTitle("");
   };
 
   const sortedTickets = (() => {
