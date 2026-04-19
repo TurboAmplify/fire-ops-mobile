@@ -5,13 +5,13 @@ size accepted by App Store Connect (covers iPhone 15/16 Pro Max).
 
 | File | Headline | Subheadline |
 |------|----------|-------------|
-| `screenshot-1-dashboard.png` | Run Your Fire Crew From The Field | Crew. Fleet. Incidents. One App. |
+| `screenshot-1-dashboard.png` | Run Your Fire Operations From The Field | Crew. Fleet. Incidents. One App. |
 | `screenshot-2-crew.png` | Manage Your Crew In Real Time | Assignments, availability, and roles — all in one place |
 | `screenshot-3-fleet.png` | Track Your Fleet At A Glance | Know what's in service, deployed, or ready |
 | `screenshot-4-offline.png` | No Signal? No Problem. | Works offline. Syncs automatically when you're back. |
 | `screenshot-5-incidents.png` | Track Fires In Real Time | Acres, containment, and crew assignments |
-| `screenshot-6-expenses.png` | AI Reads Your Receipts | Snap a photo. We auto-fill the rest. (AI Powered) |
-| `screenshot-7-shift-tickets.png` | Complete OF-297s On Site | Capture shifts and signatures in the field |
+| `screenshot-6-expenses.png` | Scan Receipts Instantly | Snap a photo. We fill in the details. (AI Powered) |
+| `screenshot-7-shift-tickets.png` | OF-297s Without Paperwork | Capture shifts and signatures in the field |
 | `screenshot-8-audience.png` | Built for Fire Crews in the Field | Contractors • VFDs • Agencies |
 
 ## Upload order (App Store Connect)
