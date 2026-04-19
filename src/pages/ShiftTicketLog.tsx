@@ -14,7 +14,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { generateOF297Pdf } from "@/components/shift-tickets/generateOF297Pdf";
+import { generateOF297Pdf, generateOF297PdfBlob } from "@/components/shift-tickets/generateOF297Pdf";
+import { Eye } from "lucide-react";
 
 function formatDateSafe(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
@@ -92,7 +93,10 @@ export default function ShiftTicketLog() {
   // refetchOnMount + refetchOnWindowFocus ensure changes from the edit page show up on return
   const { data: tickets, isLoading } = useRecentShiftTickets(200);
   const [selected, setSelected] = useState<SelectedTicket | null>(null);
-  const [pdfLoading, setPdfLoading] = useState(false);
+  const [downloadLoading, setDownloadLoading] = useState(false);
+  const [viewLoading, setViewLoading] = useState(false);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [pdfPreviewTitle, setPdfPreviewTitle] = useState<string>("");
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
@@ -117,7 +121,24 @@ export default function ShiftTicketLog() {
 
   const handleViewPdf = async () => {
     if (!selected) return;
-    setPdfLoading(true);
+    setViewLoading(true);
+    try {
+      const { blob, fileName } = await generateOF297PdfBlob(selected.ticket);
+      const url = URL.createObjectURL(blob);
+      setPdfPreviewUrl(url);
+      setPdfPreviewTitle(fileName);
+      setSelected(null);
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+      toast.error("Failed to generate PDF");
+    } finally {
+      setViewLoading(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!selected) return;
+    setDownloadLoading(true);
     try {
       await generateOF297Pdf(selected.ticket);
       setSelected(null);
@@ -125,8 +146,14 @@ export default function ShiftTicketLog() {
       console.error("PDF generation failed:", err);
       toast.error("Failed to generate PDF");
     } finally {
-      setPdfLoading(false);
+      setDownloadLoading(false);
     }
+  };
+
+  const closePdfPreview = () => {
+    if (pdfPreviewUrl) URL.revokeObjectURL(pdfPreviewUrl);
+    setPdfPreviewUrl(null);
+    setPdfPreviewTitle("");
   };
 
   const sortedTickets = (() => {
@@ -311,17 +338,44 @@ export default function ShiftTicketLog() {
             </button>
             <button
               onClick={handleViewPdf}
-              disabled={pdfLoading}
+              disabled={viewLoading}
               className="flex items-center gap-3 rounded-xl bg-secondary px-4 py-3 text-left text-sm font-medium active:bg-secondary/70 transition-colors disabled:opacity-50 touch-target"
             >
-              {pdfLoading ? (
+              {viewLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              ) : (
+                <Eye className="h-4 w-4 text-primary" />
+              )}
+              <span className="flex-1">View PDF</span>
+            </button>
+            <button
+              onClick={handleDownloadPdf}
+              disabled={downloadLoading}
+              className="flex items-center gap-3 rounded-xl bg-secondary px-4 py-3 text-left text-sm font-medium active:bg-secondary/70 transition-colors disabled:opacity-50 touch-target"
+            >
+              {downloadLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin text-primary" />
               ) : (
                 <FileDown className="h-4 w-4 text-primary" />
               )}
-              <span className="flex-1">View / download PDF</span>
+              <span className="flex-1">Download PDF</span>
             </button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!pdfPreviewUrl} onOpenChange={(open) => !open && closePdfPreview()}>
+        <DialogContent className="max-w-4xl w-[95vw] h-[90vh] p-0 flex flex-col gap-0">
+          <DialogHeader className="px-4 py-3 border-b">
+            <DialogTitle className="text-base truncate pr-8">{pdfPreviewTitle || "Shift Ticket PDF"}</DialogTitle>
+          </DialogHeader>
+          {pdfPreviewUrl && (
+            <iframe
+              src={pdfPreviewUrl}
+              title="Shift Ticket PDF"
+              className="flex-1 w-full bg-muted"
+            />
+          )}
         </DialogContent>
       </Dialog>
     </AppShell>
