@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import {
   Flame, Plus, ScanLine, ChevronRight, Settings,
