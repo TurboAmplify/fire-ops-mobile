@@ -52,13 +52,21 @@ export default function Settings() {
       });
 
       if (error) throw error;
+      // Edge function returns { error: "..." } in body when the DB refuses
+      if (data && (data as any).error) {
+        throw new Error((data as any).error);
+      }
 
       toast({ title: "Account deleted", description: "Your account and data have been removed." });
       await signOut();
       navigate("/login");
     } catch (err: any) {
       console.error("Delete account error:", err);
-      toast({ title: "Error", description: "Failed to delete account. Please try again.", variant: "destructive" });
+      const message =
+        err?.message?.includes("only admin") || err?.message?.includes("operational records")
+          ? err.message
+          : "Failed to delete account. Please try again.";
+      toast({ title: "Cannot delete account", description: message, variant: "destructive" });
     } finally {
       setDeleting(false);
       setShowDeleteConfirm(false);
@@ -220,7 +228,10 @@ export default function Settings() {
           <div className="rounded-2xl border-2 border-destructive/30 bg-destructive/5 p-4 space-y-3">
             <p className="text-sm font-semibold text-destructive">Are you sure?</p>
             <p className="text-xs text-muted-foreground">
-              This will permanently delete your account, organization, and all associated data. This action cannot be undone.
+              This will permanently delete your account and remove you from any organizations you belong to. This action cannot be undone.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              <strong className="text-foreground">Note:</strong> If you are the only admin of an organization with active records, deletion will be refused. You must promote another admin first, or contact support to remove the organization.
             </p>
             <div className="flex gap-3">
               <button
