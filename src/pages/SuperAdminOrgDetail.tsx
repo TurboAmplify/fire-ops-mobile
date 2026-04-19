@@ -1,11 +1,25 @@
+import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, ChevronLeft, Building2, Eye } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2, ChevronLeft, Building2, Eye, UserPlus, UserMinus } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { useImpersonation } from "@/hooks/useImpersonation";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 type OrgDetail = {
@@ -59,7 +73,10 @@ export default function SuperAdminOrgDetail() {
   const { orgId } = useParams<{ orgId: string }>();
   const navigate = useNavigate();
   const { startViewAs } = useImpersonation();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [membershipDialog, setMembershipDialog] = useState<null | "add" | "remove">(null);
+  const [reason, setReason] = useState("");
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["super-admin", "org", orgId],
@@ -68,6 +85,33 @@ export default function SuperAdminOrgDetail() {
       const { data, error } = await supabase.rpc("admin_get_organization", { _org_id: orgId! });
       if (error) throw error;
       return data as unknown as OrgDetail | null;
+    },
+  });
+
+  const isMember = !!user?.id && !!data?.members.some((m) => m.user_id === user.id);
+
+  const membershipMutation = useMutation({
+    mutationFn: async ({ action, reason }: { action: "add" | "remove"; reason: string }) => {
+      if (!orgId) throw new Error("No organization");
+      const trimmed = reason.trim() || null;
+      const rpc = action === "add" ? "admin_self_add_to_org" : "admin_self_remove_from_org";
+      const { error } = await supabase.rpc(rpc, { _org_id: orgId, _reason: trimmed });
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => {
+      toast.success(
+        vars.action === "add"
+          ? `Added to ${data?.name ?? "organization"} as admin`
+          : `Removed from ${data?.name ?? "organization"}`,
+      );
+      queryClient.invalidateQueries({ queryKey: ["super-admin", "org", orgId] });
+      setMembershipDialog(null);
+      setReason("");
+    },
+    onError: (err) => {
+      toast.error("Action failed", {
+        description: err instanceof Error ? err.message : undefined,
+      });
     },
   });
 
@@ -104,16 +148,40 @@ export default function SuperAdminOrgDetail() {
             </h1>
             <p className="truncate font-mono text-xs text-muted-foreground">{orgId}</p>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1.5"
-            disabled={!data}
-            onClick={handleViewAs}
-          >
-            <Eye className="h-4 w-4" />
-            View as this org
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {isMember ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                disabled={!data}
+                onClick={() => setMembershipDialog("remove")}
+              >
+                <UserMinus className="h-4 w-4" />
+                Remove me from org
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                className="gap-1.5"
+                disabled={!data}
+                onClick={() => setMembershipDialog("add")}
+              >
+                <UserPlus className="h-4 w-4" />
+                Add me as admin
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              disabled={!data}
+              onClick={handleViewAs}
+            >
+              <Eye className="h-4 w-4" />
+              View as this org
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -235,6 +303,66 @@ export default function SuperAdminOrgDetail() {
           </>
         )}
       </main>
+
+      <AlertDialog
+        open={membershipDialog !== null}
+        onOpenChange={(open) => {
+          if (!open && !membershipMutation.isPending) {
+            setMembershipDialog(null);
+            setReason("");
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {membershipDialog === "add"
+                ? `Add yourself to ${data?.name ?? "this organization"}?`
+                : `Remove yourself from ${data?.name ?? "this organization"}?`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {membershipDialog === "add"
+                ? "You'll become a real admin member of this org with full read/write access. Every action you take will appear under your name in the org's audit log. This action is recorded in the platform admin audit log."
+                : "You'll lose admin access to this org and your platform-admin write privileges here will revert to read-only. This action is recorded in the platform admin audit log."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="membership-reason" className="text-sm">
+              Reason (optional)
+            </Label>
+            <Textarea
+              id="membership-reason"
+              placeholder="e.g. Helping customer fix duplicate incident"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={3}
+              maxLength={1024}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={membershipMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={membershipMutation.isPending || !membershipDialog}
+              onClick={(e) => {
+                e.preventDefault();
+                if (!membershipDialog) return;
+                membershipMutation.mutate({ action: membershipDialog, reason });
+              }}
+              className={
+                membershipDialog === "remove"
+                  ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  : undefined
+              }
+            >
+              {membershipMutation.isPending
+                ? "Working..."
+                : membershipDialog === "add"
+                  ? "Add me as admin"
+                  : "Remove me"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
