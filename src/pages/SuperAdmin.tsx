@@ -36,7 +36,7 @@ const sections = [
     description: "Every super-admin action you take",
     icon: FileText,
     to: "/super-admin/audit",
-    ready: false,
+    ready: true,
   },
 ];
 
