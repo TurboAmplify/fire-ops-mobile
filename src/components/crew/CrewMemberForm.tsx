@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { CrewPhotoUpload } from "@/components/crew/CrewPhotoUpload";
 import { useOrganization } from "@/hooks/useOrganization";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface Props {
   memberId: string | null;
@@ -16,7 +18,8 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
   const { data: existing, isLoading: loadingExisting } = useCrewMember(memberId || "");
   const createMutation = useCreateCrewMember();
   const updateMutation = useUpdateCrewMember();
-  const { isAdmin } = useOrganization();
+  const { isAdmin, membership } = useOrganization();
+  const queryClient = useQueryClient();
 
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
@@ -26,6 +29,22 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
   const [hourlyRate, setHourlyRate] = useState("");
   const [hwRate, setHwRate] = useState("");
 
+  // Pay rates live in an admin-only table; only admins can read or write them.
+  const { data: comp } = useQuery({
+    queryKey: ["crew-compensation", memberId],
+    queryFn: async () => {
+      if (!memberId) return null;
+      const { data, error } = await supabase
+        .from("crew_compensation" as any)
+        .select("hourly_rate, hw_rate")
+        .eq("crew_member_id", memberId)
+        .maybeSingle();
+      if (error) throw error;
+      return data as any;
+    },
+    enabled: isAdmin && isEdit && !!memberId,
+  });
+
   useEffect(() => {
     if (existing) {
       setName(existing.name);
@@ -33,10 +52,15 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
       setPhone(existing.phone || "");
       setActive(existing.active);
       setNotes((existing as any).notes || "");
-      setHourlyRate((existing as any).hourly_rate?.toString() || "");
-      setHwRate((existing as any).hw_rate?.toString() || "");
     }
   }, [existing]);
+
+  useEffect(() => {
+    if (comp) {
+      setHourlyRate(comp.hourly_rate != null ? String(comp.hourly_rate) : "");
+      setHwRate(comp.hw_rate != null ? String(comp.hw_rate) : "");
+    }
+  }, [comp]);
 
   const isPending = createMutation.isPending || updateMutation.isPending;
   const canSubmit = name.trim() && role.trim() && !isPending;
@@ -52,20 +76,36 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
       active,
       notes: notes.trim() || null,
     };
-    // Only admins are allowed to set/change pay rates (also enforced by DB trigger)
-    if (isAdmin) {
-      payload.hourly_rate = hourlyRate ? parseFloat(hourlyRate) : null;
-      payload.hw_rate = hwRate ? parseFloat(hwRate) : null;
-    }
 
     try {
+      let savedId = memberId;
       if (isEdit && memberId) {
         await updateMutation.mutateAsync({ id: memberId, updates: payload });
-        toast.success("Crew member updated");
       } else {
-        await createMutation.mutateAsync(payload);
-        toast.success("Crew member added");
+        const created = await createMutation.mutateAsync(payload);
+        savedId = (created as any)?.id ?? null;
       }
+
+      // Persist pay rates to the admin-only crew_compensation table
+      if (isAdmin && savedId && membership?.organizationId) {
+        const hr = hourlyRate ? parseFloat(hourlyRate) : null;
+        const hw = hwRate ? parseFloat(hwRate) : null;
+        if (hr !== null || hw !== null) {
+          const { error } = await supabase.from("crew_compensation" as any).upsert(
+            {
+              crew_member_id: savedId,
+              organization_id: membership.organizationId,
+              hourly_rate: hr,
+              hw_rate: hw,
+            } as any,
+            { onConflict: "crew_member_id" }
+          );
+          if (error) throw error;
+          queryClient.invalidateQueries({ queryKey: ["crew-compensation"] });
+        }
+      }
+
+      toast.success(isEdit ? "Crew member updated" : "Crew member added");
       onClose();
     } catch {
       toast.error(isEdit ? "Failed to update" : "Failed to add crew member");
