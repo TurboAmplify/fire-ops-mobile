@@ -30,6 +30,10 @@ export default function ResetPassword() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (password.length < 8) {
+      toast({ title: "Password too short", description: "Use at least 8 characters.", variant: "destructive" });
+      return;
+    }
     setLoading(true);
     try {
       const { error } = await supabase.auth.updateUser({ password });
@@ -71,7 +75,7 @@ export default function ResetPassword() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               required
-              minLength={6}
+              minLength={8}
               autoComplete="new-password"
             />
           </div>

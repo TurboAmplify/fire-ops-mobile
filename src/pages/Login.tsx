@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
@@ -9,6 +10,12 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import heroBg from "@/assets/hero-bg.jpg";
 import fireLogo from "@/assets/fire-logo.png";
+
+const emailSchema = z.string().trim().email("Enter a valid email").max(255, "Email too long");
+const passwordSchema = z
+  .string()
+  .min(8, "Password must be at least 8 characters")
+  .max(72, "Password too long");
 
 export default function Login() {
   const { user, loading: authLoading } = useAuth();
@@ -35,8 +42,22 @@ export default function Login() {
     setLoading(true);
 
     try {
+      // Validate inputs before hitting auth
+      const emailResult = emailSchema.safeParse(email);
+      if (!emailResult.success) {
+        throw new Error(emailResult.error.issues[0]?.message ?? "Invalid email");
+      }
+      const cleanEmail = emailResult.data;
+
+      if (mode !== "forgot") {
+        const passwordResult = passwordSchema.safeParse(password);
+        if (!passwordResult.success) {
+          throw new Error(passwordResult.error.issues[0]?.message ?? "Invalid password");
+        }
+      }
+
       if (mode === "forgot") {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
           redirectTo: `${window.location.origin}/reset-password`,
         });
         if (error) throw error;
@@ -44,7 +65,7 @@ export default function Login() {
         setMode("login");
       } else if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
-          email,
+          email: cleanEmail,
           password,
           options: { emailRedirectTo: window.location.origin },
         });
@@ -55,7 +76,7 @@ export default function Login() {
         });
         setMode("login");
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
         if (error) throw error;
       }
     } catch (err: any) {
@@ -129,7 +150,7 @@ export default function Login() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  minLength={6}
+                  minLength={8}
                   autoComplete={mode === "signup" ? "new-password" : "current-password"}
                   className="h-12 rounded-xl bg-secondary border-border text-[15px] placeholder:text-muted-foreground/50"
                 />
