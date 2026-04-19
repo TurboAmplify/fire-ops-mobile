@@ -693,6 +693,39 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_admin_audit: {
+        Row: {
+          action: string
+          actor_user_id: string
+          id: string
+          occurred_at: string
+          payload: Json
+          reason: string | null
+          target_id: string | null
+          target_type: string | null
+        }
+        Insert: {
+          action: string
+          actor_user_id: string
+          id?: string
+          occurred_at?: string
+          payload?: Json
+          reason?: string | null
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string
+          id?: string
+          occurred_at?: string
+          payload?: Json
+          reason?: string | null
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Relationships: []
+      }
       platform_admins: {
         Row: {
           granted_at: string
@@ -1559,6 +1592,20 @@ export type Database = {
     }
     Functions: {
       admin_get_organization: { Args: { _org_id: string }; Returns: Json }
+      admin_list_audit: {
+        Args: { _limit?: number }
+        Returns: {
+          action: string
+          actor_email: string
+          actor_user_id: string
+          id: string
+          occurred_at: string
+          payload: Json
+          reason: string
+          target_id: string
+          target_type: string
+        }[]
+      }
       admin_list_organizations: {
         Args: never
         Returns: {
@@ -1585,6 +1632,16 @@ export type Database = {
           organizations: Json
           user_id: string
         }[]
+      }
+      admin_log_action: {
+        Args: {
+          _action: string
+          _payload?: Json
+          _reason?: string
+          _target_id?: string
+          _target_type?: string
+        }
+        Returns: string
       }
       admin_recent_activity: {
         Args: { _days?: number }
