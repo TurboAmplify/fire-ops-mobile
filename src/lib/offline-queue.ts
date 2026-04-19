@@ -119,13 +119,12 @@ export async function replayQueue(): Promise<number> {
         const idx = queue.findIndex((m) => m.id === mutation.id);
         if (idx === -1) continue;
 
-        if (result.ok) {
+        if (result.ok === true) {
           queue.splice(idx, 1);
           synced++;
         } else {
-          const errorMessage = result.error;
           const next = (queue[idx].attempts ?? 0) + 1;
-          queue[idx] = { ...queue[idx], attempts: next, lastError: errorMessage };
+          queue[idx] = { ...queue[idx], attempts: next, lastError: (result as { ok: false; error: string }).error };
           if (next >= MAX_ATTEMPTS) newlyFailed++;
         }
         await writeQueue(queue);
