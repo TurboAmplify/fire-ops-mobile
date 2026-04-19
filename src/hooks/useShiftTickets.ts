@@ -42,6 +42,7 @@ export function useUpdateShiftTicket(ticketId: string, incidentTruckId: string) 
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["shift-ticket", ticketId] });
       qc.invalidateQueries({ queryKey: ["shift-tickets", incidentTruckId] });
+      qc.invalidateQueries({ queryKey: ["shift-tickets-recent"] });
     },
   });
 }
@@ -72,6 +73,9 @@ export function useRecentShiftTickets(limit = 25) {
       if (error) throw error;
       return (data ?? []) as unknown as RecentShiftTicket[];
     },
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    staleTime: 0,
   });
 }
 
