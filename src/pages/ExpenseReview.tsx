@@ -5,6 +5,7 @@ import { useExpenses, useUpdateExpense } from "@/hooks/useExpenses";
 import { CATEGORY_ICON_MAP, CATEGORY_LABELS } from "@/services/expenses";
 import type { ExpenseCategory } from "@/services/expenses";
 import { ExpenseStatusBadge } from "@/components/expenses/ExpenseStatusBadge";
+import { SignedImage } from "@/components/ui/SignedImage";
 import { useAuth } from "@/hooks/useAuth";
 import { useOrganization } from "@/hooks/useOrganization";
 import { toast } from "sonner";
