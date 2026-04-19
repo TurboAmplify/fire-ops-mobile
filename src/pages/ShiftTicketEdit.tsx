@@ -91,6 +91,7 @@ export default function ShiftTicketEdit() {
       onBack={() => navigate(`/incidents/${incidentId}`)}
       exportingPdf={exportingPdf}
       crewRoster={activeCrew}
+      isAdmin={isAdmin}
     />
   );
 }
