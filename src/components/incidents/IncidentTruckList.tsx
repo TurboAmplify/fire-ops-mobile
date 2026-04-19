@@ -10,6 +10,7 @@ import { ResourceOrderSection } from "./ResourceOrderSection";
 import { AgreementUpload } from "./AgreementUpload";
 import { ShiftTicketSection } from "@/components/shift-tickets/ShiftTicketSection";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { SignedImage } from "@/components/ui/SignedImage";
 
 const truckStatuses: IncidentTruckStatus[] = ["assigned", "active", "demobed", "completed"];
 
@@ -293,7 +294,7 @@ function TruckCard({
                 <div className="relative w-28 h-28 rounded-xl overflow-hidden shrink-0 bg-secondary">
                   {photoUrl ? (
                     <>
-                      <img src={photoUrl} alt={it.trucks.name} className="w-full h-full object-cover" />
+                      <SignedImage src={photoUrl} alt={it.trucks.name} className="w-full h-full object-cover" />
                       <div className="absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-card to-transparent" />
                     </>
                   ) : (

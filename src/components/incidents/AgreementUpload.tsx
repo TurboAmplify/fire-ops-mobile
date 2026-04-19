@@ -4,6 +4,7 @@ import { uploadAgreementFile } from "@/services/agreements";
 import { FileText, Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useOrganization } from "@/hooks/useOrganization";
+import { SignedLink } from "@/components/ui/SignedLink";
 
 interface Props {
   incidentId?: string;
@@ -57,11 +58,9 @@ export function AgreementUpload({ incidentId, incidentTruckId, label = "Agreemen
       )}
 
       {agreements?.map((ag) => (
-        <a
+        <SignedLink
           key={ag.id}
           href={ag.file_url}
-          target="_blank"
-          rel="noopener noreferrer"
           className="flex items-center gap-2 rounded-lg bg-secondary/50 p-3 touch-target"
         >
           <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -71,7 +70,7 @@ export function AgreementUpload({ incidentId, incidentTruckId, label = "Agreemen
               <p className="text-xs text-primary font-semibold">Agreement: {ag.agreement_number}</p>
             )}
           </div>
-        </a>
+        </SignedLink>
       ))}
     </div>
   );

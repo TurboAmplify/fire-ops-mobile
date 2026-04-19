@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { useUploadCrewPhoto, useDeleteCrewPhoto } from "@/hooks/useCrewMembers";
 import { useOrganization } from "@/hooks/useOrganization";
 import { Camera, ImageIcon, Trash2, Loader2, User } from "lucide-react";
+import { SignedImage } from "@/components/ui/SignedImage";
 import { toast } from "sonner";
 
 interface Props {
@@ -56,7 +57,7 @@ export function CrewPhotoUpload({ memberId, photoUrl, name }: Props) {
       <label className="relative cursor-pointer group">
         <div className="h-28 w-28 rounded-full overflow-hidden border-4 border-primary/20 bg-secondary">
           {photoUrl ? (
-            <img
+            <SignedImage
               src={photoUrl}
               alt={name}
               className="w-full h-full object-cover"

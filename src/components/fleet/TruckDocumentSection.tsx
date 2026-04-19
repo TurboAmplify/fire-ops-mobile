@@ -5,6 +5,7 @@ import { FileText, Trash2, Loader2, Plus, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { DOC_TYPE_LABELS } from "@/services/fleet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SignedLink } from "@/components/ui/SignedLink";
 
 interface TruckDocumentSectionProps {
   truckId: string;
@@ -114,14 +115,12 @@ export function TruckDocumentSection({ truckId }: TruckDocumentSectionProps) {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <a
+                <SignedLink
                   href={doc.file_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
                   className="p-2 text-primary touch-target"
                 >
                   <ExternalLink className="h-4 w-4" />
-                </a>
+                </SignedLink>
                 <button
                   onClick={() => handleDelete(doc.id)}
                   disabled={deleteMutation.isPending}

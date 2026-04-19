@@ -4,6 +4,7 @@ import { useOrganization } from "@/hooks/useOrganization";
 import { Camera, Trash2, Loader2, Tag, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import { SignedImage } from "@/components/ui/SignedImage";
 
 const PHOTO_LABELS = ["Exterior", "Interior", "VIN Plate", "Registration", "Damage", "Equipment", "Other"];
 
@@ -109,7 +110,7 @@ export function TruckPhotoSection({ truckId }: TruckPhotoSectionProps) {
           {photos.map((photo) => (
             <div key={photo.id} className="relative rounded-lg overflow-hidden bg-secondary">
               <div className="aspect-square">
-                <img
+                <SignedImage
                   src={photo.file_url}
                   alt={photo.photo_label || photo.file_name}
                   className="w-full h-full object-cover"

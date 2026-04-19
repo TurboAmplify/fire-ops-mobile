@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { useUpdateTruckHeroPhoto, useDeleteTruckHeroPhoto } from "@/hooks/useFleet";
 import { useOrganization } from "@/hooks/useOrganization";
 import { Camera, ImageIcon, Trash2, Loader2, Truck as TruckIcon } from "lucide-react";
+import { SignedImage } from "@/components/ui/SignedImage";
 import { toast } from "sonner";
 
 interface Props {
@@ -46,7 +47,7 @@ export function TruckHeroPhoto({ truckId, photoUrl, truckName }: Props) {
       {/* Hero image area */}
       <div className="relative rounded-2xl overflow-hidden bg-secondary aspect-[16/7] max-h-40">
         {photoUrl ? (
-          <img
+          <SignedImage
             src={photoUrl}
             alt={truckName}
             className="w-full h-full object-cover"

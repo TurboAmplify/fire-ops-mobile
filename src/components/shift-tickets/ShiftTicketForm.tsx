@@ -863,7 +863,7 @@ export function ShiftTicketForm({
             <label className={labelClass}>32. Signature</label>
             {contractorSigUrl ? (
               <div className="space-y-2">
-                <img src={contractorSigUrl} alt="Contractor signature" className="h-16 rounded border border-border bg-card" />
+                <SignedImage src={contractorSigUrl} alt="Contractor signature" className="h-16 rounded border border-border bg-card" />
                 <button onClick={() => { setContractorSigUrl(null); markDirty(); }} className="text-xs text-destructive touch-target">Clear</button>
               </div>
             ) : (
@@ -889,7 +889,7 @@ export function ShiftTicketForm({
             )}
             <span className={labelClass}>34. Signature</span>
             {supervisorSigUrl ? (
-              <img src={supervisorSigUrl} alt="Supervisor signature" className="h-12 rounded border border-border bg-card" />
+              <SignedImage src={supervisorSigUrl} alt="Supervisor signature" className="h-12 rounded border border-border bg-card" />
             ) : (
               <p className="text-xs text-muted-foreground italic">No signature yet</p>
             )}

@@ -4,6 +4,7 @@ import { uploadResourceOrderFile, parseResourceOrderAI } from "@/services/resour
 import { FileText, Upload, Loader2, ChevronDown, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useOrganization } from "@/hooks/useOrganization";
+import { SignedLink } from "@/components/ui/SignedLink";
 
 interface Props {
   incidentTruckId: string;
@@ -128,14 +129,12 @@ export function ResourceOrderSection({ incidentTruckId }: Props) {
 
                 {hasParsed && <ParsedDataDisplay data={parsed} />}
 
-                <a
+                <SignedLink
                   href={order.file_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
                   className="block text-xs text-primary underline touch-target"
                 >
                   View original document
-                </a>
+                </SignedLink>
               </div>
             )}
           </div>
