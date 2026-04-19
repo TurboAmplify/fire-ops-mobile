@@ -123,8 +123,9 @@ export async function replayQueue(): Promise<number> {
           queue.splice(idx, 1);
           synced++;
         } else {
+          const errorMessage = result.error;
           const next = (queue[idx].attempts ?? 0) + 1;
-          queue[idx] = { ...queue[idx], attempts: next, lastError: result.error };
+          queue[idx] = { ...queue[idx], attempts: next, lastError: errorMessage };
           if (next >= MAX_ATTEMPTS) newlyFailed++;
         }
         await writeQueue(queue);
