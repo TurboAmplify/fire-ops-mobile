@@ -110,8 +110,8 @@ const App = () => (
             </Routes>
           </BrowserRouter>
         </TooltipProvider>
-        </ImpersonationProvider>
-      </OrganizationProvider>
+        </OrganizationProvider>
+      </ImpersonationProvider>
     </AuthProvider>
   </PersistQueryClientProvider>
 );
