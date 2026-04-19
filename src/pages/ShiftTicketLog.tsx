@@ -62,9 +62,29 @@ function summarizePerDiem(entries: PersonnelEntry[]): string {
   return parts.length ? parts.join(" + ") : "—";
 }
 
+// "Lunch" in the log = a 30-min unpaid lunch break taken on shift.
+// On the form this is the "Lunch" chip in CrewSyncCard which writes
+// "30-min lunch at HHMM" into the entry remarks. It is intentionally
+// separate from the Per Diem "L" meal allowance.
 function lunchStatus(entries: PersonnelEntry[]): { label: string; tone: "ok" | "muted" } {
-  const anyLunch = (entries ?? []).some((e) => e.per_diem_l);
+  const anyLunch = (entries ?? []).some(
+    (e) => /30-?min lunch/i.test(e.remarks || "") || e.per_diem_l
+  );
   return anyLunch ? { label: "Lunch", tone: "ok" } : { label: "No lunch", tone: "muted" };
+}
+
+function isFinalizable(t: { contractor_rep_signed_at: string | null; supervisor_signed_at: string | null }): boolean {
+  return !!(t.contractor_rep_signed_at && t.supervisor_signed_at);
+}
+
+function statusReason(t: { status: string; contractor_rep_signed_at: string | null; supervisor_signed_at: string | null }): string {
+  if (t.status === "final") return "Both signatures captured — ticket is final.";
+  const missing: string[] = [];
+  if (!t.contractor_rep_signed_at) missing.push("contractor");
+  if (!t.supervisor_signed_at) missing.push("supervisor");
+  return missing.length === 0
+    ? "Save the ticket to mark it final."
+    : `Awaiting ${missing.join(" & ")} signature${missing.length > 1 ? "s" : ""} to finalize.`;
 }
 
 function crewSummary(entries: PersonnelEntry[]): string {
