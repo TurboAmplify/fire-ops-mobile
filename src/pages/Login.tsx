@@ -34,6 +34,7 @@ export default function Login() {
   }
 
   if (user) {
+    // ProtectedRoute on "/" will route platform admins onward to /super-admin.
     return <Navigate to="/" replace />;
   }
 
