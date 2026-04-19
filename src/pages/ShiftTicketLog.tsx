@@ -3,8 +3,10 @@ import { useRecentShiftTickets } from "@/hooks/useShiftTickets";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Clock, FileText, Pencil, FileDown, Loader2, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { CheckCircle2, Clock, FileText, Pencil, FileDown, Loader2, ArrowUp, ArrowDown, ArrowUpDown, Trash2, AlertTriangle, Eye } from "lucide-react";
 import type { PersonnelEntry, ShiftTicket } from "@/services/shift-tickets";
+import { deleteShiftTicket } from "@/services/shift-tickets";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   Dialog,
@@ -12,10 +14,12 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { generateOF297Pdf, generateOF297PdfBlob } from "@/components/shift-tickets/generateOF297Pdf";
-import { Eye } from "lucide-react";
 
 function formatDateSafe(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
