@@ -693,6 +693,24 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_admins: {
+        Row: {
+          granted_at: string
+          notes: string | null
+          user_id: string
+        }
+        Insert: {
+          granted_at?: string
+          notes?: string | null
+          user_id: string
+        }
+        Update: {
+          granted_at?: string
+          notes?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -1574,6 +1592,7 @@ export type Database = {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
       }
+      is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
       user_can_access_truck: {
         Args: { _truck_id: string; _user_id: string }
         Returns: boolean
