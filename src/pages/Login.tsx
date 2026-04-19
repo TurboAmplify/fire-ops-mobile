@@ -21,6 +21,8 @@ export default function Login() {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
+  const [hasInviteCode, setHasInviteCode] = useState(false);
+  const [inviteCode, setInviteCode] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
