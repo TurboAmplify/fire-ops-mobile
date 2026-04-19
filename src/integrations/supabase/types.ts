@@ -1558,6 +1558,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_get_organization: { Args: { _org_id: string }; Returns: Json }
+      admin_list_organizations: {
+        Args: never
+        Returns: {
+          created_at: string
+          id: string
+          incident_count: number
+          last_activity_at: string
+          member_count: number
+          name: string
+          org_type: string
+          pending_invite_count: number
+          seat_limit: number
+          tier: string
+        }[]
+      }
       create_organization_with_owner:
         | { Args: { _name: string }; Returns: string }
         | {
