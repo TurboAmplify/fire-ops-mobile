@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
 import { logPlatformAction } from "@/services/platform-audit";
@@ -26,6 +27,7 @@ const ImpersonationContext = createContext<ImpersonationContextType>({
 
 export function ImpersonationProvider({ children }: { children: ReactNode }) {
   const { isPlatformAdmin } = usePlatformAdmin();
+  const qc = useQueryClient();
   const [target, setTarget] = useState<ImpersonationTarget | null>(null);
 
   // Restore from sessionStorage on mount (only valid for platform admins)
@@ -58,13 +60,15 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
       const next: ImpersonationTarget = { organizationId: orgId, organizationName: name };
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       setTarget(next);
+      // Flush all org-scoped caches so impersonated org's data loads cleanly
+      qc.clear();
       await logPlatformAction("view_as_start", {
         targetType: "organization",
         targetId: orgId,
         payload: { organization_name: name },
       });
     },
-    [isPlatformAdmin],
+    [isPlatformAdmin, qc],
   );
 
   const stopViewAs = useCallback(async () => {
