@@ -1,73 +1,69 @@
 
 
-Confirming first: the truck photo **upload** flow is wired and working — file goes to the `truck-photos` storage bucket and a row is written to `truck_photos` (gallery) or `trucks.photo_url` (hero). There is **no AI parsing** of those photos today. The `PHOTO_LABELS` list (VIN Plate, Registration, etc.) was set up as manual labels only.
-
-You asked for both: verify upload works *and* add AI parsing. Here's the plan.
-
----
-
-# Truck photo AI parsing
+# Tutorial / onboarding tour
 
 ## What you'll get
 
-A new **"Scan with AI"** button inside `TruckPhotoSection`. Flow:
+A **mobile-first guided tour** that runs automatically the first time a user logs in, and is always available from Settings → "Replay Tutorial" and a small "?" button on the Dashboard header.
 
-1. User taps "Scan VIN / Registration" (camera or library picker).
-2. Photo uploads to `truck-photos` as usual.
-3. Edge function reads the image and extracts whatever it can find: **VIN, license plate, year, make, model, registration expiration**.
-4. A small confirmation sheet appears showing the extracted fields with checkboxes ("Apply VIN", "Apply plate", etc.).
-5. User taps "Apply" → fields are written to the `trucks` row (only the ones they kept). Photo gets auto-labeled "VIN Plate" or "Registration" based on what was detected.
-6. If nothing useful was found, friendly toast: "Couldn't read details from this photo — try a clearer shot of the VIN plate."
+The tour is a series of full-screen-friendly **bottom-sheet cards** (not a tooltip overlay — those break on mobile and require horizontal positioning). Each step shows:
+- A title + short description (1-2 sentences)
+- A small icon/illustration matching the feature
+- "Skip", "Back", "Next" buttons + a progress dots indicator
+- Optional "Take me there" button that navigates to the relevant screen
 
-Existing manual upload buttons stay exactly as they are — this is additive.
+Steps cover the core flow:
+1. **Welcome** — "FireOps HQ helps you run incidents, crews, and expenses from the field."
+2. **Dashboard** — Active incidents, stats, quick actions
+3. **Incidents** — Create incidents, assign trucks/crew
+4. **Shift Tickets** — Daily OF-297 tickets per truck
+5. **Crew** — Manage personnel, contacts, roles
+6. **Fleet** — Trucks, photos, inspections, AI VIN scan
+7. **Expenses** — Receipts, scan with AI, categorize
+8. **Needs List** — Track what crews need on the fire
+9. **Offline** — App works without signal, syncs when back
+10. **Settings & Replay** — Where to find help and replay the tour anytime
 
-## Backend — new edge function
+Each step is a single card; no horizontal scroll, no tooltip pointing at off-screen elements, safe-area aware.
 
-`supabase/functions/parse-truck-photo/index.ts` (mirrors the existing `parse-receipt` pattern):
-- Accepts `{ fileUrl }` (signed URL of the just-uploaded photo).
-- Calls Lovable AI Gateway (`google/gemini-2.5-flash` — good vision + cheap) with a tool-call schema for structured output:
-  ```
-  { vin, license_plate, year, make, model, 
-    registration_expires, detected_document_type: "vin_plate"|"registration"|"other" }
-  ```
-- Returns `{ parsed: {...} }`. Any field the model isn't confident about comes back as `null`.
-- Handles 429 / 402 with friendly error messages.
-- Registered in `supabase/config.toml` with `verify_jwt = false` (matches other parse-* functions).
+## How "first login" detection works
 
-## Frontend — small additions
+- `tutorial_completed_at` boolean stored in `profiles` table (per-user, syncs across devices).
+- Plus a `localStorage` fallback so the tour can be dismissed instantly without a network round-trip.
+- On Dashboard mount: if user is signed in, has an org, and `tutorial_completed_at` is null → auto-open the tour after a 600ms delay (lets the page settle).
+- Marking complete: writes both `localStorage` and the profile column.
 
-**`src/services/fleet.ts`**
-- New `parseTruckPhoto(fileUrl: string)` that invokes the edge function.
-- New `applyParsedFieldsToTruck(truckId, fields)` helper.
+## How "available anytime" works
 
-**`src/components/fleet/TruckPhotoSection.tsx`**
-- Add a third button: **"Scan VIN / Registration"** (camera icon, distinct color so it stands out).
-- After upload, call `parseTruckPhoto`, show a small `Sheet` with the extracted fields + checkboxes + "Apply" button.
-- On apply, mutate the truck and show a success toast with what was updated.
-- Auto-set `photo_label` based on `detected_document_type`.
+- Settings page → new "Replay Tutorial" row under a new **Help** section (above Legal & Support).
+- Dashboard header → new small `?` icon button (next to the Super Admin chip) that opens the tour from step 1.
+- Both call the same `useTutorial().start()` function.
 
-**Loading + error states:** spinner during scan, toast on no-match, toast on rate-limit (429) and credits (402).
+## Mobile-first guarantees
 
-## Verifying upload works (your other ask)
+- Card uses existing `Sheet` component (`side="bottom"`), already used elsewhere — proven safe-area + keyboard behavior.
+- Content is `max-w-full px-4`, all text wraps, no fixed widths.
+- Buttons are full-width stacked on narrow screens, no horizontal scroll possible.
+- No element pointers / no tooltip-attached-to-DOM-node logic (those are fragile on mobile and cause horizontal overflow when the target scrolls off-screen).
 
-After implementing, I'll test by uploading a sample photo end-to-end and check:
-1. File lands in `truck-photos` bucket at `{org_id}/{truck_id}/{uuid}.{ext}`.
-2. Row appears in `truck_photos` table with correct `truck_id`, `organization_id`, `file_url`.
-3. Image renders via `SignedImage`.
-4. (For hero) `trucks.photo_url` is updated and the thumbnail shows in the Fleet list.
+## Backend (1 small migration)
 
-If anything is broken in the existing upload flow, I'll fix it as part of this same change.
+- Add `tutorial_completed_at timestamptz` column to `profiles` (nullable, default null).
+- No RLS changes needed — existing profile policies cover it (user can read/update own row).
 
 ## Files
 
-- New: `supabase/functions/parse-truck-photo/index.ts`
-- Edited: `supabase/config.toml` (register the function with `verify_jwt = false`)
-- Edited: `src/services/fleet.ts` (add `parseTruckPhoto` + apply helper)
-- Edited: `src/components/fleet/TruckPhotoSection.tsx` (Scan button + confirmation sheet)
+- New migration: add `profiles.tutorial_completed_at`
+- New: `src/hooks/useTutorial.tsx` — Provider + hook (state, open/close, mark complete, persist)
+- New: `src/components/tutorial/TutorialOverlay.tsx` — The Sheet-based step UI
+- New: `src/components/tutorial/tutorial-steps.ts` — The step content array (icon, title, body, optional route)
+- Edited: `src/App.tsx` — Wrap routes with `TutorialProvider`, mount `<TutorialOverlay />` once
+- Edited: `src/pages/Dashboard.tsx` — Auto-trigger on first visit + add `?` help button to header
+- Edited: `src/pages/Settings.tsx` — Add "Help" section with "Replay Tutorial" row
 
 ## Out of scope (ask if you want these)
 
-- Parsing the **hero photo** (`TruckHeroPhoto`) — keeping AI scanning in the gallery section only, since hero is meant to be a clean exterior shot.
-- Document OCR for `truck_documents` (PDFs of insurance, DOT cards) — separate feature.
-- Bulk re-scan of existing photos — manual one-by-one only for v1.
+- Per-feature contextual tooltips (e.g. coach mark on the "Scan Receipt" button the first time a user lands on Expenses) — possible later as a separate "tips" layer.
+- Video walkthrough — text + icons only for v1, keeps file size down.
+- Role-specific tour variations (admin vs crew member) — single tour for everyone in v1.
 
