@@ -3,7 +3,7 @@ import { useRecentShiftTickets } from "@/hooks/useShiftTickets";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Clock, FileText, Pencil, FileDown, Loader2 } from "lucide-react";
+import { CheckCircle2, Clock, FileText, Pencil, FileDown, Loader2, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import type { PersonnelEntry, ShiftTicket } from "@/services/shift-tickets";
 import { useState } from "react";
 import {
@@ -84,12 +84,26 @@ type SelectedTicket = {
   dateLabel: string;
 };
 
+type SortKey = "date" | "truck" | "crew" | "lunch" | "perDiem" | "contractor" | "supervisor" | "status";
+type SortDir = "asc" | "desc";
+
 export default function ShiftTicketLog() {
   const navigate = useNavigate();
   // refetchOnMount + refetchOnWindowFocus ensure changes from the edit page show up on return
   const { data: tickets, isLoading } = useRecentShiftTickets(200);
   const [selected, setSelected] = useState<SelectedTicket | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>("date");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "date" ? "desc" : "asc");
+    }
+  };
 
   const handleEdit = () => {
     if (!selected?.incidentId) {
@@ -113,6 +127,53 @@ export default function ShiftTicketLog() {
     } finally {
       setPdfLoading(false);
     }
+  };
+
+  const sortedTickets = (() => {
+    if (!tickets) return tickets;
+    const dir = sortDir === "asc" ? 1 : -1;
+    const cmp = (a: string | number, b: string | number) =>
+      a < b ? -1 * dir : a > b ? 1 * dir : 0;
+    const keyFor = (t: (typeof tickets)[number]): string | number => {
+      switch (sortKey) {
+        case "date":
+          return ticketDate(t);
+        case "truck":
+          return (t.incident_trucks?.trucks?.name ?? "").toLowerCase();
+        case "crew":
+          return crewSummary(t.personnel_entries).toLowerCase();
+        case "lunch":
+          return lunchStatus(t.personnel_entries).tone === "ok" ? 1 : 0;
+        case "perDiem":
+          return summarizePerDiem(t.personnel_entries).toLowerCase();
+        case "contractor":
+          return t.contractor_rep_signed_at ?? "";
+        case "supervisor":
+          return t.supervisor_signed_at ?? "";
+        case "status":
+          return t.status ?? "";
+      }
+    };
+    return [...tickets].sort((a, b) => cmp(keyFor(a), keyFor(b)));
+  })();
+
+  const SortHeader = ({ label, k }: { label: string; k: SortKey }) => {
+    const active = sortKey === k;
+    const Icon = !active ? ArrowUpDown : sortDir === "asc" ? ArrowUp : ArrowDown;
+    return (
+      <th className="text-left font-semibold px-3 py-2.5 whitespace-nowrap">
+        <button
+          type="button"
+          onClick={() => toggleSort(k)}
+          className={`inline-flex items-center gap-1 uppercase tracking-wider text-[11px] ${
+            active ? "text-foreground" : "text-muted-foreground"
+          } hover:text-foreground transition-colors`}
+        >
+          {label}
+          <Icon className="h-3 w-3" />
+        </button>
+      </th>
+    );
   };
 
   return (
@@ -142,20 +203,20 @@ export default function ShiftTicketLog() {
           <div className="rounded-2xl bg-card card-shadow overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-muted/40 text-[11px] uppercase tracking-wider text-muted-foreground">
+                <thead className="bg-muted/40">
                   <tr>
-                    <th className="text-left font-semibold px-3 py-2.5 whitespace-nowrap">Date</th>
-                    <th className="text-left font-semibold px-3 py-2.5 whitespace-nowrap">Truck</th>
-                    <th className="text-left font-semibold px-3 py-2.5">Crew</th>
-                    <th className="text-left font-semibold px-3 py-2.5 whitespace-nowrap">Lunch</th>
-                    <th className="text-left font-semibold px-3 py-2.5 whitespace-nowrap">Per Diem</th>
-                    <th className="text-left font-semibold px-3 py-2.5 whitespace-nowrap">Contractor Sig</th>
-                    <th className="text-left font-semibold px-3 py-2.5 whitespace-nowrap">Supervisor Sig</th>
-                    <th className="text-left font-semibold px-3 py-2.5 whitespace-nowrap">Status</th>
+                    <SortHeader label="Date" k="date" />
+                    <SortHeader label="Truck" k="truck" />
+                    <SortHeader label="Crew" k="crew" />
+                    <SortHeader label="Lunch" k="lunch" />
+                    <SortHeader label="Per Diem" k="perDiem" />
+                    <SortHeader label="Contractor Sig" k="contractor" />
+                    <SortHeader label="Supervisor Sig" k="supervisor" />
+                    <SortHeader label="Status" k="status" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
-                  {tickets.map((t) => {
+                  {(sortedTickets ?? []).map((t) => {
                     const dateStr = ticketDate(t);
                     const dateLabel = formatDateSafe(dateStr);
                     const lunch = lunchStatus(t.personnel_entries);
