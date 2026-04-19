@@ -257,8 +257,10 @@ export function ShiftTicketForm({
   const buildSavePayload = (): Partial<ShiftTicket> => {
     const persistedContractorSigUrl = getPersistedSignatureUrl(contractorSigUrl);
     const persistedSupervisorSigUrl = getPersistedSignatureUrl(supervisorSigUrl);
-    // M2-M4: Auto-promote status to "final" once both signatures are persisted.
-    const isFinal = !!(persistedContractorSigUrl && persistedSupervisorSigUrl);
+    // Lock model: Final = supervisor signature captured. Contractor sig alone
+    // keeps the ticket in Draft status. Re-locking happens automatically on
+    // every save while the supervisor sig is still present.
+    const isFinal = !!persistedSupervisorSigUrl;
     return {
       incident_truck_id: incidentTruckId,
       organization_id: organizationId,
