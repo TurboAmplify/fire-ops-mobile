@@ -77,6 +77,27 @@ export default function Payroll() {
   const { data: crewMembers, isLoading: loadingCrew, error: crewError } = useCrewMembers();
   const { data: incidents } = useIncidents();
 
+  // Pay rates live in an admin-only table; only admins reach this page (AdminGate)
+  const { data: compensation } = useQuery({
+    queryKey: ["crew-compensation"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("crew_compensation" as any)
+        .select("crew_member_id, hourly_rate, hw_rate");
+      if (error) throw error;
+      return (data as any[]) ?? [];
+    },
+    enabled: isAdmin,
+  });
+
+  const compMap = useMemo(() => {
+    const m = new Map<string, { hourly_rate: number | null; hw_rate: number | null }>();
+    (compensation ?? []).forEach((c: any) => {
+      m.set(c.crew_member_id, { hourly_rate: c.hourly_rate, hw_rate: c.hw_rate });
+    });
+    return m;
+  }, [compensation]);
+
   const isLoading = loadingTickets || loadingCrew;
   const loadError = ticketsError || crewError;
 
@@ -138,8 +159,9 @@ export default function Payroll() {
       const totalHours = hoursMap.get(cm.id) || 0;
       if (totalHours <= 0) return;
 
-      const hourlyRate = Number(cm.hourly_rate) || 0;
-      const hwRate = Number(cm.hw_rate) || 0;
+      const comp = compMap.get(cm.id);
+      const hourlyRate = Number(comp?.hourly_rate) || 0;
+      const hwRate = Number(comp?.hw_rate) || 0;
       const regularHours = Math.min(totalHours, 40);
       const overtimeHours = Math.max(0, totalHours - 40);
       const regularPay = regularHours * hourlyRate;
