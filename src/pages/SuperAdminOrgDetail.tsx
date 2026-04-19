@@ -59,6 +59,7 @@ export default function SuperAdminOrgDetail() {
   const { orgId } = useParams<{ orgId: string }>();
   const navigate = useNavigate();
   const { startViewAs } = useImpersonation();
+  const queryClient = useQueryClient();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["super-admin", "org", orgId],
@@ -74,6 +75,8 @@ export default function SuperAdminOrgDetail() {
     if (!orgId) return;
     try {
       await startViewAs(orgId, data?.name);
+      // Drop any cached data from prior context so org-scoped queries refetch
+      queryClient.clear();
       toast.success(`Viewing as ${data?.name ?? "organization"} (read-only)`);
       navigate("/");
     } catch (err) {
