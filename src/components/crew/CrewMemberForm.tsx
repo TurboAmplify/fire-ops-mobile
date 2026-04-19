@@ -4,6 +4,7 @@ import { Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { CrewPhotoUpload } from "@/components/crew/CrewPhotoUpload";
+import { useOrganization } from "@/hooks/useOrganization";
 
 interface Props {
   memberId: string | null;
@@ -15,6 +16,7 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
   const { data: existing, isLoading: loadingExisting } = useCrewMember(memberId || "");
   const createMutation = useCreateCrewMember();
   const updateMutation = useUpdateCrewMember();
+  const { isAdmin } = useOrganization();
 
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
@@ -43,15 +45,18 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
     e.preventDefault();
     if (!canSubmit) return;
 
-    const payload = {
+    const payload: any = {
       name: name.trim(),
       role: role.trim(),
       phone: phone.trim() || null,
       active,
       notes: notes.trim() || null,
-      hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
-      hw_rate: hwRate ? parseFloat(hwRate) : null,
-    } as any;
+    };
+    // Only admins are allowed to set/change pay rates (also enforced by DB trigger)
+    if (isAdmin) {
+      payload.hourly_rate = hourlyRate ? parseFloat(hourlyRate) : null;
+      payload.hw_rate = hwRate ? parseFloat(hwRate) : null;
+    }
 
     try {
       if (isEdit && memberId) {
@@ -115,16 +120,18 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
                 <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className={inputClass} placeholder="555-123-4567" inputMode="tel" />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-muted-foreground">Hourly Rate ($)</label>
-                  <input type="number" step="0.01" min="0" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} className={inputClass} placeholder="0.00" inputMode="decimal" />
+              {isAdmin && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-muted-foreground">Hourly Rate ($)</label>
+                    <input type="number" step="0.01" min="0" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} className={inputClass} placeholder="0.00" inputMode="decimal" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-muted-foreground">H&W Rate ($)</label>
+                    <input type="number" step="0.01" min="0" value={hwRate} onChange={(e) => setHwRate(e.target.value)} className={inputClass} placeholder="0.00" inputMode="decimal" />
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-muted-foreground">H&W Rate ($)</label>
-                  <input type="number" step="0.01" min="0" value={hwRate} onChange={(e) => setHwRate(e.target.value)} className={inputClass} placeholder="0.00" inputMode="decimal" />
-                </div>
-              </div>
+              )}
 
               <div className="space-y-1">
                 <label className="text-sm font-medium text-muted-foreground">Notes</label>

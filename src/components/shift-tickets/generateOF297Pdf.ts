@@ -320,18 +320,10 @@ export async function generateOF297PdfBlob(ticket: ShiftTicket): Promise<{ blob:
   const sigBoxH = 48;
 
   // Load signatures in parallel
-  console.log("[PDF] Loading signatures:", {
-    contractor: ticket.contractor_rep_signature_url ? "present" : "missing",
-    supervisor: ticket.supervisor_signature_url ? "present" : "missing",
-  });
   const [contractorSigData, supervisorSigData] = await Promise.all([
     ticket.contractor_rep_signature_url ? loadImageAsBase64(ticket.contractor_rep_signature_url) : Promise.resolve(null),
     ticket.supervisor_signature_url ? loadImageAsBase64(ticket.supervisor_signature_url) : Promise.resolve(null),
   ]);
-  console.log("[PDF] Signature load results:", {
-    contractorLoaded: !!contractorSigData,
-    supervisorLoaded: !!supervisorSigData,
-  });
 
   // Row 1: Contractor name (31) + Contractor signature (32)
   // Draw box outlines
