@@ -14,7 +14,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { generateOF297Pdf } from "@/components/shift-tickets/generateOF297Pdf";
+import { generateOF297Pdf, generateOF297PdfBlob } from "@/components/shift-tickets/generateOF297Pdf";
+import { Eye } from "lucide-react";
 
 function formatDateSafe(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
