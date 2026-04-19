@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield, Building2, Users, Activity, AlertTriangle, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
+import { BackgroundSwitcher } from "@/components/settings/BackgroundSwitcher";
 
 const sections = [
   {
@@ -58,6 +59,10 @@ export default function SuperAdmin() {
       <main className="mx-auto max-w-6xl px-6 py-8">
         <div className="mb-6 rounded-lg border border-dashed bg-muted/30 p-4 text-sm text-muted-foreground">
           Step 1 complete: platform_admin gate active. Read-only org and user views ship next.
+        </div>
+
+        <div className="mb-6">
+          <BackgroundSwitcher />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
