@@ -164,6 +164,40 @@ export default function ShiftTicketLog() {
     setPdfPreviewTitle("");
   };
 
+  const openDeleteDialog = () => {
+    if (!selected) return;
+    setDeleteTarget(selected);
+    setDeleteConfirmText("");
+    setSelected(null);
+  };
+
+  const closeDeleteDialog = () => {
+    if (deleteLoading) return;
+    setDeleteTarget(null);
+    setDeleteConfirmText("");
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    if (deleteConfirmText.trim().toLowerCase() !== "delete") return;
+    setDeleteLoading(true);
+    try {
+      await deleteShiftTicket(deleteTarget.ticket.id);
+      await qc.invalidateQueries({ queryKey: ["shift-tickets-recent"] });
+      await qc.invalidateQueries({
+        queryKey: ["shift-tickets", deleteTarget.ticket.incident_truck_id],
+      });
+      toast.success("Shift ticket deleted");
+      setDeleteTarget(null);
+      setDeleteConfirmText("");
+    } catch (err) {
+      console.error("Delete failed:", err);
+      toast.error("Failed to delete shift ticket");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   const sortedTickets = (() => {
     if (!tickets) return tickets;
     const dir = sortDir === "asc" ? 1 : -1;
