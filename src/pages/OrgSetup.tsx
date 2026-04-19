@@ -44,6 +44,8 @@ type Step = "type" | "details";
 export default function OrgSetup() {
   const { user, loading: authLoading } = useAuth();
   const { membership, loading: orgLoading, refetch } = useOrganization();
+  const { isPlatformAdmin, loading: paLoading } = usePlatformAdmin();
+  const { isImpersonating } = useImpersonation();
   const { toast } = useToast();
   const [companyName, setCompanyName] = useState("");
   const [orgType, setOrgType] = useState<OrgType>("contractor");
