@@ -8,7 +8,7 @@ const sections = [
     description: "All orgs, tier, seats, last activity",
     icon: Building2,
     to: "/super-admin/organizations",
-    ready: false,
+    ready: true,
   },
   {
     title: "Users",
