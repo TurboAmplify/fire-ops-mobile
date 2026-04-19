@@ -28,7 +28,7 @@ import { useTutorial } from "@/hooks/useTutorial";
 
 export default function Settings() {
   const { user, signOut } = useAuth();
-  const { membership } = useOrganization();
+  const { membership, memberships, setActiveOrgId } = useOrganization();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const { start: startTutorial } = useTutorial();
@@ -90,6 +90,34 @@ export default function Settings() {
               label={membership?.organizationName ?? "Organization"}
               onClick={() => navigate("/settings/organization")}
             />
+            {memberships.length > 1 && (
+              <div className="px-4 py-3 space-y-2">
+                <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  Switch active org
+                </p>
+                <div className="flex flex-col gap-1.5">
+                  {memberships.map((m) => {
+                    const active = m.organizationId === membership?.organizationId;
+                    return (
+                      <button
+                        key={m.organizationId}
+                        onClick={() => setActiveOrgId(m.organizationId)}
+                        className={`flex items-center justify-between rounded-lg border px-3 py-2.5 text-left text-sm transition-colors touch-target ${
+                          active
+                            ? "border-primary bg-primary/10 text-foreground"
+                            : "border-border bg-background hover:bg-accent"
+                        }`}
+                      >
+                        <span className="truncate font-medium">{m.organizationName}</span>
+                        <span className="ml-2 shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                          {m.role}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
