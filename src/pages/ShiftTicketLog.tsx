@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { generateOF297Pdf, generateOF297PdfBlob } from "@/components/shift-tickets/generateOF297Pdf";
+import { useOrganization } from "@/hooks/useOrganization";
 
 function formatDateSafe(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
