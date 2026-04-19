@@ -269,106 +269,232 @@ export default function ShiftTicketLog() {
         )}
 
         {!isLoading && tickets && tickets.length > 0 && (
-          <div className="rounded-2xl bg-card card-shadow overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/40">
-                  <tr>
-                    <SortHeader label="Date" k="date" />
-                    <SortHeader label="Truck" k="truck" />
-                    <SortHeader label="Crew" k="crew" />
-                    <SortHeader label="Lunch" k="lunch" />
-                    <SortHeader label="Per Diem" k="perDiem" />
-                    <SortHeader label="Contractor Sig" k="contractor" />
-                    <SortHeader label="Supervisor Sig" k="supervisor" />
-                    <SortHeader label="Status" k="status" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/60">
-                  {(sortedTickets ?? []).map((t) => {
-                    const dateStr = ticketDate(t);
-                    const dateLabel = formatDateSafe(dateStr);
-                    const lunch = lunchStatus(t.personnel_entries);
-                    const perDiem = summarizePerDiem(t.personnel_entries);
-                    const crew = crewSummary(t.personnel_entries);
-                    const truckName = t.incident_trucks?.trucks?.name ?? "—";
-                    const incidentId = t.incident_trucks?.incident_id;
-                    const onClick = () =>
-                      setSelected({
-                        ticket: t as unknown as ShiftTicket,
-                        incidentId,
-                        truckName,
-                        dateLabel,
-                      });
-                    return (
-                      <tr
-                        key={t.id}
-                        onClick={onClick}
-                        className="cursor-pointer active:bg-secondary/40 transition-colors"
+          <>
+            {/* Mobile: card list (no horizontal scroll) */}
+            <div className="md:hidden space-y-2">
+              {(sortedTickets ?? []).map((t) => {
+                const dateStr = ticketDate(t);
+                const dateLabel = formatDateSafe(dateStr);
+                const lunch = lunchStatus(t.personnel_entries);
+                const perDiem = summarizePerDiem(t.personnel_entries);
+                const crew = crewSummary(t.personnel_entries);
+                const truckName = t.incident_trucks?.trucks?.name ?? "—";
+                const incidentId = t.incident_trucks?.incident_id;
+                const onClick = () =>
+                  setSelected({
+                    ticket: t as unknown as ShiftTicket,
+                    incidentId,
+                    truckName,
+                    dateLabel,
+                  });
+                return (
+                  <button
+                    key={t.id}
+                    onClick={onClick}
+                    className="w-full text-left rounded-2xl bg-card card-shadow p-3 active:bg-secondary/40 transition-colors touch-target"
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-sm">{dateLabel}</span>
+                          <span className="text-muted-foreground">·</span>
+                          <span className="text-sm font-medium truncate">{truckName}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate">{crew}</p>
+                      </div>
+                      <Badge
+                        variant={t.status === "final" ? "default" : "outline"}
+                        className="capitalize font-normal shrink-0"
                       >
-                        <td className="px-3 py-3 whitespace-nowrap font-medium">{dateLabel}</td>
-                        <td className="px-3 py-3 whitespace-nowrap">{truckName}</td>
-                        <td className="px-3 py-3 min-w-[160px]">{crew}</td>
-                        <td className="px-3 py-3 whitespace-nowrap">
-                          {lunch.tone === "ok" ? (
-                            <Badge variant="secondary" className="font-normal">
-                              <CheckCircle2 className="h-3 w-3 mr-1" /> Lunch
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground">No lunch</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-3 whitespace-nowrap">{perDiem}</td>
-                        <td className="px-3 py-3 whitespace-nowrap">
-                          {t.contractor_rep_signed_at ? (
-                            <div className="flex items-center gap-1.5 text-xs">
-                              <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
-                              <span>{formatTime(t.contractor_rep_signed_at)}</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                              <Clock className="h-3.5 w-3.5" /> Pending
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-3 py-3 whitespace-nowrap">
-                          {t.supervisor_signed_at ? (
-                            <div className="flex items-center gap-1.5 text-xs">
-                              <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
-                              <span>{formatTime(t.supervisor_signed_at)}</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                              <Clock className="h-3.5 w-3.5" /> Pending
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-3 py-3 whitespace-nowrap">
-                          <Badge
-                            variant={t.status === "final" ? "default" : "outline"}
-                            className="capitalize font-normal"
-                          >
-                            {t.status}
-                          </Badge>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                        {t.status}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-wrap text-[11px] text-muted-foreground">
+                      {lunch.tone === "ok" ? (
+                        <Badge variant="secondary" className="font-normal h-5 px-1.5">
+                          <CheckCircle2 className="h-3 w-3 mr-0.5" /> Lunch
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="font-normal h-5 px-1.5">
+                          No lunch
+                        </Badge>
+                      )}
+                      {perDiem !== "—" && (
+                        <Badge variant="outline" className="font-normal h-5 px-1.5">
+                          {perDiem}
+                        </Badge>
+                      )}
+                      <span className="inline-flex items-center gap-1">
+                        {t.contractor_rep_signed_at ? (
+                          <CheckCircle2 className="h-3 w-3 text-primary" />
+                        ) : (
+                          <Clock className="h-3 w-3" />
+                        )}
+                        Contractor
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        {t.supervisor_signed_at ? (
+                          <CheckCircle2 className="h-3 w-3 text-primary" />
+                        ) : (
+                          <Clock className="h-3 w-3" />
+                        )}
+                        Supervisor
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
-          </div>
+
+            {/* Desktop/tablet: full table */}
+            <div className="hidden md:block rounded-2xl bg-card card-shadow overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/40">
+                    <tr>
+                      <SortHeader label="Date" k="date" />
+                      <SortHeader label="Truck" k="truck" />
+                      <SortHeader label="Crew" k="crew" />
+                      <SortHeader label="Lunch" k="lunch" />
+                      <SortHeader label="Per Diem" k="perDiem" />
+                      <SortHeader label="Contractor Sig" k="contractor" />
+                      <SortHeader label="Supervisor Sig" k="supervisor" />
+                      <SortHeader label="Status" k="status" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/60">
+                    {(sortedTickets ?? []).map((t) => {
+                      const dateStr = ticketDate(t);
+                      const dateLabel = formatDateSafe(dateStr);
+                      const lunch = lunchStatus(t.personnel_entries);
+                      const perDiem = summarizePerDiem(t.personnel_entries);
+                      const crew = crewSummary(t.personnel_entries);
+                      const truckName = t.incident_trucks?.trucks?.name ?? "—";
+                      const incidentId = t.incident_trucks?.incident_id;
+                      const onClick = () =>
+                        setSelected({
+                          ticket: t as unknown as ShiftTicket,
+                          incidentId,
+                          truckName,
+                          dateLabel,
+                        });
+                      return (
+                        <tr
+                          key={t.id}
+                          onClick={onClick}
+                          className="cursor-pointer active:bg-secondary/40 transition-colors"
+                        >
+                          <td className="px-3 py-3 whitespace-nowrap font-medium">{dateLabel}</td>
+                          <td className="px-3 py-3 whitespace-nowrap">{truckName}</td>
+                          <td className="px-3 py-3 min-w-[160px]">{crew}</td>
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            {lunch.tone === "ok" ? (
+                              <Badge variant="secondary" className="font-normal">
+                                <CheckCircle2 className="h-3 w-3 mr-1" /> Lunch
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground">No lunch</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-3 whitespace-nowrap">{perDiem}</td>
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            {t.contractor_rep_signed_at ? (
+                              <div className="flex items-center gap-1.5 text-xs">
+                                <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                                <span>{formatTime(t.contractor_rep_signed_at)}</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <Clock className="h-3.5 w-3.5" /> Pending
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            {t.supervisor_signed_at ? (
+                              <div className="flex items-center gap-1.5 text-xs">
+                                <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                                <span>{formatTime(t.supervisor_signed_at)}</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <Clock className="h-3.5 w-3.5" /> Pending
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            <Badge
+                              variant={t.status === "final" ? "default" : "outline"}
+                              className="capitalize font-normal"
+                            >
+                              {t.status}
+                            </Badge>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
         )}
       </div>
 
       <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent className="sm:max-w-sm max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Shift Ticket</DialogTitle>
             <DialogDescription>
               {selected ? `${selected.truckName} — ${selected.dateLabel}` : ""}
             </DialogDescription>
           </DialogHeader>
+          {selected && (
+            <div className="rounded-xl bg-muted/40 p-3 text-sm space-y-2">
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground">Crew</span>
+                <span className="text-right font-medium">
+                  {crewSummary(selected.ticket.personnel_entries)}
+                </span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground">Lunch</span>
+                <span className="text-right font-medium">
+                  {lunchStatus(selected.ticket.personnel_entries).tone === "ok" ? "Yes" : "No"}
+                </span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground">Per diem</span>
+                <span className="text-right font-medium">
+                  {summarizePerDiem(selected.ticket.personnel_entries)}
+                </span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground">Contractor sig</span>
+                <span className="text-right font-medium">
+                  {selected.ticket.contractor_rep_signed_at
+                    ? formatTime(selected.ticket.contractor_rep_signed_at)
+                    : "Pending"}
+                </span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground">Supervisor sig</span>
+                <span className="text-right font-medium">
+                  {selected.ticket.supervisor_signed_at
+                    ? formatTime(selected.ticket.supervisor_signed_at)
+                    : "Pending"}
+                </span>
+              </div>
+              <div className="flex justify-between gap-3 items-center">
+                <span className="text-muted-foreground">Status</span>
+                <Badge
+                  variant={selected.ticket.status === "final" ? "default" : "outline"}
+                  className="capitalize font-normal"
+                >
+                  {selected.ticket.status}
+                </Badge>
+              </div>
+            </div>
+          )}
           <div className="grid gap-2 pt-2">
             <button
               onClick={handleEdit}
