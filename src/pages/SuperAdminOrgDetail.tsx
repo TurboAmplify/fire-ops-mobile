@@ -303,6 +303,66 @@ export default function SuperAdminOrgDetail() {
           </>
         )}
       </main>
+
+      <AlertDialog
+        open={membershipDialog !== null}
+        onOpenChange={(open) => {
+          if (!open && !membershipMutation.isPending) {
+            setMembershipDialog(null);
+            setReason("");
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {membershipDialog === "add"
+                ? `Add yourself to ${data?.name ?? "this organization"}?`
+                : `Remove yourself from ${data?.name ?? "this organization"}?`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {membershipDialog === "add"
+                ? "You'll become a real admin member of this org with full read/write access. Every action you take will appear under your name in the org's audit log. This action is recorded in the platform admin audit log."
+                : "You'll lose admin access to this org and your platform-admin write privileges here will revert to read-only. This action is recorded in the platform admin audit log."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="membership-reason" className="text-sm">
+              Reason (optional)
+            </Label>
+            <Textarea
+              id="membership-reason"
+              placeholder="e.g. Helping customer fix duplicate incident"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={3}
+              maxLength={1024}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={membershipMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={membershipMutation.isPending || !membershipDialog}
+              onClick={(e) => {
+                e.preventDefault();
+                if (!membershipDialog) return;
+                membershipMutation.mutate({ action: membershipDialog, reason });
+              }}
+              className={
+                membershipDialog === "remove"
+                  ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  : undefined
+              }
+            >
+              {membershipMutation.isPending
+                ? "Working..."
+                : membershipDialog === "add"
+                  ? "Add me as admin"
+                  : "Remove me"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
