@@ -2,7 +2,7 @@ import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import {
   Flame, Plus, ScanLine, ChevronRight, Settings,
-  Truck, Users, ClipboardList, CheckCircle2,
+  Truck, Users, ClipboardList, CheckCircle2, ShieldCheck,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useIncidents } from "@/hooks/useIncidents";
@@ -11,6 +11,7 @@ import { useCrewMembers } from "@/hooks/useCrewMembers";
 import { useNeedsList } from "@/hooks/useNeedsList";
 import { ShiftTicketQuickAccess } from "@/components/shift-tickets/ShiftTicketQuickAccess";
 import { InspectionDueBanner } from "@/components/fleet/InspectionDueBanner";
+import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
 import type { LucideIcon } from "lucide-react";
 
 export default function Dashboard() {
