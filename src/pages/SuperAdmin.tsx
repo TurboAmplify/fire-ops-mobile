@@ -62,10 +62,6 @@ export default function SuperAdmin() {
           Step 1 complete: platform_admin gate active. Read-only org and user views ship next.
         </div>
 
-        <div className="mb-6">
-          <BackgroundSwitcher />
-        </div>
-
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {sections.map((s) => {
             const Icon = s.icon;
@@ -98,6 +94,27 @@ export default function SuperAdmin() {
               </div>
             );
           })}
+        </div>
+
+        <div className="mt-8">
+          <Collapsible>
+            <Card>
+              <CollapsibleTrigger className="flex w-full items-center justify-between p-6 text-left hover:bg-muted/30 transition-colors rounded-lg [&[data-state=open]>svg]:rotate-180">
+                <div>
+                  <CardTitle className="text-base">App Background</CardTitle>
+                  <CardDescription className="mt-1">
+                    Cinematic backdrop applied globally for all users.
+                  </CardDescription>
+                </div>
+                <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 text-muted-foreground" />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="border-t px-6 py-4">
+                  <BackgroundSwitcher />
+                </div>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
         </div>
       </main>
     </div>
