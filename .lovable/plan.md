@@ -1,67 +1,50 @@
 
 
-## Goal
-Add a `/super-admin` area gated to a new `platform_admin` role (you only) that shows orgs, users, subscriptions, usage, and errors — plus support actions with an audit trail.
+Picking up from the cancelled plan. The user's earlier questions were:
+1. Where do I go as super admin? — no entry point exists yet.
+2. Can I view as an org admin/crew member? — impersonation not built.
+3. Does login have sign-up? — yes, already there (confirmed earlier).
 
-## Approach
+Plan stays focused on (1) and (2). Skipping the Overview dashboard for now to keep this shippable; can add after.
 
-### 1. Platform admin role (new, separate from `org admin`)
-- New table `platform_admins (user_id uuid pk, granted_at, notes)` — explicit allow-list. No way to self-grant.
-- Helper: `is_platform_admin(uid) returns boolean` (security-definer).
-- Seed your user_id via migration.
-- New RLS pattern: every super-admin RPC checks `is_platform_admin(auth.uid())` first. Existing tenant RLS is untouched.
+## Plan — Super Admin entry point + read-only "View as"
 
-### 2. Cross-org read access via SECURITY DEFINER RPCs (not loosened RLS)
-Keep tenant RLS strict. Add server-side functions that bypass RLS only after confirming platform_admin:
-- `admin_list_organizations()` — orgs + tier + seat_limit + member_count + last_activity_at
-- `admin_get_organization(_org_id)` — full detail: members, invites, storage usage, activity counts (incidents, expenses, shift tickets, trucks)
-- `admin_list_users(search, limit, offset)` — auth.users + profiles + org memberships
-- `admin_recent_signups(days)` and `admin_recent_activity(days)` for the activity feed
-- `admin_storage_usage_by_org()` — sums object sizes per bucket per org
+### A. Entry points (so you can actually find /super-admin)
+1. **`src/pages/More.tsx`** — add a "Platform" section at the top, visible only when `usePlatformAdmin().isPlatformAdmin` is true. One row: "Super Admin" → `/super-admin`, with the `Shield` icon. Sits above "Logs".
+2. **`src/pages/Dashboard.tsx`** — small "Super Admin" pill/link in the header (top-right), gated by the same hook. Tap → `/super-admin`. Hidden for everyone else.
 
-### 3. Support actions (writes, all audited)
-- `admin_set_org_tier(_org_id, _tier, _seat_limit, _reason)`
-- `admin_extend_invite(_invite_id)`
-- `admin_soft_delete_org(_org_id, _reason)` — sets a `deleted_at`, kills future logins
-- `admin_reset_user_password(_user_id)` — calls auth admin API via edge function
-- Every write inserts into `platform_admin_audit (id, actor_user_id, action, target_type, target_id, payload jsonb, reason, occurred_at)` — append-only, RESTRICTIVE no-update / no-delete (same pattern as `signature_audit_log`).
+### B. Read-only "View as" mode
+Goal: from `/super-admin/organizations/:orgId`, you can preview the app as if you were a member of that org, **read-only**, with a clear banner and an audit trail.
 
-### 4. UI: `/super-admin/*` (mobile-tolerant but desktop-first)
-- `Overview` — top-line cards: total orgs, active orgs (7d), new signups (7d), MRR placeholder, errors (24h via Sentry link)
-- `Organizations` — searchable list, click into detail page with members, usage, storage, recent activity, support actions
-- `Users` — search by email/name, see org memberships, last sign-in
-- `Activity feed` — last 7 days of signups, org creations, invites accepted
-- `Errors` — embed Sentry issue list (or link out) + recent edge function failures from `function_edge_logs`
-- `Audit` — your own action log
+1. **DB — audit table + RPC**
+   - New table `platform_admin_audit (id, actor_user_id, action, target_type, target_id, payload jsonb, reason, occurred_at)` — append-only (RESTRICTIVE no-update / no-delete, mirrors `signature_audit_log`).
+   - New SECURITY DEFINER RPC `admin_log_action(_action, _target_type, _target_id, _payload, _reason)` — checks `is_platform_admin()`, inserts a row.
 
-Routes guarded by a new `<PlatformAdminGate>` (mirrors `AdminGate`).
+2. **Client — impersonation context**
+   - Extend `OrganizationProvider` (`src/hooks/useOrganization.tsx`) with `viewAsOrgId`, `setViewAsOrgId`, `isImpersonating`. Persist `viewAsOrgId` in `sessionStorage` (clears on browser close).
+   - When `viewAsOrgId` is set AND user is platform admin: `membership` is overridden by a fetched summary of that org (name, tier, seats), and `isAdmin` is forced to `false` (read-only — even if you're admin of your own org, in view-as mode you're not).
+   - New helper `useIsImpersonating()` — convenience selector.
 
-### 5. Error monitoring (separate from super admin)
-- Add **Sentry** to the React app + Capacitor + edge functions. Sentry gives crash reports, breadcrumbs, release tracking, and source maps — none of which Supabase logs do.
-- In the super admin Errors tab, link out to Sentry rather than rebuilding it.
+3. **Server-side read access while impersonating**
+   - Tenant RLS still requires `get_user_org_ids(auth.uid())` to include the org. To make data visible without granting membership, add a SECURITY DEFINER RPC `admin_view_as_get_org_ids()` that returns `viewAsOrgId` only when `is_platform_admin()`. **Simpler alternative (preferred)**: extend `get_user_org_ids(_user_id)` to also return any org IDs from a new session-scoped GUC `app.view_as_org_id` — but GUCs across requests are fragile.
+   - **Decision**: keep tenant RLS untouched. For v1, "View as" reads use new SECURITY DEFINER RPCs that check `is_platform_admin()` + return data for `_org_id`. Start with the highest-value views: incidents list, crew list, fleet list, expenses list. Each impersonation page calls the admin RPC instead of the normal hook when `isImpersonating` is true.
+   - This avoids any RLS loosening — impersonation is a fully separate read path.
 
-### 6. What stays in Supabase dashboard
-- Raw SQL when you need to fix one row
-- Auth provider config, secrets, storage bucket browsing
-- Postgres logs for slow queries
+4. **Write blocking while impersonating**
+   - Add a single guard in `src/integrations/supabase/client.ts`'s consumers — easier: a top-level `useImpersonationGuard()` hook used by ProtectedRoute that, when `isImpersonating === true`, wraps mutations to throw "Read-only: super admin view-as mode". Implementation: a small `assertNotImpersonating()` utility called at the top of every service mutation function (`crew.ts`, `incidents.ts`, `expenses.ts`, `fleet.ts`, `shifts.ts`, `shift-tickets.ts`). Cheap and safe.
 
-### 7. What stays in App Store Connect / Play Console
-- Install/uninstall counts, retention, store search terms
-- Crash reports from native layer (also flows into Sentry)
-- Reviews and ratings
-- IAP revenue if/when you add subscriptions
+5. **UI**
+   - **Banner**: persistent red bar at the top of `AppShell` when `isImpersonating`. Shows org name, "Viewing as super admin (read-only)", and an "Exit" button that clears `viewAsOrgId`.
+   - **Entry**: on `/super-admin/organizations/:orgId`, add a "View as this org" button. Sets `viewAsOrgId`, calls `admin_log_action('view_as_start', 'organization', orgId)`, navigates to `/`.
+   - **Exit** clears `viewAsOrgId` and logs `view_as_stop`.
 
-## Build order (small, shippable steps)
-1. `platform_admins` table + `is_platform_admin()` + seed your user. Add `<PlatformAdminGate>` and stub `/super-admin` page. *(safe, invisible to everyone but you)*
-2. Read-only RPCs + Organizations list + detail page.
-3. Activity feed + Users search.
-4. `platform_admin_audit` table + first write action (`admin_set_org_tier`).
-5. Wire up Sentry in React, Capacitor, and edge functions.
-6. Errors tab pulling from Sentry + recent failed edge function logs.
-7. Remaining support actions (extend invite, soft-delete org, reset password) — each one audited.
+### Build order (small, shippable)
+1. Entry points only (More + Dashboard link). Ship.
+2. `platform_admin_audit` table + `admin_log_action` RPC + audit page stub.
+3. Impersonation context + banner + Exit. Reads use existing hooks (will return empty since you're not a member — confirms guard works).
+4. Add admin read RPCs for incidents/crew/fleet/expenses; route hooks to use them when `isImpersonating`.
+5. Add `assertNotImpersonating()` guards across service mutation files.
 
-## Open questions for you
-- Do you want **billing/subscriptions** real now (Stripe via Lovable Payments) or just a manual `tier` + `seat_limit` you bump by hand for the first paying customers?
-- Sentry account — happy to wire it up, or do you want PostHog (which also gives session replay + product analytics)?
-- For "impersonate an org" — useful for support but a privacy minefield. Skip for v1?
+### Open question
+- For step 4, do you want all five core lists (incidents, crew, fleet, expenses, shift tickets) wired up at once, or start with **incidents + crew** only and grow from there? Each list needs a small admin RPC + a hook tweak — quick but not free.
 
