@@ -17,7 +17,7 @@ export default function ShiftTicketEdit() {
     ticketId: string;
   }>();
   const navigate = useNavigate();
-  const { membership } = useOrganization();
+  const { membership, isAdmin } = useOrganization();
   const { data: ticket, isLoading } = useShiftTicket(ticketId || "");
   const updateMutation = useUpdateShiftTicket(ticketId || "", incidentTruckId || "");
   const { data: crewAssignments } = useIncidentTruckCrew(incidentTruckId || "");
