@@ -1526,8 +1526,13 @@ export type Database = {
         Returns: string
       }
       get_org_from_shift: { Args: { _shift_id: string }; Returns: string }
+      get_org_from_signature_path: { Args: { _path: string }; Returns: string }
       get_org_from_truck_inspection: {
         Args: { _inspection_id: string }
+        Returns: string
+      }
+      get_truck_from_inspection_photo_path: {
+        Args: { _path: string }
         Returns: string
       }
       get_user_crew_member_id: { Args: { _user_id: string }; Returns: string }
