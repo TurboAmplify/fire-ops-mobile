@@ -65,6 +65,7 @@ export function AppShell({ children, title, headerRight, showBack, onBack }: App
       <OfflineBanner />
       <main className="flex-1 pb-20">{children}</main>
       <BottomNav />
+      </div>
     </div>
   );
 }
