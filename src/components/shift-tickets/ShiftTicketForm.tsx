@@ -162,7 +162,7 @@ export function ShiftTicketForm({
 
   // Collapsible personnel
   const [expandedPersonnelIndex, setExpandedPersonnelIndex] = useState<number | null>(null);
-  const [activeDrawer, setActiveDrawer] = useState<"header" | "equipment" | "options" | "remarks" | null>(null);
+  const [activeDrawer, setActiveDrawer] = useState<"header" | "equipment" | "remarks" | null>(null);
   const [showCrewPicker, setShowCrewPicker] = useState(false);
 
   // Supervisor sheet
