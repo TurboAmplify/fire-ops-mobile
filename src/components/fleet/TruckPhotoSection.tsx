@@ -66,13 +66,9 @@ export function TruckPhotoSection({ truckId }: TruckPhotoSectionProps) {
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !membership) return;
-    try {
-      await uploadMutation.mutateAsync({ orgId: membership.organizationId, file });
-      toast.success("Photo uploaded");
-    } catch {
-      toast.error("Failed to upload photo");
-    }
     if (inputRef.current) inputRef.current.value = "";
+    // Use the same scan flow so every uploaded photo gets auto-parsed for VIN / reg.
+    await runScan(file);
   };
 
   const handleScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
