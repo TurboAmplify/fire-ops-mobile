@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Clock } from "lucide-react";
 import { toast } from "sonner";
 import { MilitaryTimeInput } from "./MilitaryTimeInput";
-import { computeHours, buildRemarksString } from "@/services/shift-tickets";
+import { computeHours, buildRemarksString, splitForLunch, normalizeLunchTime } from "@/services/shift-tickets";
 import type { EquipmentEntry, PersonnelEntry } from "@/services/shift-tickets";
 
 interface CrewSyncCardProps {
@@ -22,7 +22,7 @@ export function CrewSyncCard({ equipmentEntries, personnelEntries, setPersonnelE
   // explicitly untaps it. If a saved ticket already has personnel entries,
   // restore the lunch state from the first entry's remarks string.
   const [hasLunch, setHasLunch] = useState(true);
-  const [lunchTime, setLunchTime] = useState("1200");
+  const [lunchTime, setLunchTime] = useState("12:00");
   const [lodging, setLodging] = useState(false);
   const [perDiemB, setPerDiemB] = useState(false);
   const [perDiemL, setPerDiemL] = useState(false);
@@ -38,10 +38,10 @@ export function CrewSyncCard({ equipmentEntries, personnelEntries, setPersonnelE
       setPerDiemD(first.per_diem_d || false);
       // Restore lunch from saved remarks. If a saved entry has no "30-min lunch"
       // marker, the user previously turned it off — respect that choice.
-      const lunchMatch = first.remarks?.match(/30-?min lunch at (\d{4})/i);
+      const lunchMatch = first.remarks?.match(/30-?min lunch at (\d{1,2}:?\d{2})/i);
       if (lunchMatch) {
         setHasLunch(true);
-        setLunchTime(lunchMatch[1]);
+        setLunchTime(normalizeLunchTime(lunchMatch[1]));
       } else if (first.remarks) {
         setHasLunch(false);
       }
@@ -55,16 +55,21 @@ export function CrewSyncCard({ equipmentEntries, personnelEntries, setPersonnelE
       toast.error("Enter equipment start and stop times first");
       return;
     }
+    const normalizedLunch = normalizeLunchTime(lunchTime) || "12:00";
     const updated = personnelEntries.map((entry) => {
-      const opHours = computeHours(eqStart, eqStop);
-      const finalTotal = hasLunch ? Math.round((opHours - 0.5) * 10) / 10 : opHours;
+      const split = hasLunch
+        ? splitForLunch(eqStart, eqStop, normalizedLunch)
+        : { op_start: eqStart, op_stop: eqStop, sb_start: "", sb_stop: "" };
+      const opHours = computeHours(split.op_start, split.op_stop);
+      const sbHours = computeHours(split.sb_start, split.sb_stop);
+      const finalTotal = Math.round((opHours + sbHours) * 10) / 10;
       const newEntry: PersonnelEntry = {
         ...entry,
         date: eqDate || entry.date,
-        op_start: eqStart,
-        op_stop: eqStop,
-        sb_start: "",
-        sb_stop: "",
+        op_start: split.op_start,
+        op_stop: split.op_stop,
+        sb_start: split.sb_start,
+        sb_stop: split.sb_stop,
         total: finalTotal,
         activity_type: "work",
         work_context: "",
@@ -75,7 +80,7 @@ export function CrewSyncCard({ equipmentEntries, personnelEntries, setPersonnelE
       };
       newEntry.remarks = buildRemarksString(newEntry);
       if (hasLunch) {
-        newEntry.remarks += `, 30-min lunch at ${lunchTime}`;
+        newEntry.remarks += `, 30-min lunch at ${normalizedLunch}`;
       }
       return newEntry;
     });
