@@ -56,39 +56,57 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_ANON_KEY")!,
       { global: { headers: { Authorization: authHeader } } }
     );
-    const { data: claimsData, error: authError } = await supabase.auth.getClaims(authHeader.replace("Bearer ", ""));
-    if (authError || !claimsData?.claims) {
+    const { data: userData, error: authError } = await supabase.auth.getUser();
+    if (authError || !userData?.user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const { imageUrl } = await req.json();
-    if (!imageUrl) {
-      return new Response(JSON.stringify({ error: "imageUrl is required" }), {
+    const { imageUrl, imageDataUrl } = await req.json();
+    if (!imageUrl && !imageDataUrl) {
+      return new Response(JSON.stringify({ error: "imageUrl or imageDataUrl is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    if (!isAllowedFileUrl(imageUrl)) {
-      return new Response(JSON.stringify({ error: "imageUrl must be a Supabase Storage URL" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+
+    let dataUrl: { url: string };
+    if (imageDataUrl) {
+      // Inline path: client already has the bytes, skip the Storage round-trip.
+      if (typeof imageDataUrl !== "string" || !imageDataUrl.startsWith("data:")) {
+        return new Response(JSON.stringify({ error: "imageDataUrl must be a data: URL" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      // Cap inline payloads at ~10MB base64 (~7.5MB raw) to keep latency in check.
+      if (imageDataUrl.length > 10 * 1024 * 1024) {
+        return new Response(JSON.stringify({ error: "imageDataUrl too large" }), {
+          status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      dataUrl = { url: imageDataUrl };
+    } else {
+      if (!isAllowedFileUrl(imageUrl)) {
+        return new Response(JSON.stringify({ error: "imageUrl must be a Supabase Storage URL" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      dataUrl = await toDataUrl(imageUrl);
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const dataUrl = await toDataUrl(imageUrl);
-
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
+      signal: AbortSignal.timeout(30_000),
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-2.5-flash-lite",
         messages: [
           {
             role: "system",

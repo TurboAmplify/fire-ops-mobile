@@ -96,7 +96,7 @@ export function ReceiptParseButton({ receiptUrl, onApply }: Props) {
       {parsing ? (
         <>
           <Loader2 className="h-4 w-4 animate-spin" />
-          Analyzing receipt...
+          Reading receipt...
         </>
       ) : (
         <>

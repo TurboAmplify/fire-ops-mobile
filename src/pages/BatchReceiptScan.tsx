@@ -2,7 +2,7 @@ import { AppShell } from "@/components/AppShell";
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Camera, Loader2, CheckCircle2, Trash2, Pencil, Save } from "lucide-react";
-import { uploadReceipt, CATEGORY_LABELS } from "@/services/expenses";
+import { uploadReceipt, CATEGORY_LABELS, compressImageForReceipt, blobToDataUrl } from "@/services/expenses";
 import type { ExpenseCategory } from "@/services/expenses";
 import { parseBatchReceiptsAI, type ParsedReceipt } from "@/services/ai-parsing";
 import { useCreateExpense } from "@/hooks/useExpenses";
@@ -58,9 +58,17 @@ export default function BatchReceiptScan() {
     setPhase("analyzing");
 
     try {
-      const url = await uploadReceipt(file, membership?.organizationId ?? undefined);
+      // Compress on client
+      const compressed = await compressImageForReceipt(file);
+      const dataUrl = await blobToDataUrl(compressed);
+
+      // Run upload + AI parse in parallel
+      const [url, receipts] = await Promise.all([
+        uploadReceipt(compressed, membership?.organizationId ?? undefined, file.name),
+        parseBatchReceiptsAI({ imageDataUrl: dataUrl }),
+      ]);
       setReceiptUrl(url);
-      const receipts = await parseBatchReceiptsAI(url);
+
       if (!receipts.length) {
         setError("No receipts detected in the image. Try again with a clearer photo.");
         setPhase("capture");
@@ -74,7 +82,6 @@ export default function BatchReceiptScan() {
         }))
       );
       setPhase("review");
-      // Prompt the user to attach this batch to an incident
       setAttachSheetOpen(true);
     } catch (err) {
       console.error(err);
