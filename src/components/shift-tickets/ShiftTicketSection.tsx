@@ -165,9 +165,10 @@ export function ShiftTicketSection({
               className="min-w-0 flex-1 text-left touch-target"
             >
               <p className="text-sm font-medium truncate">{label}</p>
-              <p className="text-[10px] text-muted-foreground">
-                {t.status === "draft" ? "Draft" : "Final"} | {dateDisplay}
-              </p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <StatusBadge ticket={t} />
+                <span className="text-[10px] text-muted-foreground">{dateDisplay}</span>
+              </div>
             </button>
             <button
               onClick={() => navigate(`/incidents/${incidentId}/trucks/${incidentTruckId}/shift-ticket/${t.id}`)}
