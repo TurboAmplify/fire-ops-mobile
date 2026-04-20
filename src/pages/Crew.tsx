@@ -4,6 +4,7 @@ import { Plus, Loader2, Phone, User } from "lucide-react";
 import { useState } from "react";
 import { CrewMemberForm } from "@/components/crew/CrewMemberForm";
 import { SignedImage } from "@/components/ui/SignedImage";
+import { formatPhone } from "@/lib/phone";
 
 function getInitials(name: string) {
   return name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
