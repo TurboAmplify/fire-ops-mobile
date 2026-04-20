@@ -3,9 +3,10 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ChevronDown, Check } from "lucide-react";
+import { ChevronDown, Check, Plus } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
+import { Link } from "react-router-dom";
 import type { Truck } from "@/services/fleet";
 import { TRUCK_STATUS_LABELS, type TruckStatus } from "@/services/fleet";
 
@@ -130,20 +131,37 @@ export function TruckInfoSection({ truck, onStatusChange, isUpdatingStatus }: Tr
         <CollapsibleContent>
           <div className="px-4 pb-4 space-y-4">
             {sections.map((section) => {
-              const filled = section.items.filter((i) => i.value);
-              if (filled.length === 0) return null;
+              const isVehicleId = section.title === "Vehicle Identification";
+              // Always show VIN row in Vehicle Identification, even when blank
+              const items = isVehicleId
+                ? section.items.filter((i) => i.value || i.label === "VIN")
+                : section.items.filter((i) => i.value);
+              if (items.length === 0) return null;
               return (
                 <div key={section.title}>
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                     {section.title}
                   </p>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                    {filled.map((d) => (
-                      <div key={d.label}>
-                        <p className="text-xs text-muted-foreground">{d.label}</p>
-                        <p className="text-sm font-medium">{String(d.value)}</p>
-                      </div>
-                    ))}
+                    {items.map((d) => {
+                      const isMissingVin = d.label === "VIN" && !d.value;
+                      return (
+                        <div key={d.label}>
+                          <p className="text-xs text-muted-foreground">{d.label}</p>
+                          {isMissingVin ? (
+                            <Link
+                              to={`/fleet/${truck.id}/edit`}
+                              className="inline-flex items-center gap-1 text-sm font-medium text-primary active:opacity-70"
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                              Add VIN
+                            </Link>
+                          ) : (
+                            <p className="text-sm font-medium break-all">{String(d.value)}</p>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               );

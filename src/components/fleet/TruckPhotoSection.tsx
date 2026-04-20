@@ -66,28 +66,28 @@ export function TruckPhotoSection({ truckId }: TruckPhotoSectionProps) {
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !membership) return;
-    try {
-      await uploadMutation.mutateAsync({ orgId: membership.organizationId, file });
-      toast.success("Photo uploaded");
-    } catch {
-      toast.error("Failed to upload photo");
-    }
     if (inputRef.current) inputRef.current.value = "";
+    // Use the same scan flow so every uploaded photo gets auto-parsed for VIN / reg.
+    await runScan(file);
   };
 
-  const handleScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !membership) return;
-    e.target.value = "";
+  const runScan = async (file: File) => {
+    if (!membership) return;
     setScanning(true);
+    let uploadedPhoto: { id: string; file_url: string } | null = null;
     try {
-      // Upload first
-      const photo = await uploadMutation.mutateAsync({
+      uploadedPhoto = await uploadMutation.mutateAsync({
         orgId: membership.organizationId,
         file,
       });
-      // Then parse
-      const parsed = await parseTruckPhoto(photo.file_url);
+    } catch {
+      setScanning(false);
+      toast.error("Failed to upload photo");
+      return;
+    }
+
+    try {
+      const parsed = await parseTruckPhoto(uploadedPhoto.file_url);
 
       const hasAnyField = (
         ["vin", "license_plate", "year", "make", "model", "registration_expires"] as FieldKey[]
@@ -97,14 +97,14 @@ export function TruckPhotoSection({ truckId }: TruckPhotoSectionProps) {
       const autoLabel = DOCUMENT_TYPE_TO_LABEL[parsed.detected_document_type ?? "other"];
       if (autoLabel && autoLabel !== "Other") {
         try {
-          await updateTruckPhotoLabel(photo.id, autoLabel);
+          await updateTruckPhotoLabel(uploadedPhoto.id, autoLabel);
         } catch {
           // non-fatal
         }
       }
 
       if (!hasAnyField) {
-        toast.info("Couldn't read details from this photo. Try a clearer shot of the VIN plate or registration.");
+        toast.success("Photo uploaded");
         return;
       }
 
@@ -114,13 +114,22 @@ export function TruckPhotoSection({ truckId }: TruckPhotoSectionProps) {
         if (parsed[k] != null && parsed[k] !== "") detected.add(k);
       });
       setSelectedFields(detected);
-      setScanResult({ parsed, photoId: photo.id });
+      setScanResult({ parsed, photoId: uploadedPhoto.id });
     } catch (err: any) {
-      const msg = err?.message ?? "Failed to scan photo";
-      toast.error(msg);
+      // Upload succeeded but parse failed — keep the photo, surface a soft notice.
+      toast.message("Photo uploaded", {
+        description: err?.message ?? "Couldn't auto-read details. You can still tag it manually.",
+      });
     } finally {
       setScanning(false);
     }
+  };
+
+  const handleScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !membership) return;
+    e.target.value = "";
+    await runScan(file);
   };
 
   const handleApply = async () => {
