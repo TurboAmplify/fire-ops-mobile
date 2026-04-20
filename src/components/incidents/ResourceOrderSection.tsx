@@ -109,6 +109,18 @@ export function ResourceOrderSection({ incidentTruckId }: Props) {
               </div>
             </button>
 
+            {!hasParsed && !isParsing && (
+              <div className="border-t px-3 py-2">
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleRetryParse(order); }}
+                  className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary/10 px-2 py-2 text-xs font-semibold text-primary touch-target active:bg-primary/20"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Parse with AI now
+                </button>
+              </div>
+            )}
+
             {isExpanded && (
               <div className="border-t px-3 pb-3 pt-2 space-y-2">
                 {!hasParsed && !isParsing && (
