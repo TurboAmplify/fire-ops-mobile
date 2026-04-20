@@ -136,10 +136,10 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
     "w-full rounded-xl border bg-card px-4 py-3 text-base outline-none focus:ring-2 focus:ring-ring touch-target";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60" onClick={handleAttemptClose}>
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60" onClick={handleAttemptClose}>
       <div
         className="w-full max-w-lg rounded-t-2xl bg-background animate-in slide-in-from-bottom flex flex-col"
-        style={{ maxHeight: "85dvh" }}
+        style={{ maxHeight: "calc(100dvh - 5rem)" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-4 pb-2 shrink-0">
