@@ -4,6 +4,7 @@ import { Plus, Loader2, Phone, User } from "lucide-react";
 import { useState } from "react";
 import { CrewMemberForm } from "@/components/crew/CrewMemberForm";
 import { SignedImage } from "@/components/ui/SignedImage";
+import { formatPhone } from "@/lib/phone";
 
 function getInitials(name: string) {
   return name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
@@ -108,7 +109,7 @@ export default function Crew() {
                           {m.phone && (
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <Phone className="h-3.5 w-3.5" />
-                              <span>{m.phone}</span>
+                              <span>{formatPhone(m.phone)}</span>
                             </div>
                           )}
                         </div>
