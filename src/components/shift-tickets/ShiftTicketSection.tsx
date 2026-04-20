@@ -16,6 +16,28 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+function StatusBadge({ ticket }: { ticket: any }) {
+  const hasContractor = !!ticket.contractor_rep_signature_url;
+  const hasSupervisor = !!ticket.supervisor_signature_url;
+  let label = "Draft";
+  let cls = "bg-muted text-muted-foreground";
+  if (hasSupervisor) {
+    label = "Complete";
+    cls = "bg-green-500/15 text-green-700 dark:text-green-400";
+  } else if (hasContractor) {
+    label = "Awaiting Supervisor";
+    cls = "bg-amber-500/15 text-amber-700 dark:text-amber-400";
+  } else if (ticket.status && ticket.status !== "draft") {
+    label = "Submitted";
+    cls = "bg-blue-500/15 text-blue-700 dark:text-blue-400";
+  }
+  return (
+    <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold ${cls}`}>
+      {label}
+    </span>
+  );
+}
+
 interface Props {
   incidentTruckId: string;
   incidentId: string;
@@ -165,9 +187,10 @@ export function ShiftTicketSection({
               className="min-w-0 flex-1 text-left touch-target"
             >
               <p className="text-sm font-medium truncate">{label}</p>
-              <p className="text-[10px] text-muted-foreground">
-                {t.status === "draft" ? "Draft" : "Final"} | {dateDisplay}
-              </p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <StatusBadge ticket={t} />
+                <span className="text-[10px] text-muted-foreground">{dateDisplay}</span>
+              </div>
             </button>
             <button
               onClick={() => navigate(`/incidents/${incidentId}/trucks/${incidentTruckId}/shift-ticket/${t.id}`)}
