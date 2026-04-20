@@ -3,9 +3,10 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ChevronDown, Check } from "lucide-react";
+import { ChevronDown, Check, Plus } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
+import { Link } from "react-router-dom";
 import type { Truck } from "@/services/fleet";
 import { TRUCK_STATUS_LABELS, type TruckStatus } from "@/services/fleet";
 
