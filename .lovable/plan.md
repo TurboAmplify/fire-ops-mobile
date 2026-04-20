@@ -1,104 +1,61 @@
 
 
-# FireOps HQ — Launch Readiness Audit
+## Fix: Shift Ticket Auto-Population + Auto-Parsing on Upload
 
-## TL;DR
+### What's changing from the prior plan
 
-**Not ready to ship today.** You're close (~80%) but have **3 launch-blockers**, several Apple-rejection risks, and a few polish items. Most are 1–2 hour fixes.
+You're right on three points:
+1. None of these tickets have a supervisor signature yet → they're all unlocked → backfill + refresh button can run on every existing draft.
+2. Resource orders should auto-parse the moment they're uploaded (matches your real workflow — RO upload is usually how the incident kicks off).
+3. The VIN photo on the truck should auto-parse and fill the truck's VIN field, so the shift ticket can then pull it in.
 
----
+### The fix, in three layers
 
-## CRITICAL — Must fix before any submission
+**Layer 1 — Auto-parse on upload (no extra taps)**
 
-### 1. New users get auto-added to "Dry Lightning" org
-The `auto_join_demo_org` trigger on `profiles` is still active. **Every person who signs up gets dumped into your real production org as an admin.** This is catastrophic — strangers would see your incidents, crew, expenses.
-**Fix:** Drop the trigger + function. New users go through `/org-setup` like the flow already supports.
+- **Resource Orders**: `ResourceOrderSection` already auto-parses on upload today, but it depends on the user being inside that section to trigger it. Verify that path actually fires after upload and surface a clear error toast if parsing fails — and add a small "Re-parse" affordance on already-uploaded but unparsed orders so the existing 7 ROs (including the Severity one) can be parsed in one tap.
+- **VIN photos**: When a photo is uploaded to the truck and tagged as the VIN photo (or uploaded through a dedicated "Add VIN photo" flow), automatically call the existing `parse-truck-photo` edge function, extract the VIN, and write it to `trucks.vin` if the field is currently blank. Show a one-tap confirmation: "Detected VIN: 1FTXXX… — Save to truck?" so the user always confirms before it lands in the database.
+- Both flows show a small "Parsing…" spinner in place and a success/failure toast. Failures never block the upload itself.
 
-### 2. `platform_settings` readable by all users (security scan finding)
-SELECT policy is `true` — any authenticated user can read every platform setting. If you ever store a feature flag, kill switch, or internal config there, it leaks.
-**Fix:** Change SELECT policy to `is_platform_admin(auth.uid())`.
+**Layer 2 — Shift Ticket auto-backfill from latest source data**
 
-### 3. No iOS permission usage descriptions documented
-Apple **auto-rejects** apps that use the camera/photo library without `NSCameraUsageDescription` and `NSPhotoLibraryUsageDescription` in `Info.plist`. You use camera in 8+ places. The Capacitor config doesn't set these and there's no native project committed.
-**Fix:** Document the exact strings to add to `ios/App/App/Info.plist` before first Xcode build:
-- `NSCameraUsageDescription`: "FireOps HQ uses the camera to capture receipts, truck photos, inspection photos, and crew portraits."
-- `NSPhotoLibraryUsageDescription`: "FireOps HQ accesses your photo library to attach existing receipts, truck photos, and documents."
+In `ShiftTicketEdit.tsx`, expand the `mergedTicket` memo to also load the latest parsed resource order for that incident_truck and fill any blank header field on the existing ticket from:
+- **Truck row** → `equipment_make_model` (year + make + model), `equipment_type` (unit_type), `serial_vin_number` (vin), `license_id_number` (plate)
+- **Latest parsed RO** → `agreement_number`, `resource_order_number`, `incident_number`, `financial_code`, `incident_name`, `contractor_name`
 
----
+Rules:
+- Only fills blanks. Never overwrites user-entered values.
+- Runs every time the ticket is opened, so updating a truck's VIN today instantly lights up all 7 unsigned drafts on the Severity incident.
+- `handleSave` persists the merged values so PDFs and downstream views stay consistent.
 
-## HIGH — Apple rejection risks
+**Layer 3 — Manual refresh + visual hints (safety net)**
 
-### 4. Privacy policy says "Effective March 29, 2026" but you're at April 2026
-Apple reviewers check this. Update to current date.
+- Add a **"Refresh from Truck & Resource Order"** button in the ticket form header. Re-pulls the latest truck + RO data and overwrites blank fields. Useful if the user updates the truck after opening the ticket.
+- Inline hints under blank fields:
+  - VIN blank + truck VIN blank → "Add VIN on the truck profile or upload a VIN photo to auto-fill."
+  - RO # blank + RO unparsed → "Resource order has not been parsed yet — tap Parse on the resource order."
 
-### 5. Privacy policy missing required disclosures
-Apple requires you to list:
-- What data is collected (you have this — partial)
-- **Third parties** who receive data (you use Lovable AI / Google for receipt parsing — must disclose)
-- **Account deletion** instructions (you have the button but policy doesn't mention it)
-- Children's data policy (state "not directed at children under 13")
+### What this fixes for the Severity incident specifically
 
-### 6. Tracking pixel / OG image points to a Lovable preview URL
-`index.html` line 30–31: og:image hardcoded to `id-preview-...lovable.app`. When the published or store version loads, this still works but looks unprofessional in shares. Replace with a proper hosted image or your own domain asset.
+Once Layer 1 ships:
+1. Open the existing DL62 resource order on Severity → tap **Parse** (one tap) → all 7 unsigned drafts auto-fill agreement #, RO #, incident #, financial code on next open.
+2. Open the DL62 truck → upload (or re-tag) the VIN photo → VIN auto-extracts, you confirm, it saves → all 7 unsigned drafts auto-fill VIN on next open.
+3. DL61: enter plate/year/make/model manually one time on the truck profile (no photo to parse from). Same auto-fill cascade.
 
-### 7. App Store screenshot assets not generated
-You have icons (`icons/store/`) but no actual screenshots showing the app on iPhone 6.7"/6.5"/5.5" displays. **Required** for submission.
+### Files touched
 
----
+**Code**
+- `src/pages/ShiftTicketEdit.tsx` — expand merge to include RO + full truck data, persist on save, wire refresh handler
+- `src/components/shift-tickets/ShiftTicketForm.tsx` — refresh button + blank-field hints
+- `src/components/incidents/ResourceOrderSection.tsx` — verify auto-parse runs reliably on upload, add re-parse button for unparsed orders, clearer error states
+- `src/components/fleet/TruckPhotoSection.tsx` (or `TruckHeroPhoto.tsx`, whichever owns VIN photos) — trigger `parse-truck-photo` after upload when photo is tagged as VIN, write extracted VIN back to truck after user confirmation
+- `src/services/fleet.ts` — small helper to update only `trucks.vin`
 
-## MEDIUM — Functional gaps
+**No DB changes, no new edge functions** — `parse-resource-order` and `parse-truck-photo` already exist and work.
 
-### 8. Multiple memberships UI exists but no test path
-`Settings.tsx` shows an org switcher when `memberships.length > 1`, but signup flow puts everyone in one org. Once #1 is fixed, verify a user can be invited to a 2nd org and switch cleanly.
+### Out of scope
 
-### 9. Offline queue silently drops mutations on first failure
-`offline-queue.ts` line 81–83: if one mutation fails, it stops replaying *and leaves the rest in the queue forever* with no user notification. After 72h they expire silently. Crews in the field will lose data.
-**Fix:** Skip failed mutation, continue with rest, surface errors in a "Sync issues" UI.
-
-### 10. React forwardRef warning on every render
-Console shows: `Function components cannot be given refs` from `BottomNav` → `ShiftTicketQuickAccess`. Not a crash but Apple reviewers see console errors during review and it counts against polish. ~10 min fix.
-
-### 11. Account deletion deletes the whole org if you're the last admin
-`delete_user_data` wipes the entire organization (incidents, expenses, crew, etc.) silently when the deleting user is the only admin. Users won't expect this. Either:
-- Block deletion until they transfer ownership, OR
-- Show a big warning: "This will also permanently delete your organization and all data for X members."
-
----
-
-## LOW — Polish
-
-- App version in Settings is hardcoded `"1.0.0"` — fine for v1, but wire to `package.json` for future
-- No splash screen configured in Capacitor (defaults to white flash on launch)
-- Support email `support@fireopshq.com` — verify the domain/inbox is actually live before submission
-- No analytics/crash reporting (Sentry, etc.) — not required but you'll be flying blind on production crashes
-
----
-
-## What's actually working well
-
-- RLS policies are tight and well-structured (linter clean)
-- Multi-tenant isolation via `get_user_org_ids` is correct
-- Auth flow (signup, login, password reset, invite codes) is solid
-- Edge functions properly verify JWTs and use service role only for admin actions
-- Offline-tolerant query persistence via React Query
-- Privacy policy + Terms + Support pages all exist and are reachable
-- Account deletion flow exists end-to-end (rare for v1 apps)
-- Capacitor config is correct (no `server.url`, no `cleartext`)
-- All icon sizes generated for iOS + Android + store listings
-- Touch targets, safe areas, no hover-only patterns — cross-platform clean
-- No leftover TODOs or placeholder content in user-facing UI
-
----
-
-## Recommended fix order
-
-**Today (blockers):** #1, #2, #3
-**Before TestFlight:** #4, #5, #9, #10, #11
-**Before App Store submission:** #6, #7, take real screenshots on physical devices
-
----
-
-## What I'd do next
-
-If you approve, I'll start with #1, #2, and the docs for #3 — those three together take ~30 min and unblock everything else. Then we can tackle #5/#9/#10/#11 in a second pass and leave the screenshot/asset work for last.
+- Backfilling tickets that already have a supervisor signature (none exist on Severity, so moot today; if any get signed before this ships, they'll stay as-is — by design).
+- Re-running OCR on already-uploaded VIN photos in bulk. The user re-tags or re-uploads to trigger.
+- UI redesign of the ticket form.
 
