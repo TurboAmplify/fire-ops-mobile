@@ -58,6 +58,9 @@ interface ShiftTicketFormProps {
     truckMissingPlate?: boolean;
     roUnparsed?: boolean;
     hasResourceOrder?: boolean;
+    autoParsingRo?: boolean;
+    truckEditPath?: string;
+    incidentPath?: string;
   };
 }
 
