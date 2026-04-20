@@ -115,13 +115,81 @@ export async function deleteExpense(id: string) {
   if (error) throw error;
 }
 
-export async function uploadReceipt(file: File, organizationId?: string): Promise<string> {
+/**
+ * Compress + downscale an image (or pass-through non-images like PDFs).
+ * Resizes longest edge to maxEdge px, re-encodes as JPEG quality 0.82.
+ * Receipts at 1600px are well above what vision models need for OCR — accuracy unchanged.
+ * Returns the original file if compression fails or input isn't an image.
+ */
+export async function compressImageForReceipt(
+  file: File,
+  maxEdge = 1600,
+  quality = 0.82
+): Promise<Blob> {
+  if (!file.type.startsWith("image/")) return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const { width, height } = bitmap;
+    const longest = Math.max(width, height);
+    const scale = longest > maxEdge ? maxEdge / longest : 1;
+    const w = Math.round(width * scale);
+    const h = Math.round(height * scale);
+
+    const canvas = typeof OffscreenCanvas !== "undefined"
+      ? new OffscreenCanvas(w, h)
+      : Object.assign(document.createElement("canvas"), { width: w, height: h });
+    const ctx = (canvas as OffscreenCanvas | HTMLCanvasElement).getContext("2d") as
+      | CanvasRenderingContext2D
+      | OffscreenCanvasRenderingContext2D
+      | null;
+    if (!ctx) return file;
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    bitmap.close?.();
+
+    let blob: Blob | null = null;
+    if (canvas instanceof OffscreenCanvas) {
+      blob = await canvas.convertToBlob({ type: "image/jpeg", quality });
+    } else {
+      blob = await new Promise<Blob | null>((resolve) =>
+        (canvas as HTMLCanvasElement).toBlob(resolve, "image/jpeg", quality)
+      );
+    }
+    if (!blob || blob.size === 0) return file;
+    // If compression somehow made it bigger, keep original
+    return blob.size < file.size ? blob : file;
+  } catch {
+    return file;
+  }
+}
+
+/**
+ * Read a Blob into a base64 data URL on the client.
+ * Used to send the image inline to the parse edge function in parallel with Storage upload.
+ */
+export async function blobToDataUrl(blob: Blob): Promise<string> {
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error ?? new Error("Failed to read blob"));
+    reader.onload = () => resolve(String(reader.result));
+    reader.readAsDataURL(blob);
+  });
+}
+
+export async function uploadReceipt(
+  file: File | Blob,
+  organizationId?: string,
+  filename?: string
+): Promise<string> {
   if (!organizationId) {
     throw new Error("Cannot upload receipt without an organization");
   }
-  const ext = file.name.split(".").pop() || "jpg";
+  const fallbackName = filename ?? (file instanceof File ? file.name : "receipt.jpg");
+  const ext = (fallbackName.split(".").pop() || "jpg").toLowerCase();
   const path = `${organizationId}/${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabase.storage.from("receipts").upload(path, file);
+  const contentType = (file as Blob).type || (ext === "png" ? "image/png" : "image/jpeg");
+  const { error } = await supabase.storage
+    .from("receipts")
+    .upload(path, file, { contentType, upsert: false });
   if (error) throw error;
   const { data } = supabase.storage.from("receipts").getPublicUrl(path);
   return data.publicUrl;
