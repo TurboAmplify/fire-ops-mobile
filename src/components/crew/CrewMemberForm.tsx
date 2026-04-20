@@ -65,6 +65,26 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
   const isPending = createMutation.isPending || updateMutation.isPending;
   const canSubmit = name.trim() && role.trim() && !isPending;
 
+  const hasChanges = isEdit
+    ? !!existing && (
+        name !== (existing.name || "") ||
+        role !== (existing.role || "") ||
+        phone !== (existing.phone || "") ||
+        active !== existing.active ||
+        notes !== ((existing as any).notes || "") ||
+        (isAdmin && hourlyRate !== (comp?.hourly_rate != null ? String(comp.hourly_rate) : "")) ||
+        (isAdmin && hwRate !== (comp?.hw_rate != null ? String(comp.hw_rate) : ""))
+      )
+    : !!(name || role || phone || notes || hourlyRate || hwRate);
+
+  const handleAttemptClose = () => {
+    if (hasChanges && !isPending) {
+      const confirmed = window.confirm("You have unsaved changes. Discard them?");
+      if (!confirmed) return;
+    }
+    onClose();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
