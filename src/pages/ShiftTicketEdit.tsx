@@ -26,7 +26,10 @@ export default function ShiftTicketEdit() {
   const { data: crewAssignments } = useIncidentTruckCrew(incidentTruckId || "");
   const { data: incidentTrucks } = useIncidentTrucks(incidentId || "");
   const { data: resourceOrders } = useResourceOrders(incidentTruckId || "");
+  const parseRoMutation = useUpdateResourceOrderParsed(incidentTruckId || "");
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [autoParsingRo, setAutoParsingRo] = useState(false);
+  const autoParseAttempted = useRef<Set<string>>(new Set());
   const duplicateMutation = useDuplicateShiftTicket(incidentTruckId || "");
 
   // Latest truck data for backfill
@@ -42,10 +45,37 @@ export default function ShiftTicketEdit() {
     return resourceOrders.find((ro) => ro.parsed_at && ro.parsed_data) ?? null;
   }, [resourceOrders]);
 
+  // Most recent RO regardless of parse status (for auto-parse trigger)
+  const mostRecentRO = useMemo(() => {
+    if (!resourceOrders || resourceOrders.length === 0) return null;
+    return resourceOrders[0];
+  }, [resourceOrders]);
+
   const activeCrew = useMemo(
     () => crewAssignments?.filter((c) => c.is_active) ?? [],
     [crewAssignments]
   );
+
+  // Auto-parse the most recent RO if it's not parsed yet — fire once per RO per page load
+  useEffect(() => {
+    if (!mostRecentRO) return;
+    if (mostRecentRO.parsed_at) return;
+    if (autoParseAttempted.current.has(mostRecentRO.id)) return;
+    autoParseAttempted.current.add(mostRecentRO.id);
+    setAutoParsingRo(true);
+    (async () => {
+      try {
+        const parsed = await parseResourceOrderAI(mostRecentRO.file_url, mostRecentRO.file_name);
+        await parseRoMutation.mutateAsync({ id: mostRecentRO.id, parsed });
+        toast.success("Resource order parsed — header fields updated");
+      } catch (err) {
+        console.error("Auto-parse RO failed:", err);
+        toast.error("Could not auto-parse resource order. Open it from the incident to retry.");
+      } finally {
+        setAutoParsingRo(false);
+      }
+    })();
+  }, [mostRecentRO, parseRoMutation]);
 
   // Build a "backfill" object from truck + RO. Only fields that have a source value.
   const backfill = useMemo(() => {
