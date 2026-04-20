@@ -109,7 +109,7 @@ export default function Crew() {
                           {m.phone && (
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <Phone className="h-3.5 w-3.5" />
-                              <span>{m.phone}</span>
+                              <span>{formatPhone(m.phone)}</span>
                             </div>
                           )}
                         </div>
