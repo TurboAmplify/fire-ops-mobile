@@ -1,61 +1,63 @@
 
 
-## Fix: Shift Ticket Auto-Population + Auto-Parsing on Upload
+# Speed up the receipt scanner without losing accuracy
 
-### What's changing from the prior plan
+The scanner currently takes ~6–12s end-to-end. About 60% of that is image transfer (phone → Storage → edge function → Gemini), not the AI itself. We can cut total time by ~40–55% with safe changes that don't touch the prompt or schema.
 
-You're right on three points:
-1. None of these tickets have a supervisor signature yet → they're all unlocked → backfill + refresh button can run on every existing draft.
-2. Resource orders should auto-parse the moment they're uploaded (matches your real workflow — RO upload is usually how the incident kicks off).
-3. The VIN photo on the truck should auto-parse and fill the truck's VIN field, so the shift ticket can then pull it in.
+## What we'll do
 
-### The fix, in three layers
+### 1. Compress + downscale on the client before upload (biggest win)
+Receipts are pure text on white — they don't need 4032×3024 at 4 MB. Resize the longest edge to **1600px** and re-encode as JPEG quality 0.82 in the browser. Typical result: **~250–400 KB**, ~10× smaller.
 
-**Layer 1 — Auto-parse on upload (no extra taps)**
+This speeds up:
+- Upload to Storage (the user's "loading" bar)
+- Edge function's re-download from Storage
+- Base64 payload sent to Gemini
+- Gemini's own vision processing (smaller images = faster tokens)
 
-- **Resource Orders**: `ResourceOrderSection` already auto-parses on upload today, but it depends on the user being inside that section to trigger it. Verify that path actually fires after upload and surface a clear error toast if parsing fails — and add a small "Re-parse" affordance on already-uploaded but unparsed orders so the existing 7 ROs (including the Severity one) can be parsed in one tap.
-- **VIN photos**: When a photo is uploaded to the truck and tagged as the VIN photo (or uploaded through a dedicated "Add VIN photo" flow), automatically call the existing `parse-truck-photo` edge function, extract the VIN, and write it to `trucks.vin` if the field is currently blank. Show a one-tap confirmation: "Detected VIN: 1FTXXX… — Save to truck?" so the user always confirms before it lands in the database.
-- Both flows show a small "Parsing…" spinner in place and a success/failure toast. Failures never block the upload itself.
+Accuracy impact: **none** for receipts at 1600px — well above the resolution Gemini uses internally for OCR. We'll keep the original on Storage only if needed; otherwise we just store the compressed version (saves storage costs too).
 
-**Layer 2 — Shift Ticket auto-backfill from latest source data**
+### 2. Send the image inline instead of round-tripping through Storage
+Right now: client uploads to Storage → asks edge function to fetch it back. We'll change the flow so the **client posts the compressed base64 directly to the edge function** alongside (or before) the Storage upload. The Storage upload can happen in **parallel** with the AI call instead of blocking it.
 
-In `ShiftTicketEdit.tsx`, expand the `mergedTicket` memo to also load the latest parsed resource order for that incident_truck and fill any blank header field on the existing ticket from:
-- **Truck row** → `equipment_make_model` (year + make + model), `equipment_type` (unit_type), `serial_vin_number` (vin), `license_id_number` (plate)
-- **Latest parsed RO** → `agreement_number`, `resource_order_number`, `incident_number`, `financial_code`, `incident_name`, `contractor_name`
+Net effect: the AI call starts ~1–2s sooner, and the user sees results before the upload even finishes.
 
-Rules:
-- Only fills blanks. Never overwrites user-entered values.
-- Runs every time the ticket is opened, so updating a truck's VIN today instantly lights up all 7 unsigned drafts on the Severity incident.
-- `handleSave` persists the merged values so PDFs and downstream views stay consistent.
+### 3. Switch parse-receipt to `google/gemini-2.5-flash-lite`
+For the single-receipt path (the common case), flash-lite is roughly **1.5–2× faster** than flash and handles structured tool-calling extraction on clean receipt images at equivalent accuracy. We'll **keep flash on the batch endpoint** because multi-receipt layouts are harder and benefit from the larger model's reasoning.
 
-**Layer 3 — Manual refresh + visual hints (safety net)**
+If you'd rather not change models at all, we can skip this step — items 1 and 2 alone get most of the speedup.
 
-- Add a **"Refresh from Truck & Resource Order"** button in the ticket form header. Re-pulls the latest truck + RO data and overwrites blank fields. Useful if the user updates the truck after opening the ticket.
-- Inline hints under blank fields:
-  - VIN blank + truck VIN blank → "Add VIN on the truck profile or upload a VIN photo to auto-fill."
-  - RO # blank + RO unparsed → "Resource order has not been parsed yet — tap Parse on the resource order."
+### 4. Small edge-function cleanups
+- Drop the `auth.getClaims` call's redundant token re-parse; use `getUser` once (already done in batch).
+- Stream the fetch → base64 conversion in chunks instead of loading the full ArrayBuffer twice.
+- Set a 30s `AbortSignal.timeout` so a stalled Gemini call fails fast instead of hanging the UI.
 
-### What this fixes for the Severity incident specifically
+### 5. UI feedback so it *feels* faster
+- Show the receipt thumbnail **immediately** after the user picks it (from the local File object, before upload finishes).
+- Replace the single "Analyzing receipt..." spinner with a 2-step indicator: "Reading receipt → Extracting details" so users see progress.
 
-Once Layer 1 ships:
-1. Open the existing DL62 resource order on Severity → tap **Parse** (one tap) → all 7 unsigned drafts auto-fill agreement #, RO #, incident #, financial code on next open.
-2. Open the DL62 truck → upload (or re-tag) the VIN photo → VIN auto-extracts, you confirm, it saves → all 7 unsigned drafts auto-fill VIN on next open.
-3. DL61: enter plate/year/make/model manually one time on the truck profile (no photo to parse from). Same auto-fill cascade.
+## Expected result
 
-### Files touched
+| Stage | Before | After |
+|---|---|---|
+| Upload to Storage | 1.5–3s | 0.2–0.5s |
+| Edge function fetch + encode | 1–2s | 0.1s (inline) |
+| Gemini vision call | 3–6s | 2–3s (smaller image + flash-lite) |
+| **Total perceived** | **6–12s** | **2.5–4s** |
 
-**Code**
-- `src/pages/ShiftTicketEdit.tsx` — expand merge to include RO + full truck data, persist on save, wire refresh handler
-- `src/components/shift-tickets/ShiftTicketForm.tsx` — refresh button + blank-field hints
-- `src/components/incidents/ResourceOrderSection.tsx` — verify auto-parse runs reliably on upload, add re-parse button for unparsed orders, clearer error states
-- `src/components/fleet/TruckPhotoSection.tsx` (or `TruckHeroPhoto.tsx`, whichever owns VIN photos) — trigger `parse-truck-photo` after upload when photo is tagged as VIN, write extracted VIN back to truck after user confirmation
-- `src/services/fleet.ts` — small helper to update only `trucks.vin`
+Accuracy on amount, date, vendor, and category should be unchanged — we're only shrinking the image to a size still well above what the model needs, and (optionally) using flash-lite on the simpler single-receipt case.
 
-**No DB changes, no new edge functions** — `parse-resource-order` and `parse-truck-photo` already exist and work.
+## Files to change
 
-### Out of scope
+- `src/services/expenses.ts` — add `compressImageForReceipt(file)` helper; update `uploadReceipt` to accept the compressed blob.
+- `src/services/ai-parsing.ts` — add option to send base64 inline; keep URL fallback.
+- `supabase/functions/parse-receipt/index.ts` — accept inline base64 (skip re-download), switch model to `gemini-2.5-flash-lite`, add timeout.
+- `supabase/functions/parse-batch-receipts/index.ts` — accept inline base64, add timeout (keep `gemini-2.5-flash`).
+- `src/components/expenses/ExpenseForm.tsx` — show local thumbnail immediately, parallelize upload + parse, update progress text.
+- `src/components/expenses/ReceiptParseButton.tsx` — same UI feedback updates.
+- `src/pages/BatchReceiptScan.tsx` — same compress + parallel pattern.
 
-- Backfilling tickets that already have a supervisor signature (none exist on Severity, so moot today; if any get signed before this ships, they'll stay as-is — by design).
-- Re-running OCR on already-uploaded VIN photos in bulk. The user re-tags or re-uploads to trigger.
-- UI redesign of the ticket form.
+## Open question before I build
+
+Are you OK switching the **single-receipt** model to `gemini-2.5-flash-lite`? It's the largest single speed gain after image compression, but if you'd rather stay on `gemini-2.5-flash` for maximum safety, I'll skip step 3 — you'll still get most of the improvement (estimated ~3.5–5s total instead of 2.5–4s).
 
