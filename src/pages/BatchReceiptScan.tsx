@@ -2,7 +2,7 @@ import { AppShell } from "@/components/AppShell";
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Camera, Loader2, CheckCircle2, Trash2, Pencil, Save } from "lucide-react";
-import { uploadReceipt, CATEGORY_LABELS } from "@/services/expenses";
+import { uploadReceipt, CATEGORY_LABELS, compressImageForReceipt, blobToDataUrl } from "@/services/expenses";
 import type { ExpenseCategory } from "@/services/expenses";
 import { parseBatchReceiptsAI, type ParsedReceipt } from "@/services/ai-parsing";
 import { useCreateExpense } from "@/hooks/useExpenses";

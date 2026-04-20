@@ -1,7 +1,7 @@
 import { useIncidents } from "@/hooks/useIncidents";
 import { getLocalDateString } from "@/lib/local-date";
 import { useIncidentTrucks } from "@/hooks/useIncidentTrucks";
-import { CATEGORY_LABELS, FUEL_TYPE_LABELS, SCOPE_LABELS, uploadReceipt } from "@/services/expenses";
+import { CATEGORY_LABELS, FUEL_TYPE_LABELS, SCOPE_LABELS, uploadReceipt, compressImageForReceipt, blobToDataUrl } from "@/services/expenses";
 import type { ExpenseCategory, ExpenseInsert, Expense, FuelType, ExpenseType, AttachmentScope } from "@/services/expenses";
 import type { ParsedReceipt } from "@/services/ai-parsing";
 import { parseReceiptAI } from "@/services/ai-parsing";
@@ -43,6 +43,8 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
   const [receiptUrl, setReceiptUrl] = useState(initial?.receipt_url ?? "");
   const [uploading, setUploading] = useState(false);
   const [parsing, setParsing] = useState(false);
+  const [parseStep, setParseStep] = useState<"reading" | "extracting">("reading");
+  const [localThumb, setLocalThumb] = useState<string | null>(null);
   const [vendor, setVendor] = useState(initial?.vendor ?? "");
   const [expenseType, setExpenseType] = useState<ExpenseType>((initial?.expense_type as ExpenseType) ?? "company");
   const [fuelType, setFuelType] = useState<FuelType | "">(
@@ -52,9 +54,7 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
   const [mealPurpose, setMealPurpose] = useState(initial?.meal_purpose ?? "");
   const [showFuelModal, setShowFuelModal] = useState(false);
   const [showAttachSheet, setShowAttachSheet] = useState(false);
-  // Track whether AI has filled the form (hides manual category grid)
   const [aiParsed, setAiParsed] = useState(false);
-  // Track if this is an edit of an existing expense
   const isEditing = !!initial?.id;
 
   const { data: incidents } = useIncidents();
@@ -75,29 +75,44 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
   const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Immediately show local thumbnail
+    const thumb = URL.createObjectURL(file);
+    setLocalThumb(thumb);
+
     setUploading(true);
+    setParsing(true);
+    setParseStep("reading");
+
     try {
-      const url = await uploadReceipt(file, membership?.organizationId);
+      // Compress on client
+      const compressed = await compressImageForReceipt(file);
+      // Convert to base64 for inline AI call
+      const dataUrl = await blobToDataUrl(compressed);
+      setParseStep("extracting");
+
+      // Run upload + AI parse in parallel
+      const [url, parsed] = await Promise.all([
+        uploadReceipt(compressed, membership?.organizationId, file.name),
+        parseReceiptAI({ imageDataUrl: dataUrl }).catch(() => null),
+      ]);
+
       setReceiptUrl(url);
-      toast.success("Receipt uploaded");
-      // Auto-parse receipt with AI
-      setParsing(true);
-      try {
-        const parsed = await parseReceiptAI(url);
+      setUploading(false);
+
+      if (parsed) {
         applyParsedData(parsed);
-        // After successful parse, prompt to attach to incident (new expenses only, no existing link)
-        if (!isEditing && !incidentId) {
-          setShowAttachSheet(true);
-        }
-      } catch {
+        if (!isEditing && !incidentId) setShowAttachSheet(true);
+      } else {
         toast.error("Could not analyze receipt - fill in manually");
-      } finally {
-        setParsing(false);
       }
     } catch {
       toast.error("Failed to upload receipt");
     } finally {
       setUploading(false);
+      setParsing(false);
+      // Revoke thumbnail after a short delay so it stays visible while signed URL loads
+      setTimeout(() => { URL.revokeObjectURL(thumb); setLocalThumb(null); }, 2000);
     }
   };
 
@@ -109,7 +124,6 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
     if (parsed.category && categories.includes(parsed.category as ExpenseCategory)) {
       const detectedCategory = parsed.category as ExpenseCategory;
       setCategory(detectedCategory);
-      // Set description to the category label (simple, not itemized)
       setDescription(CATEGORY_LABELS[detectedCategory]);
       setAiParsed(true);
 
@@ -117,7 +131,6 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
         setShowFuelModal(true);
       }
     } else {
-      // If no category detected, set a generic description
       if (parsed.category) {
         setDescription(parsed.category);
       }
@@ -145,6 +158,8 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
       vendor: vendor.trim() || null,
     } as ExpenseInsert);
   };
+
+  const previewSrc = localThumb || (receiptUrl && !parsing ? receiptUrl : null);
 
   return (
     <>
@@ -185,23 +200,31 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
               <Camera className="h-5 w-5" />
             )}
             <span className="font-medium">
-              {uploading
+              {uploading && !parsing
                 ? "Uploading..."
                 : parsing
-                ? "Analyzing receipt..."
+                ? parseStep === "reading"
+                  ? "Reading receipt..."
+                  : "Extracting details..."
                 : receiptUrl
                 ? "Change photo"
                 : "Take or attach receipt photo"}
             </span>
             <input type="file" accept="image/*" capture="environment" onChange={handlePhoto} className="hidden" />
           </label>
-          {receiptUrl && !parsing && (
-            <SignedImage src={receiptUrl} alt="Receipt preview" className="w-full max-h-40 object-contain rounded-lg bg-secondary" />
+          {previewSrc && (
+            localThumb ? (
+              <img src={previewSrc} alt="Receipt preview" className="w-full max-h-40 object-contain rounded-lg bg-secondary" />
+            ) : (
+              <SignedImage src={previewSrc} alt="Receipt preview" className="w-full max-h-40 object-contain rounded-lg bg-secondary" />
+            )
           )}
           {parsing && (
             <div className="flex items-center gap-2 rounded-xl bg-primary/5 border border-primary/20 p-3">
               <Sparkles className="h-4 w-4 text-primary animate-pulse" />
-              <span className="text-sm font-medium text-primary">Reading receipt...</span>
+              <span className="text-sm font-medium text-primary">
+                {parseStep === "reading" ? "Reading receipt..." : "Extracting details..."}
+              </span>
             </div>
           )}
         </div>
