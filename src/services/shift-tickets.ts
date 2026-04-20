@@ -25,6 +25,9 @@ export interface PersonnelEntry {
   per_diem_b?: boolean;
   per_diem_l?: boolean;
   per_diem_d?: boolean;
+  /** Optional lunch break time (HH:MM). When set, op/sb columns represent the
+   *  pre-lunch and post-lunch segments of a single shift. */
+  lunch_time?: string;
 }
 
 export function buildRemarksString(entry: PersonnelEntry): string {
@@ -208,4 +211,70 @@ export function computeHours(start: string, stop: string): number {
   let diff = (eh * 60 + em) - (sh * 60 + sm);
   if (diff < 0) diff += 24 * 60;
   return Math.round((diff / 60) * 10) / 10;
+}
+
+/**
+ * Add minutes to an HH:MM time string. Wraps at 24h.
+ * Returns "" for invalid input.
+ */
+export function addMinutes(time: string, mins: number): string {
+  if (!time || !time.includes(":")) return "";
+  const [h, m] = time.split(":").map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return "";
+  const total = (h * 60 + m + mins + 24 * 60) % (24 * 60);
+  const newH = Math.floor(total / 60);
+  const newM = total % 60;
+  return `${String(newH).padStart(2, "0")}:${String(newM).padStart(2, "0")}`;
+}
+
+/**
+ * Normalize lunch time to HH:MM. Accepts "1200", "12:00", "12", etc.
+ */
+export function normalizeLunchTime(input: string): string {
+  if (!input) return "";
+  if (input.includes(":")) {
+    const [h, m] = input.split(":");
+    return `${(h || "0").padStart(2, "0")}:${(m || "0").padStart(2, "0")}`;
+  }
+  const digits = input.replace(/\D/g, "");
+  if (digits.length === 0) return "";
+  if (digits.length <= 2) return `${digits.padStart(2, "0")}:00`;
+  if (digits.length === 3) return `0${digits[0]}:${digits.slice(1, 3)}`;
+  return `${digits.slice(0, 2)}:${digits.slice(2, 4)}`;
+}
+
+/**
+ * Split an op_start → op_stop window into two segments around a lunch break.
+ * Returns op (start → lunch) and sb (lunch+30 → original stop).
+ * If lunch is outside the window, returns the original window with empty SB.
+ */
+export function splitForLunch(
+  start: string,
+  stop: string,
+  lunchTime: string,
+  lunchDurationMin = 30
+): { op_start: string; op_stop: string; sb_start: string; sb_stop: string } {
+  if (!start || !stop || !lunchTime) {
+    return { op_start: start, op_stop: stop, sb_start: "", sb_stop: "" };
+  }
+  const lunchEnd = addMinutes(lunchTime, lunchDurationMin);
+  const toMin = (t: string) => {
+    const [h, m] = t.split(":").map(Number);
+    return h * 60 + m;
+  };
+  const sMin = toMin(start);
+  const eMinRaw = toMin(stop);
+  const eMin = eMinRaw < sMin ? eMinRaw + 24 * 60 : eMinRaw;
+  let lMin = toMin(lunchTime);
+  if (lMin < sMin) lMin += 24 * 60;
+  // Lunch must fall strictly inside the window
+  if (lMin <= sMin || lMin + lunchDurationMin >= eMin) {
+    return { op_start: start, op_stop: stop, sb_start: "", sb_stop: "" };
+  }
+  return {
+    op_start: start,
+    op_stop: lunchTime,
+    sb_start: lunchEnd,
+    sb_stop: stop,
+  };
 }
