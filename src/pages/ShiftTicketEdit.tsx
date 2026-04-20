@@ -158,6 +158,32 @@ export default function ShiftTicketEdit() {
     navigate(`/incidents/${incidentId}/trucks/${incidentTruckId}/shift-ticket/${newTicket.id}`);
   };
 
+  // Once backfill data lands (truck VIN updated, or RO just got parsed),
+  // automatically persist the merged values so they're saved without a tap.
+  const lastPersistedSig = useRef<string>("");
+  useEffect(() => {
+    if (!ticket || !ticketId) return;
+    // Compute what would be added by the backfill
+    const merged = applyBackfill(ticket);
+    const diff: Partial<ShiftTicket> = {};
+    (Object.keys(backfill) as (keyof ShiftTicket)[]).forEach((k) => {
+      if ((ticket as any)[k] !== (merged as any)[k]) {
+        (diff as any)[k] = (merged as any)[k];
+      }
+    });
+    if (Object.keys(diff).length === 0) return;
+    // Avoid re-saving the same diff repeatedly
+    const sig = JSON.stringify(diff);
+    if (sig === lastPersistedSig.current) return;
+    lastPersistedSig.current = sig;
+    updateMutation.mutate(diff, {
+      onError: () => {
+        // Allow retry on next render
+        lastPersistedSig.current = "";
+      },
+    });
+  }, [ticket, ticketId, backfill, applyBackfill, updateMutation]);
+
   // Hint flags for the form
   const sourceHints = useMemo(
     () => ({
@@ -165,8 +191,11 @@ export default function ShiftTicketEdit() {
       truckMissingPlate: !truck?.plate,
       roUnparsed: !latestParsedRO,
       hasResourceOrder: (resourceOrders?.length ?? 0) > 0,
+      autoParsingRo,
+      truckEditPath: truck?.id ? `/fleet/${truck.id}/edit` : undefined,
+      incidentPath: incidentId ? `/incidents/${incidentId}` : undefined,
     }),
-    [truck, latestParsedRO, resourceOrders]
+    [truck, latestParsedRO, resourceOrders, autoParsingRo, incidentId]
   );
 
   if (isLoading) {
