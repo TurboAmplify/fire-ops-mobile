@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { ShiftTicketForm } from "@/components/shift-tickets/ShiftTicketForm";
 import { useShiftTicket, useUpdateShiftTicket, useDuplicateShiftTicket } from "@/hooks/useShiftTickets";
@@ -8,7 +9,8 @@ import { generateOF297Pdf } from "@/components/shift-tickets/generateOF297Pdf";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useIncidentTruckCrew } from "@/hooks/useIncidentTruckCrew";
 import { useIncidentTrucks } from "@/hooks/useIncidentTrucks";
-import { useResourceOrders } from "@/hooks/useResourceOrders";
+import { useResourceOrders, useUpdateResourceOrderParsed } from "@/hooks/useResourceOrders";
+import { parseResourceOrderAI } from "@/services/resource-orders";
 import type { ShiftTicket } from "@/services/shift-tickets";
 
 export default function ShiftTicketEdit() {
@@ -24,7 +26,10 @@ export default function ShiftTicketEdit() {
   const { data: crewAssignments } = useIncidentTruckCrew(incidentTruckId || "");
   const { data: incidentTrucks } = useIncidentTrucks(incidentId || "");
   const { data: resourceOrders } = useResourceOrders(incidentTruckId || "");
+  const parseRoMutation = useUpdateResourceOrderParsed(incidentTruckId || "");
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [autoParsingRo, setAutoParsingRo] = useState(false);
+  const autoParseAttempted = useRef<Set<string>>(new Set());
   const duplicateMutation = useDuplicateShiftTicket(incidentTruckId || "");
 
   // Latest truck data for backfill
@@ -40,10 +45,37 @@ export default function ShiftTicketEdit() {
     return resourceOrders.find((ro) => ro.parsed_at && ro.parsed_data) ?? null;
   }, [resourceOrders]);
 
+  // Most recent RO regardless of parse status (for auto-parse trigger)
+  const mostRecentRO = useMemo(() => {
+    if (!resourceOrders || resourceOrders.length === 0) return null;
+    return resourceOrders[0];
+  }, [resourceOrders]);
+
   const activeCrew = useMemo(
     () => crewAssignments?.filter((c) => c.is_active) ?? [],
     [crewAssignments]
   );
+
+  // Auto-parse the most recent RO if it's not parsed yet — fire once per RO per page load
+  useEffect(() => {
+    if (!mostRecentRO) return;
+    if (mostRecentRO.parsed_at) return;
+    if (autoParseAttempted.current.has(mostRecentRO.id)) return;
+    autoParseAttempted.current.add(mostRecentRO.id);
+    setAutoParsingRo(true);
+    (async () => {
+      try {
+        const parsed = await parseResourceOrderAI(mostRecentRO.file_url, mostRecentRO.file_name);
+        await parseRoMutation.mutateAsync({ id: mostRecentRO.id, parsed });
+        toast.success("Resource order parsed — header fields updated");
+      } catch (err) {
+        console.error("Auto-parse RO failed:", err);
+        toast.error("Could not auto-parse resource order. Open it from the incident to retry.");
+      } finally {
+        setAutoParsingRo(false);
+      }
+    })();
+  }, [mostRecentRO, parseRoMutation]);
 
   // Build a "backfill" object from truck + RO. Only fields that have a source value.
   const backfill = useMemo(() => {
@@ -126,6 +158,32 @@ export default function ShiftTicketEdit() {
     navigate(`/incidents/${incidentId}/trucks/${incidentTruckId}/shift-ticket/${newTicket.id}`);
   };
 
+  // Once backfill data lands (truck VIN updated, or RO just got parsed),
+  // automatically persist the merged values so they're saved without a tap.
+  const lastPersistedSig = useRef<string>("");
+  useEffect(() => {
+    if (!ticket || !ticketId) return;
+    // Compute what would be added by the backfill
+    const merged = applyBackfill(ticket);
+    const diff: Partial<ShiftTicket> = {};
+    (Object.keys(backfill) as (keyof ShiftTicket)[]).forEach((k) => {
+      if ((ticket as any)[k] !== (merged as any)[k]) {
+        (diff as any)[k] = (merged as any)[k];
+      }
+    });
+    if (Object.keys(diff).length === 0) return;
+    // Avoid re-saving the same diff repeatedly
+    const sig = JSON.stringify(diff);
+    if (sig === lastPersistedSig.current) return;
+    lastPersistedSig.current = sig;
+    updateMutation.mutate(diff, {
+      onError: () => {
+        // Allow retry on next render
+        lastPersistedSig.current = "";
+      },
+    });
+  }, [ticket, ticketId, backfill, applyBackfill, updateMutation]);
+
   // Hint flags for the form
   const sourceHints = useMemo(
     () => ({
@@ -133,8 +191,11 @@ export default function ShiftTicketEdit() {
       truckMissingPlate: !truck?.plate,
       roUnparsed: !latestParsedRO,
       hasResourceOrder: (resourceOrders?.length ?? 0) > 0,
+      autoParsingRo,
+      truckEditPath: truck?.id ? `/fleet/${truck.id}/edit` : undefined,
+      incidentPath: incidentId ? `/incidents/${incidentId}` : undefined,
     }),
-    [truck, latestParsedRO, resourceOrders]
+    [truck, latestParsedRO, resourceOrders, autoParsingRo, incidentId]
   );
 
   if (isLoading) {

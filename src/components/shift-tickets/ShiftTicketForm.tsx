@@ -58,6 +58,9 @@ interface ShiftTicketFormProps {
     truckMissingPlate?: boolean;
     roUnparsed?: boolean;
     hasResourceOrder?: boolean;
+    autoParsingRo?: boolean;
+    truckEditPath?: string;
+    incidentPath?: string;
   };
 }
 
@@ -575,29 +578,51 @@ export function ShiftTicketForm({
         </div>
 
         {/* Source-data hints */}
-        {sourceHints && (sourceHints.truckMissingVin || sourceHints.truckMissingPlate || sourceHints.roUnparsed) && !editingLocked && (
+        {sourceHints && (sourceHints.truckMissingVin || sourceHints.truckMissingPlate || sourceHints.roUnparsed || sourceHints.autoParsingRo) && !editingLocked && (
           <div className="space-y-1.5">
-            {(sourceHints.truckMissingVin || sourceHints.truckMissingPlate) && (
-              <div className="flex items-start gap-2 rounded-xl bg-muted/50 border border-border p-2.5">
-                <Info className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
-                <p className="text-[11px] text-muted-foreground leading-snug">
-                  {sourceHints.truckMissingVin && sourceHints.truckMissingPlate
-                    ? "Add the VIN and license plate on the truck profile (or scan the VIN photo) to auto-fill these fields."
-                    : sourceHints.truckMissingVin
-                      ? "Add the VIN on the truck profile or scan the VIN photo to auto-fill the VIN field."
-                      : "Add the license plate on the truck profile to auto-fill the License/ID field."}
+            {sourceHints.autoParsingRo && (
+              <div className="flex items-start gap-2 rounded-xl bg-primary/10 border border-primary/30 p-2.5">
+                <Loader2 className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5 animate-spin" />
+                <p className="text-[11px] text-primary font-medium leading-snug">
+                  Reading the resource order with AI… header fields will fill in automatically when it finishes.
                 </p>
               </div>
             )}
-            {sourceHints.roUnparsed && (
-              <div className="flex items-start gap-2 rounded-xl bg-muted/50 border border-border p-2.5">
+            {(sourceHints.truckMissingVin || sourceHints.truckMissingPlate) && (
+              <a
+                href={sourceHints.truckEditPath || "#"}
+                onClick={(e) => {
+                  if (!sourceHints.truckEditPath) e.preventDefault();
+                }}
+                className="flex items-start gap-2 rounded-xl bg-muted/50 border border-border p-2.5 active:bg-accent/40 transition-colors"
+              >
+                <Info className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                <p className="text-[11px] text-muted-foreground leading-snug">
+                  {sourceHints.truckMissingVin && sourceHints.truckMissingPlate
+                    ? "Add the VIN and license plate on the truck profile to auto-fill these fields."
+                    : sourceHints.truckMissingVin
+                      ? "Add the VIN on the truck profile (or upload + tag a VIN photo) to auto-fill the VIN field."
+                      : "Add the license plate on the truck profile to auto-fill the License/ID field."}
+                  {sourceHints.truckEditPath && <span className="font-semibold text-primary"> Open truck →</span>}
+                </p>
+              </a>
+            )}
+            {sourceHints.roUnparsed && !sourceHints.autoParsingRo && (
+              <a
+                href={sourceHints.incidentPath || "#"}
+                onClick={(e) => {
+                  if (!sourceHints.incidentPath) e.preventDefault();
+                }}
+                className="flex items-start gap-2 rounded-xl bg-muted/50 border border-border p-2.5 active:bg-accent/40 transition-colors"
+              >
                 <Info className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
                 <p className="text-[11px] text-muted-foreground leading-snug">
                   {sourceHints.hasResourceOrder
-                    ? "Resource order has not been parsed yet — open the resource order and tap Parse to auto-fill agreement #, RO #, incident #, and financial code."
+                    ? "Resource order has not been parsed yet — open the incident and tap Parse on the resource order."
                     : "No resource order uploaded for this truck yet — upload one to auto-fill the header fields."}
+                  {sourceHints.incidentPath && <span className="font-semibold text-primary"> Open incident →</span>}
                 </p>
-              </div>
+              </a>
             )}
           </div>
         )}
