@@ -65,6 +65,26 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
   const isPending = createMutation.isPending || updateMutation.isPending;
   const canSubmit = name.trim() && role.trim() && !isPending;
 
+  const hasChanges = isEdit
+    ? !!existing && (
+        name !== (existing.name || "") ||
+        role !== (existing.role || "") ||
+        phone !== (existing.phone || "") ||
+        active !== existing.active ||
+        notes !== ((existing as any).notes || "") ||
+        (isAdmin && hourlyRate !== (comp?.hourly_rate != null ? String(comp.hourly_rate) : "")) ||
+        (isAdmin && hwRate !== (comp?.hw_rate != null ? String(comp.hw_rate) : ""))
+      )
+    : !!(name || role || phone || notes || hourlyRate || hwRate);
+
+  const handleAttemptClose = () => {
+    if (hasChanges && !isPending) {
+      const confirmed = window.confirm("You have unsaved changes. Discard them?");
+      if (!confirmed) return;
+    }
+    onClose();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
@@ -116,7 +136,7 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
     "w-full rounded-xl border bg-card px-4 py-3 text-base outline-none focus:ring-2 focus:ring-ring touch-target";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60" onClick={handleAttemptClose}>
       <div
         className="w-full max-w-lg rounded-t-2xl bg-background animate-in slide-in-from-bottom flex flex-col"
         style={{ maxHeight: "85dvh" }}
@@ -124,7 +144,7 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
       >
         <div className="flex items-center justify-between p-4 pb-2 shrink-0">
           <h2 className="text-lg font-bold">{isEdit ? "Edit Crew Member" : "Add Crew Member"}</h2>
-          <button onClick={onClose} className="touch-target p-1">
+          <button onClick={handleAttemptClose} className="touch-target p-1">
             <X className="h-5 w-5 text-muted-foreground" />
           </button>
         </div>
