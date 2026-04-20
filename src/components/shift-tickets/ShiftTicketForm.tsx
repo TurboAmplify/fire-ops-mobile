@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "sonner";
-import { Plus, Loader2, FileText, Save, Download, AlertTriangle, Copy, Lock, Unlock } from "lucide-react";
+import { Plus, Loader2, FileText, Save, Download, AlertTriangle, Copy, Lock, Unlock, RefreshCw, Info } from "lucide-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import {
   Dialog,
@@ -50,6 +50,15 @@ interface ShiftTicketFormProps {
   crewRoster?: IncidentTruckCrewWithMember[];
   /** True when the signed-in user is an org admin. Required for unlocking a final ticket. */
   isAdmin?: boolean;
+  /** Pull latest truck + RO data and overwrite blank fields. */
+  onRefreshFromSources?: () => void | Promise<void>;
+  /** Source data status for inline hints. */
+  sourceHints?: {
+    truckMissingVin?: boolean;
+    truckMissingPlate?: boolean;
+    roUnparsed?: boolean;
+    hasResourceOrder?: boolean;
+  };
 }
 
 const emptyEquipmentEntry = (): EquipmentEntry => ({
@@ -95,7 +104,23 @@ export function ShiftTicketForm({
   warnings,
   crewRoster,
   isAdmin = false,
+  onRefreshFromSources,
+  sourceHints,
 }: ShiftTicketFormProps) {
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    if (!onRefreshFromSources) return;
+    setRefreshing(true);
+    try {
+      await Promise.resolve(onRefreshFromSources());
+      toast.success("Refreshed from truck & resource order");
+    } catch {
+      toast.error("Failed to refresh");
+    } finally {
+      setRefreshing(false);
+    }
+  };
   const { user } = useAuth();
   // Header fields
   const [agreementNumber, setAgreementNumber] = useState("");
