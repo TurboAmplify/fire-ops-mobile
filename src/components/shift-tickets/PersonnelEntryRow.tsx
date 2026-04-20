@@ -235,7 +235,7 @@ export function PersonnelEntryRow({ entry, index, onChange, onRemove, collapsed,
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-[10px] text-muted-foreground">24. Op Start (24h)</label>
+            <label className="text-[10px] text-muted-foreground">24. Start (24h)</label>
             <MilitaryTimeInput
               value={entry.op_start}
               onChange={(v) => update("op_start", v)}
@@ -244,7 +244,7 @@ export function PersonnelEntryRow({ entry, index, onChange, onRemove, collapsed,
           </div>
           <div>
             <label className="text-[10px] text-muted-foreground">
-              25. Op Stop {entry.lunch_time ? "(lunch start)" : "(24h)"}
+              25. Stop {entry.lunch_time ? "(lunch start)" : "(24h)"}
             </label>
             <MilitaryTimeInput
               value={entry.op_stop}
@@ -254,7 +254,7 @@ export function PersonnelEntryRow({ entry, index, onChange, onRemove, collapsed,
           </div>
         </div>
 
-        {/* Lunch break controls — auto-splits Op into Op + SB segments */}
+        {/* Lunch break controls — auto-splits the shift into pre-lunch and post-lunch segments */}
         <div className="flex items-center gap-2 rounded-lg bg-muted/40 px-2 py-2">
           <button
             type="button"
@@ -277,14 +277,14 @@ export function PersonnelEntryRow({ entry, index, onChange, onRemove, collapsed,
             </button>
           )}
           <span className="ml-auto text-[10px] text-muted-foreground">
-            Splits shift into Op + SB
+            Splits shift around lunch
           </span>
         </div>
 
         <div className="grid grid-cols-2 gap-2">
           <div>
             <label className="text-[10px] text-muted-foreground">
-              26. SB Start {entry.lunch_time ? "(post-lunch)" : "(24h)"}
+              26. Start {entry.lunch_time ? "(post-lunch)" : "(24h)"}
             </label>
             <MilitaryTimeInput
               value={entry.sb_start}
@@ -294,7 +294,7 @@ export function PersonnelEntryRow({ entry, index, onChange, onRemove, collapsed,
           </div>
           <div>
             <label className="text-[10px] text-muted-foreground">
-              27. SB Stop {entry.lunch_time ? "(shift end)" : "(24h)"}
+              27. Stop {entry.lunch_time ? "(shift end)" : "(24h)"}
             </label>
             <MilitaryTimeInput
               value={entry.sb_stop}

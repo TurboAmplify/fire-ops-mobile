@@ -162,7 +162,7 @@ export function ShiftTicketForm({
 
   // Collapsible personnel
   const [expandedPersonnelIndex, setExpandedPersonnelIndex] = useState<number | null>(null);
-  const [activeDrawer, setActiveDrawer] = useState<"header" | "equipment" | "options" | "remarks" | null>(null);
+  const [activeDrawer, setActiveDrawer] = useState<"header" | "equipment" | "remarks" | null>(null);
   const [showCrewPicker, setShowCrewPicker] = useState(false);
 
   // Supervisor sheet
@@ -643,8 +643,7 @@ export function ShiftTicketForm({
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
           {([
             { key: "header" as const, label: "Header", hasData: !!(incidentName || agreementNumber || contractorName) },
-            { key: "equipment" as const, label: "Equipment", hasData: !!(equipmentMakeModel || equipmentType || licenseId) },
-            { key: "options" as const, label: "Options", hasData: !!(transportRetained || isFirstLast || miles) },
+            { key: "equipment" as const, label: "Equipment", hasData: !!(equipmentMakeModel || equipmentType || licenseId || transportRetained || isFirstLast || miles) },
             { key: "remarks" as const, label: "Remarks", hasData: !!remarks },
           ]).map((chip) => (
             <button
@@ -721,21 +720,14 @@ export function ShiftTicketForm({
                   <input value={licenseId} onChange={(e) => setField(setLicenseId)(e.target.value)} className={inputClass} />
                 </div>
               </div>
-            </div>
-            <DrawerFooter>
-              <Button onClick={() => setActiveDrawer(null)}>Done</Button>
-            </DrawerFooter>
-          </DrawerContent>
-        </Drawer>
 
-        <Drawer open={activeDrawer === "options"} onOpenChange={(open) => !open && setActiveDrawer(null)}>
-          <DrawerContent>
-            <DrawerHeader><DrawerTitle>Options</DrawerTitle></DrawerHeader>
-            <div className="px-4 pb-2 space-y-2">
-              <label className="flex items-center gap-3 touch-target">
+              {/* 12. Transport Retained */}
+              <label className="flex items-center gap-3 touch-target pt-2 border-t border-border">
                 <input type="checkbox" checked={transportRetained} onChange={(e) => { setTransportRetained(e.target.checked); markDirty(); }} className="h-5 w-5 rounded border-input accent-primary" />
                 <span className="text-sm">12. Transport Retained</span>
               </label>
+
+              {/* 13. First/Last Ticket — matches OF-297 block 13 */}
               <label className="flex items-center gap-3 touch-target">
                 <input type="checkbox" checked={isFirstLast} onChange={(e) => { setIsFirstLast(e.target.checked); markDirty(); }} className="h-5 w-5 rounded border-input accent-primary" />
                 <span className="text-sm">13. First/Last Ticket</span>
@@ -750,8 +742,10 @@ export function ShiftTicketForm({
                   ))}
                 </div>
               )}
+
+              {/* 14. Miles — matches OF-297 block 14 */}
               <div>
-                <label className={labelClass}>14. Miles</label>
+                <label className={labelClass}>14. Miles / Hours (real odometer reading)</label>
                 <input type="number" inputMode="decimal" value={miles} onChange={(e) => setField(setMiles)(e.target.value)} placeholder="0" className={inputClass} />
               </div>
             </div>
