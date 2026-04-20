@@ -25,6 +25,9 @@ export interface PersonnelEntry {
   per_diem_b?: boolean;
   per_diem_l?: boolean;
   per_diem_d?: boolean;
+  /** Optional lunch break time (HH:MM). When set, op/sb columns represent the
+   *  pre-lunch and post-lunch segments of a single shift. */
+  lunch_time?: string;
 }
 
 export function buildRemarksString(entry: PersonnelEntry): string {
