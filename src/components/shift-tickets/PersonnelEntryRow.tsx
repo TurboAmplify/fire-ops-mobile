@@ -28,7 +28,6 @@ interface Props {
 }
 
 const DEFAULT_LUNCH = "12:00";
-const LUNCH_REMARK_RE = /,?\s*30-?min lunch at \d{1,2}:?\d{2}/i;
 
 function withLunchRemark(entry: PersonnelEntry): PersonnelEntry {
   const base = buildRemarksString(entry);
