@@ -157,10 +157,10 @@ export function OF297FormPreview({
               <tr>
                 <th className={headerCellClass}>22. Date</th>
                 <th className={headerCellClass}>23. Name</th>
-                <th className={headerCellClass}>24. Op Start</th>
-                <th className={headerCellClass}>25. Op Stop</th>
-                <th className={headerCellClass}>26. SB Start</th>
-                <th className={headerCellClass}>27. SB Stop</th>
+                <th className={headerCellClass}>24. Start</th>
+                <th className={headerCellClass}>25. Stop</th>
+                <th className={headerCellClass}>26. Start</th>
+                <th className={headerCellClass}>27. Stop</th>
                 <th className={headerCellClass}>28. Total</th>
                 <th className={headerCellClass}>29. Remarks</th>
               </tr>
