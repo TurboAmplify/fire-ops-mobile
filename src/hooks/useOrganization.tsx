@@ -129,6 +129,15 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     return allMemberships[0];
   }, [allMemberships, activeOrgId]);
 
+  // If a stored/selected activeOrgId isn't in our loaded memberships (e.g. the
+  // user was just added to a new org elsewhere), refetch once to pick it up.
+  useEffect(() => {
+    if (!user || !activeOrgId) return;
+    if (allMemberships.length === 0) return;
+    if (allMemberships.some((m) => m.organizationId === activeOrgId)) return;
+    fetchMembership();
+  }, [user, activeOrgId, allMemberships, fetchMembership]);
+
   const setActiveOrgId = useCallback((orgId: string) => {
     try {
       localStorage.setItem(ACTIVE_ORG_KEY, orgId);

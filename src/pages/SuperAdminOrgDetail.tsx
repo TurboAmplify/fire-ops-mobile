@@ -134,9 +134,18 @@ export default function SuperAdminOrgDetail() {
     }
   };
 
-  const handleEditOrg = () => {
+  const handleEditOrg = async () => {
     if (!orgId) return;
     setActiveOrgId(orgId);
+    // Make sure the membership list reflects any just-added membership before
+    // OrgSettings mounts and reads it. Without this, switching to a freshly
+    // joined org can show "Members (0)" because the org-members query runs
+    // against a stale/empty membership.
+    try {
+      await refetchMemberships();
+    } catch {
+      // non-fatal: OrgSettings will refetch on its own
+    }
     // Drop cached org-scoped data so OrgSettings reflects the newly-active org
     queryClient.invalidateQueries();
     navigate("/settings/organization");
