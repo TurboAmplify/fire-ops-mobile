@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "sonner";
-import { Plus, Loader2, FileText, Save, Download, AlertTriangle, Copy, Lock, Unlock } from "lucide-react";
+import { Plus, Loader2, FileText, Save, Download, AlertTriangle, Copy, Lock, Unlock, RefreshCw, Info } from "lucide-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import {
   Dialog,
@@ -50,6 +50,15 @@ interface ShiftTicketFormProps {
   crewRoster?: IncidentTruckCrewWithMember[];
   /** True when the signed-in user is an org admin. Required for unlocking a final ticket. */
   isAdmin?: boolean;
+  /** Pull latest truck + RO data and overwrite blank fields. */
+  onRefreshFromSources?: () => void | Promise<void>;
+  /** Source data status for inline hints. */
+  sourceHints?: {
+    truckMissingVin?: boolean;
+    truckMissingPlate?: boolean;
+    roUnparsed?: boolean;
+    hasResourceOrder?: boolean;
+  };
 }
 
 const emptyEquipmentEntry = (): EquipmentEntry => ({
@@ -95,7 +104,23 @@ export function ShiftTicketForm({
   warnings,
   crewRoster,
   isAdmin = false,
+  onRefreshFromSources,
+  sourceHints,
 }: ShiftTicketFormProps) {
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    if (!onRefreshFromSources) return;
+    setRefreshing(true);
+    try {
+      await Promise.resolve(onRefreshFromSources());
+      toast.success("Refreshed from truck & resource order");
+    } catch {
+      toast.error("Failed to refresh");
+    } finally {
+      setRefreshing(false);
+    }
+  };
   const { user } = useAuth();
   // Header fields
   const [agreementNumber, setAgreementNumber] = useState("");
@@ -535,7 +560,47 @@ export function ShiftTicketForm({
           {ticket?.status === "draft" && (
             <span className="shrink-0 rounded-full bg-warning/20 text-warning px-2 py-0.5 text-[10px] font-bold">DRAFT</span>
           )}
+          {onRefreshFromSources && ticket?.id && !editingLocked && (
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              title="Refresh from Truck & Resource Order"
+              className="ml-auto flex shrink-0 items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1.5 text-[11px] font-semibold text-foreground touch-target active:bg-accent/40 disabled:opacity-50"
+            >
+              {refreshing ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+              Refresh
+            </button>
+          )}
         </div>
+
+        {/* Source-data hints */}
+        {sourceHints && (sourceHints.truckMissingVin || sourceHints.truckMissingPlate || sourceHints.roUnparsed) && !editingLocked && (
+          <div className="space-y-1.5">
+            {(sourceHints.truckMissingVin || sourceHints.truckMissingPlate) && (
+              <div className="flex items-start gap-2 rounded-xl bg-muted/50 border border-border p-2.5">
+                <Info className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                <p className="text-[11px] text-muted-foreground leading-snug">
+                  {sourceHints.truckMissingVin && sourceHints.truckMissingPlate
+                    ? "Add the VIN and license plate on the truck profile (or scan the VIN photo) to auto-fill these fields."
+                    : sourceHints.truckMissingVin
+                      ? "Add the VIN on the truck profile or scan the VIN photo to auto-fill the VIN field."
+                      : "Add the license plate on the truck profile to auto-fill the License/ID field."}
+                </p>
+              </div>
+            )}
+            {sourceHints.roUnparsed && (
+              <div className="flex items-start gap-2 rounded-xl bg-muted/50 border border-border p-2.5">
+                <Info className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                <p className="text-[11px] text-muted-foreground leading-snug">
+                  {sourceHints.hasResourceOrder
+                    ? "Resource order has not been parsed yet — open the resource order and tap Parse to auto-fill agreement #, RO #, incident #, and financial code."
+                    : "No resource order uploaded for this truck yet — upload one to auto-fill the header fields."}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Warnings */}
         {warnings && warnings.length > 0 && (
