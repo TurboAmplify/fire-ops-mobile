@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { ShiftTicketForm } from "@/components/shift-tickets/ShiftTicketForm";
 import { useShiftTicket, useUpdateShiftTicket, useDuplicateShiftTicket } from "@/hooks/useShiftTickets";
@@ -8,7 +9,8 @@ import { generateOF297Pdf } from "@/components/shift-tickets/generateOF297Pdf";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useIncidentTruckCrew } from "@/hooks/useIncidentTruckCrew";
 import { useIncidentTrucks } from "@/hooks/useIncidentTrucks";
-import { useResourceOrders } from "@/hooks/useResourceOrders";
+import { useResourceOrders, useUpdateResourceOrderParsed } from "@/hooks/useResourceOrders";
+import { parseResourceOrderAI } from "@/services/resource-orders";
 import type { ShiftTicket } from "@/services/shift-tickets";
 
 export default function ShiftTicketEdit() {
