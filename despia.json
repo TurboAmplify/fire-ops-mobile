@@ -1,0 +1,29 @@
+{
+  "$comment": "Despia build configuration for FireOps HQ. Despia wraps the published web app at https://fire-buddy-mobile.lovable.app as native iOS and Android apps. Most of these values can also be set in Despia's web dashboard if you prefer the UI — this file is provided so you have a single source of truth.",
+
+  "appName": "FireOps HQ",
+  "appId": "app.lovable.63e454bc32e142ee9def17eb4240739a",
+  "appVersion": "1.0.0",
+  "url": "https://fire-buddy-mobile.lovable.app",
+
+  "ios": {
+    "minimumOSVersion": "16.0",
+    "permissions": {
+      "NSCameraUsageDescription": "FireOps HQ uses the camera to capture receipts, truck photos, inspection photos, crew portraits, and signed documents in the field.",
+      "NSPhotoLibraryUsageDescription": "FireOps HQ accesses your photo library so you can attach existing receipts, truck photos, inspection photos, and operational documents.",
+      "NSPhotoLibraryAddUsageDescription": "FireOps HQ saves shift ticket PDFs and receipt copies to your photo library when you choose to export them."
+    }
+  },
+
+  "android": {
+    "permissions": [
+      "android.permission.CAMERA",
+      "android.permission.READ_MEDIA_IMAGES",
+      "android.permission.READ_EXTERNAL_STORAGE",
+      "android.permission.WRITE_EXTERNAL_STORAGE",
+      "android.permission.INTERNET",
+      "android.permission.ACCESS_NETWORK_STATE"
+    ],
+    "targetSdk": 34
+  }
+}
