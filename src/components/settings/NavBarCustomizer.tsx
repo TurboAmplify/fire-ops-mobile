@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import {
-  Flame, Banknote, DollarSign, FileText, Users, Truck, ClipboardList, Package, GraduationCap, Siren, FileSpreadsheet, Check,
+  Flame, Banknote, DollarSign, FileText, Users, Truck, ClipboardList, Package, GraduationCap, Check,
 } from "lucide-react";
 import {
   Dialog,
@@ -34,8 +34,6 @@ export const ALL_NAV_OPTIONS: NavTabOption[] = [
   { key: "fleet", label: "Fleet", icon: Truck, to: "/fleet" },
   { key: "needs", label: "Needs List", icon: ClipboardList, to: "/needs" },
   { key: "training", label: "Training", icon: GraduationCap, to: "/training", module: "training" },
-  { key: "run-reports", label: "Run Reports", icon: Siren, to: "/run-reports", module: "runReport" },
-  { key: "ctr", label: "Crew Time Report", icon: FileSpreadsheet, to: "/ctr", module: "ctr" },
 ];
 
 export const DEFAULT_TAB_KEYS = ["incidents", "expenses", "shift-tickets", "crew"];
