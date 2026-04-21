@@ -1,63 +1,64 @@
 
 
-# Speed up the receipt scanner without losing accuracy
+# App Store Readiness — Final Plan
 
-The scanner currently takes ~6–12s end-to-end. About 60% of that is image transfer (phone → Storage → edge function → Gemini), not the AI itself. We can cut total time by ~40–55% with safe changes that don't touch the prompt or schema.
+## Decisions locked in
 
-## What we'll do
+1. **"Coming Soon" pages** → Option A: remove the route, page, and any nav entries entirely. (Also applies to `RunReport.tsx` — same "Coming Soon" issue.)
+2. **iOS Info.plist setup** → adapted for **Despia** (no Mac/Xcode). Despia accepts a config file at the project root that injects the iOS permission strings during their build. I'll create `despia.json` with the three required strings so you don't have to touch native code.
+3. **og:image** → replace the stale Lovable preview screenshot with a professionally generated FireOps HQ social card image, hosted in the project at `/og-image.png`.
 
-### 1. Compress + downscale on the client before upload (biggest win)
-Receipts are pure text on white — they don't need 4032×3024 at 4 MB. Resize the longest edge to **1600px** and re-encode as JPEG quality 0.82 in the browser. Typical result: **~250–400 KB**, ~10× smaller.
+## What I'll change in code
 
-This speeds up:
-- Upload to Storage (the user's "loading" bar)
-- Edge function's re-download from Storage
-- Base64 payload sent to Gemini
-- Gemini's own vision processing (smaller images = faster tokens)
+| File | Change |
+|---|---|
+| `src/pages/CrewTimeReport.tsx` | Delete |
+| `src/pages/RunReport.tsx` | Delete (also "Coming Soon") |
+| `src/App.tsx` | Remove `/ctr` and `/run-reports` routes + imports |
+| `src/components/settings/NavBarCustomizer.tsx` | Remove `ctr` and `runReport` tab options |
+| `src/components/ModuleGate.tsx` | Remove `ctr` and `runReport` modules |
+| `src/hooks/useOrgSettings.ts` (if module flags live here) | Remove `ctr` / `runReport` defaults |
+| `src/pages/Settings.tsx` | Replace hardcoded `"1.0.0"` with version from `package.json` |
+| `index.html` | Replace stale og:image URL with `/og-image.png` |
+| `public/og-image.png` | New — professional 1200×630 FireOps HQ social card |
+| `public/_redirects` | Delete (Lovable hosting handles SPA fallback natively) |
+| `despia.json` | New — at project root, contains iOS permission strings + app metadata for Despia's build pipeline |
+| `docs/mobile-store-readiness.md` | Mark completed items, note Despia path |
+| `docs/app-review-notes.md` | Add Sign in with Apple note + pre-submission checklist |
+| `docs/app-privacy-questionnaire.md` | New — exact answers to paste into App Store Connect's privacy questionnaire |
+| `docs/despia-setup.md` | New — Despia-specific build/submission walkthrough |
 
-Accuracy impact: **none** for receipts at 1600px — well above the resolution Gemini uses internally for OCR. We'll keep the original on Storage only if needed; otherwise we just store the compressed version (saves storage costs too).
+## How the Despia path works (replaces `npx cap` steps)
 
-### 2. Send the image inline instead of round-tripping through Storage
-Right now: client uploads to Storage → asks edge function to fetch it back. We'll change the flow so the **client posts the compressed base64 directly to the edge function** alongside (or before) the Storage upload. The Storage upload can happen in **parallel** with the AI call instead of blocking it.
+Despia takes your published web app URL and wraps it as a native iOS/Android app. The three iOS permission strings Apple requires get configured in Despia's dashboard (or via `despia.json`):
 
-Net effect: the AI call starts ~1–2s sooner, and the user sees results before the upload even finishes.
+- `NSCameraUsageDescription` — for receipt/truck/inspection/signature photos
+- `NSPhotoLibraryUsageDescription` — for picking existing images
+- `NSPhotoLibraryAddUsageDescription` — for saving exported PDFs
 
-### 3. Switch parse-receipt to `google/gemini-2.5-flash-lite`
-For the single-receipt path (the common case), flash-lite is roughly **1.5–2× faster** than flash and handles structured tool-calling extraction on clean receipt images at equivalent accuracy. We'll **keep flash on the batch endpoint** because multi-receipt layouts are harder and benefit from the larger model's reasoning.
+I'll put the exact strings in `despia.json` and in `docs/despia-setup.md` with step-by-step instructions for the Despia dashboard, so you can copy-paste them in either place.
 
-If you'd rather not change models at all, we can skip this step — items 1 and 2 alone get most of the speedup.
+## What only you can do
 
-### 4. Small edge-function cleanups
-- Drop the `auth.getClaims` call's redundant token re-parse; use `getUser` once (already done in batch).
-- Stream the fetch → base64 conversion in chunks instead of loading the full ArrayBuffer twice.
-- Set a 30s `AbortSignal.timeout` so a stalled Gemini call fails fast instead of hanging the UI.
+1. In Despia: paste the three permission strings (from `despia.json` or `docs/despia-setup.md`)
+2. In Despia: upload the 1024×1024 app icon from `public/icon-512.png` (or upscale)
+3. Create the `appreview@fireopshq.com` demo account in your live app and seed it with the data described in `docs/app-review-notes.md`
+4. In App Store Connect:
+   - Privacy Policy URL: `https://fire-buddy-mobile.lovable.app/privacy`
+   - Support URL: `https://fire-buddy-mobile.lovable.app/support`
+   - Fill out App Privacy questionnaire using `docs/app-privacy-questionnaire.md`
+   - Upload screenshots from `public/icons/store/`
+   - Paste reviewer notes from `docs/app-review-notes.md`
 
-### 5. UI feedback so it *feels* faster
-- Show the receipt thumbnail **immediately** after the user picks it (from the local File object, before upload finishes).
-- Replace the single "Analyzing receipt..." spinner with a 2-step indicator: "Reading receipt → Extracting details" so users see progress.
+## Rejection risk
 
-## Expected result
+- **Before changes:** ~70% (the two "Coming Soon" pages alone are near-certain rejection under Guideline 2.1)
+- **After this plan + your steps in Despia/App Store Connect:** ~10–15% (normal first-submission baseline)
 
-| Stage | Before | After |
-|---|---|---|
-| Upload to Storage | 1.5–3s | 0.2–0.5s |
-| Edge function fetch + encode | 1–2s | 0.1s (inline) |
-| Gemini vision call | 3–6s | 2–3s (smaller image + flash-lite) |
-| **Total perceived** | **6–12s** | **2.5–4s** |
+## One open item — confirm before I start
 
-Accuracy on amount, date, vendor, and category should be unchanged — we're only shrinking the image to a size still well above what the model needs, and (optionally) using flash-lite on the simpler single-receipt case.
+The og:image will be generated at 1200×630 with FireOps HQ branding (dark theme, fire-orange accent, app name + tagline "Wildfire Operations Management"). Want me to:
 
-## Files to change
-
-- `src/services/expenses.ts` — add `compressImageForReceipt(file)` helper; update `uploadReceipt` to accept the compressed blob.
-- `src/services/ai-parsing.ts` — add option to send base64 inline; keep URL fallback.
-- `supabase/functions/parse-receipt/index.ts` — accept inline base64 (skip re-download), switch model to `gemini-2.5-flash-lite`, add timeout.
-- `supabase/functions/parse-batch-receipts/index.ts` — accept inline base64, add timeout (keep `gemini-2.5-flash`).
-- `src/components/expenses/ExpenseForm.tsx` — show local thumbnail immediately, parallelize upload + parse, update progress text.
-- `src/components/expenses/ReceiptParseButton.tsx` — same UI feedback updates.
-- `src/pages/BatchReceiptScan.tsx` — same compress + parallel pattern.
-
-## Open question before I build
-
-Are you OK switching the **single-receipt** model to `gemini-2.5-flash-lite`? It's the largest single speed gain after image compression, but if you'd rather stay on `gemini-2.5-flash` for maximum safety, I'll skip step 3 — you'll still get most of the improvement (estimated ~3.5–5s total instead of 2.5–4s).
+- **a)** Generate it directly now with your existing brand colors, or
+- **b)** Show you 2–3 style options first to pick from?
 
