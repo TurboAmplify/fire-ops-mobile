@@ -101,8 +101,6 @@ const App = () => (
               <Route path="/more" element={<ProtectedRoute><More /></ProtectedRoute>} />
               <Route path="/needs" element={<ProtectedRoute><NeedsList /></ProtectedRoute>} />
               <Route path="/training" element={<ProtectedRoute><ModuleGate module="training"><Training /></ModuleGate></ProtectedRoute>} />
-              <Route path="/run-reports" element={<ProtectedRoute><ModuleGate module="runReport"><RunReport /></ModuleGate></ProtectedRoute>} />
-              <Route path="/ctr" element={<ProtectedRoute><ModuleGate module="ctr"><CrewTimeReport /></ModuleGate></ProtectedRoute>} />
               <Route path="/admin/logs" element={<ProtectedRoute><AdminGate><AdminLogs /></AdminGate></ProtectedRoute>} />
               <Route path="/super-admin" element={<ProtectedRoute><PlatformAdminGate><SuperAdmin /></PlatformAdminGate></ProtectedRoute>} />
               <Route path="/super-admin/organizations" element={<ProtectedRoute><PlatformAdminGate><SuperAdminOrgs /></PlatformAdminGate></ProtectedRoute>} />
