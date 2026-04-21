@@ -25,6 +25,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { NavBarCustomizer } from "@/components/settings/NavBarCustomizer";
 import { useTutorial } from "@/hooks/useTutorial";
+import pkg from "../../package.json";
+
+const APP_VERSION = (pkg as { version?: string }).version || "1.0.0";
 
 export default function Settings() {
   const { user, signOut } = useAuth();
@@ -163,7 +166,7 @@ export default function Settings() {
             About
           </h2>
           <div className="rounded-2xl bg-card overflow-hidden divide-y divide-border/60 card-shadow">
-            <InfoRow icon={Info} label="App Version" value="1.0.0" />
+            <InfoRow icon={Info} label="App Version" value={APP_VERSION} />
             <InfoRow icon={Flame} label="FireOps HQ" value="Field Operations" />
           </div>
         </section>

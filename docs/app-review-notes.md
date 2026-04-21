@@ -71,3 +71,26 @@ Settings → Account → Delete Account performs a full data wipe via the
 
 If sample data is wiped between submissions, repeat step 4 before submitting
 the next build.
+
+---
+
+## Pre-Submission Checklist (every build)
+
+1. [ ] Demo account `appreview@fireopshq.com` can sign in
+2. [ ] Demo account has all sample data listed above
+3. [ ] Privacy Policy at `/privacy` loads without sign-in
+4. [ ] Support page at `/support` loads (after sign-in is fine)
+5. [ ] Permission strings in `despia.json` haven't drifted from this doc
+6. [ ] App version in `package.json` and `despia.json` match the build
+       you're submitting
+
+## Future change — Sign in with Apple
+
+The app currently offers **only email/password** sign-in, which means
+**Sign in with Apple is NOT required** (Apple Guideline 4.8 only triggers
+it when you offer Google, Facebook, or other third-party social sign-in).
+
+If you ever add Google sign-in (or any social provider) you must add Sign
+in with Apple at the same time, in the same release, or Apple will reject
+the update.
+
