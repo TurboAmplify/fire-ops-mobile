@@ -94,7 +94,11 @@ export async function fetchShiftTickets(incidentTruckId: string): Promise<ShiftT
 
 export async function duplicateShiftTicket(
   sourceTicket: ShiftTicket,
-  organizationId: string
+  organizationId: string,
+  /** Current active crew names assigned to this incident_truck. When provided,
+   *  personnel entries are rebuilt from this list instead of carrying forward
+   *  the source ticket's operators (which may be stale). */
+  currentCrewNames?: string[]
 ): Promise<ShiftTicket> {
   // M2-M8: Advance dates by 1 day using UTC arithmetic to avoid DST shifts
   const advanceDate = (dateStr: string) => {
@@ -115,10 +119,29 @@ export async function duplicateShiftTicket(
   }));
   // Use the first equipment entry date as source of truth for personnel dates
   const personnelDate = newEquipment.length > 0 ? newEquipment[0].date : advanceDate((sourceTicket.personnel_entries as PersonnelEntry[])[0]?.date || "");
-  const newPersonnel = (sourceTicket.personnel_entries as PersonnelEntry[]).map((p) => ({
-    ...p,
-    date: personnelDate,
-  }));
+
+  // Build personnel from current truck assignments when available; otherwise
+  // copy forward from the source ticket (legacy behaviour).
+  const newPersonnel: PersonnelEntry[] = currentCrewNames && currentCrewNames.length > 0
+    ? currentCrewNames.map((name) => ({
+        date: personnelDate,
+        operator_name: name,
+        op_start: "",
+        op_stop: "",
+        sb_start: "",
+        sb_stop: "",
+        total: 0,
+        remarks: "Work",
+        activity_type: "work",
+        lodging: false,
+        per_diem_b: false,
+        per_diem_l: false,
+        per_diem_d: false,
+      }))
+    : (sourceTicket.personnel_entries as PersonnelEntry[]).map((p) => ({
+        ...p,
+        date: personnelDate,
+      }));
 
   const { id, created_at, updated_at, contractor_rep_signature_url, contractor_rep_signed_at, supervisor_signature_url, supervisor_signed_at, ...rest } = sourceTicket;
 
