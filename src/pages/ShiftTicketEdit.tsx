@@ -2,6 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
 import { ShiftTicketForm } from "@/components/shift-tickets/ShiftTicketForm";
 import { useShiftTicket, useUpdateShiftTicket, useDuplicateShiftTicket } from "@/hooks/useShiftTickets";
@@ -11,7 +12,9 @@ import { useIncidentTruckCrew } from "@/hooks/useIncidentTruckCrew";
 import { useIncidentTrucks } from "@/hooks/useIncidentTrucks";
 import { useResourceOrders, useUpdateResourceOrderParsed } from "@/hooks/useResourceOrders";
 import { parseResourceOrderAI } from "@/services/resource-orders";
-import type { ShiftTicket } from "@/services/shift-tickets";
+import { syncTicketCrewToIncidentTruck } from "@/services/incident-truck-crew";
+import { getLocalDateString } from "@/lib/local-date";
+import type { ShiftTicket, PersonnelEntry } from "@/services/shift-tickets";
 
 export default function ShiftTicketEdit() {
   const { incidentId, incidentTruckId, ticketId } = useParams<{
