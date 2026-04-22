@@ -1,5 +1,7 @@
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import { getLocalDateString } from "@/lib/local-date";
 import { ShiftTicketForm } from "@/components/shift-tickets/ShiftTicketForm";
 import { useCreateShiftTicket, useUpdateShiftTicket } from "@/hooks/useShiftTickets";
@@ -9,6 +11,7 @@ import { useIncident } from "@/hooks/useIncidents";
 import { useIncidentTrucks } from "@/hooks/useIncidentTrucks";
 import { useIncidentTruckCrew } from "@/hooks/useIncidentTruckCrew";
 import { useAgreements } from "@/hooks/useAgreements";
+import { syncTicketCrewToIncidentTruck } from "@/services/incident-truck-crew";
 import { generateOF297Pdf } from "@/components/shift-tickets/generateOF297Pdf";
 import type { ShiftTicket, PersonnelEntry } from "@/services/shift-tickets";
 
