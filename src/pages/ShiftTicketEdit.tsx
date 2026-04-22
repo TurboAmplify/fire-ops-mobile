@@ -136,6 +136,48 @@ export default function ShiftTicketEdit() {
     // Persist backfilled values so PDFs and downstream views stay consistent
     const merged = applyBackfill(data);
     await updateMutation.mutateAsync(merged);
+
+    // Auto-sync ticket personnel back into incident_truck_crew when the ticket
+    // is dated today. Adds new operators, releases ones no longer present.
+    // Skipped for past-dated tickets so historical edits don't churn the roster.
+    try {
+      const today = getLocalDateString();
+      const ticketDates = new Set<string>();
+      const eqEntries = (merged.equipment_entries as { date?: string }[] | undefined) ?? [];
+      const peEntries = (merged.personnel_entries as PersonnelEntry[] | undefined) ?? [];
+      eqEntries.forEach((e) => e?.date && ticketDates.add(e.date));
+      peEntries.forEach((p) => p?.date && ticketDates.add(p.date));
+      const isTodaysTicket = ticketDates.has(today);
+
+      if (
+        isTodaysTicket &&
+        membership?.organizationId &&
+        incidentTruckId &&
+        peEntries.length > 0
+      ) {
+        const operatorNames = peEntries.map((p) => p.operator_name ?? "").filter(Boolean);
+        const result = await syncTicketCrewToIncidentTruck({
+          incidentTruckId,
+          organizationId: membership.organizationId,
+          ticketOperatorNames: operatorNames,
+        });
+        if (result.added > 0 || result.released > 0) {
+          queryClient.invalidateQueries({ queryKey: ["incident-truck-crew", incidentTruckId] });
+          const parts: string[] = [];
+          if (result.added > 0) parts.push(`${result.added} added`);
+          if (result.released > 0) parts.push(`${result.released} released`);
+          toast.success(`Truck crew updated: ${parts.join(", ")}`);
+        }
+        if (result.unmatched.length > 0) {
+          toast.warning(
+            `Couldn't match ${result.unmatched.length} operator${result.unmatched.length === 1 ? "" : "s"} to crew records: ${result.unmatched.join(", ")}. Add them in Crew first.`
+          );
+        }
+      }
+    } catch (err) {
+      console.error("Crew sync failed:", err);
+      // Sync failure should not block the save
+    }
   };
 
   const handleRefreshFromSources = async () => {
