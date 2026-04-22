@@ -154,7 +154,14 @@ export default function ShiftTicketEdit() {
 
   const handleDuplicate = async () => {
     if (!ticket || !membership?.organizationId) return;
-    const newTicket = await duplicateMutation.mutateAsync({ ticket: ticket as ShiftTicket, organizationId: membership.organizationId });
+    const currentCrewNames = activeCrew
+      .map((c) => c.crew_members?.name?.trim())
+      .filter((n): n is string => !!n);
+    const newTicket = await duplicateMutation.mutateAsync({
+      ticket: ticket as ShiftTicket,
+      organizationId: membership.organizationId,
+      currentCrewNames,
+    });
     navigate(`/incidents/${incidentId}/trucks/${incidentTruckId}/shift-ticket/${newTicket.id}`);
   };
 
