@@ -4,6 +4,7 @@ import { FileText, Plus, Loader2, ChevronRight, Flame, Truck as TruckIcon, Histo
 import { useLatestTicketPerTruck, useRecentShiftTickets } from "@/hooks/useShiftTickets";
 import { useIncidents } from "@/hooks/useIncidents";
 import { useIncidentTrucks } from "@/hooks/useIncidentTrucks";
+import { getLocalDateString } from "@/lib/local-date";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -29,6 +30,22 @@ function getTicketDate(t: any): string {
   const pEntries = (t.personnel_entries as any[]) || [];
   const shiftDate = entries[0]?.date || pEntries[0]?.date || null;
   return shiftDate || t.updated_at?.split("T")[0] || "";
+}
+
+/** Relative label for shift dates: Today / Yesterday / "X days ago" / formatted date */
+function relativeDateLabel(dateStr: string): string {
+  if (!dateStr) return "";
+  const today = getLocalDateString();
+  if (dateStr === today) return "Today";
+  const [ty, tm, td] = today.split("-").map(Number);
+  const [dy, dm, dd] = dateStr.split("-").map(Number);
+  if (!ty || !dy) return fmtDate(dateStr);
+  const diffDays = Math.round(
+    (Date.UTC(ty, tm - 1, td) - Date.UTC(dy, dm - 1, dd)) / 86_400_000
+  );
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays > 1 && diffDays < 7) return `${diffDays} days ago`;
+  return fmtDate(dateStr);
 }
 
 export function ShiftTicketQuickAccess({ open, onOpenChange }: Props) {
