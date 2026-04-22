@@ -22,6 +22,7 @@ export default function ShiftTicketCreate() {
   const locState = location.state as Record<string, string> | undefined;
   const { membership } = useOrganization();
   const orgId = membership?.organizationId || "";
+  const queryClient = useQueryClient();
 
   // Fetch relational data
   const { data: incident } = useIncident(incidentId || "");
@@ -152,6 +153,38 @@ export default function ShiftTicketCreate() {
         organization_id: orgId,
       } as any);
       setTicket(created);
+    }
+
+    // Auto-sync ticket personnel back into incident_truck_crew when dated today
+    try {
+      const today = getLocalDateString();
+      const ticketDates = new Set<string>();
+      const eqEntries = (cleanData.equipment_entries as { date?: string }[] | undefined) ?? [];
+      const peEntries = (cleanData.personnel_entries as PersonnelEntry[] | undefined) ?? [];
+      eqEntries.forEach((e) => e?.date && ticketDates.add(e.date));
+      peEntries.forEach((p) => p?.date && ticketDates.add(p.date));
+      if (ticketDates.has(today) && incidentTruckId && peEntries.length > 0) {
+        const operatorNames = peEntries.map((p) => p.operator_name ?? "").filter(Boolean);
+        const result = await syncTicketCrewToIncidentTruck({
+          incidentTruckId,
+          organizationId: orgId,
+          ticketOperatorNames: operatorNames,
+        });
+        if (result.added > 0 || result.released > 0) {
+          queryClient.invalidateQueries({ queryKey: ["incident-truck-crew", incidentTruckId] });
+          const parts: string[] = [];
+          if (result.added > 0) parts.push(`${result.added} added`);
+          if (result.released > 0) parts.push(`${result.released} released`);
+          toast.success(`Truck crew updated: ${parts.join(", ")}`);
+        }
+        if (result.unmatched.length > 0) {
+          toast.warning(
+            `Couldn't match ${result.unmatched.length} operator${result.unmatched.length === 1 ? "" : "s"} to crew records: ${result.unmatched.join(", ")}. Add them in Crew first.`
+          );
+        }
+      }
+    } catch (err) {
+      console.error("Crew sync failed:", err);
     }
   };
 
