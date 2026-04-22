@@ -81,3 +81,82 @@ export async function releaseCrewFromTruck(id: string) {
     .eq("id", id);
   if (error) throw error;
 }
+
+/**
+ * Sync the operator names from a shift ticket back into the incident_truck_crew
+ * roster. Operators on the ticket but not yet active get added; active crew
+ * not present on the ticket get released. Names are matched case-insensitively.
+ *
+ * Returns counts so callers can surface a toast.
+ */
+export async function syncTicketCrewToIncidentTruck(opts: {
+  incidentTruckId: string;
+  organizationId: string;
+  /** Trimmed operator names from the ticket's personnel_entries */
+  ticketOperatorNames: string[];
+}): Promise<{ added: number; released: number; unmatched: string[] }> {
+  const { incidentTruckId, organizationId, ticketOperatorNames } = opts;
+  const wantedNames = Array.from(
+    new Set(
+      ticketOperatorNames
+        .map((n) => n.trim())
+        .filter((n) => n.length > 0)
+    )
+  );
+  const wantedLower = new Set(wantedNames.map((n) => n.toLowerCase()));
+
+  // Current active assignments for this incident_truck
+  const current = await fetchIncidentTruckCrew(incidentTruckId);
+  const currentActive = current.filter((c) => c.is_active);
+  const currentLowerSet = new Set(
+    currentActive.map((c) => (c.crew_members?.name ?? "").trim().toLowerCase())
+  );
+
+  // Pull all active crew members in the org so we can resolve names → crew_member_id
+  const { data: orgCrew, error: crewErr } = await supabase
+    .from("crew_members")
+    .select("id, name")
+    .eq("organization_id", organizationId)
+    .eq("active", true);
+  if (crewErr) throw crewErr;
+
+  const crewByLowerName = new Map<string, string>();
+  (orgCrew ?? []).forEach((c) => {
+    const key = (c.name ?? "").trim().toLowerCase();
+    if (key) crewByLowerName.set(key, c.id);
+  });
+
+  // Add: present on ticket, not currently active on truck
+  const toAdd = wantedNames.filter((n) => !currentLowerSet.has(n.toLowerCase()));
+  const unmatched: string[] = [];
+  let added = 0;
+  for (const name of toAdd) {
+    const crewId = crewByLowerName.get(name.toLowerCase());
+    if (!crewId) {
+      unmatched.push(name);
+      continue;
+    }
+    try {
+      await assignCrewToTruck(incidentTruckId, crewId);
+      added += 1;
+    } catch (err) {
+      console.error("syncTicketCrewToIncidentTruck: failed to assign", name, err);
+    }
+  }
+
+  // Release: currently active on truck, not present on ticket
+  const toRelease = currentActive.filter(
+    (c) => !wantedLower.has((c.crew_members?.name ?? "").trim().toLowerCase())
+  );
+  let released = 0;
+  for (const assignment of toRelease) {
+    try {
+      await releaseCrewFromTruck(assignment.id);
+      released += 1;
+    } catch (err) {
+      console.error("syncTicketCrewToIncidentTruck: failed to release", assignment.id, err);
+    }
+  }
+
+  return { added, released, unmatched };
+}

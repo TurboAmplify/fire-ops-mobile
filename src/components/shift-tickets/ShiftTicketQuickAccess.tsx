@@ -4,6 +4,7 @@ import { FileText, Plus, Loader2, ChevronRight, Flame, Truck as TruckIcon, Histo
 import { useLatestTicketPerTruck, useRecentShiftTickets } from "@/hooks/useShiftTickets";
 import { useIncidents } from "@/hooks/useIncidents";
 import { useIncidentTrucks } from "@/hooks/useIncidentTrucks";
+import { getLocalDateString } from "@/lib/local-date";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -29,6 +30,22 @@ function getTicketDate(t: any): string {
   const pEntries = (t.personnel_entries as any[]) || [];
   const shiftDate = entries[0]?.date || pEntries[0]?.date || null;
   return shiftDate || t.updated_at?.split("T")[0] || "";
+}
+
+/** Relative label for shift dates: Today / Yesterday / "X days ago" / formatted date */
+function relativeDateLabel(dateStr: string): string {
+  if (!dateStr) return "";
+  const today = getLocalDateString();
+  if (dateStr === today) return "Today";
+  const [ty, tm, td] = today.split("-").map(Number);
+  const [dy, dm, dd] = dateStr.split("-").map(Number);
+  if (!ty || !dy) return fmtDate(dateStr);
+  const diffDays = Math.round(
+    (Date.UTC(ty, tm - 1, td) - Date.UTC(dy, dm - 1, dd)) / 86_400_000
+  );
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays > 1 && diffDays < 7) return `${diffDays} days ago`;
+  return fmtDate(dateStr);
 }
 
 export function ShiftTicketQuickAccess({ open, onOpenChange }: Props) {
@@ -95,7 +112,9 @@ export function ShiftTicketQuickAccess({ open, onOpenChange }: Props) {
               <div className="space-y-2">
                 {latestPerTruck?.map((t) => {
                   const truckName = t.incident_trucks?.trucks?.name ?? t.equipment_type ?? "Truck";
-                  const dateDisplay = fmtDate(getTicketDate(t));
+                  const dateStr = getTicketDate(t);
+                  const dateDisplay = relativeDateLabel(dateStr);
+                  const isToday = dateStr === getLocalDateString();
                   return (
                     <button
                       key={t.id}
@@ -104,7 +123,12 @@ export function ShiftTicketQuickAccess({ open, onOpenChange }: Props) {
                     >
                       <TruckIcon className="h-4 w-4 text-primary shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{truckName}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-medium truncate">{truckName}</p>
+                          {isToday && (
+                            <span className="text-[9px] font-bold uppercase tracking-wider text-primary shrink-0">Today</span>
+                          )}
+                        </div>
                         <p className="text-[10px] text-muted-foreground truncate">
                           {[t.incident_name, dateDisplay].filter(Boolean).join(" - ")}
                         </p>
@@ -191,7 +215,8 @@ function HistoryList({ onTap, onBack }: { onTap: (t: any) => void; onBack: () =>
       )}
       {tickets?.map((t) => {
         const truckName = t.incident_trucks?.trucks?.name ?? t.equipment_type ?? "Truck";
-        const dateDisplay = fmtDate(getTicketDate(t));
+        const dateStr = getTicketDate(t);
+        const dateDisplay = relativeDateLabel(dateStr);
         return (
           <button
             key={t.id}

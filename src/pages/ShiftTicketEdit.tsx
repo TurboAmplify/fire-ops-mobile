@@ -2,6 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
 import { ShiftTicketForm } from "@/components/shift-tickets/ShiftTicketForm";
 import { useShiftTicket, useUpdateShiftTicket, useDuplicateShiftTicket } from "@/hooks/useShiftTickets";
@@ -11,7 +12,9 @@ import { useIncidentTruckCrew } from "@/hooks/useIncidentTruckCrew";
 import { useIncidentTrucks } from "@/hooks/useIncidentTrucks";
 import { useResourceOrders, useUpdateResourceOrderParsed } from "@/hooks/useResourceOrders";
 import { parseResourceOrderAI } from "@/services/resource-orders";
-import type { ShiftTicket } from "@/services/shift-tickets";
+import { syncTicketCrewToIncidentTruck } from "@/services/incident-truck-crew";
+import { getLocalDateString } from "@/lib/local-date";
+import type { ShiftTicket, PersonnelEntry } from "@/services/shift-tickets";
 
 export default function ShiftTicketEdit() {
   const { incidentId, incidentTruckId, ticketId } = useParams<{
@@ -20,6 +23,7 @@ export default function ShiftTicketEdit() {
     ticketId: string;
   }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { membership, isAdmin } = useOrganization();
   const { data: ticket, isLoading } = useShiftTicket(ticketId || "");
   const updateMutation = useUpdateShiftTicket(ticketId || "", incidentTruckId || "");
@@ -132,6 +136,48 @@ export default function ShiftTicketEdit() {
     // Persist backfilled values so PDFs and downstream views stay consistent
     const merged = applyBackfill(data);
     await updateMutation.mutateAsync(merged);
+
+    // Auto-sync ticket personnel back into incident_truck_crew when the ticket
+    // is dated today. Adds new operators, releases ones no longer present.
+    // Skipped for past-dated tickets so historical edits don't churn the roster.
+    try {
+      const today = getLocalDateString();
+      const ticketDates = new Set<string>();
+      const eqEntries = (merged.equipment_entries as { date?: string }[] | undefined) ?? [];
+      const peEntries = (merged.personnel_entries as PersonnelEntry[] | undefined) ?? [];
+      eqEntries.forEach((e) => e?.date && ticketDates.add(e.date));
+      peEntries.forEach((p) => p?.date && ticketDates.add(p.date));
+      const isTodaysTicket = ticketDates.has(today);
+
+      if (
+        isTodaysTicket &&
+        membership?.organizationId &&
+        incidentTruckId &&
+        peEntries.length > 0
+      ) {
+        const operatorNames = peEntries.map((p) => p.operator_name ?? "").filter(Boolean);
+        const result = await syncTicketCrewToIncidentTruck({
+          incidentTruckId,
+          organizationId: membership.organizationId,
+          ticketOperatorNames: operatorNames,
+        });
+        if (result.added > 0 || result.released > 0) {
+          queryClient.invalidateQueries({ queryKey: ["incident-truck-crew", incidentTruckId] });
+          const parts: string[] = [];
+          if (result.added > 0) parts.push(`${result.added} added`);
+          if (result.released > 0) parts.push(`${result.released} released`);
+          toast.success(`Truck crew updated: ${parts.join(", ")}`);
+        }
+        if (result.unmatched.length > 0) {
+          toast.warning(
+            `Couldn't match ${result.unmatched.length} operator${result.unmatched.length === 1 ? "" : "s"} to crew records: ${result.unmatched.join(", ")}. Add them in Crew first.`
+          );
+        }
+      }
+    } catch (err) {
+      console.error("Crew sync failed:", err);
+      // Sync failure should not block the save
+    }
   };
 
   const handleRefreshFromSources = async () => {
@@ -154,7 +200,14 @@ export default function ShiftTicketEdit() {
 
   const handleDuplicate = async () => {
     if (!ticket || !membership?.organizationId) return;
-    const newTicket = await duplicateMutation.mutateAsync({ ticket: ticket as ShiftTicket, organizationId: membership.organizationId });
+    const currentCrewNames = activeCrew
+      .map((c) => c.crew_members?.name?.trim())
+      .filter((n): n is string => !!n);
+    const newTicket = await duplicateMutation.mutateAsync({
+      ticket: ticket as ShiftTicket,
+      organizationId: membership.organizationId,
+      currentCrewNames,
+    });
     navigate(`/incidents/${incidentId}/trucks/${incidentTruckId}/shift-ticket/${newTicket.id}`);
   };
 
