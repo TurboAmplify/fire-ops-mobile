@@ -215,7 +215,8 @@ function HistoryList({ onTap, onBack }: { onTap: (t: any) => void; onBack: () =>
       )}
       {tickets?.map((t) => {
         const truckName = t.incident_trucks?.trucks?.name ?? t.equipment_type ?? "Truck";
-        const dateDisplay = fmtDate(getTicketDate(t));
+        const dateStr = getTicketDate(t);
+        const dateDisplay = relativeDateLabel(dateStr);
         return (
           <button
             key={t.id}
