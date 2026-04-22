@@ -112,7 +112,9 @@ export function ShiftTicketQuickAccess({ open, onOpenChange }: Props) {
               <div className="space-y-2">
                 {latestPerTruck?.map((t) => {
                   const truckName = t.incident_trucks?.trucks?.name ?? t.equipment_type ?? "Truck";
-                  const dateDisplay = fmtDate(getTicketDate(t));
+                  const dateStr = getTicketDate(t);
+                  const dateDisplay = relativeDateLabel(dateStr);
+                  const isToday = dateStr === getLocalDateString();
                   return (
                     <button
                       key={t.id}
@@ -121,7 +123,12 @@ export function ShiftTicketQuickAccess({ open, onOpenChange }: Props) {
                     >
                       <TruckIcon className="h-4 w-4 text-primary shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{truckName}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-medium truncate">{truckName}</p>
+                          {isToday && (
+                            <span className="text-[9px] font-bold uppercase tracking-wider text-primary shrink-0">Today</span>
+                          )}
+                        </div>
                         <p className="text-[10px] text-muted-foreground truncate">
                           {[t.incident_name, dateDisplay].filter(Boolean).join(" - ")}
                         </p>
