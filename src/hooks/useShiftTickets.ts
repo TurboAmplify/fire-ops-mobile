@@ -110,8 +110,8 @@ export function useLatestTicketPerTruck() {
 export function useDuplicateShiftTicket(incidentTruckId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ ticket, organizationId }: { ticket: ShiftTicket; organizationId: string }) =>
-      duplicateShiftTicket(ticket, organizationId),
+    mutationFn: ({ ticket, organizationId, currentCrewNames }: { ticket: ShiftTicket; organizationId: string; currentCrewNames?: string[] }) =>
+      duplicateShiftTicket(ticket, organizationId, currentCrewNames),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["shift-tickets", incidentTruckId] });
       qc.invalidateQueries({ queryKey: ["shift-tickets-recent"] });
