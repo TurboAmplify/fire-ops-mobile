@@ -4,10 +4,11 @@ import { useIncidents } from "@/hooks/useIncidents";
 import { useOrganization } from "@/hooks/useOrganization";
 import {
   Loader2, ChevronLeft, ChevronRight, Clock, DollarSign, Users, Lock, Flame, User,
-  FileText, Download, X, Settings as SettingsIcon, AlertTriangle, Printer,
+  FileText, Download, X, Settings as SettingsIcon, AlertTriangle, Printer, CalendarRange,
 } from "lucide-react";
 import { useState, useMemo } from "react";
-import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, subDays } from "date-fns";
+import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, subDays, parseISO } from "date-fns";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
