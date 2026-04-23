@@ -83,6 +83,8 @@ export default function Payroll() {
       return (data as any[]) ?? [];
     },
     enabled: isAdmin,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const compMap = useMemo(() => {
