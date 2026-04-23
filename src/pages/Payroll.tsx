@@ -302,8 +302,14 @@ export default function Payroll() {
                     <div className="text-right ml-3 shrink-0">
                       <p className="text-sm font-bold">${line.grossPay.toFixed(2)}</p>
                       <p className="text-[11px] text-muted-foreground">
-                        {line.totalHours.toFixed(1)} hrs
-                        {line.overtimeHours > 0 && <span className="text-warning"> · {line.overtimeHours.toFixed(1)} OT</span>}
+                        {line.payMethod === "daily" && line.shiftCount != null ? (
+                          <>{line.shiftCount} {line.shiftCount === 1 ? "shift" : "shifts"} · {line.totalHours.toFixed(1)} hrs</>
+                        ) : (
+                          <>
+                            {line.totalHours.toFixed(1)} hrs
+                            {line.overtimeHours > 0 && <span className="text-warning"> · {line.overtimeHours.toFixed(1)} OT</span>}
+                          </>
+                        )}
                       </p>
                     </div>
                   </div>
