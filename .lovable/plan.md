@@ -1,164 +1,100 @@
 
 
-# Payroll v2 — Withholdings, Paystubs, Access Control
+# Coyote Flats backfill + Engine Boss daily-rate support
 
-## What's already in place (preserved)
-- `useAppMode()` reads `organizations.modules_enabled` JSONB → already overrides per-org module flags including `payroll`.
-- `<AdminGate>` + `<ModuleGate module="payroll">` already wrap the `/payroll` route.
-- Nav bar already hides Payroll tab when `payroll` module is off OR user is not admin.
-- `aggregateCrewPayroll()` in `src/lib/payroll.ts` correctly handles weekly OT, H&W on first 40, Mon–Sun weeks. We extend it, not replace it.
-- `platform_settings` table exists (already used for app background) — perfect for the global kill-switch.
+Two pieces: (1) add daily-rate-per-shift as a payment method for crew, and (2) load the Coyote Flats data using it.
 
-## 1. Access control (Super Admin → Org Admin → Crew)
+## Part 1 — Daily rate as a payment method (schema + engine + UI)
 
-**Global kill-switch (Super Admin only)**
-- New row in `platform_settings`: `key = 'payroll_global_enabled'`, `value = { enabled: true }` (default on).
-- Add a "Payroll System" toggle to `SuperAdmin.tsx` page.
-- `useAppMode()` extends to read this value. If global off → `modules.payroll = false` for everyone, no exceptions.
+### Schema (new migration)
+Add to `crew_compensation`:
 
-**Per-organization toggle (Super Admin only)**
-- Already supported via `organizations.modules_enabled.payroll`. No schema change.
-- Add a "Payroll" toggle in `SuperAdminOrgDetail.tsx` that writes `modules_enabled = jsonb_set(modules_enabled, '{payroll}', 'true'/'false')`.
-- One-time data migration: set `modules_enabled.payroll = true` for **Dry Lightning Wildland Firefighters LLC**, leave others empty (which falls back to `MODE_CONFIG.contractor.payroll = true`).
-  - **Important:** since the default for contractors is currently `true`, we'll also flip the contractor default to `false` so all *other* contractor orgs are disabled by default (per your spec).
+| Column | Type | Default | Purpose |
+|---|---|---|---|
+| `pay_method` | text | `'hourly'` | `'hourly'` or `'daily'` |
+| `daily_rate` | numeric | `null` | Flat $ per shift when `pay_method = 'daily'` |
 
-**Final visibility rules** (already enforced by `useVisibleSelectedTabs` + `ModuleGate` + `AdminGate`):
-- Crew users: never see payroll, anywhere.
-- Org admins: see payroll only if module is on for their org AND global switch is on.
-- Super admin: sees the toggles, sees payroll inside any org they're a member of.
+No data loss — existing rows stay on `'hourly'`.
 
-## 2. Org-level withholding defaults
+### Payroll engine (`src/lib/payroll.ts`)
+Extend `CompensationLite` with `pay_method` and `daily_rate`. In `aggregateCrewPayroll`:
 
-New table `org_payroll_settings`:
+- **Hourly (existing behavior, unchanged)**: regular × rate, OT 1.5× over 40, H&W on first 40.
+- **Daily**: count distinct shift dates per crew member in range; gross = `shifts × daily_rate`. No OT, no H&W. Hours still tracked for display, but pay is flat.
 
-| Column | Default |
-|---|---|
-| `organization_id` (PK) | — |
-| `federal_pct` | `10.00` |
-| `social_security_pct` | `6.20` |
-| `medicare_pct` | `1.45` |
-| `state_pct` | `0.00` |
-| `state_enabled` | `false` |
-| `extra_withholding_default` | `0.00` |
+`CrewPayrollLine` gets two new optional fields: `payMethod: 'hourly' | 'daily'` and `shiftCount` (only set on daily). Hourly fields stay zero on daily rows so existing UI doesn't break — daily rows just show the flat amount and shift count instead of the breakdown.
 
-RLS: admin read/write only, scoped by org. Edited from a new section on the existing **Payroll Settings** screen (admin-only).
+### UI changes
 
-## 3. Per-employee withholding profile
+**Crew member form (`CrewMemberForm.tsx`)**
+- Role becomes a dropdown: Engine Boss, Crew Boss, FF1, FF2, Engineer, Other (free-text). The exact list lives in one constant so we add roles in one place later.
+- New "Payment Method" segmented control under the rates section: **Hourly** | **Daily**.
+  - Hourly selected → show Hourly Rate + H&W Rate (today's UI).
+  - Daily selected → show single "Daily Rate ($)" input, hide H&W.
+- Admin-only, mobile-first (full-width 44px+ controls, inline switch — no modal).
 
-Extend `crew_compensation` (already exists, already admin-only RLS). Add columns:
+**Payroll page (`Payroll.tsx`)**
+- Daily-rate crew rows show: `N shifts × $1,000 = $X,XXX` instead of the regular/OT/H&W breakdown.
+- Compliance banner unchanged. Deductions card still works (federal/SS/Medicare apply to gross regardless of method).
+- Paystub for daily-rate employees lists each shift date instead of an hours table.
 
-| Column | Type | Default |
-|---|---|---|
-| `filing_status` | text | `'single'` (`single` \| `married_jointly`) |
-| `dependents_count` | int | `0` |
-| `use_default_withholding` | bool | `true` |
-| `federal_pct_override` | numeric | `null` |
-| `extra_withholding` | numeric | `0` |
-| `state_pct_override` | numeric | `null` |
-| `social_security_exempt` | bool | `false` |
-| `medicare_exempt` | bool | `false` |
-| `other_deductions` | numeric | `0` |
-| `notes` | text | `null` |
+### What this protects
+- Mixed contractor model preserved: org admins choose per-employee.
+- No change to Brandon/Nevaeh/Sheldon (FF2 hourly).
+- App Store-ready: pure additive change, no removed features, mobile-first, no new permissions.
 
-UI: extend the existing crew member edit screen (`CrewMemberForm.tsx`) with a collapsible **"Payroll Profile"** card, admin-only.
+## Part 2 — Coyote Flats backfill (data load)
 
-## 4. Calculation engine (extends `src/lib/payroll.ts`)
+Same plan as before, with two updates:
 
-New helper `calcDeductions({ grossPay, regularPay, overtimePay, profile, orgDefaults })` returns:
+1. **Justin Richardson is the EB on DL 62.** Confirmed in the roster.
+2. Both Engine Bosses (Dustin Aldrich + Justin Richardson) get `pay_method = 'daily'`, `daily_rate = 1000.00` set on their `crew_compensation` rows before the tickets are inserted.
 
-```text
-{ federal, socialSecurity, medicare, state, other, total, net }
-```
+### Data load steps
+1. Seed `org_payroll_settings` for Dry Lightning (10% / 6.2% / 1.45% / 0% state).
+2. Upsert `crew_compensation` for **Dustin Aldrich**: `pay_method='daily'`, `daily_rate=1000`.
+3. Upsert `crew_compensation` for **Justin Richardson**: `pay_method='daily'`, `daily_rate=1000`.
+4. Assign **DL 31** to the Coyote Flats incident (`incident_trucks` insert).
+5. Crew rosters on `incident_truck_crew`:
+   - DL 31: Dustin (EB), Brandon (FF2), Nevaeh (FF2), Sheldon (FF2)
+   - DL 62: Justin (EB)
+6. Insert **4 shift tickets**, status `final`:
 
-Rules:
-- Each tax = `(applicable wages) × percentage`. SS and Medicare apply to gross unless exempt.
-- `federal_pct` resolves: profile override → org default.
-- `extra_withholding` is a flat dollar add to federal.
-- All amounts rounded to cents at display time, never during accumulation.
+| # | Date | Truck | Hrs | Personnel |
+|---|---|---|---|---|
+| 1 | 2026-03-19 | DL 31 | 12 | Dustin (EB), Brandon, Nevaeh |
+| 2 | 2026-03-20 | DL 31 | 14 | Dustin, Brandon, Nevaeh |
+| 3 | 2026-03-22 | DL 62 | 12 | Justin (EB) |
+| 4 | 2026-03-22 | DL 31 | 13 | Dustin, Brandon, Sheldon |
 
-`aggregateCrewPayroll()` gets a new optional `withholdings` arg — when present, each `CrewPayrollLine` gains a `deductions` block and `netPay`.
+### What you'll see in Payroll → By Crew → All Time
+- **Dustin Aldrich (EB)** — 3 shifts × $1,000 = **$3,000 gross**
+- **Justin Richardson (EB)** — 1 shift × $1,000 = **$1,000 gross**
+- **Brandon Aldrich (FF2)** — 39 hrs × $28.73 + H&W = $1,312.62 gross
+- **Nevaeh Smith (FF2)** — 26 hrs × $28.73 + H&W = $875.08 gross
+- **Sheldon Sundstrom (FF2)** — 13 hrs × $28.73 + H&W = $437.54 gross
 
-## 5. Payroll page UI (mobile-first, extends existing screen)
+By Fire → Coyote Flats shows the same numbers grouped under the incident. Each row expands to deductions + net pay, and "View Paystub" / "Download PDF" works.
 
-Existing tabs (This Week / Pay Period / All Time) and toggle (By Crew / By Fire) stay.
+## Files touched
 
-When a crew row is expanded, add three stacked cards below the existing Gross Pay block:
+**Migration (1)**: add 2 columns to `crew_compensation`.
 
-```text
-┌─ Deductions ──────────────────┐
-│  Federal (10%)        −$184.74│
-│  Social Security (6.2%) −$114.54│
-│  Medicare (1.45%)      −$26.79│
-│  State (0%)             $0.00 │
-│  Other                  $0.00 │
-│  Extra withholding      $0.00 │
-│  ───────────────────────────  │
-│  Total Deductions    −$326.07 │
-└───────────────────────────────┘
+**Edited code (3)**:
+- `src/lib/payroll.ts` — daily-method branch in aggregator; new fields on `CompensationLite` and `CrewPayrollLine`.
+- `src/components/crew/CrewMemberForm.tsx` — role dropdown, payment method toggle, conditional rate inputs.
+- `src/pages/Payroll.tsx` — daily-rate row rendering (shift count × rate).
+- `src/components/payroll/Paystub.tsx` — daily-rate variant (shift list instead of hours table).
 
-┌─ Net Pay ─────────────────────┐
-│           $1,521.13           │
-└───────────────────────────────┘
+**Data inserts (separate, after schema is live)**:
+- `org_payroll_settings`: 1 row
+- `crew_compensation`: 2 upserts (Dustin, Justin)
+- `incident_trucks`: 1 row (DL 31 → Coyote Flats)
+- `incident_truck_crew`: 5 rows
+- `shift_tickets`: 4 rows
 
-[ View Paystub ]  [ Download PDF ]
-```
+**No changes** to bottom nav, access control, OT/H&W hourly logic, withholding engine, or anything outside the payroll/crew surface.
 
-Compliance banner pinned to the top of the page:
-> "Estimated Withholding — Not Official Tax Calculation"
-
-## 6. Paystub (PDF + on-screen)
-
-New `src/components/payroll/Paystub.tsx` — clean printable view with:
-- Employer (org), employee name, role, pay period, pay date
-- Hours table: regular hrs × rate, OT hrs × 1.5x rate
-- Gross → itemized deductions → net
-- Per-incident hours summary if pay covers multiple fires
-- Same disclaimer at bottom
-
-PDF generation: reuse the existing `jspdf` + `html2canvas` pattern from `generateOF297Pdf.ts`. New file: `src/components/payroll/generatePaystubPdf.ts`. "Download PDF" triggers it; "View Paystub" opens a full-screen modal with the same component + a Print button that calls `window.print()`.
-
-## 7. Reporting
-
-The existing By Crew / By Fire toggle + incident filter + date ranges already cover: employee, incident, fire, pay period, all incidents combined. We add:
-
-- **Org-wide totals card** at the top of "All Time" view: total gross, total deductions, total net for the org.
-- **Crew filter dropdown** (single-select) to drill into one person across all fires.
-- The existing By-Fire mode gets a deductions row per crew under each incident.
-
-## 8. Data integrity
-
-For v1, payroll is still **live-derived** from shift tickets + the *current* crew_compensation row (matches existing behavior — keeps complexity down, avoids a snapshot table).
-
-Guard rail: when a profile is edited, show a warning toast: *"Withholding changes apply to this and all future payroll views. Past PDFs you've already downloaded are unchanged."*
-
-(If you later need locked historical pay runs, we add a `pay_runs` snapshot table in a follow-up — the engine is already split out so it'll plug in cleanly.)
-
-## Technical changes summary
-
-**New migration (schema only):**
-- New table `org_payroll_settings` + RLS
-- Add 10 columns to `crew_compensation`
-
-**New data migration (one-time):**
-- `INSERT INTO platform_settings(key, value) VALUES ('payroll_global_enabled', '{"enabled":true}')`
-- `UPDATE organizations SET modules_enabled = jsonb_set(modules_enabled, '{payroll}', 'true') WHERE name = 'Dry Lightning Wildland Firefighters LLC'`
-- Flip `MODE_CONFIG.contractor.payroll` default to `false` in `src/lib/app-mode.ts`
-
-**New files:**
-- `src/hooks/useOrgPayrollSettings.ts`
-- `src/components/payroll/WithholdingProfileForm.tsx`
-- `src/components/payroll/Paystub.tsx`
-- `src/components/payroll/generatePaystubPdf.ts`
-- `src/components/payroll/PayrollSettingsCard.tsx`
-- `src/components/super-admin/PayrollAccessToggle.tsx`
-
-**Edited files:**
-- `src/lib/payroll.ts` — add `calcDeductions` + extend `CrewPayrollLine` with `deductions` & `netPay`
-- `src/lib/app-mode.ts` — read global kill-switch; flip contractor default
-- `src/pages/Payroll.tsx` — deductions/net/paystub UI, compliance banner, crew filter, org totals
-- `src/pages/SuperAdmin.tsx` — global toggle
-- `src/pages/SuperAdminOrgDetail.tsx` — per-org payroll toggle
-- `src/components/crew/CrewMemberForm.tsx` — withholding profile section (admin only)
-
-No changes to bottom nav code (already filters on module + adminOnly correctly). No changes to existing OT / H&W / weekly logic.
+## Resource-order completeness reminder
+Agreement number is still missing for Coyote Flats. Not blocking — but adding the season's master agreement number to the Dry Lightning org or this incident will pre-fill it on every future ticket.
 
