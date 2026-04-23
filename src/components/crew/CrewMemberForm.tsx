@@ -27,11 +27,14 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
 
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
+  const [roleSelection, setRoleSelection] = useState<string>("");
   const [phone, setPhone] = useState("");
   const [active, setActive] = useState(true);
   const [notes, setNotes] = useState("");
+  const [payMethod, setPayMethod] = useState<"hourly" | "daily">("hourly");
   const [hourlyRate, setHourlyRate] = useState("");
   const [hwRate, setHwRate] = useState("");
+  const [dailyRate, setDailyRate] = useState("");
   const [withholding, setWithholding] = useState<WithholdingProfileValues>(EMPTY_WITHHOLDING);
 
   const mode = useAppMode();
