@@ -34,7 +34,9 @@ export const MODE_CONFIG: Record<OrgType, ModeConfig> = {
     modules: {
       resourceOrders: true,
       shiftTickets: true,
-      payroll: true,
+      // Payroll v2: disabled by default for new contractor orgs.
+      // Super admin opts each org in via organizations.modules_enabled.payroll.
+      payroll: false,
       runReport: false,
       ctr: false,
       training: false,
@@ -87,9 +89,31 @@ const DEFAULT_MODE: AppMode = {
   loading: true,
 };
 
+// Global payroll kill-switch (super admin controlled)
+function usePayrollGlobalEnabled(): boolean {
+  const { data } = useQuery({
+    queryKey: ["platform-settings", "payroll_global_enabled"],
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("platform_settings")
+        .select("value")
+        .eq("key", "payroll_global_enabled")
+        .maybeSingle();
+      if (error) {
+        // Non-admins can't read platform_settings — assume enabled (per-org gating still applies)
+        return { enabled: true };
+      }
+      return (data?.value as any) ?? { enabled: true };
+    },
+  });
+  return data?.enabled !== false;
+}
+
 export function useAppMode(): AppMode {
   const { membership } = useOrganization();
   const orgId = membership?.organizationId;
+  const payrollGlobalEnabled = usePayrollGlobalEnabled();
 
   const { data, isLoading } = useQuery({
     queryKey: ["org-mode", orgId],
@@ -119,6 +143,11 @@ export function useAppMode(): AppMode {
     }
     modules = { ...modules, ...overrides };
 
+    // Global kill-switch: if disabled platform-wide, payroll is off for everyone.
+    if (!payrollGlobalEnabled) {
+      modules.payroll = false;
+    }
+
     return {
       orgType,
       modules,
@@ -126,5 +155,5 @@ export function useAppMode(): AppMode {
       acceptsAssignments,
       loading: isLoading,
     };
-  }, [orgId, data, isLoading]);
+  }, [orgId, data, isLoading, payrollGlobalEnabled]);
 }

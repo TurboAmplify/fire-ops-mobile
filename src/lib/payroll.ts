@@ -36,6 +36,113 @@ export interface CompensationLite {
   hw_rate: number | null;
 }
 
+// === Withholding profile / org defaults =====================================
+
+export interface OrgPayrollDefaults {
+  federal_pct: number;        // e.g. 10
+  social_security_pct: number; // 6.2
+  medicare_pct: number;        // 1.45
+  state_pct: number;           // 0
+  state_enabled: boolean;
+  extra_withholding_default: number; // dollars
+}
+
+export const DEFAULT_ORG_PAYROLL: OrgPayrollDefaults = {
+  federal_pct: 10,
+  social_security_pct: 6.2,
+  medicare_pct: 1.45,
+  state_pct: 0,
+  state_enabled: false,
+  extra_withholding_default: 0,
+};
+
+export interface WithholdingProfile {
+  filing_status?: "single" | "married_jointly" | null;
+  dependents_count?: number | null;
+  use_default_withholding?: boolean | null;
+  federal_pct_override?: number | null;
+  extra_withholding?: number | null;
+  state_pct_override?: number | null;
+  social_security_exempt?: boolean | null;
+  medicare_exempt?: boolean | null;
+  other_deductions?: number | null;
+  notes?: string | null;
+}
+
+export interface DeductionBreakdown {
+  federalPct: number;
+  federal: number;
+  ssPct: number;
+  socialSecurity: number;
+  medicarePct: number;
+  medicare: number;
+  statePct: number;
+  state: number;
+  extraWithholding: number;
+  other: number;
+  total: number;
+}
+
+export interface CalcDeductionsInput {
+  grossPay: number;
+  profile?: WithholdingProfile | null;
+  orgDefaults: OrgPayrollDefaults;
+}
+
+/**
+ * Simplified percentage-based withholding. Not an official tax calculation.
+ * - SS / Medicare apply to gross pay unless the employee is exempt.
+ * - Federal % resolves: profile override (when use_default is false) → org default.
+ * - Extra withholding is a flat dollar add on top of federal.
+ * - State % resolves: profile override → org default (only when state enabled).
+ */
+export function calcDeductions({ grossPay, profile, orgDefaults }: CalcDeductionsInput): DeductionBreakdown {
+  const useDefault = profile?.use_default_withholding ?? true;
+
+  const federalPct = !useDefault && profile?.federal_pct_override != null
+    ? Number(profile.federal_pct_override)
+    : Number(orgDefaults.federal_pct);
+
+  const ssPct = profile?.social_security_exempt ? 0 : Number(orgDefaults.social_security_pct);
+  const medicarePct = profile?.medicare_exempt ? 0 : Number(orgDefaults.medicare_pct);
+
+  let statePct = 0;
+  if (orgDefaults.state_enabled) {
+    statePct = !useDefault && profile?.state_pct_override != null
+      ? Number(profile.state_pct_override)
+      : Number(orgDefaults.state_pct);
+  }
+
+  const extraWithholding = profile?.extra_withholding != null
+    ? Number(profile.extra_withholding)
+    : Number(orgDefaults.extra_withholding_default ?? 0);
+
+  const other = Number(profile?.other_deductions ?? 0);
+
+  const federal = (grossPay * federalPct) / 100 + extraWithholding;
+  const socialSecurity = (grossPay * ssPct) / 100;
+  const medicare = (grossPay * medicarePct) / 100;
+  const state = (grossPay * statePct) / 100;
+
+  const total = federal + socialSecurity + medicare + state + other;
+
+  return {
+    federalPct,
+    federal,
+    ssPct,
+    socialSecurity,
+    medicarePct,
+    medicare,
+    statePct,
+    state,
+    extraWithholding,
+    other,
+    total,
+  };
+}
+
+// === Aggregation ============================================================
+
 export interface IncidentBreakdown {
   incidentId: string | null;
   incidentName: string;
@@ -62,6 +169,9 @@ export interface CrewPayrollLine {
   overtimePay: number;
   grossPay: number;
   byIncident: IncidentBreakdown[];
+  // Withholding (optional — only populated when withholdings provided)
+  deductions?: DeductionBreakdown;
+  netPay?: number;
 }
 
 export interface IncidentPayrollLine {
@@ -84,6 +194,8 @@ export interface PayrollTotals {
   hours: number;
   otHours: number;
   gross: number;
+  deductions: number;
+  net: number;
 }
 
 interface AggregateOptions {
@@ -93,6 +205,11 @@ interface AggregateOptions {
   rangeStart: Date | null;
   rangeEnd: Date | null;
   incidentFilter: string;
+  // Optional withholding context. When provided, each line gets deductions+netPay.
+  withholdings?: {
+    profiles: Map<string, WithholdingProfile>;
+    orgDefaults: OrgPayrollDefaults;
+  };
 }
 
 interface WeekBucket {
@@ -123,13 +240,11 @@ function weekKey(dateStr: string): string {
  * OT is computed per Mon–Sun week so multi-week ranges sum correctly.
  */
 export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] {
-  const { shiftTickets, crewMembers, compensation, rangeStart, rangeEnd, incidentFilter } = opts;
+  const { shiftTickets, crewMembers, compensation, rangeStart, rangeEnd, incidentFilter, withholdings } = opts;
 
-  // name -> crew
   const nameMap = new Map<string, CrewMemberLite>();
   crewMembers.forEach((cm) => nameMap.set(cm.name.toLowerCase().trim(), cm));
 
-  // crewId -> weekKey -> WeekBucket
   const buckets = new Map<string, Map<string, WeekBucket>>();
 
   shiftTickets.forEach((st) => {
@@ -184,7 +299,6 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
     let hwPay = 0;
     let overtimePay = 0;
 
-    // incidentId -> aggregate breakdown across all weeks
     const incAgg = new Map<
       string,
       { incidentName: string; totalHours: number; regularHours: number; overtimeHours: number }
@@ -202,9 +316,6 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
       hwPay += wkReg * hwRate;
       overtimePay += wkOT * hourlyRate * 1.5;
 
-      // Distribute the week's reg/OT across incidents proportionally to that
-      // week's hours per incident. This keeps per-incident totals consistent
-      // with weekly OT calculation (no incident gets "free" OT).
       bucket.byIncident.forEach((inc, incidentId) => {
         const share = wkTotal > 0 ? inc.hours / wkTotal : 0;
         const incReg = wkReg * share;
@@ -244,7 +355,9 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
     });
     byIncident.sort((a, b) => b.grossPay - a.grossPay);
 
-    lines.push({
+    const grossPay = regularPay + hwPay + overtimePay;
+
+    const line: CrewPayrollLine = {
       crewMemberId: cm.id,
       name: cm.name,
       role: cm.role,
@@ -256,9 +369,18 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
       regularPay,
       hwPay,
       overtimePay,
-      grossPay: regularPay + hwPay + overtimePay,
+      grossPay,
       byIncident,
-    });
+    };
+
+    if (withholdings) {
+      const profile = withholdings.profiles.get(cm.id) ?? null;
+      const deductions = calcDeductions({ grossPay, profile, orgDefaults: withholdings.orgDefaults });
+      line.deductions = deductions;
+      line.netPay = grossPay - deductions.total;
+    }
+
+    lines.push(line);
   });
 
   return lines.sort((a, b) => b.grossPay - a.grossPay || b.totalHours - a.totalHours);
@@ -310,7 +432,9 @@ export function sumTotals(lines: CrewPayrollLine[]): PayrollTotals {
       hours: acc.hours + l.totalHours,
       otHours: acc.otHours + l.overtimeHours,
       gross: acc.gross + l.grossPay,
+      deductions: acc.deductions + (l.deductions?.total ?? 0),
+      net: acc.net + (l.netPay ?? l.grossPay),
     }),
-    { hours: 0, otHours: 0, gross: 0 }
+    { hours: 0, otHours: 0, gross: 0, deductions: 0, net: 0 }
   );
 }
