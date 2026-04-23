@@ -37,6 +37,12 @@ function useAllShiftTickets() {
       if (error) throw error;
       return data as unknown as ShiftTicketRow[];
     },
+    // Payroll is read-heavy and aggregates from many sources — always pull fresh
+    // on mount so newly-added shift tickets show up immediately, instead of
+    // waiting on the global 5-minute stale window from the persisted cache.
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -77,6 +83,8 @@ export default function Payroll() {
       return (data as any[]) ?? [];
     },
     enabled: isAdmin,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const compMap = useMemo(() => {
