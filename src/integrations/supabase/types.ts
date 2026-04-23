@@ -111,6 +111,7 @@ export type Database = {
       crew_compensation: {
         Row: {
           crew_member_id: string
+          daily_rate: number | null
           dependents_count: number
           extra_withholding: number
           federal_pct_override: number | null
@@ -121,6 +122,7 @@ export type Database = {
           notes: string | null
           organization_id: string
           other_deductions: number
+          pay_method: string
           social_security_exempt: boolean
           state_pct_override: number | null
           updated_at: string
@@ -128,6 +130,7 @@ export type Database = {
         }
         Insert: {
           crew_member_id: string
+          daily_rate?: number | null
           dependents_count?: number
           extra_withholding?: number
           federal_pct_override?: number | null
@@ -138,6 +141,7 @@ export type Database = {
           notes?: string | null
           organization_id: string
           other_deductions?: number
+          pay_method?: string
           social_security_exempt?: boolean
           state_pct_override?: number | null
           updated_at?: string
@@ -145,6 +149,7 @@ export type Database = {
         }
         Update: {
           crew_member_id?: string
+          daily_rate?: number | null
           dependents_count?: number
           extra_withholding?: number
           federal_pct_override?: number | null
@@ -155,6 +160,7 @@ export type Database = {
           notes?: string | null
           organization_id?: string
           other_deductions?: number
+          pay_method?: string
           social_security_exempt?: boolean
           state_pct_override?: number | null
           updated_at?: string
