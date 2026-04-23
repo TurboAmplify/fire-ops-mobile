@@ -1,64 +1,91 @@
 
 
-# App Store Readiness — Final Plan
+# Payroll Review & Enhancements
 
-## Decisions locked in
+## Audit results (what's already correct)
 
-1. **"Coming Soon" pages** → Option A: remove the route, page, and any nav entries entirely. (Also applies to `RunReport.tsx` — same "Coming Soon" issue.)
-2. **iOS Info.plist setup** → adapted for **Despia** (no Mac/Xcode). Despia accepts a config file at the project root that injects the iOS permission strings during their build. I'll create `despia.json` with the three required strings so you don't have to touch native code.
-3. **og:image** → replace the stale Lovable preview screenshot with a professionally generated FireOps HQ social card image, hosted in the project at `/og-image.png`.
-
-## What I'll change in code
-
-| File | Change |
+| Requirement | Status |
 |---|---|
-| `src/pages/CrewTimeReport.tsx` | Delete |
-| `src/pages/RunReport.tsx` | Delete (also "Coming Soon") |
-| `src/App.tsx` | Remove `/ctr` and `/run-reports` routes + imports |
-| `src/components/settings/NavBarCustomizer.tsx` | Remove `ctr` and `runReport` tab options |
-| `src/components/ModuleGate.tsx` | Remove `ctr` and `runReport` modules |
-| `src/hooks/useOrgSettings.ts` (if module flags live here) | Remove `ctr` / `runReport` defaults |
-| `src/pages/Settings.tsx` | Replace hardcoded `"1.0.0"` with version from `package.json` |
-| `index.html` | Replace stale og:image URL with `/og-image.png` |
-| `public/og-image.png` | New — professional 1200×630 FireOps HQ social card |
-| `public/_redirects` | Delete (Lovable hosting handles SPA fallback natively) |
-| `despia.json` | New — at project root, contains iOS permission strings + app metadata for Despia's build pipeline |
-| `docs/mobile-store-readiness.md` | Mark completed items, note Despia path |
-| `docs/app-review-notes.md` | Add Sign in with Apple note + pre-submission checklist |
-| `docs/app-privacy-questionnaire.md` | New — exact answers to paste into App Store Connect's privacy questionnaire |
-| `docs/despia-setup.md` | New — Despia-specific build/submission walkthrough |
+| OT = 1.5x **base only** (no H&W on OT) | Correct (line 169) |
+| H&W applies to **first 40 hrs only** | Correct (line 168) |
+| Week = **Monday–Sunday** | Correct (`weekStartsOn: 1`) |
+| Payroll populated from **shift ticket personnel entries** | Correct |
+| Admin-only access | Correct |
 
-## How the Despia path works (replaces `npx cap` steps)
+## Gaps to fix
 
-Despia takes your published web app URL and wraps it as a native iOS/Android app. The three iOS permission strings Apple requires get configured in Despia's dashboard (or via `despia.json`):
+1. **Default rates are wrong.** Current crew_compensation rows are $28.50 base / $5.65 H&W. Per your reference: **$28.73 base / $4.93 H&W** (~$33.66 total).
+2. **No "all fires" total view** — page is locked to one week at a time. You can't see season totals.
+3. **No per-incident breakdown per crew member** — when you expand a crew row, it only shows weekly totals, not which fires those hours came from.
+4. **Sort by fire is partial** — there's an incident filter, but no per-fire subtotals or "view by fire" mode.
 
-- `NSCameraUsageDescription` — for receipt/truck/inspection/signature photos
-- `NSPhotoLibraryUsageDescription` — for picking existing images
-- `NSPhotoLibraryAddUsageDescription` — for saving exported PDFs
+## Plan
 
-I'll put the exact strings in `despia.json` and in `docs/despia-setup.md` with step-by-step instructions for the Despia dashboard, so you can copy-paste them in either place.
+### 1. Update default rates
+- Bulk-update existing `crew_compensation` rows to **$28.73 / $4.93** (only rows still at the old $28.50 / $5.65 — won't touch any custom rates already set).
+- Update org `default_hw_rate` to **4.93**.
+- Update memory file to reflect new defaults.
 
-## What only you can do
+### 2. Add view modes to Payroll page
+Add a tab toggle at the top:
 
-1. In Despia: paste the three permission strings (from `despia.json` or `docs/despia-setup.md`)
-2. In Despia: upload the 1024×1024 app icon from `public/icon-512.png` (or upscale)
-3. Create the `appreview@fireopshq.com` demo account in your live app and seed it with the data described in `docs/app-review-notes.md`
-4. In App Store Connect:
-   - Privacy Policy URL: `https://fire-buddy-mobile.lovable.app/privacy`
-   - Support URL: `https://fire-buddy-mobile.lovable.app/support`
-   - Fill out App Privacy questionnaire using `docs/app-privacy-questionnaire.md`
-   - Upload screenshots from `public/icons/store/`
-   - Paste reviewer notes from `docs/app-review-notes.md`
+```text
+┌─────────────────────────────────────────────┐
+│  [ This Week ]  [ Pay Period ]  [ All Time ] │
+└─────────────────────────────────────────────┘
+```
 
-## Rejection risk
+- **This Week** — current Mon–Sun view (unchanged behavior)
+- **Pay Period** — pick any custom date range (defaults to current 2-week period)
+- **All Time** — every shift ticket entry, season-to-date totals
 
-- **Before changes:** ~70% (the two "Coming Soon" pages alone are near-certain rejection under Guideline 2.1)
-- **After this plan + your steps in Despia/App Store Connect:** ~10–15% (normal first-submission baseline)
+OT calculation stays **per Mon–Sun week** in all modes (so "All Time" sums each week's OT correctly — never lumps 200 hrs into one OT bucket).
 
-## One open item — confirm before I start
+### 3. Per-incident breakdown on crew expand
+When you tap a crew member to expand, show their hours broken down by fire:
 
-The og:image will be generated at 1200×630 with FireOps HQ branding (dark theme, fire-orange accent, app name + tagline "Wildfire Operations Management"). Want me to:
+```text
+Les Madson                    $1,847.20
+40 reg + 12 OT hrs
+─────────────────────────────────
+By Fire:
+  Dry Lightning      32 hrs    $1,108.16
+  Pine Ridge         20 hrs    $  739.04
+─────────────────────────────────
+Base Rate: $28.73/hr
+H&W: $4.93/hr (first 40 hrs)
+Regular Pay: $1,149.20
+H&W:           $197.20
+OT (1.5x):     $517.14
+─────────────────────────
+Gross:       $1,863.54
+```
 
-- **a)** Generate it directly now with your existing brand colors, or
-- **b)** Show you 2–3 style options first to pick from?
+### 4. "View by Fire" mode
+Add a second toggle next to the date-range tabs:
+
+```text
+[ By Crew ]  [ By Fire ]
+```
+
+- **By Crew** (default, current view) — list of crew with totals
+- **By Fire** — list of incidents, each expandable to show every crew member who logged hours on that fire + per-fire subtotal
+
+This gives you both angles: "what does each person get paid?" and "what does each fire cost in labor?"
+
+## Technical details
+
+- All changes client-side except a single migration to bump rate defaults.
+- Aggregation logic moves into a small helper that groups personnel entries by `(crew_member_id, incident_id, week_start)` so OT is always weekly even in all-time view.
+- Date range respects local timezone (uses existing `local-date.ts` helpers).
+- No schema changes — `crew_compensation` and `shift_tickets.personnel_entries` already have everything we need.
+- Files touched:
+  - `src/pages/Payroll.tsx` — add view tabs, by-fire mode, per-incident breakdown
+  - `src/lib/payroll.ts` (new) — pure aggregation/calc helpers + tests-friendly
+  - 1 migration: update default rates
+  - `.lovable/memory/features/payroll.md` — update rate defaults
+
+## One thing to confirm before I start
+
+The rate update will only touch crew_compensation rows that are currently at the old default ($28.50 / $5.65). Any rows you've manually customized to a different rate will be left alone. Sound right?
 
