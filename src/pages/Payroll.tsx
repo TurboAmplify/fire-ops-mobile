@@ -307,6 +307,57 @@ export default function Payroll() {
           </div>
         )}
 
+        {/* Jump to week with activity */}
+        <Sheet open={weekPickerOpen} onOpenChange={setWeekPickerOpen}>
+          <SheetTrigger asChild>
+            <button
+              type="button"
+              className="w-full flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium touch-target active:scale-[0.99]"
+            >
+              <span className="flex items-center gap-2">
+                <CalendarRange className="h-4 w-4 text-primary" />
+                Jump to week with activity
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {activeWeeks.length} {activeWeeks.length === 1 ? "week" : "weeks"}
+              </span>
+            </button>
+          </SheetTrigger>
+          <SheetContent side="bottom" className="max-h-[70vh] overflow-y-auto rounded-t-2xl">
+            <SheetHeader className="text-left">
+              <SheetTitle className="text-base">Active Weeks</SheetTitle>
+              <p className="text-xs text-muted-foreground">
+                Only weeks with logged hours for the current filter.
+              </p>
+            </SheetHeader>
+            <div className="mt-3 space-y-1.5">
+              {activeWeeks.length === 0 && (
+                <p className="text-sm text-muted-foreground py-8 text-center">
+                  No weeks with hours for this filter.
+                </p>
+              )}
+              {activeWeeks.map((w) => {
+                const we = endOfWeek(w.weekStart, { weekStartsOn: 1 });
+                return (
+                  <button
+                    key={w.weekStart.toISOString()}
+                    onClick={() => jumpToWeek(w.weekStart)}
+                    className="w-full flex items-center justify-between rounded-xl border border-border/60 bg-card px-4 py-3 text-left active:scale-[0.99] touch-target"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold">
+                        {format(w.weekStart, "MMM d")} – {format(we, "MMM d, yyyy")}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">Mon – Sun</p>
+                    </div>
+                    <p className="text-sm font-bold shrink-0 ml-3">{w.hours.toFixed(1)} hrs</p>
+                  </button>
+                );
+              })}
+            </div>
+          </SheetContent>
+        </Sheet>
+
         <Tabs value={viewMode} onValueChange={(v) => { setViewMode(v as ViewMode); setExpandedId(null); }}>
           <TabsList className="grid w-full grid-cols-2 h-11">
             <TabsTrigger value="crew" className="text-xs flex items-center gap-1.5"><User className="h-3.5 w-3.5" /> By Crew</TabsTrigger>
