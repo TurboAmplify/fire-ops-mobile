@@ -34,6 +34,8 @@ export interface CrewMemberLite {
 export interface CompensationLite {
   hourly_rate: number | null;
   hw_rate: number | null;
+  pay_method?: "hourly" | "daily" | null;
+  daily_rate?: number | null;
 }
 
 // === Withholding profile / org defaults =====================================
@@ -169,6 +171,11 @@ export interface CrewPayrollLine {
   overtimePay: number;
   grossPay: number;
   byIncident: IncidentBreakdown[];
+  // Payment method
+  payMethod?: "hourly" | "daily";
+  dailyRate?: number;
+  shiftCount?: number;
+  shiftDates?: string[];
   // Withholding (optional — only populated when withholdings provided)
   deductions?: DeductionBreakdown;
   netPay?: number;
