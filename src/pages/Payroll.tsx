@@ -2,36 +2,44 @@ import { AppShell } from "@/components/AppShell";
 import { useCrewMembers } from "@/hooks/useCrewMembers";
 import { useIncidents } from "@/hooks/useIncidents";
 import { useOrganization } from "@/hooks/useOrganization";
-import { Loader2, ChevronLeft, ChevronRight, Clock, DollarSign, Users, Lock } from "lucide-react";
+import {
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  DollarSign,
+  Users,
+  Lock,
+  Flame,
+  User,
+} from "lucide-react";
 import { useState, useMemo } from "react";
-import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, parseISO, isWithinInterval } from "date-fns";
+import {
+  format,
+  startOfWeek,
+  endOfWeek,
+  addWeeks,
+  subWeeks,
+  subDays,
+} from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-
-interface PersonnelEntry {
-  operator_name: string;
-  date: string;
-  total: number | string;
-  activity_type?: string;
-  lodging?: boolean;
-  per_diem_b?: boolean;
-  per_diem_l?: boolean;
-  per_diem_d?: boolean;
-  op_start?: string;
-  op_stop?: string;
-  sb_start?: string;
-  sb_stop?: string;
-  remarks?: string;
-}
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  aggregateCrewPayroll,
+  pivotByIncident,
+  sumTotals,
+  type CrewPayrollLine,
+  type IncidentPayrollLine,
+  type ShiftTicketLite,
+} from "@/lib/payroll";
 
 interface ShiftTicketRow {
   id: string;
-  incident_truck_id: string;
-  personnel_entries: PersonnelEntry[];
+  personnel_entries: any;
   incident_trucks: {
-    incident_id: string;
-    incidents: { id: string; name: string };
-  };
+    incidents: { id: string; name: string } | null;
+  } | null;
 }
 
 function useAllShiftTickets() {
@@ -40,36 +48,38 @@ function useAllShiftTickets() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("shift_tickets")
-        .select("id, incident_truck_id, personnel_entries, incident_trucks!inner(incident_id, incidents:incidents!incident_trucks_incident_id_fkey(id, name))");
+        .select(
+          "id, personnel_entries, incident_trucks!inner(incidents:incidents!incident_trucks_incident_id_fkey(id, name))"
+        );
       if (error) throw error;
       return data as unknown as ShiftTicketRow[];
     },
   });
 }
 
-interface CrewPayrollLine {
-  crewMemberId: string;
-  name: string;
-  role: string;
-  hourlyRate: number;
-  hwRate: number;
-  totalHours: number;
-  regularHours: number;
-  overtimeHours: number;
-  regularPay: number;
-  hwPay: number;
-  overtimePay: number;
-  grossPay: number;
-  lodgingDays: number;
-  perDiemDays: number;
-}
+type ViewRange = "week" | "period" | "all";
+type ViewMode = "crew" | "fire";
 
 export default function Payroll() {
   const { isAdmin } = useOrganization();
+
+  const [viewRange, setViewRange] = useState<ViewRange>("week");
+  const [viewMode, setViewMode] = useState<ViewMode>("crew");
+
   const [weekStart, setWeekStart] = useState(() =>
     startOfWeek(new Date(), { weekStartsOn: 1 })
   );
   const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
+
+  // Pay period: defaults to current 2-week pay period (this week + last week)
+  const [periodEnd, setPeriodEnd] = useState(() =>
+    endOfWeek(new Date(), { weekStartsOn: 1 })
+  );
+  const periodStart = useMemo(
+    () => startOfWeek(subDays(periodEnd, 7), { weekStartsOn: 1 }),
+    [periodEnd]
+  );
+
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [incidentFilter, setIncidentFilter] = useState("all");
 
@@ -77,7 +87,6 @@ export default function Payroll() {
   const { data: crewMembers, isLoading: loadingCrew, error: crewError } = useCrewMembers();
   const { data: incidents } = useIncidents();
 
-  // Pay rates live in an admin-only table; only admins reach this page (AdminGate)
   const { data: compensation } = useQuery({
     queryKey: ["crew-compensation"],
     queryFn: async () => {
@@ -101,108 +110,65 @@ export default function Payroll() {
   const isLoading = loadingTickets || loadingCrew;
   const loadError = ticketsError || crewError;
 
-  // Build payroll lines from shift ticket personnel entries
-  const payrollLines = useMemo((): CrewPayrollLine[] => {
-    if (!shiftTickets || !crewMembers) return [];
+  const { rangeStart, rangeEnd, rangeLabel, rangeSubLabel } = useMemo(() => {
+    if (viewRange === "all") {
+      return {
+        rangeStart: null as Date | null,
+        rangeEnd: null as Date | null,
+        rangeLabel: "All Time",
+        rangeSubLabel: "Season to date",
+      };
+    }
+    if (viewRange === "period") {
+      return {
+        rangeStart: periodStart,
+        rangeEnd: periodEnd,
+        rangeLabel: `${format(periodStart, "MMM d")} - ${format(periodEnd, "MMM d, yyyy")}`,
+        rangeSubLabel: "Pay Period (2 weeks)",
+      };
+    }
+    return {
+      rangeStart: weekStart,
+      rangeEnd: weekEnd,
+      rangeLabel: `${format(weekStart, "MMM d")} - ${format(weekEnd, "MMM d, yyyy")}`,
+      rangeSubLabel: "Mon - Sun",
+    };
+  }, [viewRange, weekStart, weekEnd, periodStart, periodEnd]);
 
-    // Build name -> crew member lookup (case-insensitive)
-    const nameMap = new Map<string, (typeof crewMembers)[number]>();
-    crewMembers.forEach((cm) => {
-      nameMap.set(cm.name.toLowerCase().trim(), cm);
+  // Normalize tickets for the aggregator
+  const normalizedTickets: ShiftTicketLite[] = useMemo(() => {
+    if (!shiftTickets) return [];
+    return shiftTickets.map((st) => ({
+      id: st.id,
+      personnel_entries: st.personnel_entries,
+      incident_id: st.incident_trucks?.incidents?.id ?? null,
+      incident_name: st.incident_trucks?.incidents?.name ?? "Unassigned",
+    }));
+  }, [shiftTickets]);
+
+  const crewLines: CrewPayrollLine[] = useMemo(() => {
+    if (!crewMembers) return [];
+    return aggregateCrewPayroll({
+      shiftTickets: normalizedTickets,
+      crewMembers: crewMembers.map((c) => ({ id: c.id, name: c.name, role: c.role })),
+      compensation: compMap,
+      rangeStart,
+      rangeEnd,
+      incidentFilter,
     });
+  }, [normalizedTickets, crewMembers, compMap, rangeStart, rangeEnd, incidentFilter]);
 
-    // Aggregate hours, lodging, per diem per crew member
-    const hoursMap = new Map<string, number>();
-    const lodgingMap = new Map<string, Set<string>>();
-    const perDiemMap = new Map<string, Set<string>>();
+  const incidentLines: IncidentPayrollLine[] = useMemo(
+    () => pivotByIncident(crewLines),
+    [crewLines]
+  );
 
-    shiftTickets.forEach((st) => {
-      // Incident filter
-      if (incidentFilter !== "all") {
-        if (st.incident_trucks?.incidents?.id !== incidentFilter) return;
-      }
-
-      const entries = Array.isArray(st.personnel_entries) ? st.personnel_entries : [];
-      entries.forEach((pe) => {
-        if (!pe.operator_name || !pe.date) return;
-
-        // Check if date is within the selected week
-        try {
-          const d = parseISO(pe.date);
-          if (!isWithinInterval(d, { start: weekStart, end: weekEnd })) return;
-        } catch {
-          return;
-        }
-
-        const cm = nameMap.get(pe.operator_name.toLowerCase().trim());
-        if (!cm) return;
-
-        const hours = Number(pe.total) || 0;
-        hoursMap.set(cm.id, (hoursMap.get(cm.id) || 0) + hours);
-
-        // Track lodging days
-        if (pe.lodging) {
-          if (!lodgingMap.has(cm.id)) lodgingMap.set(cm.id, new Set());
-          lodgingMap.get(cm.id)!.add(pe.date);
-        }
-
-        // Track per diem days (any meal = per diem day)
-        if (pe.per_diem_b || pe.per_diem_l || pe.per_diem_d) {
-          if (!perDiemMap.has(cm.id)) perDiemMap.set(cm.id, new Set());
-          perDiemMap.get(cm.id)!.add(pe.date);
-        }
-      });
-    });
-
-    const lines: CrewPayrollLine[] = [];
-    crewMembers.forEach((cm) => {
-      const totalHours = hoursMap.get(cm.id) || 0;
-      if (totalHours <= 0) return;
-
-      const comp = compMap.get(cm.id);
-      const hourlyRate = Number(comp?.hourly_rate) || 0;
-      const hwRate = Number(comp?.hw_rate) || 0;
-      const regularHours = Math.min(totalHours, 40);
-      const overtimeHours = Math.max(0, totalHours - 40);
-      const regularPay = regularHours * hourlyRate;
-      const hwPay = regularHours * hwRate;
-      const overtimePay = overtimeHours * hourlyRate * 1.5;
-      const grossPay = regularPay + hwPay + overtimePay;
-
-      lines.push({
-        crewMemberId: cm.id,
-        name: cm.name,
-        role: cm.role,
-        hourlyRate,
-        hwRate,
-        totalHours,
-        regularHours,
-        overtimeHours,
-        regularPay,
-        hwPay,
-        overtimePay,
-        grossPay,
-        lodgingDays: lodgingMap.get(cm.id)?.size || 0,
-        perDiemDays: perDiemMap.get(cm.id)?.size || 0,
-      });
-    });
-
-    return lines.sort((a, b) => b.grossPay - a.grossPay || b.totalHours - a.totalHours);
-  }, [shiftTickets, crewMembers, weekStart, weekEnd, incidentFilter]);
-
-  const totals = useMemo(() => {
-    return payrollLines.reduce(
-      (acc, l) => ({
-        hours: acc.hours + l.totalHours,
-        otHours: acc.otHours + l.overtimeHours,
-        gross: acc.gross + l.grossPay,
-      }),
-      { hours: 0, otHours: 0, gross: 0 }
-    );
-  }, [payrollLines]);
+  const totals = useMemo(() => sumTotals(crewLines), [crewLines]);
 
   const prevWeek = () => setWeekStart((w) => subWeeks(w, 1));
   const nextWeek = () => setWeekStart((w) => addWeeks(w, 1));
+  const prevPeriod = () => setPeriodEnd((d) => subWeeks(d, 2));
+  const nextPeriod = () => setPeriodEnd((d) => addWeeks(d, 2));
 
   if (!isAdmin) {
     return (
@@ -223,33 +189,71 @@ export default function Payroll() {
   return (
     <AppShell title="Payroll">
       <div className="p-4 space-y-4">
-        {/* Week selector */}
-        <div className="flex items-center justify-between rounded-xl bg-card p-3 card-shadow">
-          <button onClick={prevWeek} className="touch-target p-2 rounded-full active:bg-secondary/50">
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <div className="text-center">
-            <p className="text-sm font-bold">
-              {format(weekStart, "MMM d")} - {format(weekEnd, "MMM d, yyyy")}
-            </p>
-            <p className="text-[11px] text-muted-foreground">Mon - Sun</p>
-          </div>
-          <button onClick={nextWeek} className="touch-target p-2 rounded-full active:bg-secondary/50">
-            <ChevronRight className="h-5 w-5" />
-          </button>
-        </div>
+        {/* Range tabs */}
+        <Tabs value={viewRange} onValueChange={(v) => setViewRange(v as ViewRange)}>
+          <TabsList className="grid w-full grid-cols-3 h-11">
+            <TabsTrigger value="week" className="text-xs">This Week</TabsTrigger>
+            <TabsTrigger value="period" className="text-xs">Pay Period</TabsTrigger>
+            <TabsTrigger value="all" className="text-xs">All Time</TabsTrigger>
+          </TabsList>
+        </Tabs>
 
-        {/* Incident filter */}
-        <select
-          value={incidentFilter}
-          onChange={(e) => setIncidentFilter(e.target.value)}
-          className="w-full rounded-xl border bg-card px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-ring touch-target"
-        >
-          <option value="all">All Incidents</option>
-          {incidents?.map((inc) => (
-            <option key={inc.id} value={inc.id}>{inc.name}</option>
-          ))}
-        </select>
+        {/* Range selector — week / period only */}
+        {viewRange !== "all" && (
+          <div className="flex items-center justify-between rounded-xl bg-card p-3 card-shadow">
+            <button
+              onClick={viewRange === "week" ? prevWeek : prevPeriod}
+              className="touch-target p-2 rounded-full active:bg-secondary/50"
+              aria-label="Previous range"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <div className="text-center">
+              <p className="text-sm font-bold">{rangeLabel}</p>
+              <p className="text-[11px] text-muted-foreground">{rangeSubLabel}</p>
+            </div>
+            <button
+              onClick={viewRange === "week" ? nextWeek : nextPeriod}
+              className="touch-target p-2 rounded-full active:bg-secondary/50"
+              aria-label="Next range"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+        )}
+
+        {viewRange === "all" && (
+          <div className="rounded-xl bg-card p-3 card-shadow text-center">
+            <p className="text-sm font-bold">{rangeLabel}</p>
+            <p className="text-[11px] text-muted-foreground">{rangeSubLabel}</p>
+          </div>
+        )}
+
+        {/* Mode toggle: By Crew / By Fire */}
+        <Tabs value={viewMode} onValueChange={(v) => { setViewMode(v as ViewMode); setExpandedId(null); }}>
+          <TabsList className="grid w-full grid-cols-2 h-11">
+            <TabsTrigger value="crew" className="text-xs flex items-center gap-1.5">
+              <User className="h-3.5 w-3.5" /> By Crew
+            </TabsTrigger>
+            <TabsTrigger value="fire" className="text-xs flex items-center gap-1.5">
+              <Flame className="h-3.5 w-3.5" /> By Fire
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        {/* Incident filter — only useful in By Crew mode */}
+        {viewMode === "crew" && (
+          <select
+            value={incidentFilter}
+            onChange={(e) => setIncidentFilter(e.target.value)}
+            className="w-full rounded-xl border bg-card px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-ring touch-target"
+          >
+            <option value="all">All Incidents</option>
+            {incidents?.map((inc) => (
+              <option key={inc.id} value={inc.id}>{inc.name}</option>
+            ))}
+          </select>
+        )}
 
         {/* Summary cards */}
         <div className="grid grid-cols-3 gap-2">
@@ -258,14 +262,12 @@ export default function Payroll() {
           <SummaryCard icon={DollarSign} label="Gross" value={`$${totals.gross.toFixed(0)}`} />
         </div>
 
-        {/* Loading */}
         {isLoading && (
           <div className="flex justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         )}
 
-        {/* Error */}
         {!isLoading && loadError && (
           <div className="py-12 text-center space-y-1">
             <p className="text-sm text-destructive">Failed to load payroll data.</p>
@@ -273,19 +275,14 @@ export default function Payroll() {
           </div>
         )}
 
-        {/* Crew payroll list */}
-        {!isLoading && !loadError && (
+        {/* By Crew list */}
+        {!isLoading && !loadError && viewMode === "crew" && (
           <div className="space-y-2">
-            {payrollLines.length === 0 && (
-              <div className="py-12 text-center space-y-2">
-                <p className="text-muted-foreground">No hours logged this week.</p>
-                <p className="text-xs text-muted-foreground">
-                  Shift ticket hours will appear here automatically.
-                </p>
-              </div>
+            {crewLines.length === 0 && (
+              <EmptyState message="No hours logged in this range." />
             )}
 
-            {payrollLines.map((line) => (
+            {crewLines.map((line) => (
               <button
                 key={line.crewMemberId}
                 onClick={() => setExpandedId(expandedId === line.crewMemberId ? null : line.crewMemberId)}
@@ -298,37 +295,117 @@ export default function Payroll() {
                   </div>
                   <div className="text-right ml-3 shrink-0">
                     <p className="text-sm font-bold">${line.grossPay.toFixed(2)}</p>
-                    <p className="text-[11px] text-muted-foreground">{line.totalHours.toFixed(1)} hrs</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {line.totalHours.toFixed(1)} hrs
+                      {line.overtimeHours > 0 && (
+                        <span className="text-warning"> · {line.overtimeHours.toFixed(1)} OT</span>
+                      )}
+                    </p>
                   </div>
                 </div>
 
                 {expandedId === line.crewMemberId && (
-                  <div className="mt-3 pt-3 border-t border-border/60 space-y-1.5">
-                    <DetailRow label="Base Rate" value={`$${line.hourlyRate.toFixed(2)}/hr`} />
-                    <DetailRow label="H&W Rate" value={`$${line.hwRate.toFixed(2)}/hr`} />
-                    <DetailRow label="Regular Hours" value={`${line.regularHours.toFixed(1)} hrs`} />
-                    <DetailRow label="Regular Pay" value={`$${line.regularPay.toFixed(2)}`} />
-                    <DetailRow label="H&W (first 40 hrs)" value={`$${line.hwPay.toFixed(2)}`} />
-                    {line.overtimeHours > 0 && (
-                      <>
-                        <DetailRow label="OT Hours (1.5x)" value={`${line.overtimeHours.toFixed(1)} hrs`} highlight />
-                        <DetailRow label="OT Pay" value={`$${line.overtimePay.toFixed(2)}`} highlight />
-                      </>
+                  <div className="mt-3 pt-3 border-t border-border/60 space-y-2">
+                    {/* Per-incident breakdown */}
+                    {line.byIncident.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">By Fire</p>
+                        {line.byIncident.map((inc) => (
+                          <div key={(inc.incidentId ?? "_un") + inc.incidentName} className="flex justify-between items-center pl-1">
+                            <span className="text-xs truncate flex-1">{inc.incidentName}</span>
+                            <span className="text-[11px] text-muted-foreground mx-2 shrink-0">
+                              {inc.totalHours.toFixed(1)} hrs
+                            </span>
+                            <span className="text-xs font-medium shrink-0 w-20 text-right">
+                              ${inc.grossPay.toFixed(2)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     )}
-                    {line.lodgingDays > 0 && (
-                      <DetailRow label="Lodging Days" value={`${line.lodgingDays}`} />
-                    )}
-                    {line.perDiemDays > 0 && (
-                      <DetailRow label="Per Diem Days" value={`${line.perDiemDays}`} />
-                    )}
-                    <div className="pt-1.5 border-t border-border/40 flex justify-between">
-                      <span className="text-xs font-bold">Gross Pay</span>
-                      <span className="text-xs font-bold">${line.grossPay.toFixed(2)}</span>
+
+                    <div className="pt-2 border-t border-border/40 space-y-1.5">
+                      <DetailRow label="Base Rate" value={`$${line.hourlyRate.toFixed(2)}/hr`} />
+                      <DetailRow label="H&W Rate" value={`$${line.hwRate.toFixed(2)}/hr`} />
+                      <DetailRow label="Regular Hours" value={`${line.regularHours.toFixed(1)} hrs`} />
+                      <DetailRow label="Regular Pay" value={`$${line.regularPay.toFixed(2)}`} />
+                      <DetailRow label="H&W (first 40 hrs/wk)" value={`$${line.hwPay.toFixed(2)}`} />
+                      {line.overtimeHours > 0 && (
+                        <>
+                          <DetailRow label="OT Hours (1.5x)" value={`${line.overtimeHours.toFixed(1)} hrs`} highlight />
+                          <DetailRow label="OT Pay" value={`$${line.overtimePay.toFixed(2)}`} highlight />
+                        </>
+                      )}
+                      <div className="pt-1.5 border-t border-border/40 flex justify-between">
+                        <span className="text-xs font-bold">Gross Pay</span>
+                        <span className="text-xs font-bold">${line.grossPay.toFixed(2)}</span>
+                      </div>
                     </div>
                   </div>
                 )}
               </button>
             ))}
+          </div>
+        )}
+
+        {/* By Fire list */}
+        {!isLoading && !loadError && viewMode === "fire" && (
+          <div className="space-y-2">
+            {incidentLines.length === 0 && (
+              <EmptyState message="No fire activity in this range." />
+            )}
+
+            {incidentLines.map((inc) => {
+              const key = inc.incidentId ?? "_unassigned";
+              return (
+                <button
+                  key={key}
+                  onClick={() => setExpandedId(expandedId === key ? null : key)}
+                  className="w-full text-left rounded-xl bg-card p-4 transition-transform active:scale-[0.98] card-shadow"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold truncate">{inc.incidentName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {inc.byCrew.length} {inc.byCrew.length === 1 ? "person" : "people"}
+                      </p>
+                    </div>
+                    <div className="text-right ml-3 shrink-0">
+                      <p className="text-sm font-bold">${inc.grossPay.toFixed(2)}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {inc.totalHours.toFixed(1)} hrs
+                        {inc.overtimeHours > 0 && (
+                          <span className="text-warning"> · {inc.overtimeHours.toFixed(1)} OT</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  {expandedId === key && (
+                    <div className="mt-3 pt-3 border-t border-border/60 space-y-1">
+                      {inc.byCrew.map((c) => (
+                        <div key={c.crewMemberId} className="flex justify-between items-center">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-medium truncate">{c.name}</p>
+                            <p className="text-[10px] text-muted-foreground">{c.role}</p>
+                          </div>
+                          <span className="text-[11px] text-muted-foreground mx-2 shrink-0">
+                            {c.totalHours.toFixed(1)} hrs
+                          </span>
+                          <span className="text-xs font-medium shrink-0 w-20 text-right">
+                            ${c.grossPay.toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+                      <div className="pt-2 border-t border-border/40 flex justify-between">
+                        <span className="text-xs font-bold">Fire Total</span>
+                        <span className="text-xs font-bold">${inc.grossPay.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  )}
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
@@ -355,6 +432,17 @@ function DetailRow({ label, value, highlight }: { label: string; value: string; 
       <span className={`text-xs ${highlight ? "text-warning font-medium" : "font-medium"}`}>
         {value}
       </span>
+    </div>
+  );
+}
+
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div className="py-12 text-center space-y-2">
+      <p className="text-muted-foreground">{message}</p>
+      <p className="text-xs text-muted-foreground">
+        Shift ticket hours will appear here automatically.
+      </p>
     </div>
   );
 }
