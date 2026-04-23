@@ -54,7 +54,8 @@ export default function Payroll() {
   const { isAdmin, membership } = useOrganization();
   const orgName = membership?.organizationName ?? "Organization";
 
-  const [viewRange, setViewRange] = useState<ViewRange>("week");
+  const [viewRange, setViewRange] = useState<ViewRange>("all");
+  const [weekPickerOpen, setWeekPickerOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("crew");
   const [showSettings, setShowSettings] = useState(false);
   const [paystubFor, setPaystubFor] = useState<CrewPayrollLine | null>(null);
