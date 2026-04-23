@@ -557,6 +557,85 @@ export function ShiftTicketForm({
     markDirty();
   };
 
+  // Apply parsed shift ticket from imported photo/scan into form state.
+  const handleImportApply = (parsed: ParsedShiftTicket, mode: "fill-empty" | "replace") => {
+    const fill = (current: string, next: string | undefined) => {
+      const v = (next ?? "").trim();
+      if (!v) return current;
+      if (mode === "replace") return v;
+      return current ? current : v;
+    };
+    setAgreementNumber((c) => fill(c, parsed.agreement_number));
+    setContractorName((c) => fill(c, parsed.contractor_name));
+    setResourceOrderNumber((c) => fill(c, parsed.resource_order_number));
+    setIncidentName((c) => fill(c, parsed.incident_name));
+    setIncidentNumber((c) => fill(c, parsed.incident_number));
+    setFinancialCode((c) => fill(c, parsed.financial_code));
+    setEquipmentMakeModel((c) => fill(c, parsed.equipment_make_model));
+    setEquipmentType((c) => fill(c, parsed.equipment_type));
+    setSerialVin((c) => fill(c, parsed.serial_vin_number));
+    setLicenseId((c) => fill(c, parsed.license_id_number));
+    setContractorRepName((c) => fill(c, parsed.contractor_rep_name));
+    setSupervisorName((c) => fill(c, parsed.supervisor_name));
+    setRemarks((c) => fill(c, parsed.remarks));
+    if (typeof parsed.transport_retained === "boolean" && (mode === "replace" || !transportRetained)) {
+      setTransportRetained(parsed.transport_retained);
+    }
+    if (typeof parsed.is_first_last === "boolean" && (mode === "replace" || !isFirstLast)) {
+      setIsFirstLast(parsed.is_first_last);
+    }
+    if (typeof parsed.miles === "number" && (mode === "replace" || !miles)) {
+      setMiles(String(parsed.miles));
+    }
+
+    const importedEq = (parsed.equipment_entries ?? [])
+      .filter((r) => r && (r.date || r.start || r.stop || r.quantity || r.type))
+      .map<EquipmentEntry>((r) => ({
+        date: r.date || getLocalDateString(),
+        start: r.start || "",
+        stop: r.stop || "",
+        total: computeHours(r.start || "", r.stop || ""),
+        quantity: r.quantity || "1",
+        type: r.type || "Day",
+        remarks: r.remarks || "",
+      }));
+    if (importedEq.length > 0) {
+      const isFormEmpty = equipmentEntries.length === 0 ||
+        (equipmentEntries.length === 1 && !equipmentEntries[0].start && !equipmentEntries[0].stop);
+      if (mode === "replace" || isFormEmpty) setEquipmentEntries(importedEq);
+    }
+
+    const importedPe = (parsed.personnel_entries ?? [])
+      .filter((r) => r && (r.operator_name || r.op_start || r.op_stop))
+      .map<PersonnelEntry>((r) => {
+        const op = computeHours(r.op_start || "", r.op_stop || "");
+        const sb = computeHours(r.sb_start || "", r.sb_stop || "");
+        const activity = r.activity_type === "travel" ? ("travel" as const) : ("work" as const);
+        return {
+          date: r.date || getLocalDateString(),
+          operator_name: r.operator_name || "",
+          op_start: r.op_start || "",
+          op_stop: r.op_stop || "",
+          sb_start: r.sb_start || "",
+          sb_stop: r.sb_stop || "",
+          total: Math.round((op + sb) * 10) / 10,
+          remarks: r.remarks || (activity === "travel" ? "Travel/Check-In" : "Work"),
+          activity_type: activity,
+          lodging: false,
+          per_diem_b: false,
+          per_diem_l: false,
+          per_diem_d: false,
+        };
+      });
+    if (importedPe.length > 0) {
+      const isFormEmpty = personnelEntries.length === 0 ||
+        (personnelEntries.length === 1 && !personnelEntries[0].operator_name && !personnelEntries[0].op_start);
+      if (mode === "replace" || isFormEmpty) setPersonnelEntries(importedPe);
+    }
+
+    markDirty();
+  };
+
   return (
     <AppShell title="Shift Ticket" onBack={() => isDirty ? setShowLeaveDialog(true) : onBack?.()}>
       <div className="px-4 pt-3 pb-40 space-y-5" style={{ overflowX: 'clip' }}>
