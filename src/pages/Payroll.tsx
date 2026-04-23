@@ -566,6 +566,45 @@ export default function Payroll() {
                         <span className="text-xs font-bold">Fire Total</span>
                         <span className="text-xs font-bold">${inc.grossPay.toFixed(2)}</span>
                       </div>
+                      {(() => {
+                        const weeks = activeWeeksByIncident.get(key) ?? [];
+                        if (weeks.length === 0) return null;
+                        return (
+                          <div className="pt-3 mt-2 border-t border-border/40 space-y-2">
+                            <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Weeks Worked</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {weeks.map((w) => {
+                                const we = endOfWeek(w.weekStart, { weekStartsOn: 1 });
+                                return (
+                                  <span
+                                    key={w.weekStart.toISOString()}
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (inc.incidentId) setIncidentFilter(inc.incidentId);
+                                      jumpToWeek(w.weekStart);
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        if (inc.incidentId) setIncidentFilter(inc.incidentId);
+                                        jumpToWeek(w.weekStart);
+                                      }
+                                    }}
+                                    className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-[11px] font-medium text-primary cursor-pointer active:scale-95 transition-transform touch-target"
+                                  >
+                                    <CalendarRange className="h-3 w-3" />
+                                    {format(w.weekStart, "MMM d")} – {format(we, "MMM d")}
+                                    <span className="text-primary/70">· {w.hours.toFixed(1)}h</span>
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
                 </button>
