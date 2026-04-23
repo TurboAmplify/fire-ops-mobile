@@ -139,11 +139,14 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
       if (isAdmin && savedId && membership?.organizationId) {
         const hr = hourlyRate ? parseFloat(hourlyRate) : null;
         const hw = hwRate ? parseFloat(hwRate) : null;
+        const dr = dailyRate ? parseFloat(dailyRate) : null;
         const compRow: any = {
           crew_member_id: savedId,
           organization_id: membership.organizationId,
           hourly_rate: hr,
           hw_rate: hw,
+          pay_method: payMethod,
+          daily_rate: payMethod === "daily" ? dr : null,
         };
         if (showPayroll) {
           compRow.filing_status = withholding.filing_status;
@@ -210,7 +213,30 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
 
               <div className="space-y-1">
                 <label className="text-sm font-medium text-muted-foreground">Role *</label>
-                <input type="text" value={role} onChange={(e) => setRole(e.target.value)} className={inputClass} placeholder="e.g. Engine Boss, Firefighter" />
+                <select
+                  value={roleSelection}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setRoleSelection(v);
+                    if (v && v !== "Other") setRole(v);
+                    else if (v === "Other") setRole("");
+                  }}
+                  className={inputClass}
+                >
+                  <option value="" disabled>Select role…</option>
+                  {CREW_ROLES.map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+                {roleSelection === "Other" && (
+                  <input
+                    type="text"
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    className={inputClass + " mt-2"}
+                    placeholder="Enter custom role"
+                  />
+                )}
               </div>
 
               <div className="space-y-1">
@@ -219,15 +245,47 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
               </div>
 
               {isAdmin && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-muted-foreground">Hourly Rate ($)</label>
-                    <input type="number" step="0.01" min="0" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} className={inputClass} placeholder="0.00" inputMode="decimal" />
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Payment Method</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPayMethod("hourly")}
+                      className={`touch-target rounded-xl py-3 text-sm font-bold transition-colors ${
+                        payMethod === "hourly" ? "bg-primary text-primary-foreground" : "bg-card border text-foreground"
+                      }`}
+                    >
+                      Hourly
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPayMethod("daily")}
+                      className={`touch-target rounded-xl py-3 text-sm font-bold transition-colors ${
+                        payMethod === "daily" ? "bg-primary text-primary-foreground" : "bg-card border text-foreground"
+                      }`}
+                    >
+                      Daily Flat
+                    </button>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-muted-foreground">H&W Rate ($)</label>
-                    <input type="number" step="0.01" min="0" value={hwRate} onChange={(e) => setHwRate(e.target.value)} className={inputClass} placeholder="0.00" inputMode="decimal" />
-                  </div>
+
+                  {payMethod === "hourly" ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium text-muted-foreground">Hourly Rate ($)</label>
+                        <input type="number" step="0.01" min="0" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} className={inputClass} placeholder="0.00" inputMode="decimal" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium text-muted-foreground">H&W Rate ($)</label>
+                        <input type="number" step="0.01" min="0" value={hwRate} onChange={(e) => setHwRate(e.target.value)} className={inputClass} placeholder="0.00" inputMode="decimal" />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-muted-foreground">Daily Rate ($/shift)</label>
+                      <input type="number" step="0.01" min="0" value={dailyRate} onChange={(e) => setDailyRate(e.target.value)} className={inputClass} placeholder="1000.00" inputMode="decimal" />
+                      <p className="text-[11px] text-muted-foreground">Flat amount paid per shift, regardless of hours. No OT, no H&W.</p>
+                    </div>
+                  )}
                 </div>
               )}
 
