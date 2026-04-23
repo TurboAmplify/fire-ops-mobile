@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -32,16 +32,19 @@ export function NeedsListForm({ item, onClose }: NeedsListFormProps) {
   const isEditing = !!item;
   const saving = createItem.isPending || updateItem.isPending;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim()) return;
+  const handleSave = async () => {
+    const trimmed = title.trim();
+    if (!trimmed) {
+      toast.error("Please enter an item name");
+      return;
+    }
 
     try {
       if (isEditing) {
         await updateItem.mutateAsync({
           id: item.id,
           updates: {
-            title: title.trim(),
+            title: trimmed,
             notes: notes.trim() || null,
             category,
             crew_member_id: category === "crew" && crewMemberId ? crewMemberId : null,
@@ -51,7 +54,7 @@ export function NeedsListForm({ item, onClose }: NeedsListFormProps) {
         toast.success("Item updated");
       } else {
         await createItem.mutateAsync({
-          title: title.trim(),
+          title: trimmed,
           notes: notes.trim() || null,
           category,
           crew_member_id: category === "crew" && crewMemberId ? crewMemberId : null,
@@ -61,22 +64,34 @@ export function NeedsListForm({ item, onClose }: NeedsListFormProps) {
         toast.success("Item added");
       }
       onClose();
-    } catch {
-      toast.error("Failed to save item");
+    } catch (err) {
+      console.error("[NeedsListForm] save failed", err);
+      const msg = err instanceof Error ? err.message : "Failed to save item";
+      toast.error(msg);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
-      <div className="w-full max-w-lg rounded-t-2xl bg-card p-5 pb-8 safe-area-bottom animate-in slide-in-from-bottom duration-200">
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-t-2xl bg-card p-5 pb-8 safe-area-bottom animate-in slide-in-from-bottom duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold">{isEditing ? "Edit Item" : "Add Need"}</h2>
-          <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary touch-target">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary touch-target"
+          >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-4">
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Item *</label>
             <Input
@@ -84,7 +99,6 @@ export function NeedsListForm({ item, onClose }: NeedsListFormProps) {
               onChange={(e) => setTitle(e.target.value)}
               placeholder="What do you need?"
               autoFocus
-              required
             />
           </div>
 
@@ -127,7 +141,7 @@ export function NeedsListForm({ item, onClose }: NeedsListFormProps) {
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
                 <option value="">Select crew member...</option>
-                {crewMembers.filter(c => c.active).map((c) => (
+                {crewMembers.filter((c) => c.active).map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
@@ -151,13 +165,14 @@ export function NeedsListForm({ item, onClose }: NeedsListFormProps) {
           )}
 
           <button
-            type="submit"
+            type="button"
+            onClick={handleSave}
             disabled={saving || !title.trim()}
             className="w-full rounded-xl bg-primary py-3.5 text-sm font-semibold text-primary-foreground transition-all active:scale-[0.98] disabled:opacity-50 touch-target"
           >
             {saving ? "Saving…" : isEditing ? "Update" : "Add to List"}
           </button>
-        </form>
+        </div>
       </div>
     </div>
   );
