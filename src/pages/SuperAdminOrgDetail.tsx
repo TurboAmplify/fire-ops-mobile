@@ -22,6 +22,7 @@ import { useImpersonation } from "@/hooks/useImpersonation";
 import { useAuth } from "@/hooks/useAuth";
 import { useOrganization } from "@/hooks/useOrganization";
 import { toast } from "sonner";
+import { OrgPayrollToggle } from "@/components/super-admin/PayrollAccessToggle";
 
 type OrgDetail = {
   id: string;
@@ -288,6 +289,11 @@ export default function SuperAdminOrgDetail() {
                 value={`$${Number(data.counts.expense_total).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
               />
             </div>
+
+            <OrgPayrollToggle
+              orgId={data.id}
+              currentValue={(data.modules_enabled as any)?.payroll === true}
+            />
 
             <Card>
               <CardHeader>
