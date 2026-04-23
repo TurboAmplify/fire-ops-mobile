@@ -48,7 +48,7 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
       if (!memberId) return null;
       const { data, error } = await supabase
         .from("crew_compensation" as any)
-        .select("hourly_rate, hw_rate, filing_status, dependents_count, use_default_withholding, federal_pct_override, extra_withholding, state_pct_override, social_security_exempt, medicare_exempt, other_deductions, notes")
+        .select("hourly_rate, hw_rate, pay_method, daily_rate, filing_status, dependents_count, use_default_withholding, federal_pct_override, extra_withholding, state_pct_override, social_security_exempt, medicare_exempt, other_deductions, notes")
         .eq("crew_member_id", memberId)
         .maybeSingle();
       if (error) throw error;
@@ -61,6 +61,9 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
     if (existing) {
       setName(existing.name);
       setRole(existing.role);
+      // If existing role matches a standard option, select it; otherwise treat as "Other"
+      const matched = (CREW_ROLES as readonly string[]).includes(existing.role) ? existing.role : "Other";
+      setRoleSelection(matched);
       setPhone(existing.phone || "");
       setActive(existing.active);
       setNotes((existing as any).notes || "");
@@ -71,6 +74,8 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
     if (comp) {
       setHourlyRate(comp.hourly_rate != null ? String(comp.hourly_rate) : "");
       setHwRate(comp.hw_rate != null ? String(comp.hw_rate) : "");
+      setPayMethod(comp.pay_method === "daily" ? "daily" : "hourly");
+      setDailyRate(comp.daily_rate != null ? String(comp.daily_rate) : "");
       setWithholding({
         filing_status: (comp.filing_status as any) ?? "single",
         dependents_count: comp.dependents_count != null ? String(comp.dependents_count) : "0",
