@@ -4,10 +4,11 @@ import { useIncidents } from "@/hooks/useIncidents";
 import { useOrganization } from "@/hooks/useOrganization";
 import {
   Loader2, ChevronLeft, ChevronRight, Clock, DollarSign, Users, Lock, Flame, User,
-  FileText, Download, X, Settings as SettingsIcon, AlertTriangle, Printer,
+  FileText, Download, X, Settings as SettingsIcon, AlertTriangle, Printer, CalendarRange,
 } from "lucide-react";
 import { useState, useMemo } from "react";
-import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, subDays } from "date-fns";
+import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, subDays, parseISO } from "date-fns";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -53,7 +54,8 @@ export default function Payroll() {
   const { isAdmin, membership } = useOrganization();
   const orgName = membership?.organizationName ?? "Organization";
 
-  const [viewRange, setViewRange] = useState<ViewRange>("week");
+  const [viewRange, setViewRange] = useState<ViewRange>("all");
+  const [weekPickerOpen, setWeekPickerOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("crew");
   const [showSettings, setShowSettings] = useState(false);
   const [paystubFor, setPaystubFor] = useState<CrewPayrollLine | null>(null);
@@ -160,6 +162,69 @@ export default function Payroll() {
   const incidentLines: IncidentPayrollLine[] = useMemo(() => pivotByIncident(crewLines), [crewLines]);
   const totals = useMemo(() => sumTotals(crewLines), [crewLines]);
 
+  // Active weeks across the current incident/crew filter — derived from raw
+  // tickets so it isn't constrained by the rangeStart/rangeEnd cap.
+  const crewNameSet = useMemo(() => {
+    if (crewFilter === "all") return null;
+    const cm = crewMembers?.find((c) => c.id === crewFilter);
+    return cm ? cm.name.trim().toLowerCase() : null;
+  }, [crewFilter, crewMembers]);
+
+  const activeWeeks = useMemo(() => {
+    const buckets = new Map<string, { weekStart: Date; hours: number }>();
+    normalizedTickets.forEach((st) => {
+      if (incidentFilter !== "all" && st.incident_id !== incidentFilter) return;
+      const entries = Array.isArray(st.personnel_entries) ? (st.personnel_entries as any[]) : [];
+      entries.forEach((e) => {
+        if (!e?.date) return;
+        if (crewNameSet && (e.operator_name ?? "").trim().toLowerCase() !== crewNameSet) return;
+        const hours = Number(e.total ?? 0);
+        if (!hours) return;
+        let dt: Date;
+        try { dt = parseISO(e.date); } catch { return; }
+        if (isNaN(dt.getTime())) return;
+        const ws = startOfWeek(dt, { weekStartsOn: 1 });
+        const key = ws.toISOString();
+        const cur = buckets.get(key) ?? { weekStart: ws, hours: 0 };
+        cur.hours += hours;
+        buckets.set(key, cur);
+      });
+    });
+    return Array.from(buckets.values()).sort((a, b) => b.weekStart.getTime() - a.weekStart.getTime());
+  }, [normalizedTickets, incidentFilter, crewNameSet]);
+
+  // Per-incident active weeks (for By Fire chips)
+  const activeWeeksByIncident = useMemo(() => {
+    const map = new Map<string, { weekStart: Date; hours: number }[]>();
+    normalizedTickets.forEach((st) => {
+      const entries = Array.isArray(st.personnel_entries) ? (st.personnel_entries as any[]) : [];
+      const incKey = st.incident_id ?? "_unassigned";
+      entries.forEach((e) => {
+        if (!e?.date) return;
+        const hours = Number(e.total ?? 0);
+        if (!hours) return;
+        let dt: Date;
+        try { dt = parseISO(e.date); } catch { return; }
+        if (isNaN(dt.getTime())) return;
+        const ws = startOfWeek(dt, { weekStartsOn: 1 });
+        const key = ws.toISOString();
+        const list = map.get(incKey) ?? [];
+        const existing = list.find((w) => w.weekStart.toISOString() === key);
+        if (existing) existing.hours += hours;
+        else list.push({ weekStart: ws, hours });
+        map.set(incKey, list);
+      });
+    });
+    map.forEach((list) => list.sort((a, b) => b.weekStart.getTime() - a.weekStart.getTime()));
+    return map;
+  }, [normalizedTickets]);
+
+  const jumpToWeek = (date: Date) => {
+    setWeekStart(startOfWeek(date, { weekStartsOn: 1 }));
+    setViewRange("week");
+    setWeekPickerOpen(false);
+  };
+
   const prevWeek = () => setWeekStart((w) => subWeeks(w, 1));
   const nextWeek = () => setWeekStart((w) => addWeeks(w, 1));
   const prevPeriod = () => setPeriodEnd((d) => subWeeks(d, 2));
@@ -241,6 +306,57 @@ export default function Payroll() {
             <p className="text-[11px] text-muted-foreground">{rangeSubLabel}</p>
           </div>
         )}
+
+        {/* Jump to week with activity */}
+        <Sheet open={weekPickerOpen} onOpenChange={setWeekPickerOpen}>
+          <SheetTrigger asChild>
+            <button
+              type="button"
+              className="w-full flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium touch-target active:scale-[0.99]"
+            >
+              <span className="flex items-center gap-2">
+                <CalendarRange className="h-4 w-4 text-primary" />
+                Jump to week with activity
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {activeWeeks.length} {activeWeeks.length === 1 ? "week" : "weeks"}
+              </span>
+            </button>
+          </SheetTrigger>
+          <SheetContent side="bottom" className="max-h-[70vh] overflow-y-auto rounded-t-2xl">
+            <SheetHeader className="text-left">
+              <SheetTitle className="text-base">Active Weeks</SheetTitle>
+              <p className="text-xs text-muted-foreground">
+                Only weeks with logged hours for the current filter.
+              </p>
+            </SheetHeader>
+            <div className="mt-3 space-y-1.5">
+              {activeWeeks.length === 0 && (
+                <p className="text-sm text-muted-foreground py-8 text-center">
+                  No weeks with hours for this filter.
+                </p>
+              )}
+              {activeWeeks.map((w) => {
+                const we = endOfWeek(w.weekStart, { weekStartsOn: 1 });
+                return (
+                  <button
+                    key={w.weekStart.toISOString()}
+                    onClick={() => jumpToWeek(w.weekStart)}
+                    className="w-full flex items-center justify-between rounded-xl border border-border/60 bg-card px-4 py-3 text-left active:scale-[0.99] touch-target"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold">
+                        {format(w.weekStart, "MMM d")} – {format(we, "MMM d, yyyy")}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">Mon – Sun</p>
+                    </div>
+                    <p className="text-sm font-bold shrink-0 ml-3">{w.hours.toFixed(1)} hrs</p>
+                  </button>
+                );
+              })}
+            </div>
+          </SheetContent>
+        </Sheet>
 
         <Tabs value={viewMode} onValueChange={(v) => { setViewMode(v as ViewMode); setExpandedId(null); }}>
           <TabsList className="grid w-full grid-cols-2 h-11">
@@ -450,6 +566,45 @@ export default function Payroll() {
                         <span className="text-xs font-bold">Fire Total</span>
                         <span className="text-xs font-bold">${inc.grossPay.toFixed(2)}</span>
                       </div>
+                      {(() => {
+                        const weeks = activeWeeksByIncident.get(key) ?? [];
+                        if (weeks.length === 0) return null;
+                        return (
+                          <div className="pt-3 mt-2 border-t border-border/40 space-y-2">
+                            <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Weeks Worked</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {weeks.map((w) => {
+                                const we = endOfWeek(w.weekStart, { weekStartsOn: 1 });
+                                return (
+                                  <span
+                                    key={w.weekStart.toISOString()}
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (inc.incidentId) setIncidentFilter(inc.incidentId);
+                                      jumpToWeek(w.weekStart);
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        if (inc.incidentId) setIncidentFilter(inc.incidentId);
+                                        jumpToWeek(w.weekStart);
+                                      }
+                                    }}
+                                    className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-[11px] font-medium text-primary cursor-pointer active:scale-95 transition-transform touch-target"
+                                  >
+                                    <CalendarRange className="h-3 w-3" />
+                                    {format(w.weekStart, "MMM d")} – {format(we, "MMM d")}
+                                    <span className="text-primary/70">· {w.hours.toFixed(1)}h</span>
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
                 </button>
