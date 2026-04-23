@@ -1,100 +1,71 @@
 
 
-# Coyote Flats backfill + Engine Boss daily-rate support
+# Payroll navigation — "Jump to weeks with activity"
 
-Two pieces: (1) add daily-rate-per-shift as a payment method for crew, and (2) load the Coyote Flats data using it.
+## Problem
+Reviewing a historical incident requires arrowing through empty weeks one at a time. Even "All Time" mixes everything together. There's no way to see at a glance which weeks an incident actually has hours on, or jump straight to one.
 
-## Part 1 — Daily rate as a payment method (schema + engine + UI)
+## Solution
+Default to **All Time**, plus add an **"Active Weeks" drawer** that lists every week with logged hours for the current filter (incident or crew). Tap a week → jumps view to that week instantly.
 
-### Schema (new migration)
-Add to `crew_compensation`:
+### A. Default range = "All Time"
+Today the page opens on "This Week" — fine for current crew bosses, but useless for historical review. Default to **All Time** instead. This single change solves the most common case ("show me Coyote Flats payroll") because everything appears at once, grouped under the incident.
 
-| Column | Type | Default | Purpose |
-|---|---|---|---|
-| `pay_method` | text | `'hourly'` | `'hourly'` or `'daily'` |
-| `daily_rate` | numeric | `null` | Flat $ per shift when `pay_method = 'daily'` |
+### B. New "Active Weeks" picker
+Below the range tabs, add a compact horizontal pill: **`Jump to week ▾`**. Tapping opens a bottom sheet (mobile) / dropdown (desktop) showing every Mon–Sun week that has at least one shift in the current filter context, newest first:
 
-No data loss — existing rows stay on `'hourly'`.
+```text
+Active Weeks — Coyote Flats
+─────────────────────────────
+Mar 16 – Mar 22, 2026     39 hrs   $4,625
+Mar 09 – Mar 15, 2026     14 hrs   $1,200
+Feb 23 – Mar 1, 2026      12 hrs     $850
+─────────────────────────────
+```
 
-### Payroll engine (`src/lib/payroll.ts`)
-Extend `CompensationLite` with `pay_method` and `daily_rate`. In `aggregateCrewPayroll`:
+Each row is a 44px+ tap target. Tapping:
+1. Switches `viewRange` to `"week"`.
+2. Sets `weekStart` to that Monday.
+3. Closes the sheet.
+4. Filter (incident / crew) is preserved.
 
-- **Hourly (existing behavior, unchanged)**: regular × rate, OT 1.5× over 40, H&W on first 40.
-- **Daily**: count distinct shift dates per crew member in range; gross = `shifts × daily_rate`. No OT, no H&W. Hours still tracked for display, but pay is flat.
+Only weeks with activity appear — no empty weeks to scroll past.
 
-`CrewPayrollLine` gets two new optional fields: `payMethod: 'hourly' | 'daily'` and `shiftCount` (only set on daily). Hourly fields stay zero on daily rows so existing UI doesn't break — daily rows just show the flat amount and shift count instead of the breakdown.
+### C. "By Fire" expand → show weeks
+In the "By Fire" view, when you tap an incident to expand it, also include a **"Weeks worked"** section with the same chip list. Tapping a week chip narrows the page view to that week and the current incident. This makes the workflow:
 
-### UI changes
+> Tap incident → see weeks → tap week → see crew breakdown for that week.
 
-**Crew member form (`CrewMemberForm.tsx`)**
-- Role becomes a dropdown: Engine Boss, Crew Boss, FF1, FF2, Engineer, Other (free-text). The exact list lives in one constant so we add roles in one place later.
-- New "Payment Method" segmented control under the rates section: **Hourly** | **Daily**.
-  - Hourly selected → show Hourly Rate + H&W Rate (today's UI).
-  - Daily selected → show single "Daily Rate ($)" input, hide H&W.
-- Admin-only, mobile-first (full-width 44px+ controls, inline switch — no modal).
+No more arrowing.
 
-**Payroll page (`Payroll.tsx`)**
-- Daily-rate crew rows show: `N shifts × $1,000 = $X,XXX` instead of the regular/OT/H&W breakdown.
-- Compliance banner unchanged. Deductions card still works (federal/SS/Medicare apply to gross regardless of method).
-- Paystub for daily-rate employees lists each shift date instead of an hours table.
+### D. Keep existing controls
+- This Week / Pay Period / All Time tabs stay.
+- Prev/next chevrons stay (still useful for stepping forward/back one week once you're zoomed in).
+- Crew + Incident filters stay.
 
-### What this protects
-- Mixed contractor model preserved: org admins choose per-employee.
-- No change to Brandon/Nevaeh/Sheldon (FF2 hourly).
-- App Store-ready: pure additive change, no removed features, mobile-first, no new permissions.
+## Technical details (small, contained)
 
-## Part 2 — Coyote Flats backfill (data load)
+**`src/pages/Payroll.tsx`**
+- Change initial `viewRange` from `"week"` → `"all"`.
+- Compute new memo `activeWeeks: { weekStart: Date; hours: number; gross: number }[]` from `normalizedTickets` (already filtered by `incidentFilter`/`crewFilter`). Group personnel entry dates by Mon-anchored week, sum hours, sort newest-first.
+- Add `<button>` "Jump to week" → opens `<Sheet>` (already in ui kit) with the list.
+- New handler `jumpToWeek(date)` sets `viewRange="week"` and `weekStart=date`.
 
-Same plan as before, with two updates:
+**No schema, no engine changes.** All derived from data already loaded. No new query, no perf cost — same `shiftTickets` array, just one extra reduce.
 
-1. **Justin Richardson is the EB on DL 62.** Confirmed in the roster.
-2. Both Engine Bosses (Dustin Aldrich + Justin Richardson) get `pay_method = 'daily'`, `daily_rate = 1000.00` set on their `crew_compensation` rows before the tickets are inserted.
+**Mobile-first:**
+- Bottom sheet on mobile (`<Sheet side="bottom">`), max-h-[70vh] scroll.
+- Each row 56px tall with hours + gross on the right.
+- Empty state: "No weeks with hours for this filter."
 
-### Data load steps
-1. Seed `org_payroll_settings` for Dry Lightning (10% / 6.2% / 1.45% / 0% state).
-2. Upsert `crew_compensation` for **Dustin Aldrich**: `pay_method='daily'`, `daily_rate=1000`.
-3. Upsert `crew_compensation` for **Justin Richardson**: `pay_method='daily'`, `daily_rate=1000`.
-4. Assign **DL 31** to the Coyote Flats incident (`incident_trucks` insert).
-5. Crew rosters on `incident_truck_crew`:
-   - DL 31: Dustin (EB), Brandon (FF2), Nevaeh (FF2), Sheldon (FF2)
-   - DL 62: Justin (EB)
-6. Insert **4 shift tickets**, status `final`:
-
-| # | Date | Truck | Hrs | Personnel |
-|---|---|---|---|---|
-| 1 | 2026-03-19 | DL 31 | 12 | Dustin (EB), Brandon, Nevaeh |
-| 2 | 2026-03-20 | DL 31 | 14 | Dustin, Brandon, Nevaeh |
-| 3 | 2026-03-22 | DL 62 | 12 | Justin (EB) |
-| 4 | 2026-03-22 | DL 31 | 13 | Dustin, Brandon, Sheldon |
-
-### What you'll see in Payroll → By Crew → All Time
-- **Dustin Aldrich (EB)** — 3 shifts × $1,000 = **$3,000 gross**
-- **Justin Richardson (EB)** — 1 shift × $1,000 = **$1,000 gross**
-- **Brandon Aldrich (FF2)** — 39 hrs × $28.73 + H&W = $1,312.62 gross
-- **Nevaeh Smith (FF2)** — 26 hrs × $28.73 + H&W = $875.08 gross
-- **Sheldon Sundstrom (FF2)** — 13 hrs × $28.73 + H&W = $437.54 gross
-
-By Fire → Coyote Flats shows the same numbers grouped under the incident. Each row expands to deductions + net pay, and "View Paystub" / "Download PDF" works.
+## What changes for the user
+1. Open Payroll → see everything ("All Time"), no scrolling.
+2. Filter by Coyote Flats → see all crew + totals immediately.
+3. Want week-by-week breakdown? Tap **Jump to week** → see only weeks Coyote Flats had activity → tap one → done.
+4. By Fire view → tap fire → tap a week chip inside → zooms in.
 
 ## Files touched
+- `src/pages/Payroll.tsx` — default range, active weeks computation, sheet UI, jump handler, week chips inside expanded fire row.
 
-**Migration (1)**: add 2 columns to `crew_compensation`.
-
-**Edited code (3)**:
-- `src/lib/payroll.ts` — daily-method branch in aggregator; new fields on `CompensationLite` and `CrewPayrollLine`.
-- `src/components/crew/CrewMemberForm.tsx` — role dropdown, payment method toggle, conditional rate inputs.
-- `src/pages/Payroll.tsx` — daily-rate row rendering (shift count × rate).
-- `src/components/payroll/Paystub.tsx` — daily-rate variant (shift list instead of hours table).
-
-**Data inserts (separate, after schema is live)**:
-- `org_payroll_settings`: 1 row
-- `crew_compensation`: 2 upserts (Dustin, Justin)
-- `incident_trucks`: 1 row (DL 31 → Coyote Flats)
-- `incident_truck_crew`: 5 rows
-- `shift_tickets`: 4 rows
-
-**No changes** to bottom nav, access control, OT/H&W hourly logic, withholding engine, or anything outside the payroll/crew surface.
-
-## Resource-order completeness reminder
-Agreement number is still missing for Coyote Flats. Not blocking — but adding the season's master agreement number to the Dry Lightning org or this incident will pre-fill it on every future ticket.
+No other files. No migration. No engine changes. Mobile-first, App-Store-safe (additive only, no removed features).
 
