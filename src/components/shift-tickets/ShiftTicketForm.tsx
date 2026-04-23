@@ -169,6 +169,8 @@ export function ShiftTicketForm({
 
   // Supervisor sheet
   const [showSupervisorSheet, setShowSupervisorSheet] = useState(false);
+  // Import-from-photo sheet
+  const [showImportSheet, setShowImportSheet] = useState(false);
   const { data: availableCrewMembers = [] } = useAvailableCrewMembers(organizationId || undefined);
 
   const selectedCrewNames = new Set(
