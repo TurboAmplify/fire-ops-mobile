@@ -221,7 +221,8 @@ interface AggregateOptions {
 
 interface WeekBucket {
   hours: number;
-  byIncident: Map<string, { hours: number; incidentName: string }>;
+  byIncident: Map<string, { hours: number; incidentName: string; dates: Set<string> }>;
+  dates: Set<string>;
 }
 
 function withinRange(dateStr: string, start: Date | null, end: Date | null): boolean {
@@ -276,15 +277,17 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
       const wk = weekKey(pe.date);
       let bucket = wkMap.get(wk);
       if (!bucket) {
-        bucket = { hours: 0, byIncident: new Map() };
+        bucket = { hours: 0, byIncident: new Map(), dates: new Set() };
         wkMap.set(wk, bucket);
       }
       bucket.hours += hours;
+      bucket.dates.add(pe.date);
       const inc = bucket.byIncident.get(incidentId);
       if (inc) {
         inc.hours += hours;
+        inc.dates.add(pe.date);
       } else {
-        bucket.byIncident.set(incidentId, { hours, incidentName });
+        bucket.byIncident.set(incidentId, { hours, incidentName, dates: new Set([pe.date]) });
       }
     });
   });
