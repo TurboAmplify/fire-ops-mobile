@@ -11,6 +11,7 @@ import { WithholdingProfileForm, EMPTY_WITHHOLDING, type WithholdingProfileValue
 import { useAppMode } from "@/lib/app-mode";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
+import { CREW_ROLES } from "@/lib/crew-roles";
 
 interface Props {
   memberId: string | null;
