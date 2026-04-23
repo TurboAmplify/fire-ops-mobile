@@ -72,7 +72,7 @@ export default function Payroll() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("crew_compensation" as any)
-        .select("crew_member_id, hourly_rate, hw_rate");
+        .select("crew_member_id, hourly_rate, hw_rate, pay_method, daily_rate");
       if (error) throw error;
       return (data as any[]) ?? [];
     },
@@ -80,8 +80,13 @@ export default function Payroll() {
   });
 
   const compMap = useMemo(() => {
-    const m = new Map<string, { hourly_rate: number | null; hw_rate: number | null }>();
-    (compensation ?? []).forEach((c: any) => m.set(c.crew_member_id, { hourly_rate: c.hourly_rate, hw_rate: c.hw_rate }));
+    const m = new Map<string, { hourly_rate: number | null; hw_rate: number | null; pay_method?: "hourly" | "daily" | null; daily_rate?: number | null }>();
+    (compensation ?? []).forEach((c: any) => m.set(c.crew_member_id, {
+      hourly_rate: c.hourly_rate,
+      hw_rate: c.hw_rate,
+      pay_method: c.pay_method,
+      daily_rate: c.daily_rate,
+    }));
     return m;
   }, [compensation]);
 
@@ -297,8 +302,14 @@ export default function Payroll() {
                     <div className="text-right ml-3 shrink-0">
                       <p className="text-sm font-bold">${line.grossPay.toFixed(2)}</p>
                       <p className="text-[11px] text-muted-foreground">
-                        {line.totalHours.toFixed(1)} hrs
-                        {line.overtimeHours > 0 && <span className="text-warning"> · {line.overtimeHours.toFixed(1)} OT</span>}
+                        {line.payMethod === "daily" && line.shiftCount != null ? (
+                          <>{line.shiftCount} {line.shiftCount === 1 ? "shift" : "shifts"} · {line.totalHours.toFixed(1)} hrs</>
+                        ) : (
+                          <>
+                            {line.totalHours.toFixed(1)} hrs
+                            {line.overtimeHours > 0 && <span className="text-warning"> · {line.overtimeHours.toFixed(1)} OT</span>}
+                          </>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -320,12 +331,23 @@ export default function Payroll() {
                     )}
 
                     <div className="pt-2 border-t border-border/40 space-y-1.5">
-                      <DetailRow label="Base Rate" value={`$${line.hourlyRate.toFixed(2)}/hr`} />
-                      <DetailRow label="H&W Rate" value={`$${line.hwRate.toFixed(2)}/hr`} />
-                      <DetailRow label="Regular Pay" value={`$${line.regularPay.toFixed(2)}`} />
-                      <DetailRow label="H&W (first 40 hrs/wk)" value={`$${line.hwPay.toFixed(2)}`} />
-                      {line.overtimeHours > 0 && (
-                        <DetailRow label={`OT Pay (${line.overtimeHours.toFixed(1)} hrs × 1.5)`} value={`$${line.overtimePay.toFixed(2)}`} highlight />
+                      {line.payMethod === "daily" && line.dailyRate ? (
+                        <>
+                          <DetailRow label="Payment Method" value="Flat Daily Rate" />
+                          <DetailRow label="Daily Rate" value={`$${line.dailyRate.toFixed(2)}/shift`} />
+                          <DetailRow label="Shifts Worked" value={`${line.shiftCount ?? 0}`} />
+                          <DetailRow label="Hours Tracked" value={`${line.totalHours.toFixed(1)} hrs`} />
+                        </>
+                      ) : (
+                        <>
+                          <DetailRow label="Base Rate" value={`$${line.hourlyRate.toFixed(2)}/hr`} />
+                          <DetailRow label="H&W Rate" value={`$${line.hwRate.toFixed(2)}/hr`} />
+                          <DetailRow label="Regular Pay" value={`$${line.regularPay.toFixed(2)}`} />
+                          <DetailRow label="H&W (first 40 hrs/wk)" value={`$${line.hwPay.toFixed(2)}`} />
+                          {line.overtimeHours > 0 && (
+                            <DetailRow label={`OT Pay (${line.overtimeHours.toFixed(1)} hrs × 1.5)`} value={`$${line.overtimePay.toFixed(2)}`} highlight />
+                          )}
+                        </>
                       )}
                       <div className="pt-1.5 border-t border-border/40 flex justify-between">
                         <span className="text-xs font-bold">Gross Pay</span>

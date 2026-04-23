@@ -36,47 +36,80 @@ export function Paystub({ line, organizationName, periodLabel, payDate = new Dat
         </div>
       </div>
 
-      <table className="w-full mb-4 text-sm border-collapse">
-        <thead>
-          <tr className="border-b-2 border-black">
-            <th className="text-left py-1.5">Earnings</th>
-            <th className="text-right py-1.5">Hours</th>
-            <th className="text-right py-1.5">Rate</th>
-            <th className="text-right py-1.5">Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr className="border-b border-gray-300">
-            <td className="py-1">Regular</td>
-            <td className="text-right py-1">{line.regularHours.toFixed(2)}</td>
-            <td className="text-right py-1">${fmt(line.hourlyRate)}</td>
-            <td className="text-right py-1">${fmt(line.regularPay)}</td>
-          </tr>
-          {line.hwPay > 0 && (
+      {line.payMethod === "daily" && line.dailyRate ? (
+        <table className="w-full mb-4 text-sm border-collapse">
+          <thead>
+            <tr className="border-b-2 border-black">
+              <th className="text-left py-1.5">Earnings (Flat Daily Rate)</th>
+              <th className="text-right py-1.5">Shifts</th>
+              <th className="text-right py-1.5">Rate</th>
+              <th className="text-right py-1.5">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
             <tr className="border-b border-gray-300">
-              <td className="py-1">Health &amp; Welfare</td>
+              <td className="py-1">Daily Pay</td>
+              <td className="text-right py-1">{line.shiftCount ?? 0}</td>
+              <td className="text-right py-1">${fmt(line.dailyRate)}</td>
+              <td className="text-right py-1">${fmt(line.grossPay)}</td>
+            </tr>
+            {line.shiftDates && line.shiftDates.length > 0 && (
+              <tr>
+                <td colSpan={4} className="py-1 text-[11px] text-gray-600">
+                  Shift dates: {line.shiftDates.map((d) => format(new Date(d + "T00:00:00"), "MMM d")).join(", ")}
+                </td>
+              </tr>
+            )}
+            <tr className="border-t-2 border-black font-bold">
+              <td className="py-1.5">Gross Pay</td>
+              <td></td>
+              <td></td>
+              <td className="text-right py-1.5">${fmt(line.grossPay)}</td>
+            </tr>
+          </tbody>
+        </table>
+      ) : (
+        <table className="w-full mb-4 text-sm border-collapse">
+          <thead>
+            <tr className="border-b-2 border-black">
+              <th className="text-left py-1.5">Earnings</th>
+              <th className="text-right py-1.5">Hours</th>
+              <th className="text-right py-1.5">Rate</th>
+              <th className="text-right py-1.5">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border-b border-gray-300">
+              <td className="py-1">Regular</td>
               <td className="text-right py-1">{line.regularHours.toFixed(2)}</td>
-              <td className="text-right py-1">${fmt(line.hwRate)}</td>
-              <td className="text-right py-1">${fmt(line.hwPay)}</td>
+              <td className="text-right py-1">${fmt(line.hourlyRate)}</td>
+              <td className="text-right py-1">${fmt(line.regularPay)}</td>
             </tr>
-          )}
-          {line.overtimeHours > 0 && (
-            <tr className="border-b border-gray-300">
-              <td className="py-1">Overtime (1.5x)</td>
-              <td className="text-right py-1">{line.overtimeHours.toFixed(2)}</td>
-              <td className="text-right py-1">${fmt(line.hourlyRate * 1.5)}</td>
-              <td className="text-right py-1">${fmt(line.overtimePay)}</td>
+            {line.hwPay > 0 && (
+              <tr className="border-b border-gray-300">
+                <td className="py-1">Health &amp; Welfare</td>
+                <td className="text-right py-1">{line.regularHours.toFixed(2)}</td>
+                <td className="text-right py-1">${fmt(line.hwRate)}</td>
+                <td className="text-right py-1">${fmt(line.hwPay)}</td>
+              </tr>
+            )}
+            {line.overtimeHours > 0 && (
+              <tr className="border-b border-gray-300">
+                <td className="py-1">Overtime (1.5x)</td>
+                <td className="text-right py-1">{line.overtimeHours.toFixed(2)}</td>
+                <td className="text-right py-1">${fmt(line.hourlyRate * 1.5)}</td>
+                <td className="text-right py-1">${fmt(line.overtimePay)}</td>
+              </tr>
+            )}
+            <tr className="border-t-2 border-black font-bold">
+              <td className="py-1.5">Gross Pay</td>
+              <td></td>
+              <td></td>
+              <td className="text-right py-1.5">${fmt(line.grossPay)}</td>
             </tr>
-          )}
-          <tr className="border-t-2 border-black font-bold">
-            <td className="py-1.5">Gross Pay</td>
-            <td></td>
-            <td></td>
-            <td className="text-right py-1.5">${fmt(line.grossPay)}</td>
-          </tr>
-        </tbody>
-      </table>
-
+          </tbody>
+        </table>
+      )}
       {line.byIncident.length > 1 && (
         <div className="mb-4">
           <p className="text-xs uppercase font-bold text-gray-600 mb-1">Hours by Incident</p>

@@ -11,6 +11,7 @@ import { WithholdingProfileForm, EMPTY_WITHHOLDING, type WithholdingProfileValue
 import { useAppMode } from "@/lib/app-mode";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
+import { CREW_ROLES } from "@/lib/crew-roles";
 
 interface Props {
   memberId: string | null;
@@ -27,11 +28,14 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
 
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
+  const [roleSelection, setRoleSelection] = useState<string>("");
   const [phone, setPhone] = useState("");
   const [active, setActive] = useState(true);
   const [notes, setNotes] = useState("");
+  const [payMethod, setPayMethod] = useState<"hourly" | "daily">("hourly");
   const [hourlyRate, setHourlyRate] = useState("");
   const [hwRate, setHwRate] = useState("");
+  const [dailyRate, setDailyRate] = useState("");
   const [withholding, setWithholding] = useState<WithholdingProfileValues>(EMPTY_WITHHOLDING);
 
   const mode = useAppMode();
@@ -44,7 +48,7 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
       if (!memberId) return null;
       const { data, error } = await supabase
         .from("crew_compensation" as any)
-        .select("hourly_rate, hw_rate, filing_status, dependents_count, use_default_withholding, federal_pct_override, extra_withholding, state_pct_override, social_security_exempt, medicare_exempt, other_deductions, notes")
+        .select("hourly_rate, hw_rate, pay_method, daily_rate, filing_status, dependents_count, use_default_withholding, federal_pct_override, extra_withholding, state_pct_override, social_security_exempt, medicare_exempt, other_deductions, notes")
         .eq("crew_member_id", memberId)
         .maybeSingle();
       if (error) throw error;
@@ -57,6 +61,9 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
     if (existing) {
       setName(existing.name);
       setRole(existing.role);
+      // If existing role matches a standard option, select it; otherwise treat as "Other"
+      const matched = (CREW_ROLES as readonly string[]).includes(existing.role) ? existing.role : "Other";
+      setRoleSelection(matched);
       setPhone(existing.phone || "");
       setActive(existing.active);
       setNotes((existing as any).notes || "");
@@ -67,6 +74,8 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
     if (comp) {
       setHourlyRate(comp.hourly_rate != null ? String(comp.hourly_rate) : "");
       setHwRate(comp.hw_rate != null ? String(comp.hw_rate) : "");
+      setPayMethod(comp.pay_method === "daily" ? "daily" : "hourly");
+      setDailyRate(comp.daily_rate != null ? String(comp.daily_rate) : "");
       setWithholding({
         filing_status: (comp.filing_status as any) ?? "single",
         dependents_count: comp.dependents_count != null ? String(comp.dependents_count) : "0",
@@ -130,11 +139,14 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
       if (isAdmin && savedId && membership?.organizationId) {
         const hr = hourlyRate ? parseFloat(hourlyRate) : null;
         const hw = hwRate ? parseFloat(hwRate) : null;
+        const dr = dailyRate ? parseFloat(dailyRate) : null;
         const compRow: any = {
           crew_member_id: savedId,
           organization_id: membership.organizationId,
           hourly_rate: hr,
           hw_rate: hw,
+          pay_method: payMethod,
+          daily_rate: payMethod === "daily" ? dr : null,
         };
         if (showPayroll) {
           compRow.filing_status = withholding.filing_status;
@@ -201,7 +213,30 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
 
               <div className="space-y-1">
                 <label className="text-sm font-medium text-muted-foreground">Role *</label>
-                <input type="text" value={role} onChange={(e) => setRole(e.target.value)} className={inputClass} placeholder="e.g. Engine Boss, Firefighter" />
+                <select
+                  value={roleSelection}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setRoleSelection(v);
+                    if (v && v !== "Other") setRole(v);
+                    else if (v === "Other") setRole("");
+                  }}
+                  className={inputClass}
+                >
+                  <option value="" disabled>Select role…</option>
+                  {CREW_ROLES.map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+                {roleSelection === "Other" && (
+                  <input
+                    type="text"
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    className={inputClass + " mt-2"}
+                    placeholder="Enter custom role"
+                  />
+                )}
               </div>
 
               <div className="space-y-1">
@@ -210,15 +245,47 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
               </div>
 
               {isAdmin && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-muted-foreground">Hourly Rate ($)</label>
-                    <input type="number" step="0.01" min="0" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} className={inputClass} placeholder="0.00" inputMode="decimal" />
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Payment Method</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPayMethod("hourly")}
+                      className={`touch-target rounded-xl py-3 text-sm font-bold transition-colors ${
+                        payMethod === "hourly" ? "bg-primary text-primary-foreground" : "bg-card border text-foreground"
+                      }`}
+                    >
+                      Hourly
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPayMethod("daily")}
+                      className={`touch-target rounded-xl py-3 text-sm font-bold transition-colors ${
+                        payMethod === "daily" ? "bg-primary text-primary-foreground" : "bg-card border text-foreground"
+                      }`}
+                    >
+                      Daily Flat
+                    </button>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-muted-foreground">H&W Rate ($)</label>
-                    <input type="number" step="0.01" min="0" value={hwRate} onChange={(e) => setHwRate(e.target.value)} className={inputClass} placeholder="0.00" inputMode="decimal" />
-                  </div>
+
+                  {payMethod === "hourly" ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium text-muted-foreground">Hourly Rate ($)</label>
+                        <input type="number" step="0.01" min="0" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} className={inputClass} placeholder="0.00" inputMode="decimal" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium text-muted-foreground">H&W Rate ($)</label>
+                        <input type="number" step="0.01" min="0" value={hwRate} onChange={(e) => setHwRate(e.target.value)} className={inputClass} placeholder="0.00" inputMode="decimal" />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-muted-foreground">Daily Rate ($/shift)</label>
+                      <input type="number" step="0.01" min="0" value={dailyRate} onChange={(e) => setDailyRate(e.target.value)} className={inputClass} placeholder="1000.00" inputMode="decimal" />
+                      <p className="text-[11px] text-muted-foreground">Flat amount paid per shift, regardless of hours. No OT, no H&W.</p>
+                    </div>
+                  )}
                 </div>
               )}
 
