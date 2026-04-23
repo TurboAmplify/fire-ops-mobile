@@ -301,6 +301,8 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
     const comp = compensation.get(cm.id);
     const hourlyRate = Number(comp?.hourly_rate) || 0;
     const hwRate = Number(comp?.hw_rate) || 0;
+    const payMethod: "hourly" | "daily" = comp?.pay_method === "daily" ? "daily" : "hourly";
+    const dailyRate = Number(comp?.daily_rate) || 0;
 
     let totalHours = 0;
     let regularHours = 0;
@@ -309,9 +311,11 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
     let hwPay = 0;
     let overtimePay = 0;
 
+    // Daily-only: collect distinct shift dates (overall + per incident)
+    const allDates = new Set<string>();
     const incAgg = new Map<
       string,
-      { incidentName: string; totalHours: number; regularHours: number; overtimeHours: number }
+      { incidentName: string; totalHours: number; regularHours: number; overtimeHours: number; dates: Set<string> }
     >();
 
     wkMap.forEach((bucket) => {
@@ -326,6 +330,8 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
       hwPay += wkReg * hwRate;
       overtimePay += wkOT * hourlyRate * 1.5;
 
+      bucket.dates.forEach((d) => allDates.add(d));
+
       bucket.byIncident.forEach((inc, incidentId) => {
         const share = wkTotal > 0 ? inc.hours / wkTotal : 0;
         const incReg = wkReg * share;
@@ -335,22 +341,40 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
           existing.totalHours += inc.hours;
           existing.regularHours += incReg;
           existing.overtimeHours += incOT;
+          inc.dates.forEach((d) => existing.dates.add(d));
         } else {
           incAgg.set(incidentId, {
             incidentName: inc.incidentName,
             totalHours: inc.hours,
             regularHours: incReg,
             overtimeHours: incOT,
+            dates: new Set(inc.dates),
           });
         }
       });
     });
 
+    const isDaily = payMethod === "daily" && dailyRate > 0;
+    const shiftCount = allDates.size;
+    const sortedShiftDates = Array.from(allDates).sort();
+
     const byIncident: IncidentBreakdown[] = [];
     incAgg.forEach((agg, incidentId) => {
-      const incRegPay = agg.regularHours * hourlyRate;
-      const incHwPay = agg.regularHours * hwRate;
-      const incOTPay = agg.overtimeHours * hourlyRate * 1.5;
+      let incRegPay: number;
+      let incHwPay: number;
+      let incOTPay: number;
+      let incGross: number;
+      if (isDaily) {
+        incRegPay = 0;
+        incHwPay = 0;
+        incOTPay = 0;
+        incGross = agg.dates.size * dailyRate;
+      } else {
+        incRegPay = agg.regularHours * hourlyRate;
+        incHwPay = agg.regularHours * hwRate;
+        incOTPay = agg.overtimeHours * hourlyRate * 1.5;
+        incGross = incRegPay + incHwPay + incOTPay;
+      }
       byIncident.push({
         incidentId: incidentId === "_unassigned" ? null : incidentId,
         incidentName: agg.incidentName,
@@ -360,12 +384,24 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
         regularPay: incRegPay,
         hwPay: incHwPay,
         overtimePay: incOTPay,
-        grossPay: incRegPay + incHwPay + incOTPay,
+        grossPay: incGross,
       });
     });
     byIncident.sort((a, b) => b.grossPay - a.grossPay);
 
-    const grossPay = regularPay + hwPay + overtimePay;
+    let grossPay: number;
+    if (isDaily) {
+      // Flat daily — ignore hourly breakdown for pay calculation
+      grossPay = shiftCount * dailyRate;
+      regularPay = 0;
+      hwPay = 0;
+      overtimePay = 0;
+      // Keep hours for display, but zero out OT (no OT on daily)
+      overtimeHours = 0;
+      regularHours = totalHours;
+    } else {
+      grossPay = regularPay + hwPay + overtimePay;
+    }
 
     const line: CrewPayrollLine = {
       crewMemberId: cm.id,
@@ -381,7 +417,14 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
       overtimePay,
       grossPay,
       byIncident,
+      payMethod,
     };
+
+    if (isDaily) {
+      line.dailyRate = dailyRate;
+      line.shiftCount = shiftCount;
+      line.shiftDates = sortedShiftDates;
+    }
 
     if (withholdings) {
       const profile = withholdings.profiles.get(cm.id) ?? null;
