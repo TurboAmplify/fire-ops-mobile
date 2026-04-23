@@ -72,7 +72,7 @@ export default function Payroll() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("crew_compensation" as any)
-        .select("crew_member_id, hourly_rate, hw_rate");
+        .select("crew_member_id, hourly_rate, hw_rate, pay_method, daily_rate");
       if (error) throw error;
       return (data as any[]) ?? [];
     },
@@ -80,8 +80,13 @@ export default function Payroll() {
   });
 
   const compMap = useMemo(() => {
-    const m = new Map<string, { hourly_rate: number | null; hw_rate: number | null }>();
-    (compensation ?? []).forEach((c: any) => m.set(c.crew_member_id, { hourly_rate: c.hourly_rate, hw_rate: c.hw_rate }));
+    const m = new Map<string, { hourly_rate: number | null; hw_rate: number | null; pay_method?: "hourly" | "daily" | null; daily_rate?: number | null }>();
+    (compensation ?? []).forEach((c: any) => m.set(c.crew_member_id, {
+      hourly_rate: c.hourly_rate,
+      hw_rate: c.hw_rate,
+      pay_method: c.pay_method,
+      daily_rate: c.daily_rate,
+    }));
     return m;
   }, [compensation]);
 
