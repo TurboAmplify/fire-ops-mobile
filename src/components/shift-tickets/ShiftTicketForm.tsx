@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "sonner";
-import { Plus, Loader2, FileText, Save, Download, AlertTriangle, Copy, Lock, Unlock, RefreshCw, Info } from "lucide-react";
+import { Plus, Loader2, FileText, Save, Download, AlertTriangle, Copy, Lock, Unlock, RefreshCw, Info, Camera } from "lucide-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import {
   Dialog,
@@ -22,6 +22,8 @@ import { PersonnelEntryRow } from "./PersonnelEntryRow";
 import { CrewSyncCard } from "./CrewSyncCard";
 import { OF297FormPreview } from "./OF297FormPreview";
 import { UnsavedChangesDialog } from "./UnsavedChangesDialog";
+import { ShiftTicketImportSheet } from "./ShiftTicketImportSheet";
+import type { ParsedShiftTicket } from "@/services/shift-ticket-import";
 import { SuccessOverlay } from "@/components/ui/SuccessOverlay";
 import { SignedImage } from "@/components/ui/SignedImage";
 import { uploadSignature, computeHours, buildRemarksString, insertSignatureAuditLog } from "@/services/shift-tickets";
