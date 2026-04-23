@@ -162,6 +162,69 @@ export default function Payroll() {
   const incidentLines: IncidentPayrollLine[] = useMemo(() => pivotByIncident(crewLines), [crewLines]);
   const totals = useMemo(() => sumTotals(crewLines), [crewLines]);
 
+  // Active weeks across the current incident/crew filter — derived from raw
+  // tickets so it isn't constrained by the rangeStart/rangeEnd cap.
+  const crewNameSet = useMemo(() => {
+    if (crewFilter === "all") return null;
+    const cm = crewMembers?.find((c) => c.id === crewFilter);
+    return cm ? cm.name.trim().toLowerCase() : null;
+  }, [crewFilter, crewMembers]);
+
+  const activeWeeks = useMemo(() => {
+    const buckets = new Map<string, { weekStart: Date; hours: number }>();
+    normalizedTickets.forEach((st) => {
+      if (incidentFilter !== "all" && st.incident_id !== incidentFilter) return;
+      const entries = Array.isArray(st.personnel_entries) ? (st.personnel_entries as any[]) : [];
+      entries.forEach((e) => {
+        if (!e?.date) return;
+        if (crewNameSet && (e.operator_name ?? "").trim().toLowerCase() !== crewNameSet) return;
+        const hours = Number(e.total ?? 0);
+        if (!hours) return;
+        let dt: Date;
+        try { dt = parseISO(e.date); } catch { return; }
+        if (isNaN(dt.getTime())) return;
+        const ws = startOfWeek(dt, { weekStartsOn: 1 });
+        const key = ws.toISOString();
+        const cur = buckets.get(key) ?? { weekStart: ws, hours: 0 };
+        cur.hours += hours;
+        buckets.set(key, cur);
+      });
+    });
+    return Array.from(buckets.values()).sort((a, b) => b.weekStart.getTime() - a.weekStart.getTime());
+  }, [normalizedTickets, incidentFilter, crewNameSet]);
+
+  // Per-incident active weeks (for By Fire chips)
+  const activeWeeksByIncident = useMemo(() => {
+    const map = new Map<string, { weekStart: Date; hours: number }[]>();
+    normalizedTickets.forEach((st) => {
+      const entries = Array.isArray(st.personnel_entries) ? (st.personnel_entries as any[]) : [];
+      const incKey = st.incident_id ?? "_unassigned";
+      entries.forEach((e) => {
+        if (!e?.date) return;
+        const hours = Number(e.total ?? 0);
+        if (!hours) return;
+        let dt: Date;
+        try { dt = parseISO(e.date); } catch { return; }
+        if (isNaN(dt.getTime())) return;
+        const ws = startOfWeek(dt, { weekStartsOn: 1 });
+        const key = ws.toISOString();
+        const list = map.get(incKey) ?? [];
+        const existing = list.find((w) => w.weekStart.toISOString() === key);
+        if (existing) existing.hours += hours;
+        else list.push({ weekStart: ws, hours });
+        map.set(incKey, list);
+      });
+    });
+    map.forEach((list) => list.sort((a, b) => b.weekStart.getTime() - a.weekStart.getTime()));
+    return map;
+  }, [normalizedTickets]);
+
+  const jumpToWeek = (date: Date) => {
+    setWeekStart(startOfWeek(date, { weekStartsOn: 1 }));
+    setViewRange("week");
+    setWeekPickerOpen(false);
+  };
+
   const prevWeek = () => setWeekStart((w) => subWeeks(w, 1));
   const nextWeek = () => setWeekStart((w) => addWeeks(w, 1));
   const prevPeriod = () => setPeriodEnd((d) => subWeeks(d, 2));
