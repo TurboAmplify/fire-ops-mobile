@@ -111,24 +111,54 @@ export type Database = {
       crew_compensation: {
         Row: {
           crew_member_id: string
+          dependents_count: number
+          extra_withholding: number
+          federal_pct_override: number | null
+          filing_status: string
           hourly_rate: number | null
           hw_rate: number | null
+          medicare_exempt: boolean
+          notes: string | null
           organization_id: string
+          other_deductions: number
+          social_security_exempt: boolean
+          state_pct_override: number | null
           updated_at: string
+          use_default_withholding: boolean
         }
         Insert: {
           crew_member_id: string
+          dependents_count?: number
+          extra_withholding?: number
+          federal_pct_override?: number | null
+          filing_status?: string
           hourly_rate?: number | null
           hw_rate?: number | null
+          medicare_exempt?: boolean
+          notes?: string | null
           organization_id: string
+          other_deductions?: number
+          social_security_exempt?: boolean
+          state_pct_override?: number | null
           updated_at?: string
+          use_default_withholding?: boolean
         }
         Update: {
           crew_member_id?: string
+          dependents_count?: number
+          extra_withholding?: number
+          federal_pct_override?: number | null
+          filing_status?: string
           hourly_rate?: number | null
           hw_rate?: number | null
+          medicare_exempt?: boolean
+          notes?: string | null
           organization_id?: string
+          other_deductions?: number
+          social_security_exempt?: boolean
+          state_pct_override?: number | null
           updated_at?: string
+          use_default_withholding?: boolean
         }
         Relationships: [
           {
@@ -574,6 +604,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      org_payroll_settings: {
+        Row: {
+          extra_withholding_default: number
+          federal_pct: number
+          medicare_pct: number
+          organization_id: string
+          social_security_pct: number
+          state_enabled: boolean
+          state_pct: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          extra_withholding_default?: number
+          federal_pct?: number
+          medicare_pct?: number
+          organization_id: string
+          social_security_pct?: number
+          state_enabled?: boolean
+          state_pct?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          extra_withholding_default?: number
+          federal_pct?: number
+          medicare_pct?: number
+          organization_id?: string
+          social_security_pct?: number
+          state_enabled?: boolean
+          state_pct?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
       }
       organization_invites: {
         Row: {

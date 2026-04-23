@@ -7,6 +7,10 @@ import { CrewPhotoUpload } from "@/components/crew/CrewPhotoUpload";
 import { useOrganization } from "@/hooks/useOrganization";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { WithholdingProfileForm, EMPTY_WITHHOLDING, type WithholdingProfileValues } from "@/components/payroll/WithholdingProfileForm";
+import { useAppMode } from "@/lib/app-mode";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
 
 interface Props {
   memberId: string | null;
@@ -28,6 +32,10 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
   const [notes, setNotes] = useState("");
   const [hourlyRate, setHourlyRate] = useState("");
   const [hwRate, setHwRate] = useState("");
+  const [withholding, setWithholding] = useState<WithholdingProfileValues>(EMPTY_WITHHOLDING);
+
+  const mode = useAppMode();
+  const showPayroll = isAdmin && mode.modules.payroll;
 
   // Pay rates live in an admin-only table; only admins can read or write them.
   const { data: comp } = useQuery({
@@ -36,7 +44,7 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
       if (!memberId) return null;
       const { data, error } = await supabase
         .from("crew_compensation" as any)
-        .select("hourly_rate, hw_rate")
+        .select("hourly_rate, hw_rate, filing_status, dependents_count, use_default_withholding, federal_pct_override, extra_withholding, state_pct_override, social_security_exempt, medicare_exempt, other_deductions, notes")
         .eq("crew_member_id", memberId)
         .maybeSingle();
       if (error) throw error;
@@ -59,6 +67,18 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
     if (comp) {
       setHourlyRate(comp.hourly_rate != null ? String(comp.hourly_rate) : "");
       setHwRate(comp.hw_rate != null ? String(comp.hw_rate) : "");
+      setWithholding({
+        filing_status: (comp.filing_status as any) ?? "single",
+        dependents_count: comp.dependents_count != null ? String(comp.dependents_count) : "0",
+        use_default_withholding: comp.use_default_withholding ?? true,
+        federal_pct_override: comp.federal_pct_override != null ? String(comp.federal_pct_override) : "",
+        extra_withholding: comp.extra_withholding != null ? String(comp.extra_withholding) : "0",
+        state_pct_override: comp.state_pct_override != null ? String(comp.state_pct_override) : "",
+        social_security_exempt: !!comp.social_security_exempt,
+        medicare_exempt: !!comp.medicare_exempt,
+        other_deductions: comp.other_deductions != null ? String(comp.other_deductions) : "0",
+        notes: comp.notes ?? "",
+      });
     }
   }, [comp]);
 
@@ -106,23 +126,32 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
         savedId = (created as any)?.id ?? null;
       }
 
-      // Persist pay rates to the admin-only crew_compensation table
+      // Persist pay rates + withholding to the admin-only crew_compensation table
       if (isAdmin && savedId && membership?.organizationId) {
         const hr = hourlyRate ? parseFloat(hourlyRate) : null;
         const hw = hwRate ? parseFloat(hwRate) : null;
-        if (hr !== null || hw !== null) {
-          const { error } = await supabase.from("crew_compensation" as any).upsert(
-            {
-              crew_member_id: savedId,
-              organization_id: membership.organizationId,
-              hourly_rate: hr,
-              hw_rate: hw,
-            } as any,
-            { onConflict: "crew_member_id" }
-          );
-          if (error) throw error;
-          queryClient.invalidateQueries({ queryKey: ["crew-compensation"] });
+        const compRow: any = {
+          crew_member_id: savedId,
+          organization_id: membership.organizationId,
+          hourly_rate: hr,
+          hw_rate: hw,
+        };
+        if (showPayroll) {
+          compRow.filing_status = withholding.filing_status;
+          compRow.dependents_count = parseInt(withholding.dependents_count) || 0;
+          compRow.use_default_withholding = withholding.use_default_withholding;
+          compRow.federal_pct_override = withholding.federal_pct_override ? parseFloat(withholding.federal_pct_override) : null;
+          compRow.extra_withholding = withholding.extra_withholding ? parseFloat(withholding.extra_withholding) : 0;
+          compRow.state_pct_override = withholding.state_pct_override ? parseFloat(withholding.state_pct_override) : null;
+          compRow.social_security_exempt = withholding.social_security_exempt;
+          compRow.medicare_exempt = withholding.medicare_exempt;
+          compRow.other_deductions = withholding.other_deductions ? parseFloat(withholding.other_deductions) : 0;
+          compRow.notes = withholding.notes || null;
         }
+        const { error } = await supabase.from("crew_compensation" as any).upsert(compRow, { onConflict: "crew_member_id" });
+        if (error) throw error;
+        queryClient.invalidateQueries({ queryKey: ["crew-compensation"] });
+        queryClient.invalidateQueries({ queryKey: ["crew-withholding-profiles"] });
       }
 
       toast.success(isEdit ? "Crew member updated" : "Crew member added");
@@ -202,6 +231,21 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
                 <span className="text-sm font-medium">Active</span>
                 <Switch checked={active} onCheckedChange={setActive} />
               </div>
+
+              {showPayroll && (
+                <Collapsible>
+                  <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl bg-card p-3 [&[data-state=open]>svg]:rotate-180">
+                    <div className="text-left">
+                      <p className="text-sm font-bold">Payroll Profile</p>
+                      <p className="text-[11px] text-muted-foreground">Withholding & deductions</p>
+                    </div>
+                    <ChevronDown className="h-4 w-4 shrink-0 transition-transform text-muted-foreground" />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-2">
+                    <WithholdingProfileForm values={withholding} onChange={setWithholding} />
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
             </div>
 
             <div className="shrink-0 px-4 pt-2 pb-6" style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom, 1.5rem))" }}>

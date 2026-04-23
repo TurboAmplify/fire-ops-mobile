@@ -3,6 +3,7 @@ import { Shield, Building2, Users, Activity, AlertTriangle, FileText, ChevronDow
 import { Link } from "react-router-dom";
 import { BackgroundSwitcher } from "@/components/settings/BackgroundSwitcher";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { GlobalPayrollToggle } from "@/components/super-admin/PayrollAccessToggle";
 
 const sections = [
   {
@@ -94,6 +95,10 @@ export default function SuperAdmin() {
               </div>
             );
           })}
+        </div>
+
+        <div className="mt-8">
+          <GlobalPayrollToggle />
         </div>
 
         <div className="mt-8">
