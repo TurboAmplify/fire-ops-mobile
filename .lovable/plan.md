@@ -1,79 +1,99 @@
 
 
-# Pay Adjustments inside the Shift Ticket — placement + visibility
+# Admin Reports — Build Plan
 
-## Where it goes
-Move the section to **after the Signatures block, just before the audit trail / footer** in `ShiftTicketForm.tsx`. This makes it clear the adjustments are a post-script — they happen *after* the legal ticket is signed, and they don't alter the signed personnel hours.
+## Output formats
+Three buttons per report: **PDF** (jsPDF, print-ready), **CSV** (raw data, accountant-friendly), **Excel** (formatted .xlsx via SheetJS — column widths, bold headers, currency/number formatting, frozen header row).
 
-## Visual indicator the ticket has additions
+Add `xlsx` (SheetJS) dependency for Excel export.
 
-When one or more pay adjustments exist on a ticket, every admin-facing surface gets a clear marker:
+## Where it lives
+1. **New hub**: `/admin/reports` — central reports landing page with all report types
+2. **Page-level buttons**: Export buttons added to existing Activity Logs (`AdminLogs.tsx`), Audit page (`SuperAdminAudit.tsx`), and Payroll page (`Payroll.tsx`)
+3. **More page**: New "Reports" card in the Admin section linking to `/admin/reports`
 
-1. **At the top of the shift ticket** (admin view only): a small amber chip beside the ticket title:
-   ```text
-   [ + Pay adjustments (3) ]
-   ```
-   Tapping the chip scrolls down to the post-script section.
+## Report types
 
-2. **In the shift ticket list** (`ShiftTicketLog.tsx` and `ShiftTicketSection.tsx`): same chip on the row, admin-only.
+### 1. Activity Logs Report
+Three filter tabs (Inspections / Signatures / Expenses) — same data as `AdminLogs.tsx` but exportable. Includes date range filter.
 
-3. **In the post-script section header**: amber background tint and a banner:
-   > "Pay adjustments — payroll only. Not part of the signed OF-297."
+### 2. Audit Logs Report (platform admins only)
+- **Shift Ticket Audit** (org-scoped, admin) — all field changes with actor/timestamp
+- **Payroll Adjustment Audit** (org-scoped, admin) — created/deleted adjustments with actor
+- **Platform Admin Audit** (platform admin only) — cross-org actions
 
-4. **OF-297 PDF export**: nothing changes. The PDF stays clean — no chip, no adjustments line. The federal form is the legal record.
+### 3. Payroll Reports (the big one)
+Each export comes in **PDF / CSV / Excel** flavors. Date range = presets + custom.
 
-## The post-script section itself
+**Scope dropdown:**
+- All crew (org-wide)
+- Single crew member
+- All incidents
+- Single incident
+- Combination: crew × incident
 
-Section header: **"Pay Adjustments (Admin / Payroll Only)"**, collapsed by default if empty, expanded if any exist.
+**Report variants** (matches your "all three buttons" choice):
+- **Summary** — one row per crew member: reg hrs, OT hrs, H&W, gross, deductions, net
+- **Detail** — summary + per-shift breakdown (date, incident, ticket #, hrs)
+- **Paystubs** — one PDF per crew member (uses existing `generatePaystubPdf`) bundled into a single multi-page PDF, plus cover summary
 
-```text
-─── Pay Adjustments (Admin / Payroll Only) ──── [ + Add ]
-Payroll only. Not shown on signed OF-297.
+### 4. Bonus reports (filling in gaps)
+- **Incident Cost Report** — labor + expenses per incident, exportable
+- **Crew Roster Report** — active crew, roles, qualifications, contact info
+- **Expense Report** — date-range filtered expenses by category/incident
 
-  Brandon Smith   +1.5 hrs   $43.10
-    Memo: "Owner approved extra hr/shift for Coyote Flats"
-                                                       [ × ]
+## Date range UX
+Reusable `<DateRangePicker>` component:
+- Presets: This Week / Last Week / This Month / Last Month / Pay Period (Mon–Sun current week) / Last 30 Days / Year to Date / All Time
+- "Custom..." opens two shadcn Calendar pickers in a Popover
+- Mobile-first: full-width chips for presets, large touch targets
 
-  Nevaeh Jones    +1.5 hrs   $43.10
-    Memo: "Owner approved extra hr/shift for Coyote Flats"
-                                                       [ × ]
+## Files
 
-                              Adjustment Total  +$86.20
-                          [ + Apply to all crew on shift ]
-```
+**New:**
+- `src/pages/AdminReports.tsx` — central hub with cards for each report type
+- `src/components/reports/DateRangePicker.tsx` — reusable preset + custom range
+- `src/components/reports/ReportExportButtons.tsx` — PDF / CSV / Excel button trio
+- `src/components/reports/ScopePicker.tsx` — All / Single crew + All / Single incident
+- `src/services/reports/payroll-report.ts` — aggregates payroll data, calls existing `src/lib/payroll.ts`
+- `src/services/reports/activity-report.ts` — fetches inspections/signatures/expenses with date filter
+- `src/services/reports/audit-report.ts` — fetches shift_ticket_audit + payroll_adjustment_audit + platform_admin_audit
+- `src/services/reports/incident-report.ts` — labor cost + expenses per incident
+- `src/services/reports/exporters/csv.ts` — generic CSV writer
+- `src/services/reports/exporters/excel.ts` — SheetJS-based formatted xlsx writer (bold headers, frozen row, column widths, $ format)
+- `src/services/reports/exporters/pdf-payroll.ts` — payroll summary/detail PDF
+- `src/services/reports/exporters/pdf-activity.ts` — activity log PDF
+- `src/services/reports/exporters/pdf-audit.ts` — audit log PDF
+- `src/services/reports/exporters/pdf-paystubs-bundle.ts` — multi-page paystub bundle (reuses existing `generatePaystubPdf`)
+- `src/services/reports/exporters/share.ts` — single helper that triggers download on web AND opens iOS/Android share sheet via Capacitor when available (so PDFs/CSVs work on the mobile app)
 
-- **+ Add** opens the existing `AdjustmentSheet` with date + incident pre-filled from the ticket
-- **+ Apply to all crew on shift** loops through `personnel_entries` and creates one adjustment per person with the same hours/amount + memo
-- Each row shows the **memo** inline (not just on hover) so it's visible at a glance
-- Delete (×) removes the single row; confirmation toast
+**Edited:**
+- `src/App.tsx` — add `/admin/reports` route gated by `AdminGate`
+- `src/pages/More.tsx` — add "Reports" card in Admin section
+- `src/pages/AdminLogs.tsx` — add `<ReportExportButtons>` for the active tab
+- `src/pages/SuperAdminAudit.tsx` — add export buttons
+- `src/pages/Payroll.tsx` — add export buttons in admin view (top of page, mobile-first)
 
-## Memo carries everywhere
-The memo (the `reason` field on `payroll_adjustments`) already flows through:
-- **Payroll page** Adjustments section — already shows `"reason"` italicized
-- **Paystub modal + PDF** — already renders each adjustment as its own line with the memo text
-- **Audit log** — `payroll_adjustment_audit` already stores the memo in the payload
+**Dependencies added:**
+- `xlsx` (SheetJS) for formatted Excel export
 
-No backend or paystub changes needed. We're only adjusting **placement, the indicator chip, and the per-row memo display** on the ticket itself.
-
-## Admin gating
-- The whole post-script section is wrapped in an `isAdmin` check (org admin or platform admin via `useOrganization().isAdmin`)
-- Crew users never see the chip, the section, or any hint that adjustments exist
-- The OF-297 PDF export never includes them regardless of who exports
-
-## Files touched
-- `src/components/shift-tickets/PayAdjustmentsSection.tsx` (new) — the post-script section, includes header banner, list with inline memo, delete control, "+ Add", "+ Apply to all crew on shift"
-- `src/components/shift-tickets/ShiftTicketForm.tsx` — render `<PayAdjustmentsSection>` **after** `<SignaturePicker>` block (admin-gated), and add the amber "+ Pay adjustments (n)" chip near the ticket title
-- `src/components/payroll/AdjustmentSheet.tsx` — accept optional `prefillDate`, `prefillIncidentId`, `prefillCrewMemberId` props (no UI redesign, just pre-fill)
-- `src/pages/ShiftTicketLog.tsx` + `src/components/shift-tickets/ShiftTicketSection.tsx` — admin-only chip on each row that has adjustments
-- `src/hooks/usePayrollAdjustments.ts` — add a `useTicketAdjustments(incidentId, dateRange, crewMemberIds)` selector so the section only fetches the rows relevant to this ticket
+## Mobile-first / app store requirements
+- All buttons ≥44px touch targets, full-width on narrow screens, side-by-side on wider
+- Loading spinner during file generation (large payroll reports can take a beat)
+- Empty states ("No data in this date range") with clear messaging
+- Error toasts via `sonner` if generation fails — never silent
+- Capacitor share sheet integration: on iOS/Android the file opens the native "Save to Files" / share UI; on web it triggers a normal download. Single helper, no platform-specific code in components.
+- All admin-gated via `useOrganization().isAdmin` (existing pattern); platform-only audit hidden behind `usePlatformAdmin`
+- Zero changes to data tables, RLS, or existing logic — pure read-only export layer
+- Zero new RLS policies needed (all reads use existing admin RLS)
 
 ## What stays unchanged
-- `payroll_adjustments` and `payroll_adjustment_audit` tables — no schema change
-- `src/lib/payroll.ts` aggregation — already folds adjustments into gross
-- `Paystub.tsx` and `generatePaystubPdf.ts` — already render memos as line items
-- `generateOF297Pdf.ts` — explicitly excludes adjustments (no change needed; it never read from `payroll_adjustments`)
+- All existing tables, RLS, triggers, functions
+- `src/lib/payroll.ts` aggregation logic
+- `src/components/payroll/generatePaystubPdf.ts` — reused as-is
+- `src/components/shift-tickets/generateOF297Pdf.ts` — untouched
+- Crew users see nothing new (entirely admin-gated)
 
-## Technical notes
-- The "did this ticket have adjustments?" lookup uses `incident_id` + the date range covered by the ticket's `personnel_entries` + the crew members on the ticket. Cheap query, admin-only RLS already enforces visibility.
-- Chip count = number of adjustment rows tied to this ticket's scope, not dollars — keeps the chip narrow and glanceable.
+## Risk surface
+Read-only export feature, no schema changes, no auth changes. The only risk is bundle size from `xlsx` (~400KB gzipped) — mitigated by lazy-loading the exporters with dynamic `import()` so the chunk only ships when an admin actually exports.
 
