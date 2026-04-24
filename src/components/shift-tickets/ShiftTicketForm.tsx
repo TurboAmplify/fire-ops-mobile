@@ -681,11 +681,23 @@ export function ShiftTicketForm({
     <AppShell title="Shift Ticket" onBack={() => isDirty ? setShowLeaveDialog(true) : onBack?.()}>
       <div className="px-4 pt-3 pb-40 space-y-5" style={{ overflowX: 'clip' }}>
         {/* Title row */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <FileText className="h-5 w-5 text-primary shrink-0" />
           <h2 className="text-base font-extrabold truncate">OF-297 Shift Ticket</h2>
           {ticket?.status === "draft" && (
             <span className="shrink-0 rounded-full bg-warning/20 text-warning px-2 py-0.5 text-[10px] font-bold">DRAFT</span>
+          )}
+          {isAdmin && adjustmentsCount > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                document.getElementById("pay-adjustments-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+              className="shrink-0 inline-flex items-center gap-1 rounded-full bg-warning/15 border border-warning/40 px-2 py-0.5 text-[10px] font-bold text-warning touch-target active:bg-warning/25"
+              title="Jump to Pay Adjustments"
+            >
+              <DollarSign className="h-3 w-3" /> Pay adjustments ({adjustmentsCount})
+            </button>
           )}
           {onRefreshFromSources && ticket?.id && !editingLocked && (
             <button
