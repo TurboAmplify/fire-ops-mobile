@@ -125,6 +125,7 @@ export default function ShiftTicketLog() {
   const { isAdmin } = useOrganization();
   // refetchOnMount + refetchOnWindowFocus ensure changes from the edit page show up on return
   const { data: tickets, isLoading, error } = useRecentShiftTickets(200);
+  const { data: crewMembers } = useCrewMembers();
   const [selected, setSelected] = useState<SelectedTicket | null>(null);
   const [downloadLoading, setDownloadLoading] = useState(false);
   const [auditLoading, setAuditLoading] = useState(false);
@@ -136,6 +137,28 @@ export default function ShiftTicketLog() {
   const [deleteTarget, setDeleteTarget] = useState<SelectedTicket | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // "Pay crew without a ticket" flow — admin-only shortcut to AdjustmentSheet
+  const [crewPickerOpen, setCrewPickerOpen] = useState(false);
+  const [adjustmentFor, setAdjustmentFor] = useState<{ id: string; name: string; payMethod?: "hourly" | "daily" } | null>(null);
+
+  // Pull pay_method for all crew so AdjustmentSheet behaves correctly
+  const { data: comp } = useQuery({
+    queryKey: ["crew-compensation-paymethods"],
+    enabled: isAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("crew_compensation" as any)
+        .select("crew_member_id, pay_method");
+      if (error) throw error;
+      return (data as any[]) ?? [];
+    },
+  });
+  const payMethodFor = (crewMemberId: string): "hourly" | "daily" | undefined => {
+    const row = (comp ?? []).find((c) => c.crew_member_id === crewMemberId);
+    return row?.pay_method as "hourly" | "daily" | undefined;
+  };
+
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
