@@ -92,3 +92,27 @@ export function useDeletePayrollAdjustment() {
     },
   });
 }
+
+/**
+ * Selector for adjustments that belong to a single shift ticket's scope:
+ * same incident, dates within the ticket, and crew members on the ticket.
+ * Used by the post-script "Pay Adjustments" section on the shift ticket form
+ * and the chip indicators on shift ticket lists.
+ */
+export function useTicketAdjustments(params: {
+  incidentId: string | null | undefined;
+  dates: string[];
+  crewMemberIds: string[];
+  enabled?: boolean;
+}) {
+  const { data: all } = usePayrollAdjustments();
+  const dateSet = new Set(params.dates.filter(Boolean));
+  const crewSet = new Set(params.crewMemberIds.filter(Boolean));
+  const filtered = (all ?? []).filter((a) => {
+    if (params.incidentId && a.incident_id !== params.incidentId) return false;
+    if (dateSet.size > 0 && !dateSet.has(a.adjustment_date)) return false;
+    if (crewSet.size > 0 && !crewSet.has(a.crew_member_id)) return false;
+    return true;
+  });
+  return filtered;
+}
