@@ -338,9 +338,15 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
 
   const lines: CrewPayrollLine[] = [];
 
+  // Build the set of crew to render: any with shift hours OR any with adjustments
+  const crewIdsToProcess = new Set<string>();
+  buckets.forEach((_, id) => crewIdsToProcess.add(id));
+  adjByCrew.forEach((_, id) => crewIdsToProcess.add(id));
+
   crewMembers.forEach((cm) => {
+    if (!crewIdsToProcess.has(cm.id)) return;
     const wkMap = buckets.get(cm.id);
-    if (!wkMap || wkMap.size === 0) return;
+    const crewAdjustments = adjByCrew.get(cm.id) ?? [];
 
     const comp = compensation.get(cm.id);
     const hourlyRate = Number(comp?.hourly_rate) || 0;
@@ -362,41 +368,43 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
       { incidentName: string; totalHours: number; regularHours: number; overtimeHours: number; dates: Set<string> }
     >();
 
-    wkMap.forEach((bucket) => {
-      const wkTotal = bucket.hours;
-      const wkReg = Math.min(wkTotal, 40);
-      const wkOT = Math.max(0, wkTotal - 40);
+    if (wkMap) {
+      wkMap.forEach((bucket) => {
+        const wkTotal = bucket.hours;
+        const wkReg = Math.min(wkTotal, 40);
+        const wkOT = Math.max(0, wkTotal - 40);
 
-      totalHours += wkTotal;
-      regularHours += wkReg;
-      overtimeHours += wkOT;
-      regularPay += wkReg * hourlyRate;
-      hwPay += wkReg * hwRate;
-      overtimePay += wkOT * hourlyRate * 1.5;
+        totalHours += wkTotal;
+        regularHours += wkReg;
+        overtimeHours += wkOT;
+        regularPay += wkReg * hourlyRate;
+        hwPay += wkReg * hwRate;
+        overtimePay += wkOT * hourlyRate * 1.5;
 
-      bucket.dates.forEach((d) => allDates.add(d));
+        bucket.dates.forEach((d) => allDates.add(d));
 
-      bucket.byIncident.forEach((inc, incidentId) => {
-        const share = wkTotal > 0 ? inc.hours / wkTotal : 0;
-        const incReg = wkReg * share;
-        const incOT = wkOT * share;
-        const existing = incAgg.get(incidentId);
-        if (existing) {
-          existing.totalHours += inc.hours;
-          existing.regularHours += incReg;
-          existing.overtimeHours += incOT;
-          inc.dates.forEach((d) => existing.dates.add(d));
-        } else {
-          incAgg.set(incidentId, {
-            incidentName: inc.incidentName,
-            totalHours: inc.hours,
-            regularHours: incReg,
-            overtimeHours: incOT,
-            dates: new Set(inc.dates),
-          });
-        }
+        bucket.byIncident.forEach((inc, incidentId) => {
+          const share = wkTotal > 0 ? inc.hours / wkTotal : 0;
+          const incReg = wkReg * share;
+          const incOT = wkOT * share;
+          const existing = incAgg.get(incidentId);
+          if (existing) {
+            existing.totalHours += inc.hours;
+            existing.regularHours += incReg;
+            existing.overtimeHours += incOT;
+            inc.dates.forEach((d) => existing.dates.add(d));
+          } else {
+            incAgg.set(incidentId, {
+              incidentName: inc.incidentName,
+              totalHours: inc.hours,
+              regularHours: incReg,
+              overtimeHours: incOT,
+              dates: new Set(inc.dates),
+            });
+          }
+        });
       });
-    });
+    }
 
     const isDaily = payMethod === "daily" && dailyRate > 0;
     const shiftCount = allDates.size;
@@ -447,6 +455,24 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
       grossPay = regularPay + hwPay + overtimePay;
     }
 
+    // Resolve adjustments: hours×base rate or flat amount; always at base, no OT/H&W
+    const adjustmentLines: AdjustmentLine[] = crewAdjustments.map((a) => {
+      const amount = a.adjustment_type === "hours"
+        ? Number(a.hours ?? 0) * hourlyRate
+        : Number(a.amount ?? 0);
+      return {
+        id: a.id,
+        date: a.adjustment_date,
+        incidentId: a.incident_id,
+        type: a.adjustment_type,
+        hours: a.adjustment_type === "hours" ? Number(a.hours ?? 0) : null,
+        amount,
+        reason: a.reason,
+      };
+    });
+    const adjustmentTotal = adjustmentLines.reduce((s, a) => s + a.amount, 0);
+    grossPay += adjustmentTotal;
+
     const line: CrewPayrollLine = {
       crewMemberId: cm.id,
       name: cm.name,
@@ -462,6 +488,8 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
       grossPay,
       byIncident,
       payMethod,
+      adjustments: adjustmentLines,
+      adjustmentTotal,
     };
 
     if (isDaily) {
@@ -476,6 +504,9 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
       line.deductions = deductions;
       line.netPay = grossPay - deductions.total;
     }
+
+    // Reference incidentNames for adjustments shown in UI (no-op consumer hint)
+    void incidentNames;
 
     lines.push(line);
   });
