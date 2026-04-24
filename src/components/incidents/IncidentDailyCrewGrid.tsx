@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useIncidentDailyCrew } from "@/hooks/useIncidentDailyCrew";
+import { useIncidentDailyCrew, type DailyCrewStatus } from "@/hooks/useIncidentDailyCrew";
 import { Loader2, Users, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface Props {
@@ -19,6 +19,28 @@ function formatDow(d: string) {
 function formatLongDate(d: string) {
   const dt = new Date(d + "T00:00:00");
   return dt.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+}
+
+const STATUS_LABEL: Record<DailyCrewStatus, string> = {
+  draft: "Draft",
+  awaiting_supervisor: "Awaiting Supervisor",
+  complete: "Complete",
+};
+
+const STATUS_CLASSES: Record<DailyCrewStatus, string> = {
+  draft: "bg-muted text-muted-foreground",
+  awaiting_supervisor: "bg-warning/15 text-warning",
+  complete: "bg-success/15 text-success",
+};
+
+function StatusPill({ status }: { status: DailyCrewStatus }) {
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${STATUS_CLASSES[status]}`}
+    >
+      {STATUS_LABEL[status]}
+    </span>
+  );
 }
 
 export function IncidentDailyCrewGrid({ incidentId }: Props) {
