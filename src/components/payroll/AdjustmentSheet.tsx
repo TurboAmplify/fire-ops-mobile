@@ -16,6 +16,10 @@ interface Props {
   crewMemberName: string;
   payMethod?: "hourly" | "daily";
   defaultIncidentId?: string | null;
+  /** Pre-fill the date (YYYY-MM-DD). Used when opened from a shift ticket. */
+  prefillDate?: string;
+  /** When true, lock the incident + date fields (set from a ticket context). */
+  lockContext?: boolean;
 }
 
 export function AdjustmentSheet({
@@ -25,6 +29,8 @@ export function AdjustmentSheet({
   crewMemberName,
   payMethod,
   defaultIncidentId,
+  prefillDate,
+  lockContext,
 }: Props) {
   const { data: incidents } = useIncidents();
   const create = useCreatePayrollAdjustment();
@@ -37,7 +43,7 @@ export function AdjustmentSheet({
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
   const [incidentId, setIncidentId] = useState<string>(defaultIncidentId ?? "");
-  const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [date, setDate] = useState(prefillDate || format(new Date(), "yyyy-MM-dd"));
 
   const reset = () => {
     setType(isDaily ? "flat" : "hours");
@@ -45,7 +51,7 @@ export function AdjustmentSheet({
     setAmount("");
     setReason("");
     setIncidentId(defaultIncidentId ?? "");
-    setDate(format(new Date(), "yyyy-MM-dd"));
+    setDate(prefillDate || format(new Date(), "yyyy-MM-dd"));
   };
 
   const handleSubmit = async () => {
@@ -105,7 +111,8 @@ export function AdjustmentSheet({
             <select
               value={incidentId}
               onChange={(e) => setIncidentId(e.target.value)}
-              className="w-full rounded-xl border bg-background px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-ring touch-target"
+              disabled={lockContext}
+              className="w-full rounded-xl border bg-background px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-ring touch-target disabled:opacity-60"
             >
               <option value="">— None / org-wide —</option>
               {incidents?.map((inc) => (
@@ -116,7 +123,7 @@ export function AdjustmentSheet({
 
           <div className="space-y-1.5">
             <Label className="text-xs">Date</Label>
-            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} disabled={lockContext} />
           </div>
 
           <div className="space-y-1.5">

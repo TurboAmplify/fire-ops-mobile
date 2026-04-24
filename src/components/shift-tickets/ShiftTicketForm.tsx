@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "sonner";
-import { Plus, Loader2, FileText, Save, Download, AlertTriangle, Copy, Lock, Unlock, RefreshCw, Info, Camera } from "lucide-react";
+import { Plus, Loader2, FileText, Save, Download, AlertTriangle, Copy, Lock, Unlock, RefreshCw, Info, Camera, DollarSign } from "lucide-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import {
   Dialog,
@@ -23,6 +23,7 @@ import { CrewSyncCard } from "./CrewSyncCard";
 import { OF297FormPreview } from "./OF297FormPreview";
 import { UnsavedChangesDialog } from "./UnsavedChangesDialog";
 import { ShiftTicketImportSheet } from "./ShiftTicketImportSheet";
+import { PayAdjustmentsSection } from "./PayAdjustmentsSection";
 import type { ParsedShiftTicket } from "@/services/shift-ticket-import";
 import { SuccessOverlay } from "@/components/ui/SuccessOverlay";
 import { SignedImage } from "@/components/ui/SignedImage";
@@ -36,11 +37,15 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import type { ShiftTicket, EquipmentEntry, PersonnelEntry } from "@/services/shift-tickets";
 import type { IncidentTruckCrewWithMember } from "@/services/incident-truck-crew";
+import { useTicketAdjustments } from "@/hooks/usePayrollAdjustments";
+import { useCrewMembers } from "@/hooks/useCrewMembers";
 
 interface ShiftTicketFormProps {
   ticket: Partial<ShiftTicket> | null;
   incidentTruckId: string;
   organizationId: string;
+  /** Incident this ticket belongs to. Required for the admin Pay Adjustments section. */
+  incidentId?: string;
   saving: boolean;
   onSave: (data: Partial<ShiftTicket>) => void | Promise<void>;
   onExportPdf: (sigOverrides: { contractor_rep_signature_url: string | null; supervisor_signature_url: string | null }) => void;
@@ -99,6 +104,7 @@ export function ShiftTicketForm({
   ticket,
   incidentTruckId,
   organizationId,
+  incidentId,
   saving,
   onSave,
   onExportPdf,
@@ -218,6 +224,38 @@ export function ShiftTicketForm({
   const [showUnlockDialog, setShowUnlockDialog] = useState(false);
   const [unlockSubmitting, setUnlockSubmitting] = useState(false);
   const editingLocked = ticketLocked && !unlockedThisSession;
+
+  // ── Pay adjustment chip (admin-only) ──
+  // Counts how many payroll_adjustments are scoped to this ticket: same
+  // incident, same dates, same crew. Used to render the amber "+ N" chip
+  // next to the ticket title and to know whether the post-script section
+  // has anything in it.
+  const { data: allCrewMembers } = useCrewMembers();
+  const adjustmentCrewIds = (() => {
+    if (!isAdmin || !allCrewMembers) return [] as string[];
+    const ids: string[] = [];
+    const seen = new Set<string>();
+    for (const entry of personnelEntries) {
+      const key = (entry.operator_name || "").trim().toLowerCase();
+      if (!key || seen.has(key)) continue;
+      const m = allCrewMembers.find((c) => (c.name || "").trim().toLowerCase() === key);
+      if (m) {
+        seen.add(key);
+        ids.push(m.id);
+      }
+    }
+    return ids;
+  })();
+  const adjustmentDates = Array.from(
+    new Set(personnelEntries.map((p) => p.date).filter(Boolean) as string[]),
+  );
+  const ticketAdjustments = useTicketAdjustments({
+    incidentId,
+    dates: adjustmentDates,
+    crewMemberIds: adjustmentCrewIds,
+    enabled: isAdmin,
+  });
+  const adjustmentsCount = isAdmin ? ticketAdjustments.length : 0;
 
   const showSuccess = useCallback((msg: string) => {
     setSuccessMsg(msg);
@@ -643,11 +681,23 @@ export function ShiftTicketForm({
     <AppShell title="Shift Ticket" onBack={() => isDirty ? setShowLeaveDialog(true) : onBack?.()}>
       <div className="px-4 pt-3 pb-40 space-y-5" style={{ overflowX: 'clip' }}>
         {/* Title row */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <FileText className="h-5 w-5 text-primary shrink-0" />
           <h2 className="text-base font-extrabold truncate">OF-297 Shift Ticket</h2>
           {ticket?.status === "draft" && (
             <span className="shrink-0 rounded-full bg-warning/20 text-warning px-2 py-0.5 text-[10px] font-bold">DRAFT</span>
+          )}
+          {isAdmin && adjustmentsCount > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                document.getElementById("pay-adjustments-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+              className="shrink-0 inline-flex items-center gap-1 rounded-full bg-warning/15 border border-warning/40 px-2 py-0.5 text-[10px] font-bold text-warning touch-target active:bg-warning/25"
+              title="Jump to Pay Adjustments"
+            >
+              <DollarSign className="h-3 w-3" /> Pay adjustments ({adjustmentsCount})
+            </button>
           )}
           {onRefreshFromSources && ticket?.id && !editingLocked && (
             <button
@@ -1066,6 +1116,15 @@ export function ShiftTicketForm({
             )}
           </button>
         </section>
+
+        {/* ── Pay Adjustments (admin-only post-script, after signatures) ── */}
+        {isAdmin && incidentId && (
+          <PayAdjustmentsSection
+            incidentId={incidentId}
+            personnelEntries={personnelEntries}
+            organizationId={organizationId}
+          />
+        )}
       </div>
 
       {/* ── Lock banner ── */}
