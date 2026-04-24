@@ -266,6 +266,7 @@ export default function ShiftTicketEdit() {
       ticket={mergedTicket}
       incidentTruckId={incidentTruckId || ""}
       organizationId={membership?.organizationId || ""}
+      incidentId={incidentId}
       saving={updateMutation.isPending}
       onSave={handleSave}
       onExportPdf={handleExportPdf}
