@@ -728,6 +728,56 @@ export default function ShiftTicketLog() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Crew picker for "Pay without a ticket" */}
+      <Sheet open={crewPickerOpen} onOpenChange={setCrewPickerOpen}>
+        <SheetContent side="bottom" className="max-h-[75vh] overflow-y-auto rounded-t-2xl">
+          <SheetHeader className="text-left">
+            <SheetTitle className="text-base">Pay Crew Without a Ticket</SheetTitle>
+            <p className="text-xs text-muted-foreground">
+              Use this when someone needs to be paid but didn't go on a shift ticket
+              (truck went down, scheduled day, etc.). Adds a payroll adjustment — the OF-297 is not affected.
+            </p>
+          </SheetHeader>
+          <div className="mt-3 space-y-1.5">
+            {(!crewMembers || crewMembers.length === 0) && (
+              <p className="text-sm text-muted-foreground py-6 text-center">
+                No crew members in your organization yet.
+              </p>
+            )}
+            {(crewMembers ?? []).filter((c) => c.active !== false).map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => {
+                  setAdjustmentFor({ id: c.id, name: c.name, payMethod: payMethodFor(c.id) });
+                  setCrewPickerOpen(false);
+                }}
+                className="w-full flex items-center justify-between rounded-xl border border-border/60 bg-card px-4 py-3 text-left active:scale-[0.99] touch-target"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold truncate">{c.name}</p>
+                  {c.role && (
+                    <p className="text-[11px] text-muted-foreground">{c.role}</p>
+                  )}
+                </div>
+                <DollarSign className="h-4 w-4 text-warning shrink-0 ml-2" />
+              </button>
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Single-crew adjustment sheet */}
+      {adjustmentFor && (
+        <AdjustmentSheet
+          open={!!adjustmentFor}
+          onOpenChange={(v) => !v && setAdjustmentFor(null)}
+          crewMemberId={adjustmentFor.id}
+          crewMemberName={adjustmentFor.name}
+          payMethod={adjustmentFor.payMethod}
+          defaultIncidentId={null}
+        />
+      )}
     </AppShell>
   );
 }
