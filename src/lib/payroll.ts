@@ -236,6 +236,10 @@ interface AggregateOptions {
   rangeStart: Date | null;
   rangeEnd: Date | null;
   incidentFilter: string;
+  // Optional payroll adjustments (admin-added bonus pay)
+  adjustments?: PayrollAdjustmentLite[];
+  // Optional incident name lookup so adjustments can show fire names
+  incidentNames?: Map<string, string>;
   // Optional withholding context. When provided, each line gets deductions+netPay.
   withholdings?: {
     profiles: Map<string, WithholdingProfile>;
