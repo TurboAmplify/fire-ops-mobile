@@ -1,9 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+export type DailyCrewStatus = "draft" | "awaiting_supervisor" | "complete";
+
 export interface DailyCrewCell {
   hours: number;
   trucks: string[];
+  status: DailyCrewStatus;
+  ticketIds: string[];
 }
 
 export interface DailyCrewMatrix {
@@ -20,6 +24,23 @@ interface PersonnelEntry {
   total?: number | string;
   operator_name?: string;
   activity_type?: string;
+}
+
+// Lower index = less finalized (worst). When merging, keep the minimum.
+const STATUS_RANK: Record<DailyCrewStatus, number> = {
+  draft: 0,
+  awaiting_supervisor: 1,
+  complete: 2,
+};
+
+function worstStatus(a: DailyCrewStatus, b: DailyCrewStatus): DailyCrewStatus {
+  return STATUS_RANK[a] <= STATUS_RANK[b] ? a : b;
+}
+
+function deriveTicketStatus(t: any): DailyCrewStatus {
+  if (t?.supervisor_signature_url) return "complete";
+  if (t?.contractor_rep_signature_url) return "awaiting_supervisor";
+  return "draft";
 }
 
 export function useIncidentDailyCrew(incidentId: string) {
@@ -52,7 +73,7 @@ export function useIncidentDailyCrew(incidentId: string) {
           .in("incident_truck_id", itIds),
         supabase
           .from("shift_tickets")
-          .select("id, incident_truck_id, personnel_entries")
+          .select("id, incident_truck_id, personnel_entries, supervisor_signature_url, contractor_rep_signature_url")
           .in("incident_truck_id", itIds),
         // Crew lookup so we can map names to roles/ids when possible
         supabase
@@ -84,21 +105,30 @@ export function useIncidentDailyCrew(incidentId: string) {
         date: string,
         hours: number,
         truckName: string,
+        status: DailyCrewStatus,
+        ticketId: string | null,
       ) => {
         if (!date || hours <= 0) return;
         dateSet.add(date);
         crewMap[crewKey] = crewInfo;
         if (!cells[crewKey]) cells[crewKey] = {};
-        if (!cells[crewKey][date]) cells[crewKey][date] = { hours: 0, trucks: [] };
+        if (!cells[crewKey][date]) {
+          cells[crewKey][date] = { hours: 0, trucks: [], status, ticketIds: [] };
+        } else {
+          cells[crewKey][date].status = worstStatus(cells[crewKey][date].status, status);
+        }
         cells[crewKey][date].hours += hours;
         if (!cells[crewKey][date].trucks.includes(truckName)) {
           cells[crewKey][date].trucks.push(truckName);
+        }
+        if (ticketId && !cells[crewKey][date].ticketIds.includes(ticketId)) {
+          cells[crewKey][date].ticketIds.push(ticketId);
         }
         totalsByCrew[crewKey] = (totalsByCrew[crewKey] ?? 0) + hours;
         totalsByDate[date] = (totalsByDate[date] ?? 0) + hours;
       };
 
-      // 3a. Legacy shift_crew rows
+      // 3a. Legacy shift_crew rows — treat as "complete" (legacy hand-entered)
       const shiftIds = shifts.map((s) => s.id);
       const shiftMeta: Record<string, { date: string; it: string }> = {};
       shifts.forEach((s) => {
@@ -117,13 +147,22 @@ export function useIncidentDailyCrew(incidentId: string) {
           const cm = row.crew_members;
           if (!cm) return;
           const truckName = truckNameByIt[meta.it] ?? "Truck";
-          addEntry(cm.id, { id: cm.id, name: cm.name, role: cm.role }, meta.date, Number(row.hours) || 0, truckName);
+          addEntry(
+            cm.id,
+            { id: cm.id, name: cm.name, role: cm.role },
+            meta.date,
+            Number(row.hours) || 0,
+            truckName,
+            "complete",
+            null,
+          );
         });
       }
 
       // 3b. Shift ticket personnel entries (JSONB)
       tickets.forEach((t: any) => {
         const truckName = truckNameByIt[t.incident_truck_id] ?? "Truck";
+        const ticketStatus = deriveTicketStatus(t);
         const entries: PersonnelEntry[] = Array.isArray(t.personnel_entries) ? t.personnel_entries : [];
         entries.forEach((e) => {
           const name = (e.operator_name ?? "").trim();
@@ -133,7 +172,7 @@ export function useIncidentDailyCrew(incidentId: string) {
           const matched = crewByLowerName[name.toLowerCase()];
           const crewKey = matched ? matched.id : `name:${name.toLowerCase()}`;
           const crewInfo = matched ?? { id: crewKey, name, role: null };
-          addEntry(crewKey, crewInfo, date, hours, truckName);
+          addEntry(crewKey, crewInfo, date, hours, truckName, ticketStatus, t.id);
         });
       });
 
