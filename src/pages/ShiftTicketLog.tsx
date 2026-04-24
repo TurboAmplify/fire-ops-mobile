@@ -346,6 +346,18 @@ export default function ShiftTicketLog() {
           </TooltipProvider>
         </div>
 
+        {/* Admin shortcut: pay someone who wasn't on a shift ticket (e.g. truck went down) */}
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={() => setCrewPickerOpen(true)}
+            className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-warning/40 bg-warning/5 px-3 py-2.5 text-xs font-semibold text-warning touch-target active:bg-warning/10"
+          >
+            <DollarSign className="h-3.5 w-3.5" />
+            Pay crew without a ticket (payroll adjustment)
+          </button>
+        )}
+
         {isLoading && (
           <div className="rounded-2xl bg-card card-shadow p-8 flex justify-center">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
