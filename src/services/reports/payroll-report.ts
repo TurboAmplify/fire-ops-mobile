@@ -21,8 +21,24 @@ export interface PayrollReportInput {
   crewFilter: string;                 // "all" or crew member id
 }
 
+export interface ShiftEntryRow {
+  ticketId: string;
+  date: string;
+  incidentName: string;
+  crewMemberId: string;
+  crewName: string;
+  role: string;
+  opStart: string;
+  opStop: string;
+  sbStart: string;
+  sbStop: string;
+  total: number;
+  remarks: string;
+}
+
 export interface PayrollReportData {
   lines: CrewPayrollLine[];
+  shiftEntries: ShiftEntryRow[];
   rangeLabel: string;
 }
 
@@ -127,5 +143,63 @@ export async function fetchPayrollReport(
     lines = lines.filter((l) => l.crewMemberId === input.crewFilter);
   }
 
-  return { lines, rangeLabel };
+  // Build per-shift entry rows so admins can audit dates/times against pay.
+  // Apply the same filters used in aggregation: incident scope, date range,
+  // crew filter, and only crew members that exist in this org.
+  const allowedIncidents: Set<string> | null = (() => {
+    if (input.incidentFilter === "all") return null;
+    if (Array.isArray(input.incidentFilter)) {
+      return input.incidentFilter.length === 0 ? null : new Set(input.incidentFilter);
+    }
+    return new Set([input.incidentFilter]);
+  })();
+
+  const crewByName = new Map<string, { id: string; name: string; role: string }>();
+  ((crewRes.data ?? []) as { id: string; name: string; role: string }[]).forEach((cm) => {
+    crewByName.set(cm.name.toLowerCase().trim(), cm);
+  });
+
+  const inRange = (d: string): boolean => {
+    if (!input.rangeStart && !input.rangeEnd) return true;
+    const dt = new Date(d);
+    if (isNaN(dt.getTime())) return false;
+    if (input.rangeStart && dt < input.rangeStart) return false;
+    if (input.rangeEnd && dt > input.rangeEnd) return false;
+    return true;
+  };
+
+  const shiftEntries: ShiftEntryRow[] = [];
+  tickets.forEach((st) => {
+    if (allowedIncidents !== null && (!st.incident_id || !allowedIncidents.has(st.incident_id))) return;
+    const entries = Array.isArray(st.personnel_entries) ? (st.personnel_entries as any[]) : [];
+    entries.forEach((pe) => {
+      if (!pe?.operator_name || !pe?.date) return;
+      if (!inRange(pe.date)) return;
+      const cm = crewByName.get(String(pe.operator_name).toLowerCase().trim());
+      if (!cm) return;
+      if (input.crewFilter !== "all" && cm.id !== input.crewFilter) return;
+      shiftEntries.push({
+        ticketId: st.id,
+        date: pe.date,
+        incidentName: st.incident_name ?? "Unassigned",
+        crewMemberId: cm.id,
+        crewName: cm.name,
+        role: cm.role,
+        opStart: pe.op_start ?? "",
+        opStop: pe.op_stop ?? "",
+        sbStart: pe.sb_start ?? "",
+        sbStop: pe.sb_stop ?? "",
+        total: Number(pe.total) || 0,
+        remarks: pe.remarks ?? "",
+      });
+    });
+  });
+
+  shiftEntries.sort((a, b) => {
+    if (a.crewName !== b.crewName) return a.crewName.localeCompare(b.crewName);
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    return a.incidentName.localeCompare(b.incidentName);
+  });
+
+  return { lines, shiftEntries, rangeLabel };
 }

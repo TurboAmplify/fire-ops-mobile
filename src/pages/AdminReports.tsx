@@ -67,7 +67,7 @@ function PayrollReportsCard({ organizationId, organizationName }: { organization
   const buildExport = (variant: "summary" | "detail" | "paystubs") => async (fmt: Format) => {
     const incidentFilter = scope.incidentIds.length === 0 ? "all" : scope.incidentIds;
     let effectiveRange = range;
-    let { lines } = await fetchPayrollReport(
+    let { lines, shiftEntries } = await fetchPayrollReport(
       { organizationId, rangeStart: range.from, rangeEnd: range.to, incidentFilter, crewFilter: scope.crewId },
       range.label,
     );
@@ -82,6 +82,7 @@ function PayrollReportsCard({ organizationId, organizationName }: { organization
       );
       if (fallback.lines.length > 0) {
         lines = fallback.lines;
+        shiftEntries = fallback.shiftEntries;
         effectiveRange = { from: null, to: null, label: "All Time" };
         toast({
           title: "Date range widened",
@@ -167,28 +168,51 @@ function PayrollReportsCard({ organizationId, organizationName }: { organization
       });
     }
 
-    // Detail
+    // Detail — for each crew, list every shift ticket entry (date + times),
+    // then the per-incident roll-up, then any adjustments. This lets admins
+    // tie individual shift dates/times directly to the calculated hours/pay.
     const detailRows: any[] = [];
+    const entriesByCrew = new Map<string, typeof shiftEntries>();
+    shiftEntries.forEach((e) => {
+      const list = entriesByCrew.get(e.crewMemberId) ?? [];
+      list.push(e);
+      entriesByCrew.set(e.crewMemberId, list);
+    });
+
     lines.forEach((l) => {
+      const crewShifts = entriesByCrew.get(l.crewMemberId) ?? [];
+      crewShifts.forEach((e) => {
+        detailRows.push({
+          crew: l.name,
+          role: l.role,
+          incident: `Shift — ${e.incidentName}`,
+          date: e.date,
+          op: e.opStart && e.opStop ? `${e.opStart}-${e.opStop}` : "",
+          sb: e.sbStart && e.sbStop ? `${e.sbStart}-${e.sbStop}` : "",
+          hrs: e.total, reg: "", ot: "", rp: "", hw: "", op$: "", gross: "",
+        });
+      });
       l.byIncident.forEach((inc) => {
         detailRows.push({
-          crew: l.name, role: l.role, incident: inc.incidentName,
+          crew: l.name, role: l.role, incident: `Total — ${inc.incidentName}`,
+          date: "", op: "", sb: "",
           hrs: inc.totalHours, reg: inc.regularHours, ot: inc.overtimeHours,
-          rp: inc.regularPay, hw: inc.hwPay, op: inc.overtimePay, gross: inc.grossPay,
+          rp: inc.regularPay, hw: inc.hwPay, op$: inc.overtimePay, gross: inc.grossPay,
         });
       });
       l.adjustments.forEach((a) => {
         detailRows.push({
           crew: l.name, role: l.role, incident: `[Adjustment] ${a.reason}`,
-          hrs: a.hours ?? 0, reg: 0, ot: 0, rp: 0, hw: 0, op: 0, gross: a.amount,
+          date: a.date, op: "", sb: "",
+          hrs: a.hours ?? 0, reg: 0, ot: 0, rp: 0, hw: 0, op$: 0, gross: a.amount,
         });
       });
     });
 
     if (fmt === "csv") {
       return downloadCsv(baseName,
-        ["Crew", "Role", "Incident / Adjustment", "Hours", "Reg Hrs", "OT Hrs", "Reg Pay", "H&W", "OT Pay", "Total"],
-        detailRows.map((r) => [r.crew, r.role, r.incident, r.hrs, r.reg, r.ot, r.rp, r.hw, r.op, r.gross]),
+        ["Crew", "Role", "Incident / Shift / Adjustment", "Date", "Op Start-Stop", "SB Start-Stop", "Hours", "Reg Hrs", "OT Hrs", "Reg Pay", "H&W", "OT Pay", "Total"],
+        detailRows.map((r) => [r.crew, r.role, r.incident, r.date, r.op, r.sb, r.hrs, r.reg, r.ot, r.rp, r.hw, r.op$, r.gross]),
       );
     }
     if (fmt === "excel") {
@@ -196,15 +220,18 @@ function PayrollReportsCard({ organizationId, organizationName }: { organization
         name: "Payroll Detail",
         columns: [
           { header: "Crew", key: "crew", width: 22 },
-          { header: "Role", key: "role", width: 16 },
-          { header: "Incident / Adjustment", key: "incident", width: 32 },
-          { header: "Hours", key: "hrs", width: 10, format: "number" },
-          { header: "Reg Hrs", key: "reg", width: 10, format: "number" },
-          { header: "OT Hrs", key: "ot", width: 10, format: "number" },
-          { header: "Reg Pay", key: "rp", width: 14, format: "currency" },
-          { header: "H&W", key: "hw", width: 12, format: "currency" },
-          { header: "OT Pay", key: "op", width: 12, format: "currency" },
-          { header: "Total", key: "gross", width: 14, format: "currency" },
+          { header: "Role", key: "role", width: 14 },
+          { header: "Incident / Shift / Adjustment", key: "incident", width: 34 },
+          { header: "Date", key: "date", width: 12 },
+          { header: "Op Start-Stop", key: "op", width: 14 },
+          { header: "SB Start-Stop", key: "sb", width: 14 },
+          { header: "Hours", key: "hrs", width: 9, format: "number" },
+          { header: "Reg Hrs", key: "reg", width: 9, format: "number" },
+          { header: "OT Hrs", key: "ot", width: 9, format: "number" },
+          { header: "Reg Pay", key: "rp", width: 12, format: "currency" },
+          { header: "H&W", key: "hw", width: 11, format: "currency" },
+          { header: "OT Pay", key: "op$", width: 11, format: "currency" },
+          { header: "Total", key: "gross", width: 13, format: "currency" },
         ],
         rows: detailRows,
       }]);
@@ -217,16 +244,19 @@ function PayrollReportsCard({ organizationId, organizationName }: { organization
       landscape: true,
       sections: [{
         columns: [
-          { header: "Crew", key: "crew", width: 100 },
-          { header: "Role", key: "role", width: 70 },
-          { header: "Incident / Adjustment", key: "incident", width: 160 },
-          { header: "Hrs", key: "hrs", width: 50, align: "right", format: (v) => Number(v).toFixed(2) },
-          { header: "Reg", key: "reg", width: 50, align: "right", format: (v) => Number(v).toFixed(2) },
-          { header: "OT", key: "ot", width: 50, align: "right", format: (v) => Number(v).toFixed(2) },
-          { header: "Reg $", key: "rp", width: 65, align: "right", format: (v) => `$${Number(v).toFixed(2)}` },
-          { header: "H&W", key: "hw", width: 55, align: "right", format: (v) => `$${Number(v).toFixed(2)}` },
-          { header: "OT $", key: "op", width: 60, align: "right", format: (v) => `$${Number(v).toFixed(2)}` },
-          { header: "Total", key: "gross", width: 65, align: "right", format: (v) => `$${Number(v).toFixed(2)}` },
+          { header: "Crew", key: "crew", width: 85 },
+          { header: "Role", key: "role", width: 55 },
+          { header: "Incident / Shift / Adj", key: "incident", width: 135 },
+          { header: "Date", key: "date", width: 55 },
+          { header: "Op", key: "op", width: 65 },
+          { header: "SB", key: "sb", width: 65 },
+          { header: "Hrs", key: "hrs", width: 38, align: "right", format: (v) => v === "" ? "" : Number(v).toFixed(2) },
+          { header: "Reg", key: "reg", width: 38, align: "right", format: (v) => v === "" ? "" : Number(v).toFixed(2) },
+          { header: "OT", key: "ot", width: 38, align: "right", format: (v) => v === "" ? "" : Number(v).toFixed(2) },
+          { header: "Reg $", key: "rp", width: 50, align: "right", format: (v) => v === "" ? "" : `$${Number(v).toFixed(2)}` },
+          { header: "H&W", key: "hw", width: 45, align: "right", format: (v) => v === "" ? "" : `$${Number(v).toFixed(2)}` },
+          { header: "OT $", key: "op$", width: 50, align: "right", format: (v) => v === "" ? "" : `$${Number(v).toFixed(2)}` },
+          { header: "Total", key: "gross", width: 55, align: "right", format: (v) => v === "" ? "" : `$${Number(v).toFixed(2)}` },
         ],
         rows: detailRows,
       }],
@@ -246,7 +276,7 @@ function PayrollReportsCard({ organizationId, organizationName }: { organization
         <ReportExportButtons onExport={buildExport("summary")} />
       </div>
       <div className="space-y-2">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Detail (per incident / adjustment)</p>
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Detail (per shift, incident, and adjustment)</p>
         <ReportExportButtons onExport={buildExport("detail")} />
       </div>
       <div className="space-y-2">
