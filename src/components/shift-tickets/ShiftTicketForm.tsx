@@ -104,6 +104,7 @@ export function ShiftTicketForm({
   ticket,
   incidentTruckId,
   organizationId,
+  incidentId,
   saving,
   onSave,
   onExportPdf,
