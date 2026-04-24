@@ -506,6 +506,71 @@ export default function Payroll() {
                       </div>
                     )}
 
+                    {/* Adjustments section */}
+                    <div className="rounded-lg border border-border/60 bg-secondary/30 p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Adjustments</p>
+                        <button
+                          onClick={() => setAdjustmentFor(line)}
+                          className="flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-[11px] font-bold text-primary-foreground active:scale-[0.98] touch-target"
+                        >
+                          <Plus className="h-3 w-3" /> Add
+                        </button>
+                      </div>
+                      {line.adjustments.length === 0 ? (
+                        <p className="text-[11px] text-muted-foreground italic">
+                          No adjustments. Use "Add" to give discretionary extra pay (e.g. owner-approved bonus hours).
+                        </p>
+                      ) : (
+                        <div className="space-y-1.5">
+                          {line.adjustments.map((adj) => {
+                            const incName = adj.incidentId ? incidentNamesMap.get(adj.incidentId) ?? "Unknown fire" : "Org-wide";
+                            let dateLabel = adj.date;
+                            try { dateLabel = format(parseISO(adj.date), "M/d/yy"); } catch {}
+                            return (
+                              <div key={adj.id} className="flex items-start gap-2 rounded-md bg-background/60 p-2">
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-medium">
+                                    {adj.type === "hours"
+                                      ? <>+{adj.hours?.toFixed(2)} hrs <span className="text-muted-foreground font-normal">· {incName} · {dateLabel}</span></>
+                                      : <>+${adj.amount.toFixed(2)} <span className="text-muted-foreground font-normal">· {incName} · {dateLabel}</span></>
+                                    }
+                                  </p>
+                                  <p className="text-[11px] text-muted-foreground italic break-words">"{adj.reason}"</p>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span className="text-xs font-bold">+${adj.amount.toFixed(2)}</span>
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm(`Delete this adjustment for ${line.name}?`)) return;
+                                      try {
+                                        await deleteAdjustment.mutateAsync(adj.id);
+                                        toast({ title: "Adjustment deleted" });
+                                      } catch (err) {
+                                        toast({
+                                          title: "Failed to delete",
+                                          description: err instanceof Error ? err.message : "Try again.",
+                                          variant: "destructive",
+                                        });
+                                      }
+                                    }}
+                                    className="touch-target p-1.5 text-destructive active:scale-90"
+                                    aria-label="Delete adjustment"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          <div className="pt-1.5 border-t border-border/40 flex justify-between">
+                            <span className="text-[11px] font-bold">Adjustment Total</span>
+                            <span className="text-[11px] font-bold">+${line.adjustmentTotal.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
                     <div className="pt-2 border-t border-border/40 space-y-1.5">
                       {line.payMethod === "daily" && line.dailyRate ? (
                         <>
