@@ -301,3 +301,26 @@ export function splitForLunch(
     sb_stop: stop,
   };
 }
+
+/**
+ * Save-time guard: if a personnel entry's remarks claim a "30-min lunch" but the
+ * total clearly hasn't been reduced (i.e. matches the full op+sb window with no
+ * deduction), subtract 0.5h. Prevents legacy / hand-edited rows from over-paying
+ * crew. Returns a new array; never mutates input.
+ */
+export function enforceLunchDeduction(entries: PersonnelEntry[]): PersonnelEntry[] {
+  return entries.map((e) => {
+    if (!e.remarks || !/30-?min lunch/i.test(e.remarks)) return e;
+    const opH = computeHours(e.op_start || "", e.op_stop || "");
+    const sbH = computeHours(e.sb_start || "", e.sb_stop || "");
+    const raw = Math.round((opH + sbH) * 10) / 10;
+    const current = Number(e.total) || 0;
+    // If total already reflects the deduction (raw - 0.5) or is otherwise lower, leave alone
+    if (current <= raw - 0.4) return e;
+    // If current matches the raw window, deduct the half-hour break
+    if (Math.abs(current - raw) < 0.05 && raw > 0.5) {
+      return { ...e, total: Math.round((raw - 0.5) * 10) / 10 };
+    }
+    return e;
+  });
+}
