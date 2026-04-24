@@ -49,6 +49,7 @@ export default function AdminReports() {
         </p>
 
         <PayrollReportsCard organizationId={orgId} organizationName={orgName} />
+        <PLReportCard organizationId={orgId} organizationName={orgName} />
         <ActivityReportsCard organizationId={orgId} organizationName={orgName} />
         <AuditReportsCard organizationId={orgId} organizationName={orgName} isPlatformAdmin={isPlatformAdmin} />
         <IncidentCostCard organizationId={orgId} organizationName={orgName} />
