@@ -178,6 +178,15 @@ export interface AdjustmentLine {
   reason: string;
 }
 
+export interface EmployerCosts {
+  ssPct: number;
+  socialSecurity: number;
+  medicarePct: number;
+  medicare: number;
+  total: number;          // FICA match (employer share)
+  trueCost: number;       // grossPay + employer match (full burdened labor cost)
+}
+
 export interface CrewPayrollLine {
   crewMemberId: string;
   name: string;
@@ -203,6 +212,8 @@ export interface CrewPayrollLine {
   // Withholding (optional — only populated when withholdings provided)
   deductions?: DeductionBreakdown;
   netPay?: number;
+  // Employer-side FICA match (only populated when withholdings provided)
+  employer?: EmployerCosts;
 }
 
 export interface IncidentPayrollLine {
