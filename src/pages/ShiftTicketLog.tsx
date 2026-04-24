@@ -3,7 +3,7 @@ import { useRecentShiftTickets } from "@/hooks/useShiftTickets";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Clock, FileText, Pencil, FileDown, Loader2, ArrowUp, ArrowDown, ArrowUpDown, Trash2, AlertTriangle, Eye, Info } from "lucide-react";
+import { CheckCircle2, Clock, FileText, Pencil, FileDown, Loader2, ArrowUp, ArrowDown, ArrowUpDown, Trash2, AlertTriangle, Eye, Info, DollarSign } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { PersonnelEntry, ShiftTicket } from "@/services/shift-tickets";
 import { deleteShiftTicket } from "@/services/shift-tickets";
@@ -17,11 +17,16 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { generateOF297Pdf, generateOF297PdfBlob } from "@/components/shift-tickets/generateOF297Pdf";
 import { useOrganization } from "@/hooks/useOrganization";
+import { useCrewMembers } from "@/hooks/useCrewMembers";
+import { AdjustmentSheet } from "@/components/payroll/AdjustmentSheet";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 function formatDateSafe(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
@@ -120,6 +125,7 @@ export default function ShiftTicketLog() {
   const { isAdmin } = useOrganization();
   // refetchOnMount + refetchOnWindowFocus ensure changes from the edit page show up on return
   const { data: tickets, isLoading, error } = useRecentShiftTickets(200);
+  const { data: crewMembers } = useCrewMembers();
   const [selected, setSelected] = useState<SelectedTicket | null>(null);
   const [downloadLoading, setDownloadLoading] = useState(false);
   const [auditLoading, setAuditLoading] = useState(false);
@@ -131,6 +137,28 @@ export default function ShiftTicketLog() {
   const [deleteTarget, setDeleteTarget] = useState<SelectedTicket | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // "Pay crew without a ticket" flow — admin-only shortcut to AdjustmentSheet
+  const [crewPickerOpen, setCrewPickerOpen] = useState(false);
+  const [adjustmentFor, setAdjustmentFor] = useState<{ id: string; name: string; payMethod?: "hourly" | "daily" } | null>(null);
+
+  // Pull pay_method for all crew so AdjustmentSheet behaves correctly
+  const { data: comp } = useQuery({
+    queryKey: ["crew-compensation-paymethods"],
+    enabled: isAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("crew_compensation" as any)
+        .select("crew_member_id, pay_method");
+      if (error) throw error;
+      return (data as any[]) ?? [];
+    },
+  });
+  const payMethodFor = (crewMemberId: string): "hourly" | "daily" | undefined => {
+    const row = (comp ?? []).find((c) => c.crew_member_id === crewMemberId);
+    return row?.pay_method as "hourly" | "daily" | undefined;
+  };
+
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -317,6 +345,18 @@ export default function ShiftTicketLog() {
             </Tooltip>
           </TooltipProvider>
         </div>
+
+        {/* Admin shortcut: pay someone who wasn't on a shift ticket (e.g. truck went down) */}
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={() => setCrewPickerOpen(true)}
+            className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-warning/40 bg-warning/5 px-3 py-2.5 text-xs font-semibold text-warning touch-target active:bg-warning/10"
+          >
+            <DollarSign className="h-3.5 w-3.5" />
+            Pay crew without a ticket (payroll adjustment)
+          </button>
+        )}
 
         {isLoading && (
           <div className="rounded-2xl bg-card card-shadow p-8 flex justify-center">
@@ -688,6 +728,56 @@ export default function ShiftTicketLog() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Crew picker for "Pay without a ticket" */}
+      <Sheet open={crewPickerOpen} onOpenChange={setCrewPickerOpen}>
+        <SheetContent side="bottom" className="max-h-[75vh] overflow-y-auto rounded-t-2xl">
+          <SheetHeader className="text-left">
+            <SheetTitle className="text-base">Pay Crew Without a Ticket</SheetTitle>
+            <p className="text-xs text-muted-foreground">
+              Use this when someone needs to be paid but didn't go on a shift ticket
+              (truck went down, scheduled day, etc.). Adds a payroll adjustment — the OF-297 is not affected.
+            </p>
+          </SheetHeader>
+          <div className="mt-3 space-y-1.5">
+            {(!crewMembers || crewMembers.length === 0) && (
+              <p className="text-sm text-muted-foreground py-6 text-center">
+                No crew members in your organization yet.
+              </p>
+            )}
+            {(crewMembers ?? []).filter((c) => c.active !== false).map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => {
+                  setAdjustmentFor({ id: c.id, name: c.name, payMethod: payMethodFor(c.id) });
+                  setCrewPickerOpen(false);
+                }}
+                className="w-full flex items-center justify-between rounded-xl border border-border/60 bg-card px-4 py-3 text-left active:scale-[0.99] touch-target"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold truncate">{c.name}</p>
+                  {c.role && (
+                    <p className="text-[11px] text-muted-foreground">{c.role}</p>
+                  )}
+                </div>
+                <DollarSign className="h-4 w-4 text-warning shrink-0 ml-2" />
+              </button>
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Single-crew adjustment sheet */}
+      {adjustmentFor && (
+        <AdjustmentSheet
+          open={!!adjustmentFor}
+          onOpenChange={(v) => !v && setAdjustmentFor(null)}
+          crewMemberId={adjustmentFor.id}
+          crewMemberName={adjustmentFor.name}
+          payMethod={adjustmentFor.payMethod}
+          defaultIncidentId={null}
+        />
+      )}
     </AppShell>
   );
 }

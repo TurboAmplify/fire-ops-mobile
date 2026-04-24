@@ -234,15 +234,21 @@ export function PayAdjustmentsSection({
           </p>
         </div>
 
+        {/* Helper hint when ticket has no matched crew yet */}
+        {crewOnTicket.length === 0 && (
+          <div className="border-b border-border bg-card px-3 py-2.5">
+            <p className="text-[11px] text-muted-foreground leading-snug">
+              Add personnel to the ticket and save it first — then you can attach pay adjustments here.
+              Need to pay someone who wasn't on a shift ticket at all?{" "}
+              <span className="font-semibold text-foreground">Go to Payroll → tap that crew member → Add Adjustment</span>.
+            </p>
+          </div>
+        )}
+
         {/* Crew picker for adding a new adjustment */}
-        {showCrewPicker && (
+        {showCrewPicker && crewOnTicket.length > 0 && (
           <div className="border-b border-border bg-card p-2 space-y-1">
             <p className="text-[11px] font-medium text-muted-foreground px-1">Select crew member</p>
-            {crewOnTicket.length === 0 && (
-              <p className="text-xs text-muted-foreground text-center py-3">
-                No crew on this ticket are linked to crew records yet.
-              </p>
-            )}
             {crewOnTicket.map((c) => (
               <button
                 key={c.id}
