@@ -44,6 +44,7 @@ import Payroll from "./pages/Payroll";
 import More from "./pages/More";
 import NeedsList from "./pages/NeedsList";
 import AdminLogs from "./pages/AdminLogs";
+import AdminReports from "./pages/AdminReports";
 import Training from "./pages/Training";
 import { ModuleGate, AdminGate } from "@/components/ModuleGate";
 import { PlatformAdminGate } from "@/components/PlatformAdminGate";
@@ -102,6 +103,7 @@ const App = () => (
               <Route path="/needs" element={<ProtectedRoute><NeedsList /></ProtectedRoute>} />
               <Route path="/training" element={<ProtectedRoute><ModuleGate module="training"><Training /></ModuleGate></ProtectedRoute>} />
               <Route path="/admin/logs" element={<ProtectedRoute><AdminGate><AdminLogs /></AdminGate></ProtectedRoute>} />
+              <Route path="/admin/reports" element={<ProtectedRoute><AdminGate><AdminReports /></AdminGate></ProtectedRoute>} />
               <Route path="/super-admin" element={<ProtectedRoute><PlatformAdminGate><SuperAdmin /></PlatformAdminGate></ProtectedRoute>} />
               <Route path="/super-admin/organizations" element={<ProtectedRoute><PlatformAdminGate><SuperAdminOrgs /></PlatformAdminGate></ProtectedRoute>} />
               <Route path="/super-admin/organizations/:orgId" element={<ProtectedRoute><PlatformAdminGate><SuperAdminOrgDetail /></PlatformAdminGate></ProtectedRoute>} />
