@@ -211,7 +211,7 @@ function PayrollReportsCard({ organizationId, organizationName }: { organization
     }
     return downloadTablePdf({
       title: "Payroll Detail",
-      subtitle: range.label,
+      subtitle: effectiveRange.label,
       organizationName,
       filenameBase: baseName,
       landscape: true,
