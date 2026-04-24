@@ -21,8 +21,24 @@ export interface PayrollReportInput {
   crewFilter: string;                 // "all" or crew member id
 }
 
+export interface ShiftEntryRow {
+  ticketId: string;
+  date: string;
+  incidentName: string;
+  crewMemberId: string;
+  crewName: string;
+  role: string;
+  opStart: string;
+  opStop: string;
+  sbStart: string;
+  sbStop: string;
+  total: number;
+  remarks: string;
+}
+
 export interface PayrollReportData {
   lines: CrewPayrollLine[];
+  shiftEntries: ShiftEntryRow[];
   rangeLabel: string;
 }
 
