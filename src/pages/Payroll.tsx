@@ -62,6 +62,8 @@ export default function Payroll() {
   const [viewMode, setViewMode] = useState<ViewMode>("crew");
   const [showSettings, setShowSettings] = useState(false);
   const [paystubFor, setPaystubFor] = useState<CrewPayrollLine | null>(null);
+  const [adjustmentFor, setAdjustmentFor] = useState<CrewPayrollLine | null>(null);
+  const { toast } = useToast();
 
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
@@ -77,6 +79,8 @@ export default function Payroll() {
   const { data: incidents } = useIncidents();
   const { data: orgPayroll } = useOrgPayrollSettings();
   const { data: withholdingRows } = useCrewWithholdingProfiles();
+  const { data: adjustments } = usePayrollAdjustments();
+  const deleteAdjustment = useDeletePayrollAdjustment();
 
   const { data: compensation } = useQuery({
     queryKey: ["crew-compensation"],
