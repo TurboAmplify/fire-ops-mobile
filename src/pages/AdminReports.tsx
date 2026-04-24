@@ -276,7 +276,7 @@ function PayrollReportsCard({ organizationId, organizationName }: { organization
         <ReportExportButtons onExport={buildExport("summary")} />
       </div>
       <div className="space-y-2">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Detail (per incident / adjustment)</p>
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Detail (per shift, incident, and adjustment)</p>
         <ReportExportButtons onExport={buildExport("detail")} />
       </div>
       <div className="space-y-2">
