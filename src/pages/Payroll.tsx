@@ -153,6 +153,12 @@ export default function Payroll() {
     }));
   }, [shiftTickets]);
 
+  const incidentNamesMap = useMemo(() => {
+    const m = new Map<string, string>();
+    (incidents ?? []).forEach((i) => m.set(i.id, i.name));
+    return m;
+  }, [incidents]);
+
   const crewLines: CrewPayrollLine[] = useMemo(() => {
     if (!crewMembers) return [];
     const lines = aggregateCrewPayroll({
@@ -160,11 +166,22 @@ export default function Payroll() {
       crewMembers: crewMembers.map((c) => ({ id: c.id, name: c.name, role: c.role })),
       compensation: compMap,
       rangeStart, rangeEnd, incidentFilter,
+      adjustments: (adjustments ?? []).map((a) => ({
+        id: a.id,
+        crew_member_id: a.crew_member_id,
+        incident_id: a.incident_id,
+        adjustment_date: a.adjustment_date,
+        adjustment_type: a.adjustment_type,
+        hours: a.hours,
+        amount: a.amount,
+        reason: a.reason,
+      })),
+      incidentNames: incidentNamesMap,
       withholdings: { profiles: profileMap, orgDefaults: orgPayroll ?? DEFAULT_ORG_PAYROLL },
     });
     if (crewFilter !== "all") return lines.filter((l) => l.crewMemberId === crewFilter);
     return lines;
-  }, [normalizedTickets, crewMembers, compMap, rangeStart, rangeEnd, incidentFilter, crewFilter, profileMap, orgPayroll]);
+  }, [normalizedTickets, crewMembers, compMap, rangeStart, rangeEnd, incidentFilter, crewFilter, profileMap, orgPayroll, adjustments, incidentNamesMap]);
 
   const incidentLines: IncidentPayrollLine[] = useMemo(() => pivotByIncident(crewLines), [crewLines]);
   const totals = useMemo(() => sumTotals(crewLines), [crewLines]);
