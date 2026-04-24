@@ -1,6 +1,6 @@
 import { AppShell } from "@/components/AppShell";
 import { useNavigate } from "react-router-dom";
-import { Settings, ChevronRight, Shield, BarChart3, ClipboardList, ShieldCheck } from "lucide-react";
+import { Settings, ChevronRight, Shield, BarChart3, ClipboardList, ShieldCheck, FileBarChart } from "lucide-react";
 import { ALL_NAV_OPTIONS, getSelectedTabKeys, filterNavByMode } from "@/components/settings/NavBarCustomizer";
 import { useOrganization } from "@/hooks/useOrganization";
 import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
@@ -102,6 +102,19 @@ export default function More() {
               Admin
             </h2>
             <div className="rounded-2xl bg-card overflow-hidden divide-y divide-border/60 card-shadow">
+              <button
+                onClick={() => navigate("/admin/reports")}
+                className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors active:bg-secondary/50 touch-target"
+              >
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 shrink-0">
+                  <FileBarChart className="h-[18px] w-[18px] text-primary" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">Reports</p>
+                  <p className="text-[11px] text-muted-foreground">PDF / Excel / CSV exports for payroll, activity, audit</p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
+              </button>
               <button
                 onClick={() => navigate("/admin/logs")}
                 className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors active:bg-secondary/50 touch-target"
