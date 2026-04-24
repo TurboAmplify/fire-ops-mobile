@@ -67,7 +67,7 @@ function PayrollReportsCard({ organizationId, organizationName }: { organization
   const buildExport = (variant: "summary" | "detail" | "paystubs") => async (fmt: Format) => {
     const incidentFilter = scope.incidentIds.length === 0 ? "all" : scope.incidentIds;
     let effectiveRange = range;
-    let { lines } = await fetchPayrollReport(
+    let { lines, shiftEntries } = await fetchPayrollReport(
       { organizationId, rangeStart: range.from, rangeEnd: range.to, incidentFilter, crewFilter: scope.crewId },
       range.label,
     );
@@ -82,6 +82,7 @@ function PayrollReportsCard({ organizationId, organizationName }: { organization
       );
       if (fallback.lines.length > 0) {
         lines = fallback.lines;
+        shiftEntries = fallback.shiftEntries;
         effectiveRange = { from: null, to: null, label: "All Time" };
         toast({
           title: "Date range widened",
