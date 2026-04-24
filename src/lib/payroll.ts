@@ -157,6 +157,27 @@ export interface IncidentBreakdown {
   grossPay: number;
 }
 
+export interface PayrollAdjustmentLite {
+  id: string;
+  crew_member_id: string;
+  incident_id: string | null;
+  adjustment_date: string;
+  adjustment_type: "hours" | "flat";
+  hours: number | null;
+  amount: number | null;
+  reason: string;
+}
+
+export interface AdjustmentLine {
+  id: string;
+  date: string;
+  incidentId: string | null;
+  type: "hours" | "flat";
+  hours: number | null;
+  amount: number;
+  reason: string;
+}
+
 export interface CrewPayrollLine {
   crewMemberId: string;
   name: string;
@@ -176,6 +197,9 @@ export interface CrewPayrollLine {
   dailyRate?: number;
   shiftCount?: number;
   shiftDates?: string[];
+  // Adjustments (admin-added bonus pay, paid at base rate, no OT/H&W)
+  adjustments: AdjustmentLine[];
+  adjustmentTotal: number;
   // Withholding (optional — only populated when withholdings provided)
   deductions?: DeductionBreakdown;
   netPay?: number;
