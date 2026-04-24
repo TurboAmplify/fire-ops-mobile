@@ -37,11 +37,15 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import type { ShiftTicket, EquipmentEntry, PersonnelEntry } from "@/services/shift-tickets";
 import type { IncidentTruckCrewWithMember } from "@/services/incident-truck-crew";
+import { useTicketAdjustments } from "@/hooks/usePayrollAdjustments";
+import { useCrewMembers } from "@/hooks/useCrewMembers";
 
 interface ShiftTicketFormProps {
   ticket: Partial<ShiftTicket> | null;
   incidentTruckId: string;
   organizationId: string;
+  /** Incident this ticket belongs to. Required for the admin Pay Adjustments section. */
+  incidentId?: string;
   saving: boolean;
   onSave: (data: Partial<ShiftTicket>) => void | Promise<void>;
   onExportPdf: (sigOverrides: { contractor_rep_signature_url: string | null; supervisor_signature_url: string | null }) => void;
