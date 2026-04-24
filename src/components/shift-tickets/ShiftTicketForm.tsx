@@ -1116,6 +1116,15 @@ export function ShiftTicketForm({
             )}
           </button>
         </section>
+
+        {/* ── Pay Adjustments (admin-only post-script, after signatures) ── */}
+        {isAdmin && incidentId && (
+          <PayAdjustmentsSection
+            incidentId={incidentId}
+            personnelEntries={personnelEntries}
+            organizationId={organizationId}
+          />
+        )}
       </div>
 
       {/* ── Lock banner ── */}
