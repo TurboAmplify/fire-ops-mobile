@@ -235,7 +235,7 @@ interface AggregateOptions {
   compensation: Map<string, CompensationLite>;
   rangeStart: Date | null;
   rangeEnd: Date | null;
-  incidentFilter: string;
+  incidentFilter: string | string[];
   // Optional payroll adjustments (admin-added bonus pay)
   adjustments?: PayrollAdjustmentLite[];
   // Optional incident name lookup so adjustments can show fire names
@@ -284,14 +284,23 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
   const nameMap = new Map<string, CrewMemberLite>();
   crewMembers.forEach((cm) => nameMap.set(cm.name.toLowerCase().trim(), cm));
 
+  // Normalize incident filter: "all" / [] => no filter; otherwise a Set of allowed incident ids
+  const allowedIncidents: Set<string> | null = (() => {
+    if (incidentFilter === "all") return null;
+    if (Array.isArray(incidentFilter)) {
+      if (incidentFilter.length === 0) return null;
+      return new Set(incidentFilter);
+    }
+    return new Set([incidentFilter]);
+  })();
+  const matchesIncident = (id: string | null | undefined) =>
+    allowedIncidents === null ? true : !!id && allowedIncidents.has(id);
+
   // Index adjustments by crew member, filtered by current range + incident
   const adjByCrew = new Map<string, PayrollAdjustmentLite[]>();
   (adjustments ?? []).forEach((adj) => {
     if (!withinRange(adj.adjustment_date, rangeStart, rangeEnd)) return;
-    if (incidentFilter !== "all") {
-      // When filtering to a specific incident, only include adjustments tied to it
-      if (adj.incident_id !== incidentFilter) return;
-    }
+    if (allowedIncidents !== null && !matchesIncident(adj.incident_id)) return;
     const list = adjByCrew.get(adj.crew_member_id) ?? [];
     list.push(adj);
     adjByCrew.set(adj.crew_member_id, list);
@@ -300,7 +309,7 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
   const buckets = new Map<string, Map<string, WeekBucket>>();
 
   shiftTickets.forEach((st) => {
-    if (incidentFilter !== "all" && st.incident_id !== incidentFilter) return;
+    if (!matchesIncident(st.incident_id)) return;
     const entries = Array.isArray(st.personnel_entries) ? st.personnel_entries : [];
     const incidentId = st.incident_id ?? "_unassigned";
     const incidentName = st.incident_name ?? "Unassigned";

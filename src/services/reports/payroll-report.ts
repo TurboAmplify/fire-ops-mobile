@@ -17,8 +17,8 @@ export interface PayrollReportInput {
   organizationId: string;
   rangeStart: Date | null;
   rangeEnd: Date | null;
-  incidentFilter: string; // "all" or incident id
-  crewFilter: string;     // "all" or crew member id
+  incidentFilter: string | string[]; // "all" or single id or array of ids
+  crewFilter: string;                 // "all" or crew member id
 }
 
 export interface PayrollReportData {
