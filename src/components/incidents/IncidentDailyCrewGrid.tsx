@@ -160,7 +160,10 @@ export function IncidentDailyCrewGrid({ incidentId }: Props) {
                   className="flex items-center justify-between rounded-lg bg-secondary/40 px-3 py-2.5"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">{c.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-sm font-semibold">{c.name}</p>
+                      <StatusPill status={cell!.status} />
+                    </div>
                     <p className="truncate text-[11px] text-muted-foreground">
                       {cell!.trucks.join(", ")}
                       {c.role ? ` · ${c.role}` : ""}
