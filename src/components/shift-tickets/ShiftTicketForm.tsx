@@ -23,6 +23,7 @@ import { CrewSyncCard } from "./CrewSyncCard";
 import { OF297FormPreview } from "./OF297FormPreview";
 import { UnsavedChangesDialog } from "./UnsavedChangesDialog";
 import { ShiftTicketImportSheet } from "./ShiftTicketImportSheet";
+import { PayAdjustmentsSection } from "./PayAdjustmentsSection";
 import type { ParsedShiftTicket } from "@/services/shift-ticket-import";
 import { SuccessOverlay } from "@/components/ui/SuccessOverlay";
 import { SignedImage } from "@/components/ui/SignedImage";
