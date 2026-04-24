@@ -276,10 +276,26 @@ function weekKey(dateStr: string): string {
  * OT is computed per Mon–Sun week so multi-week ranges sum correctly.
  */
 export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] {
-  const { shiftTickets, crewMembers, compensation, rangeStart, rangeEnd, incidentFilter, withholdings } = opts;
+  const {
+    shiftTickets, crewMembers, compensation, rangeStart, rangeEnd,
+    incidentFilter, withholdings, adjustments, incidentNames,
+  } = opts;
 
   const nameMap = new Map<string, CrewMemberLite>();
   crewMembers.forEach((cm) => nameMap.set(cm.name.toLowerCase().trim(), cm));
+
+  // Index adjustments by crew member, filtered by current range + incident
+  const adjByCrew = new Map<string, PayrollAdjustmentLite[]>();
+  (adjustments ?? []).forEach((adj) => {
+    if (!withinRange(adj.adjustment_date, rangeStart, rangeEnd)) return;
+    if (incidentFilter !== "all") {
+      // When filtering to a specific incident, only include adjustments tied to it
+      if (adj.incident_id !== incidentFilter) return;
+    }
+    const list = adjByCrew.get(adj.crew_member_id) ?? [];
+    list.push(adj);
+    adjByCrew.set(adj.crew_member_id, list);
+  });
 
   const buckets = new Map<string, Map<string, WeekBucket>>();
 
