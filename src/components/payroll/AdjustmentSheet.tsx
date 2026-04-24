@@ -16,6 +16,10 @@ interface Props {
   crewMemberName: string;
   payMethod?: "hourly" | "daily";
   defaultIncidentId?: string | null;
+  /** Pre-fill the date (YYYY-MM-DD). Used when opened from a shift ticket. */
+  prefillDate?: string;
+  /** When true, lock the incident + date fields (set from a ticket context). */
+  lockContext?: boolean;
 }
 
 export function AdjustmentSheet({
@@ -25,6 +29,8 @@ export function AdjustmentSheet({
   crewMemberName,
   payMethod,
   defaultIncidentId,
+  prefillDate,
+  lockContext,
 }: Props) {
   const { data: incidents } = useIncidents();
   const create = useCreatePayrollAdjustment();
@@ -37,7 +43,7 @@ export function AdjustmentSheet({
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
   const [incidentId, setIncidentId] = useState<string>(defaultIncidentId ?? "");
-  const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [date, setDate] = useState(prefillDate || format(new Date(), "yyyy-MM-dd"));
 
   const reset = () => {
     setType(isDaily ? "flat" : "hours");
@@ -45,7 +51,7 @@ export function AdjustmentSheet({
     setAmount("");
     setReason("");
     setIncidentId(defaultIncidentId ?? "");
-    setDate(format(new Date(), "yyyy-MM-dd"));
+    setDate(prefillDate || format(new Date(), "yyyy-MM-dd"));
   };
 
   const handleSubmit = async () => {
