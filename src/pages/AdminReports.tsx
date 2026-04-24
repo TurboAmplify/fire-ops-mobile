@@ -65,17 +65,40 @@ function PayrollReportsCard({ organizationId, organizationName }: { organization
   const { toast } = useToast();
 
   const buildExport = (variant: "summary" | "detail" | "paystubs") => async (fmt: Format) => {
-    const { lines } = await fetchPayrollReport(
-      { organizationId, rangeStart: range.from, rangeEnd: range.to, incidentFilter: scope.incidentIds.length === 0 ? "all" : scope.incidentIds, crewFilter: scope.crewId },
+    const incidentFilter = scope.incidentIds.length === 0 ? "all" : scope.incidentIds;
+    let effectiveRange = range;
+    let { lines } = await fetchPayrollReport(
+      { organizationId, rangeStart: range.from, rangeEnd: range.to, incidentFilter, crewFilter: scope.crewId },
       range.label,
     );
 
+    // If specific incidents are selected and the date range filtered everything
+    // out, retry across all time so admins reliably get the data for the fires
+    // they explicitly picked. Notify so they understand the range was widened.
+    if (lines.length === 0 && Array.isArray(incidentFilter) && (range.from || range.to)) {
+      const fallback = await fetchPayrollReport(
+        { organizationId, rangeStart: null, rangeEnd: null, incidentFilter, crewFilter: scope.crewId },
+        "All Time",
+      );
+      if (fallback.lines.length > 0) {
+        lines = fallback.lines;
+        effectiveRange = { from: null, to: null, label: "All Time" };
+        toast({
+          title: "Date range widened",
+          description: `No data in "${range.label}" for the selected incident(s). Showing All Time instead.`,
+        });
+      }
+    }
+
     if (lines.length === 0) {
-      toast({ title: "No payroll data", description: "No hours or adjustments in this range." });
+      toast({
+        title: "No payroll data",
+        description: "No hours or adjustments for the selected scope. Try widening the date range or removing the incident filter.",
+      });
       return;
     }
 
-    const baseName = `payroll_${variant}_${range.label.replace(/\s+/g, "_")}`;
+    const baseName = `payroll_${variant}_${effectiveRange.label.replace(/\s+/g, "_")}`;
 
     if (variant === "paystubs") {
       // Paystubs bundle is PDF-only (CSV/Excel of a paystub doesn't make sense)
