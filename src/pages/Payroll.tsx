@@ -4,7 +4,7 @@ import { useIncidents } from "@/hooks/useIncidents";
 import { useOrganization } from "@/hooks/useOrganization";
 import {
   Loader2, ChevronLeft, ChevronRight, Clock, DollarSign, Users, Lock, Flame, User,
-  FileText, Download, X, Settings as SettingsIcon, AlertTriangle, Printer, CalendarRange,
+  FileText, Download, X, Settings as SettingsIcon, AlertTriangle, Printer, CalendarRange, Plus, Trash2,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, subDays, parseISO } from "date-fns";
@@ -21,6 +21,9 @@ import { useOrgPayrollSettings, useCrewWithholdingProfiles } from "@/hooks/useOr
 import { Paystub } from "@/components/payroll/Paystub";
 import { generatePaystubPdf } from "@/components/payroll/generatePaystubPdf";
 import { PayrollSettingsCard } from "@/components/payroll/PayrollSettingsCard";
+import { AdjustmentSheet } from "@/components/payroll/AdjustmentSheet";
+import { usePayrollAdjustments, useDeletePayrollAdjustment } from "@/hooks/usePayrollAdjustments";
+import { useToast } from "@/hooks/use-toast";
 
 interface ShiftTicketRow {
   id: string;
