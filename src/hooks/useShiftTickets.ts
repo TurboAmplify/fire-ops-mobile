@@ -31,6 +31,8 @@ export function useCreateShiftTicket(incidentTruckId: string) {
     mutationFn: (ticket: Parameters<typeof createShiftTicket>[0]) => createShiftTicket(ticket),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["shift-tickets", incidentTruckId] });
+      qc.invalidateQueries({ queryKey: ["incident-daily-crew"] });
+      qc.invalidateQueries({ queryKey: ["shift-tickets-recent"] });
     },
   });
 }
@@ -43,6 +45,7 @@ export function useUpdateShiftTicket(ticketId: string, incidentTruckId: string) 
       qc.invalidateQueries({ queryKey: ["shift-ticket", ticketId] });
       qc.invalidateQueries({ queryKey: ["shift-tickets", incidentTruckId] });
       qc.invalidateQueries({ queryKey: ["shift-tickets-recent"] });
+      qc.invalidateQueries({ queryKey: ["incident-daily-crew"] });
     },
   });
 }
@@ -53,6 +56,8 @@ export function useDeleteShiftTicket(incidentTruckId: string) {
     mutationFn: (id: string) => deleteShiftTicket(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["shift-tickets", incidentTruckId] });
+      qc.invalidateQueries({ queryKey: ["incident-daily-crew"] });
+      qc.invalidateQueries({ queryKey: ["shift-tickets-recent"] });
     },
   });
 }
@@ -115,6 +120,7 @@ export function useDuplicateShiftTicket(incidentTruckId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["shift-tickets", incidentTruckId] });
       qc.invalidateQueries({ queryKey: ["shift-tickets-recent"] });
+      qc.invalidateQueries({ queryKey: ["incident-daily-crew"] });
     },
   });
 }
