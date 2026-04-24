@@ -523,6 +523,7 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
       const deductions = calcDeductions({ grossPay, profile, orgDefaults: withholdings.orgDefaults });
       line.deductions = deductions;
       line.netPay = grossPay - deductions.total;
+      line.employer = calcEmployerCosts({ grossPay, profile, orgDefaults: withholdings.orgDefaults });
     }
 
     // Reference incidentNames for adjustments shown in UI (no-op consumer hint)
