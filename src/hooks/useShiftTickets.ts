@@ -120,6 +120,7 @@ export function useDuplicateShiftTicket(incidentTruckId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["shift-tickets", incidentTruckId] });
       qc.invalidateQueries({ queryKey: ["shift-tickets-recent"] });
+      qc.invalidateQueries({ queryKey: ["incident-daily-crew"] });
     },
   });
 }
