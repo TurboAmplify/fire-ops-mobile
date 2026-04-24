@@ -61,12 +61,12 @@ export default function AdminReports() {
 
 function PayrollReportsCard({ organizationId, organizationName }: { organizationId: string; organizationName: string }) {
   const [range, setRange] = useState<DateRange>(defaultRange());
-  const [scope, setScope] = useState({ crewId: "all", incidentId: "all" });
+  const [scope, setScope] = useState<{ crewId: string; incidentIds: string[] }>({ crewId: "all", incidentIds: [] });
   const { toast } = useToast();
 
   const buildExport = (variant: "summary" | "detail" | "paystubs") => async (fmt: Format) => {
     const { lines } = await fetchPayrollReport(
-      { organizationId, rangeStart: range.from, rangeEnd: range.to, incidentFilter: scope.incidentId, crewFilter: scope.crewId },
+      { organizationId, rangeStart: range.from, rangeEnd: range.to, incidentFilter: scope.incidentIds.length === 0 ? "all" : scope.incidentIds, crewFilter: scope.crewId },
       range.label,
     );
 
@@ -217,7 +217,7 @@ function PayrollReportsCard({ organizationId, organizationName }: { organization
       description="Per-crew totals, by-incident breakdown, or full paystub bundle."
     >
       <DateRangePicker value={range} onChange={setRange} />
-      <ScopePicker crewId={scope.crewId} incidentId={scope.incidentId} onChange={setScope} />
+      <ScopePicker crewId={scope.crewId} incidentIds={scope.incidentIds} onChange={setScope} />
       <div className="space-y-2 pt-1">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Summary (one row per crew)</p>
         <ReportExportButtons onExport={buildExport("summary")} />
