@@ -235,7 +235,7 @@ interface AggregateOptions {
   compensation: Map<string, CompensationLite>;
   rangeStart: Date | null;
   rangeEnd: Date | null;
-  incidentFilter: string;
+  incidentFilter: string | string[];
   // Optional payroll adjustments (admin-added bonus pay)
   adjustments?: PayrollAdjustmentLite[];
   // Optional incident name lookup so adjustments can show fire names
