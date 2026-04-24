@@ -8,12 +8,13 @@ import { ScopePicker } from "@/components/reports/ScopePicker";
 import { ReportExportButtons } from "@/components/reports/ReportExportButtons";
 import {
   Loader2, DollarSign, ClipboardCheck, Receipt, FileSignature,
-  ScrollText, Flame, Users, ShieldAlert, AlertTriangle,
+  ScrollText, Flame, Users, ShieldAlert, AlertTriangle, TrendingUp,
 } from "lucide-react";
 import { fetchPayrollReport } from "@/services/reports/payroll-report";
 import { fetchActivityRows, type ActivityKind } from "@/services/reports/activity-report";
 import { fetchAuditRows, type AuditKind } from "@/services/reports/audit-report";
 import { fetchIncidentCostRows, fetchCrewRoster } from "@/services/reports/incident-report";
+import { fetchPLReport } from "@/services/reports/pl-report";
 import { downloadCsv } from "@/services/reports/exporters/csv";
 import { downloadExcel } from "@/services/reports/exporters/excel";
 import { downloadTablePdf } from "@/services/reports/exporters/pdf-table";
