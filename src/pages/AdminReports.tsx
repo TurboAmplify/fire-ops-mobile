@@ -141,6 +141,12 @@ function PayrollReportsCard({ organizationId, organizationName }: { organization
       return downloadTablePdf({
         title: "Payroll Summary",
         subtitle: effectiveRange.label,
+        organizationName,
+        filenameBase: baseName,
+        landscape: true,
+        sections: [{
+          columns: [
+            { header: "Crew", key: "crew", width: 110 },
             { header: "Role", key: "role", width: 80 },
             { header: "Reg", key: "reg", width: 50, align: "right", format: (v) => Number(v).toFixed(2) },
             { header: "OT", key: "ot", width: 50, align: "right", format: (v) => Number(v).toFixed(2) },
