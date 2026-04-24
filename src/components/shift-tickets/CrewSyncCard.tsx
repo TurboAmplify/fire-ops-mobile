@@ -50,12 +50,48 @@ export function CrewSyncCard({ equipmentEntries, personnelEntries, setPersonnelE
 
   const crewTotal = hasLunch ? Math.round((eqTotal - 0.5) * 10) / 10 : eqTotal;
 
+  /** Returns the shift midpoint as HH:MM, handling overnight wrap (e.g. 18:00→07:00 → 00:30). */
+  const computeMidpoint = (start: string, stop: string): string => {
+    const [sh, sm] = start.split(":").map(Number);
+    const [eh, em] = stop.split(":").map(Number);
+    const sMin = sh * 60 + sm;
+    let eMin = eh * 60 + em;
+    if (eMin <= sMin) eMin += 24 * 60;
+    const midRaw = Math.round((sMin + eMin) / 2) % (24 * 60);
+    return `${String(Math.floor(midRaw / 60)).padStart(2, "0")}:${String(midRaw % 60).padStart(2, "0")}`;
+  };
+
+  /** True if the given HH:MM falls strictly inside the equipment window (with wrap). */
+  const lunchInsideWindow = (start: string, stop: string, lunch: string, durationMin = 30): boolean => {
+    const toMin = (t: string) => {
+      const [h, m] = t.split(":").map(Number);
+      return h * 60 + m;
+    };
+    const sMin = toMin(start);
+    const eMinRaw = toMin(stop);
+    const eMin = eMinRaw < sMin ? eMinRaw + 24 * 60 : eMinRaw;
+    let lMin = toMin(lunch);
+    if (lMin < sMin) lMin += 24 * 60;
+    return lMin > sMin && lMin + durationMin < eMin;
+  };
+
   const applyToAll = () => {
     if (!eqStart || !eqStop) {
       toast.error("Enter equipment start and stop times first");
       return;
     }
-    const normalizedLunch = normalizeLunchTime(lunchTime) || "12:00";
+    let normalizedLunch = normalizeLunchTime(lunchTime) || "12:00";
+
+    // Guard: if lunch chip is on but the chosen time falls outside the equipment
+    // window (common on overnight shifts where 12:00 is past the end), auto-replace
+    // with the shift midpoint so the 30-min deduction actually applies.
+    if (hasLunch && !lunchInsideWindow(eqStart, eqStop, normalizedLunch)) {
+      const mid = computeMidpoint(eqStart, eqStop);
+      normalizedLunch = mid;
+      setLunchTime(mid);
+      toast.info(`Lunch moved to ${mid} (mid-shift) so the 30-min break fits this window`);
+    }
+
     const updated = personnelEntries.map((entry) => {
       const split = hasLunch
         ? splitForLunch(eqStart, eqStop, normalizedLunch)
