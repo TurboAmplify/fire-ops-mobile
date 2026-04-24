@@ -1,0 +1,94 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useOrganization } from "@/hooks/useOrganization";
+
+export interface PayrollAdjustmentRow {
+  id: string;
+  organization_id: string;
+  crew_member_id: string;
+  incident_id: string | null;
+  adjustment_date: string;
+  adjustment_type: "hours" | "flat";
+  hours: number | null;
+  amount: number | null;
+  reason: string;
+  created_by_user_id: string | null;
+  created_at: string;
+}
+
+export interface NewPayrollAdjustment {
+  crew_member_id: string;
+  incident_id: string | null;
+  adjustment_date: string;
+  adjustment_type: "hours" | "flat";
+  hours: number | null;
+  amount: number | null;
+  reason: string;
+}
+
+export function usePayrollAdjustments() {
+  const { membership, isAdmin } = useOrganization();
+  const orgId = membership?.organizationId ?? null;
+
+  return useQuery({
+    queryKey: ["payroll-adjustments", orgId],
+    enabled: !!orgId && isAdmin,
+    staleTime: 0,
+    refetchOnMount: "always",
+    queryFn: async (): Promise<PayrollAdjustmentRow[]> => {
+      const { data, error } = await supabase
+        .from("payroll_adjustments" as any)
+        .select("*")
+        .eq("organization_id", orgId!)
+        .order("adjustment_date", { ascending: false });
+      if (error) throw error;
+      return (data as any[]) ?? [];
+    },
+  });
+}
+
+export function useCreatePayrollAdjustment() {
+  const qc = useQueryClient();
+  const { membership } = useOrganization();
+  const orgId = membership?.organizationId ?? null;
+
+  return useMutation({
+    mutationFn: async (input: NewPayrollAdjustment) => {
+      if (!orgId) throw new Error("No organization");
+      const userRes = await supabase.auth.getUser();
+      const userId = userRes.data.user?.id ?? null;
+
+      const { error } = await supabase.from("payroll_adjustments" as any).insert({
+        organization_id: orgId,
+        crew_member_id: input.crew_member_id,
+        incident_id: input.incident_id,
+        adjustment_date: input.adjustment_date,
+        adjustment_type: input.adjustment_type,
+        hours: input.adjustment_type === "hours" ? input.hours : null,
+        amount: input.adjustment_type === "flat" ? input.amount : null,
+        reason: input.reason,
+        created_by_user_id: userId,
+      } as any);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["payroll-adjustments", orgId] });
+    },
+  });
+}
+
+export function useDeletePayrollAdjustment() {
+  const qc = useQueryClient();
+  const { membership } = useOrganization();
+  const orgId = membership?.organizationId ?? null;
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("payroll_adjustments" as any).delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["payroll-adjustments", orgId] });
+    },
+  });
+}

@@ -157,6 +157,27 @@ export interface IncidentBreakdown {
   grossPay: number;
 }
 
+export interface PayrollAdjustmentLite {
+  id: string;
+  crew_member_id: string;
+  incident_id: string | null;
+  adjustment_date: string;
+  adjustment_type: "hours" | "flat";
+  hours: number | null;
+  amount: number | null;
+  reason: string;
+}
+
+export interface AdjustmentLine {
+  id: string;
+  date: string;
+  incidentId: string | null;
+  type: "hours" | "flat";
+  hours: number | null;
+  amount: number;
+  reason: string;
+}
+
 export interface CrewPayrollLine {
   crewMemberId: string;
   name: string;
@@ -176,6 +197,9 @@ export interface CrewPayrollLine {
   dailyRate?: number;
   shiftCount?: number;
   shiftDates?: string[];
+  // Adjustments (admin-added bonus pay, paid at base rate, no OT/H&W)
+  adjustments: AdjustmentLine[];
+  adjustmentTotal: number;
   // Withholding (optional — only populated when withholdings provided)
   deductions?: DeductionBreakdown;
   netPay?: number;
@@ -212,6 +236,10 @@ interface AggregateOptions {
   rangeStart: Date | null;
   rangeEnd: Date | null;
   incidentFilter: string;
+  // Optional payroll adjustments (admin-added bonus pay)
+  adjustments?: PayrollAdjustmentLite[];
+  // Optional incident name lookup so adjustments can show fire names
+  incidentNames?: Map<string, string>;
   // Optional withholding context. When provided, each line gets deductions+netPay.
   withholdings?: {
     profiles: Map<string, WithholdingProfile>;
@@ -248,10 +276,26 @@ function weekKey(dateStr: string): string {
  * OT is computed per Mon–Sun week so multi-week ranges sum correctly.
  */
 export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] {
-  const { shiftTickets, crewMembers, compensation, rangeStart, rangeEnd, incidentFilter, withholdings } = opts;
+  const {
+    shiftTickets, crewMembers, compensation, rangeStart, rangeEnd,
+    incidentFilter, withholdings, adjustments, incidentNames,
+  } = opts;
 
   const nameMap = new Map<string, CrewMemberLite>();
   crewMembers.forEach((cm) => nameMap.set(cm.name.toLowerCase().trim(), cm));
+
+  // Index adjustments by crew member, filtered by current range + incident
+  const adjByCrew = new Map<string, PayrollAdjustmentLite[]>();
+  (adjustments ?? []).forEach((adj) => {
+    if (!withinRange(adj.adjustment_date, rangeStart, rangeEnd)) return;
+    if (incidentFilter !== "all") {
+      // When filtering to a specific incident, only include adjustments tied to it
+      if (adj.incident_id !== incidentFilter) return;
+    }
+    const list = adjByCrew.get(adj.crew_member_id) ?? [];
+    list.push(adj);
+    adjByCrew.set(adj.crew_member_id, list);
+  });
 
   const buckets = new Map<string, Map<string, WeekBucket>>();
 
@@ -294,9 +338,15 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
 
   const lines: CrewPayrollLine[] = [];
 
+  // Build the set of crew to render: any with shift hours OR any with adjustments
+  const crewIdsToProcess = new Set<string>();
+  buckets.forEach((_, id) => crewIdsToProcess.add(id));
+  adjByCrew.forEach((_, id) => crewIdsToProcess.add(id));
+
   crewMembers.forEach((cm) => {
+    if (!crewIdsToProcess.has(cm.id)) return;
     const wkMap = buckets.get(cm.id);
-    if (!wkMap || wkMap.size === 0) return;
+    const crewAdjustments = adjByCrew.get(cm.id) ?? [];
 
     const comp = compensation.get(cm.id);
     const hourlyRate = Number(comp?.hourly_rate) || 0;
@@ -318,41 +368,43 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
       { incidentName: string; totalHours: number; regularHours: number; overtimeHours: number; dates: Set<string> }
     >();
 
-    wkMap.forEach((bucket) => {
-      const wkTotal = bucket.hours;
-      const wkReg = Math.min(wkTotal, 40);
-      const wkOT = Math.max(0, wkTotal - 40);
+    if (wkMap) {
+      wkMap.forEach((bucket) => {
+        const wkTotal = bucket.hours;
+        const wkReg = Math.min(wkTotal, 40);
+        const wkOT = Math.max(0, wkTotal - 40);
 
-      totalHours += wkTotal;
-      regularHours += wkReg;
-      overtimeHours += wkOT;
-      regularPay += wkReg * hourlyRate;
-      hwPay += wkReg * hwRate;
-      overtimePay += wkOT * hourlyRate * 1.5;
+        totalHours += wkTotal;
+        regularHours += wkReg;
+        overtimeHours += wkOT;
+        regularPay += wkReg * hourlyRate;
+        hwPay += wkReg * hwRate;
+        overtimePay += wkOT * hourlyRate * 1.5;
 
-      bucket.dates.forEach((d) => allDates.add(d));
+        bucket.dates.forEach((d) => allDates.add(d));
 
-      bucket.byIncident.forEach((inc, incidentId) => {
-        const share = wkTotal > 0 ? inc.hours / wkTotal : 0;
-        const incReg = wkReg * share;
-        const incOT = wkOT * share;
-        const existing = incAgg.get(incidentId);
-        if (existing) {
-          existing.totalHours += inc.hours;
-          existing.regularHours += incReg;
-          existing.overtimeHours += incOT;
-          inc.dates.forEach((d) => existing.dates.add(d));
-        } else {
-          incAgg.set(incidentId, {
-            incidentName: inc.incidentName,
-            totalHours: inc.hours,
-            regularHours: incReg,
-            overtimeHours: incOT,
-            dates: new Set(inc.dates),
-          });
-        }
+        bucket.byIncident.forEach((inc, incidentId) => {
+          const share = wkTotal > 0 ? inc.hours / wkTotal : 0;
+          const incReg = wkReg * share;
+          const incOT = wkOT * share;
+          const existing = incAgg.get(incidentId);
+          if (existing) {
+            existing.totalHours += inc.hours;
+            existing.regularHours += incReg;
+            existing.overtimeHours += incOT;
+            inc.dates.forEach((d) => existing.dates.add(d));
+          } else {
+            incAgg.set(incidentId, {
+              incidentName: inc.incidentName,
+              totalHours: inc.hours,
+              regularHours: incReg,
+              overtimeHours: incOT,
+              dates: new Set(inc.dates),
+            });
+          }
+        });
       });
-    });
+    }
 
     const isDaily = payMethod === "daily" && dailyRate > 0;
     const shiftCount = allDates.size;
@@ -403,6 +455,24 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
       grossPay = regularPay + hwPay + overtimePay;
     }
 
+    // Resolve adjustments: hours×base rate or flat amount; always at base, no OT/H&W
+    const adjustmentLines: AdjustmentLine[] = crewAdjustments.map((a) => {
+      const amount = a.adjustment_type === "hours"
+        ? Number(a.hours ?? 0) * hourlyRate
+        : Number(a.amount ?? 0);
+      return {
+        id: a.id,
+        date: a.adjustment_date,
+        incidentId: a.incident_id,
+        type: a.adjustment_type,
+        hours: a.adjustment_type === "hours" ? Number(a.hours ?? 0) : null,
+        amount,
+        reason: a.reason,
+      };
+    });
+    const adjustmentTotal = adjustmentLines.reduce((s, a) => s + a.amount, 0);
+    grossPay += adjustmentTotal;
+
     const line: CrewPayrollLine = {
       crewMemberId: cm.id,
       name: cm.name,
@@ -418,6 +488,8 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
       grossPay,
       byIncident,
       payMethod,
+      adjustments: adjustmentLines,
+      adjustmentTotal,
     };
 
     if (isDaily) {
@@ -432,6 +504,9 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
       line.deductions = deductions;
       line.netPay = grossPay - deductions.total;
     }
+
+    // Reference incidentNames for adjustments shown in UI (no-op consumer hint)
+    void incidentNames;
 
     lines.push(line);
   });

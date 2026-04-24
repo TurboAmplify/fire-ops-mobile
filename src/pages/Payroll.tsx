@@ -4,7 +4,7 @@ import { useIncidents } from "@/hooks/useIncidents";
 import { useOrganization } from "@/hooks/useOrganization";
 import {
   Loader2, ChevronLeft, ChevronRight, Clock, DollarSign, Users, Lock, Flame, User,
-  FileText, Download, X, Settings as SettingsIcon, AlertTriangle, Printer, CalendarRange,
+  FileText, Download, X, Settings as SettingsIcon, AlertTriangle, Printer, CalendarRange, Plus, Trash2,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, subDays, parseISO } from "date-fns";
@@ -21,6 +21,9 @@ import { useOrgPayrollSettings, useCrewWithholdingProfiles } from "@/hooks/useOr
 import { Paystub } from "@/components/payroll/Paystub";
 import { generatePaystubPdf } from "@/components/payroll/generatePaystubPdf";
 import { PayrollSettingsCard } from "@/components/payroll/PayrollSettingsCard";
+import { AdjustmentSheet } from "@/components/payroll/AdjustmentSheet";
+import { usePayrollAdjustments, useDeletePayrollAdjustment } from "@/hooks/usePayrollAdjustments";
+import { useToast } from "@/hooks/use-toast";
 
 interface ShiftTicketRow {
   id: string;
@@ -59,6 +62,8 @@ export default function Payroll() {
   const [viewMode, setViewMode] = useState<ViewMode>("crew");
   const [showSettings, setShowSettings] = useState(false);
   const [paystubFor, setPaystubFor] = useState<CrewPayrollLine | null>(null);
+  const [adjustmentFor, setAdjustmentFor] = useState<CrewPayrollLine | null>(null);
+  const { toast } = useToast();
 
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
@@ -74,6 +79,8 @@ export default function Payroll() {
   const { data: incidents } = useIncidents();
   const { data: orgPayroll } = useOrgPayrollSettings();
   const { data: withholdingRows } = useCrewWithholdingProfiles();
+  const { data: adjustments } = usePayrollAdjustments();
+  const deleteAdjustment = useDeletePayrollAdjustment();
 
   const { data: compensation } = useQuery({
     queryKey: ["crew-compensation"],
@@ -146,6 +153,12 @@ export default function Payroll() {
     }));
   }, [shiftTickets]);
 
+  const incidentNamesMap = useMemo(() => {
+    const m = new Map<string, string>();
+    (incidents ?? []).forEach((i) => m.set(i.id, i.name));
+    return m;
+  }, [incidents]);
+
   const crewLines: CrewPayrollLine[] = useMemo(() => {
     if (!crewMembers) return [];
     const lines = aggregateCrewPayroll({
@@ -153,11 +166,22 @@ export default function Payroll() {
       crewMembers: crewMembers.map((c) => ({ id: c.id, name: c.name, role: c.role })),
       compensation: compMap,
       rangeStart, rangeEnd, incidentFilter,
+      adjustments: (adjustments ?? []).map((a) => ({
+        id: a.id,
+        crew_member_id: a.crew_member_id,
+        incident_id: a.incident_id,
+        adjustment_date: a.adjustment_date,
+        adjustment_type: a.adjustment_type,
+        hours: a.hours,
+        amount: a.amount,
+        reason: a.reason,
+      })),
+      incidentNames: incidentNamesMap,
       withholdings: { profiles: profileMap, orgDefaults: orgPayroll ?? DEFAULT_ORG_PAYROLL },
     });
     if (crewFilter !== "all") return lines.filter((l) => l.crewMemberId === crewFilter);
     return lines;
-  }, [normalizedTickets, crewMembers, compMap, rangeStart, rangeEnd, incidentFilter, crewFilter, profileMap, orgPayroll]);
+  }, [normalizedTickets, crewMembers, compMap, rangeStart, rangeEnd, incidentFilter, crewFilter, profileMap, orgPayroll, adjustments, incidentNamesMap]);
 
   const incidentLines: IncidentPayrollLine[] = useMemo(() => pivotByIncident(crewLines), [crewLines]);
   const totals = useMemo(() => sumTotals(crewLines), [crewLines]);
@@ -422,6 +446,12 @@ export default function Payroll() {
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold truncate">{line.name}</p>
                       <p className="text-xs text-muted-foreground">{line.role}</p>
+                      {line.hourlyRate === 0 && (line.dailyRate ?? 0) === 0 && line.totalHours > 0 && (
+                        <span className="inline-flex items-center gap-1 mt-1 rounded-full bg-warning/15 text-warning px-2 py-0.5 text-[10px] font-medium">
+                          <AlertTriangle className="h-3 w-3" />
+                          No pay rate set — set in Crew → {line.name}
+                        </span>
+                      )}
                     </div>
                     <div className="text-right ml-3 shrink-0">
                       <div className="flex items-baseline justify-end gap-1.5">
