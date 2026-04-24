@@ -8,12 +8,13 @@ import { ScopePicker } from "@/components/reports/ScopePicker";
 import { ReportExportButtons } from "@/components/reports/ReportExportButtons";
 import {
   Loader2, DollarSign, ClipboardCheck, Receipt, FileSignature,
-  ScrollText, Flame, Users, ShieldAlert, AlertTriangle,
+  ScrollText, Flame, Users, ShieldAlert, AlertTriangle, TrendingUp,
 } from "lucide-react";
 import { fetchPayrollReport } from "@/services/reports/payroll-report";
 import { fetchActivityRows, type ActivityKind } from "@/services/reports/activity-report";
 import { fetchAuditRows, type AuditKind } from "@/services/reports/audit-report";
 import { fetchIncidentCostRows, fetchCrewRoster } from "@/services/reports/incident-report";
+import { fetchPLReport } from "@/services/reports/pl-report";
 import { downloadCsv } from "@/services/reports/exporters/csv";
 import { downloadExcel } from "@/services/reports/exporters/excel";
 import { downloadTablePdf } from "@/services/reports/exporters/pdf-table";
@@ -48,6 +49,7 @@ export default function AdminReports() {
         </p>
 
         <PayrollReportsCard organizationId={orgId} organizationName={orgName} />
+        <PLReportCard organizationId={orgId} organizationName={orgName} />
         <ActivityReportsCard organizationId={orgId} organizationName={orgName} />
         <AuditReportsCard organizationId={orgId} organizationName={orgName} isPlatformAdmin={isPlatformAdmin} />
         <IncidentCostCard organizationId={orgId} organizationName={orgName} />
@@ -112,33 +114,61 @@ function PayrollReportsCard({ organizationId, organizationName }: { organization
     }
 
     if (variant === "summary") {
-      const headers = ["Crew", "Role", "Reg Hrs", "OT Hrs", "Reg Pay", "H&W Pay", "OT Pay", "Adjustments", "Gross", "Deductions", "Net"];
+      const headers = [
+        "Crew", "Role", "Reg Hrs", "OT Hrs", "Reg Pay", "H&W Pay", "OT Pay", "Adjustments", "Gross",
+        "Federal", "SS", "Medicare", "State", "Extra W/H", "Other Ded", "Total Ded", "Net",
+        "ER SS", "ER Medicare", "ER Total", "True Cost",
+      ];
       const rows = lines.map((l) => [
         l.name, l.role, l.regularHours, l.overtimeHours, l.regularPay, l.hwPay, l.overtimePay,
-        l.adjustmentTotal, l.grossPay, l.deductions?.total ?? 0, l.netPay ?? l.grossPay,
+        l.adjustmentTotal, l.grossPay,
+        l.deductions?.federal ?? 0, l.deductions?.socialSecurity ?? 0, l.deductions?.medicare ?? 0,
+        l.deductions?.state ?? 0, l.deductions?.extraWithholding ?? 0, l.deductions?.other ?? 0,
+        l.deductions?.total ?? 0, l.netPay ?? l.grossPay,
+        l.employer?.socialSecurity ?? 0, l.employer?.medicare ?? 0, l.employer?.total ?? 0,
+        l.employer?.trueCost ?? l.grossPay,
       ]);
       if (fmt === "csv") return downloadCsv(baseName, headers, rows);
       if (fmt === "excel") return downloadExcel(baseName, [{
         name: "Payroll Summary",
         columns: [
           { header: "Crew", key: "crew", width: 22 },
-          { header: "Role", key: "role", width: 16 },
-          { header: "Reg Hrs", key: "reg", width: 10, format: "number" },
-          { header: "OT Hrs", key: "ot", width: 10, format: "number" },
-          { header: "Reg Pay", key: "rp", width: 14, format: "currency" },
-          { header: "H&W", key: "hw", width: 12, format: "currency" },
-          { header: "OT Pay", key: "op", width: 12, format: "currency" },
-          { header: "Adjustments", key: "adj", width: 14, format: "currency" },
-          { header: "Gross", key: "gross", width: 14, format: "currency" },
-          { header: "Deductions", key: "ded", width: 14, format: "currency" },
-          { header: "Net", key: "net", width: 14, format: "currency" },
+          { header: "Role", key: "role", width: 14 },
+          { header: "Reg Hrs", key: "reg", width: 9, format: "number" },
+          { header: "OT Hrs", key: "ot", width: 9, format: "number" },
+          { header: "Reg Pay", key: "rp", width: 12, format: "currency" },
+          { header: "H&W", key: "hw", width: 11, format: "currency" },
+          { header: "OT Pay", key: "op", width: 11, format: "currency" },
+          { header: "Adjustments", key: "adj", width: 13, format: "currency" },
+          { header: "Gross", key: "gross", width: 13, format: "currency" },
+          { header: "Federal", key: "fed", width: 11, format: "currency" },
+          { header: "SS", key: "ss", width: 10, format: "currency" },
+          { header: "Medicare", key: "med", width: 11, format: "currency" },
+          { header: "State", key: "st", width: 10, format: "currency" },
+          { header: "Extra W/H", key: "extra", width: 11, format: "currency" },
+          { header: "Other Ded", key: "oth", width: 11, format: "currency" },
+          { header: "Total Ded", key: "ded", width: 12, format: "currency" },
+          { header: "Net", key: "net", width: 12, format: "currency" },
+          { header: "ER SS", key: "ess", width: 10, format: "currency" },
+          { header: "ER Medicare", key: "emed", width: 12, format: "currency" },
+          { header: "ER Total", key: "etot", width: 12, format: "currency" },
+          { header: "True Cost", key: "true", width: 13, format: "currency" },
         ],
         rows: lines.map((l) => ({
           crew: l.name, role: l.role, reg: l.regularHours, ot: l.overtimeHours,
           rp: l.regularPay, hw: l.hwPay, op: l.overtimePay, adj: l.adjustmentTotal,
-          gross: l.grossPay, ded: l.deductions?.total ?? 0, net: l.netPay ?? l.grossPay,
+          gross: l.grossPay,
+          fed: l.deductions?.federal ?? 0, ss: l.deductions?.socialSecurity ?? 0,
+          med: l.deductions?.medicare ?? 0, st: l.deductions?.state ?? 0,
+          extra: l.deductions?.extraWithholding ?? 0, oth: l.deductions?.other ?? 0,
+          ded: l.deductions?.total ?? 0, net: l.netPay ?? l.grossPay,
+          ess: l.employer?.socialSecurity ?? 0, emed: l.employer?.medicare ?? 0,
+          etot: l.employer?.total ?? 0, true: l.employer?.trueCost ?? l.grossPay,
         })),
       }]);
+      // PDF — too many cols for a clean table; use compact widths and landscape.
+      const fmtMoney = (v: any) => `$${Number(v).toFixed(2)}`;
+      const fmtNum = (v: any) => Number(v).toFixed(2);
       return downloadTablePdf({
         title: "Payroll Summary",
         subtitle: effectiveRange.label,
@@ -147,22 +177,31 @@ function PayrollReportsCard({ organizationId, organizationName }: { organization
         landscape: true,
         sections: [{
           columns: [
-            { header: "Crew", key: "crew", width: 110 },
-            { header: "Role", key: "role", width: 80 },
-            { header: "Reg", key: "reg", width: 50, align: "right", format: (v) => Number(v).toFixed(2) },
-            { header: "OT", key: "ot", width: 50, align: "right", format: (v) => Number(v).toFixed(2) },
-            { header: "Reg Pay", key: "rp", width: 65, align: "right", format: (v) => `$${Number(v).toFixed(2)}` },
-            { header: "H&W", key: "hw", width: 60, align: "right", format: (v) => `$${Number(v).toFixed(2)}` },
-            { header: "OT Pay", key: "op", width: 65, align: "right", format: (v) => `$${Number(v).toFixed(2)}` },
-            { header: "Adj", key: "adj", width: 60, align: "right", format: (v) => `$${Number(v).toFixed(2)}` },
-            { header: "Gross", key: "gross", width: 70, align: "right", format: (v) => `$${Number(v).toFixed(2)}` },
-            { header: "Ded", key: "ded", width: 60, align: "right", format: (v) => `$${Number(v).toFixed(2)}` },
-            { header: "Net", key: "net", width: 70, align: "right", format: (v) => `$${Number(v).toFixed(2)}` },
+            { header: "Crew", key: "crew", width: 75 },
+            { header: "Reg", key: "reg", width: 32, align: "right", format: fmtNum },
+            { header: "OT", key: "ot", width: 28, align: "right", format: fmtNum },
+            { header: "Reg $", key: "rp", width: 45, align: "right", format: fmtMoney },
+            { header: "H&W", key: "hw", width: 42, align: "right", format: fmtMoney },
+            { header: "OT $", key: "op", width: 42, align: "right", format: fmtMoney },
+            { header: "Adj", key: "adj", width: 42, align: "right", format: fmtMoney },
+            { header: "Gross", key: "gross", width: 50, align: "right", format: fmtMoney },
+            { header: "Fed", key: "fed", width: 42, align: "right", format: fmtMoney },
+            { header: "SS", key: "ss", width: 38, align: "right", format: fmtMoney },
+            { header: "Med", key: "med", width: 38, align: "right", format: fmtMoney },
+            { header: "State", key: "st", width: 38, align: "right", format: fmtMoney },
+            { header: "Ded Tot", key: "ded", width: 48, align: "right", format: fmtMoney },
+            { header: "Net", key: "net", width: 48, align: "right", format: fmtMoney },
+            { header: "ER FICA", key: "etot", width: 48, align: "right", format: fmtMoney },
+            { header: "True Cost", key: "true", width: 55, align: "right", format: fmtMoney },
           ],
           rows: lines.map((l) => ({
-            crew: l.name, role: l.role, reg: l.regularHours, ot: l.overtimeHours,
+            crew: l.name, reg: l.regularHours, ot: l.overtimeHours,
             rp: l.regularPay, hw: l.hwPay, op: l.overtimePay, adj: l.adjustmentTotal,
-            gross: l.grossPay, ded: l.deductions?.total ?? 0, net: l.netPay ?? l.grossPay,
+            gross: l.grossPay,
+            fed: l.deductions?.federal ?? 0, ss: l.deductions?.socialSecurity ?? 0,
+            med: l.deductions?.medicare ?? 0, st: l.deductions?.state ?? 0,
+            ded: l.deductions?.total ?? 0, net: l.netPay ?? l.grossPay,
+            etot: l.employer?.total ?? 0, true: l.employer?.trueCost ?? l.grossPay,
           })),
         }],
       });
@@ -534,6 +573,159 @@ function IncidentCostCard({ organizationId, organizationName }: { organizationId
   return (
     <ReportCard icon={Flame} title="Incident Cost" description="Per-incident expense totals.">
       <DateRangePicker value={range} onChange={setRange} />
+      <ReportExportButtons onExport={onExport} />
+    </ReportCard>
+  );
+}
+
+/* ---------------- P&L ---------------- */
+
+function PLReportCard({ organizationId, organizationName }: { organizationId: string; organizationName: string }) {
+  const [range, setRange] = useState<DateRange>(defaultRange());
+  const [scope, setScope] = useState<{ crewId: string; incidentIds: string[] }>({ crewId: "all", incidentIds: [] });
+  const { toast } = useToast();
+
+  const onExport = async (fmt: Format) => {
+    const incidentFilter = scope.incidentIds.length === 0 ? "all" : scope.incidentIds;
+    let effectiveRange = range;
+    let data = await fetchPLReport(
+      { organizationId, rangeStart: range.from, rangeEnd: range.to, incidentFilter },
+      range.label,
+    );
+
+    // Same auto-widen behavior as the Payroll report — if specific incidents
+    // were selected and the range yielded nothing, retry across all time.
+    if (data.rows.length === 0 && Array.isArray(incidentFilter) && (range.from || range.to)) {
+      const fallback = await fetchPLReport(
+        { organizationId, rangeStart: null, rangeEnd: null, incidentFilter },
+        "All Time",
+      );
+      if (fallback.rows.length > 0) {
+        data = fallback;
+        effectiveRange = { from: null, to: null, label: "All Time" };
+        toast({
+          title: "Date range widened",
+          description: `No P&L data in "${range.label}" for the selected incident(s). Showing All Time instead.`,
+        });
+      }
+    }
+
+    if (data.rows.length === 0) {
+      toast({ title: "No P&L data", description: "No labor or expenses for the selected scope." });
+      return;
+    }
+
+    const baseName = `pl_${effectiveRange.label.replace(/\s+/g, "_")}`;
+    const headers = ["Incident", "Labor Gross", "Employer Tax (FICA)", "Labor True Cost", "Expenses", "Expense Count", "Total Cost"];
+    const rows = data.rows.map((r) => [
+      r.incidentName, r.laborGross, r.employerTaxes, r.laborTrueCost, r.expenseTotal, r.expenseCount, r.totalCost,
+    ]);
+    const totalsRow = [
+      "TOTAL", data.totals.laborGross, data.totals.employerTaxes, data.totals.laborTrueCost,
+      data.totals.expenseTotal, data.rows.reduce((a, r) => a + r.expenseCount, 0), data.totals.totalCost,
+    ];
+
+    if (fmt === "csv") {
+      return downloadCsv(baseName, headers, [...rows, totalsRow]);
+    }
+    if (fmt === "excel") {
+      return downloadExcel(baseName, [{
+        name: "P&L by Incident",
+        columns: [
+          { header: "Incident", key: "name", width: 28 },
+          { header: "Labor Gross", key: "lg", width: 14, format: "currency" },
+          { header: "Employer FICA", key: "et", width: 14, format: "currency" },
+          { header: "Labor True Cost", key: "lt", width: 16, format: "currency" },
+          { header: "Expenses", key: "ex", width: 14, format: "currency" },
+          { header: "Expense Count", key: "ec", width: 13, format: "int" },
+          { header: "Total Cost", key: "tc", width: 16, format: "currency" },
+        ],
+        rows: [
+          ...data.rows.map((r) => ({
+            name: r.incidentName, lg: r.laborGross, et: r.employerTaxes, lt: r.laborTrueCost,
+            ex: r.expenseTotal, ec: r.expenseCount, tc: r.totalCost,
+          })),
+          {
+            name: "TOTAL", lg: data.totals.laborGross, et: data.totals.employerTaxes,
+            lt: data.totals.laborTrueCost, ex: data.totals.expenseTotal,
+            ec: data.rows.reduce((a, r) => a + r.expenseCount, 0), tc: data.totals.totalCost,
+          },
+        ],
+      }, {
+        name: "Expense Detail",
+        columns: [
+          { header: "Date", key: "date", width: 12 },
+          { header: "Incident", key: "incident", width: 24 },
+          { header: "Vendor", key: "vendor", width: 22 },
+          { header: "Category", key: "cat", width: 16 },
+          { header: "Amount", key: "amt", width: 12, format: "currency" },
+          { header: "Status", key: "status", width: 12 },
+          { header: "Description", key: "desc", width: 36 },
+        ],
+        rows: data.expenseRows.map((e) => ({
+          date: e.date, incident: e.incidentName, vendor: e.vendor ?? "",
+          cat: e.category, amt: e.amount, status: e.status, desc: e.description ?? "",
+        })),
+      }]);
+    }
+
+    const fmtMoney = (v: any) => `$${Number(v).toFixed(2)}`;
+    return downloadTablePdf({
+      title: "P&L by Incident",
+      subtitle: `${effectiveRange.label} · True Cost = Gross + Employer FICA Match`,
+      organizationName,
+      filenameBase: baseName,
+      landscape: true,
+      sections: [
+        {
+          columns: [
+            { header: "Incident", key: "name", width: 180 },
+            { header: "Labor Gross", key: "lg", width: 80, align: "right", format: fmtMoney },
+            { header: "ER FICA", key: "et", width: 75, align: "right", format: fmtMoney },
+            { header: "Labor True Cost", key: "lt", width: 95, align: "right", format: fmtMoney },
+            { header: "Expenses", key: "ex", width: 80, align: "right", format: fmtMoney },
+            { header: "# Exp", key: "ec", width: 45, align: "right" },
+            { header: "Total Cost", key: "tc", width: 95, align: "right", format: fmtMoney },
+          ],
+          rows: [
+            ...data.rows.map((r) => ({
+              name: r.incidentName, lg: r.laborGross, et: r.employerTaxes, lt: r.laborTrueCost,
+              ex: r.expenseTotal, ec: r.expenseCount, tc: r.totalCost,
+            })),
+            {
+              name: "TOTAL", lg: data.totals.laborGross, et: data.totals.employerTaxes,
+              lt: data.totals.laborTrueCost, ex: data.totals.expenseTotal,
+              ec: data.rows.reduce((a, r) => a + r.expenseCount, 0), tc: data.totals.totalCost,
+            },
+          ],
+        },
+        {
+          title: "Expense Detail",
+          columns: [
+            { header: "Date", key: "date", width: 60 },
+            { header: "Incident", key: "incident", width: 140 },
+            { header: "Vendor", key: "vendor", width: 110 },
+            { header: "Category", key: "cat", width: 90 },
+            { header: "Status", key: "status", width: 60 },
+            { header: "Amount", key: "amt", width: 70, align: "right", format: fmtMoney },
+          ],
+          rows: data.expenseRows.map((e) => ({
+            date: e.date, incident: e.incidentName, vendor: e.vendor ?? "",
+            cat: e.category, status: e.status, amt: e.amount,
+          })),
+        },
+      ],
+    });
+  };
+
+  return (
+    <ReportCard
+      icon={TrendingUp}
+      title="P&L by Incident"
+      description="Fully-burdened labor cost (gross + employer FICA match) plus expenses, grouped by fire."
+    >
+      <DateRangePicker value={range} onChange={setRange} />
+      <ScopePicker crewId={scope.crewId} incidentIds={scope.incidentIds} onChange={setScope} />
       <ReportExportButtons onExport={onExport} />
     </ReportCard>
   );

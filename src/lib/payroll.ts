@@ -143,6 +143,31 @@ export function calcDeductions({ grossPay, profile, orgDefaults }: CalcDeduction
   };
 }
 
+/**
+ * Employer-side FICA match. Mirrors the employee SS/Medicare rates from
+ * org defaults, respecting per-employee exemptions. This is the contractor's
+ * cost on top of gross wages — not withheld from the employee.
+ *
+ * Note: FUTA/SUTA are intentionally omitted (would require YTD wage tracking
+ * to be accurate). Org admins can add a flat "other" employer overhead later
+ * if needed.
+ */
+export function calcEmployerCosts({ grossPay, profile, orgDefaults }: CalcDeductionsInput): EmployerCosts {
+  const ssPct = profile?.social_security_exempt ? 0 : Number(orgDefaults.social_security_pct);
+  const medicarePct = profile?.medicare_exempt ? 0 : Number(orgDefaults.medicare_pct);
+  const socialSecurity = (grossPay * ssPct) / 100;
+  const medicare = (grossPay * medicarePct) / 100;
+  const total = socialSecurity + medicare;
+  return {
+    ssPct,
+    socialSecurity,
+    medicarePct,
+    medicare,
+    total,
+    trueCost: grossPay + total,
+  };
+}
+
 // === Aggregation ============================================================
 
 export interface IncidentBreakdown {
@@ -178,6 +203,15 @@ export interface AdjustmentLine {
   reason: string;
 }
 
+export interface EmployerCosts {
+  ssPct: number;
+  socialSecurity: number;
+  medicarePct: number;
+  medicare: number;
+  total: number;          // FICA match (employer share)
+  trueCost: number;       // grossPay + employer match (full burdened labor cost)
+}
+
 export interface CrewPayrollLine {
   crewMemberId: string;
   name: string;
@@ -203,6 +237,8 @@ export interface CrewPayrollLine {
   // Withholding (optional — only populated when withholdings provided)
   deductions?: DeductionBreakdown;
   netPay?: number;
+  // Employer-side FICA match (only populated when withholdings provided)
+  employer?: EmployerCosts;
 }
 
 export interface IncidentPayrollLine {
@@ -512,6 +548,7 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
       const deductions = calcDeductions({ grossPay, profile, orgDefaults: withholdings.orgDefaults });
       line.deductions = deductions;
       line.netPay = grossPay - deductions.total;
+      line.employer = calcEmployerCosts({ grossPay, profile, orgDefaults: withholdings.orgDefaults });
     }
 
     // Reference incidentNames for adjustments shown in UI (no-op consumer hint)
