@@ -446,6 +446,12 @@ export default function Payroll() {
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold truncate">{line.name}</p>
                       <p className="text-xs text-muted-foreground">{line.role}</p>
+                      {line.hourlyRate === 0 && (line.dailyRate ?? 0) === 0 && line.totalHours > 0 && (
+                        <span className="inline-flex items-center gap-1 mt-1 rounded-full bg-warning/15 text-warning px-2 py-0.5 text-[10px] font-medium">
+                          <AlertTriangle className="h-3 w-3" />
+                          No pay rate set — set in Crew → {line.name}
+                        </span>
+                      )}
                     </div>
                     <div className="text-right ml-3 shrink-0">
                       <div className="flex items-baseline justify-end gap-1.5">
