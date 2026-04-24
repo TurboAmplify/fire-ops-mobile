@@ -26,7 +26,7 @@ import { ShiftTicketImportSheet } from "./ShiftTicketImportSheet";
 import type { ParsedShiftTicket } from "@/services/shift-ticket-import";
 import { SuccessOverlay } from "@/components/ui/SuccessOverlay";
 import { SignedImage } from "@/components/ui/SignedImage";
-import { uploadSignature, computeHours, buildRemarksString, insertSignatureAuditLog } from "@/services/shift-tickets";
+import { uploadSignature, computeHours, buildRemarksString, insertSignatureAuditLog, enforceLunchDeduction } from "@/services/shift-tickets";
 import {
   diffTicket,
   hasAnySignature,
@@ -305,6 +305,9 @@ export function ShiftTicketForm({
     // keeps the ticket in Draft status. Re-locking happens automatically on
     // every save while the supervisor sig is still present.
     const isFinal = !!persistedSupervisorSigUrl;
+    // Save-time guard: ensure any "30-min lunch" rows have the 0.5h actually
+    // deducted from total. Catches legacy rows and direct edits.
+    const normalizedPersonnel = enforceLunchDeduction(personnelEntries);
     return {
       incident_truck_id: incidentTruckId,
       organization_id: organizationId,
@@ -323,7 +326,7 @@ export function ShiftTicketForm({
       first_last_type: isFirstLast ? firstLastType : null,
       miles: miles ? parseFloat(miles) : null,
       equipment_entries: equipmentEntries as any,
-      personnel_entries: personnelEntries as any,
+      personnel_entries: normalizedPersonnel as any,
       remarks: remarks || null,
       contractor_rep_name: contractorRepName || null,
       contractor_rep_signature_url: persistedContractorSigUrl,
