@@ -204,6 +204,7 @@ export default function ShiftTicketCreate() {
       ticket={ticket}
       incidentTruckId={incidentTruckId || ""}
       organizationId={orgId}
+      incidentId={incidentId}
       saving={createMutation.isPending || updateMutation.isPending}
       onSave={handleSave}
       onExportPdf={handleExportPdf}
