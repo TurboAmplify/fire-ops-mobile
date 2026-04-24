@@ -444,13 +444,26 @@ export default function Payroll() {
                     {line.byIncident.length > 0 && (
                       <div className="space-y-1">
                         <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">By Fire</p>
-                        {line.byIncident.map((inc) => (
-                          <div key={(inc.incidentId ?? "_un") + inc.incidentName} className="flex justify-between items-center pl-1">
-                            <span className="text-xs truncate flex-1">{inc.incidentName}</span>
-                            <span className="text-[11px] text-muted-foreground mx-2 shrink-0">{inc.totalHours.toFixed(1)} hrs</span>
-                            <span className="text-xs font-medium shrink-0 w-20 text-right">${inc.grossPay.toFixed(2)}</span>
-                          </div>
-                        ))}
+                        {line.byIncident.map((inc) => {
+                          const isDaily = line.payMethod === "daily" && (line.dailyRate ?? 0) > 0;
+                          // For daily crew, derive shift count from gross / rate
+                          const incShifts = isDaily && line.dailyRate
+                            ? Math.round(inc.grossPay / line.dailyRate)
+                            : 0;
+                          return (
+                            <div key={(inc.incidentId ?? "_un") + inc.incidentName} className="flex justify-between items-center pl-1">
+                              <span className="text-xs truncate flex-1">{inc.incidentName}</span>
+                              {isDaily ? (
+                                <span className="text-[11px] text-muted-foreground mx-2 shrink-0">
+                                  {incShifts} {incShifts === 1 ? "shift" : "shifts"} × ${line.dailyRate?.toFixed(0)}
+                                </span>
+                              ) : (
+                                <span className="text-[11px] text-muted-foreground mx-2 shrink-0">{inc.totalHours.toFixed(1)} hrs</span>
+                              )}
+                              <span className="text-xs font-medium shrink-0 w-20 text-right">${inc.grossPay.toFixed(2)}</span>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
 
