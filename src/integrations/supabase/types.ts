@@ -768,6 +768,84 @@ export type Database = {
         }
         Relationships: []
       }
+      payroll_adjustment_audit: {
+        Row: {
+          actor_user_id: string | null
+          adjustment_id: string | null
+          crew_member_id: string | null
+          event_type: string
+          id: string
+          incident_id: string | null
+          occurred_at: string
+          organization_id: string
+          payload: Json
+        }
+        Insert: {
+          actor_user_id?: string | null
+          adjustment_id?: string | null
+          crew_member_id?: string | null
+          event_type: string
+          id?: string
+          incident_id?: string | null
+          occurred_at?: string
+          organization_id: string
+          payload?: Json
+        }
+        Update: {
+          actor_user_id?: string | null
+          adjustment_id?: string | null
+          crew_member_id?: string | null
+          event_type?: string
+          id?: string
+          incident_id?: string | null
+          occurred_at?: string
+          organization_id?: string
+          payload?: Json
+        }
+        Relationships: []
+      }
+      payroll_adjustments: {
+        Row: {
+          adjustment_date: string
+          adjustment_type: string
+          amount: number | null
+          created_at: string
+          created_by_user_id: string | null
+          crew_member_id: string
+          hours: number | null
+          id: string
+          incident_id: string | null
+          organization_id: string
+          reason: string
+        }
+        Insert: {
+          adjustment_date?: string
+          adjustment_type: string
+          amount?: number | null
+          created_at?: string
+          created_by_user_id?: string | null
+          crew_member_id: string
+          hours?: number | null
+          id?: string
+          incident_id?: string | null
+          organization_id: string
+          reason: string
+        }
+        Update: {
+          adjustment_date?: string
+          adjustment_type?: string
+          amount?: number | null
+          created_at?: string
+          created_by_user_id?: string | null
+          crew_member_id?: string
+          hours?: number | null
+          id?: string
+          incident_id?: string | null
+          organization_id?: string
+          reason?: string
+        }
+        Relationships: []
+      }
       platform_admin_audit: {
         Row: {
           action: string
