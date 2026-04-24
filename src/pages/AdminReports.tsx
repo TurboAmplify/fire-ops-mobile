@@ -106,7 +106,7 @@ function PayrollReportsCard({ organizationId, organizationName }: { organization
         toast({ title: "Paystubs export as PDF", description: "Use Summary or Detail for spreadsheet formats." });
         return;
       }
-      await downloadPaystubsBundle({ lines, organizationName, periodLabel: range.label, filenameBase: baseName });
+      await downloadPaystubsBundle({ lines, organizationName, periodLabel: effectiveRange.label, filenameBase: baseName });
       return;
     }
 
@@ -140,13 +140,7 @@ function PayrollReportsCard({ organizationId, organizationName }: { organization
       }]);
       return downloadTablePdf({
         title: "Payroll Summary",
-        subtitle: range.label,
-        organizationName,
-        filenameBase: baseName,
-        landscape: true,
-        sections: [{
-          columns: [
-            { header: "Crew", key: "crew", width: 110 },
+        subtitle: effectiveRange.label,
             { header: "Role", key: "role", width: 80 },
             { header: "Reg", key: "reg", width: 50, align: "right", format: (v) => Number(v).toFixed(2) },
             { header: "OT", key: "ot", width: 50, align: "right", format: (v) => Number(v).toFixed(2) },
