@@ -225,6 +225,38 @@ export function ShiftTicketForm({
   const [unlockSubmitting, setUnlockSubmitting] = useState(false);
   const editingLocked = ticketLocked && !unlockedThisSession;
 
+  // ── Pay adjustment chip (admin-only) ──
+  // Counts how many payroll_adjustments are scoped to this ticket: same
+  // incident, same dates, same crew. Used to render the amber "+ N" chip
+  // next to the ticket title and to know whether the post-script section
+  // has anything in it.
+  const { data: allCrewMembers } = useCrewMembers();
+  const adjustmentCrewIds = (() => {
+    if (!isAdmin || !allCrewMembers) return [] as string[];
+    const ids: string[] = [];
+    const seen = new Set<string>();
+    for (const entry of personnelEntries) {
+      const key = (entry.operator_name || "").trim().toLowerCase();
+      if (!key || seen.has(key)) continue;
+      const m = allCrewMembers.find((c) => (c.name || "").trim().toLowerCase() === key);
+      if (m) {
+        seen.add(key);
+        ids.push(m.id);
+      }
+    }
+    return ids;
+  })();
+  const adjustmentDates = Array.from(
+    new Set(personnelEntries.map((p) => p.date).filter(Boolean) as string[]),
+  );
+  const ticketAdjustments = useTicketAdjustments({
+    incidentId,
+    dates: adjustmentDates,
+    crewMemberIds: adjustmentCrewIds,
+    enabled: isAdmin,
+  });
+  const adjustmentsCount = isAdmin ? ticketAdjustments.length : 0;
+
   const showSuccess = useCallback((msg: string) => {
     setSuccessMsg(msg);
   }, []);
