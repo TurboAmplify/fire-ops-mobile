@@ -749,6 +749,18 @@ export default function Payroll() {
           </div>
         </div>
       )}
+
+      {/* Adjustment sheet */}
+      {adjustmentFor && (
+        <AdjustmentSheet
+          open={!!adjustmentFor}
+          onOpenChange={(v) => { if (!v) setAdjustmentFor(null); }}
+          crewMemberId={adjustmentFor.crewMemberId}
+          crewMemberName={adjustmentFor.name}
+          payMethod={adjustmentFor.payMethod}
+          defaultIncidentId={incidentFilter !== "all" ? incidentFilter : null}
+        />
+      )}
     </AppShell>
   );
 }
