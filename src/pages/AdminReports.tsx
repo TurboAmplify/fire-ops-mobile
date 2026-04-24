@@ -578,6 +578,159 @@ function IncidentCostCard({ organizationId, organizationName }: { organizationId
   );
 }
 
+/* ---------------- P&L ---------------- */
+
+function PLReportCard({ organizationId, organizationName }: { organizationId: string; organizationName: string }) {
+  const [range, setRange] = useState<DateRange>(defaultRange());
+  const [scope, setScope] = useState<{ crewId: string; incidentIds: string[] }>({ crewId: "all", incidentIds: [] });
+  const { toast } = useToast();
+
+  const onExport = async (fmt: Format) => {
+    const incidentFilter = scope.incidentIds.length === 0 ? "all" : scope.incidentIds;
+    let effectiveRange = range;
+    let data = await fetchPLReport(
+      { organizationId, rangeStart: range.from, rangeEnd: range.to, incidentFilter },
+      range.label,
+    );
+
+    // Same auto-widen behavior as the Payroll report — if specific incidents
+    // were selected and the range yielded nothing, retry across all time.
+    if (data.rows.length === 0 && Array.isArray(incidentFilter) && (range.from || range.to)) {
+      const fallback = await fetchPLReport(
+        { organizationId, rangeStart: null, rangeEnd: null, incidentFilter },
+        "All Time",
+      );
+      if (fallback.rows.length > 0) {
+        data = fallback;
+        effectiveRange = { from: null, to: null, label: "All Time" };
+        toast({
+          title: "Date range widened",
+          description: `No P&L data in "${range.label}" for the selected incident(s). Showing All Time instead.`,
+        });
+      }
+    }
+
+    if (data.rows.length === 0) {
+      toast({ title: "No P&L data", description: "No labor or expenses for the selected scope." });
+      return;
+    }
+
+    const baseName = `pl_${effectiveRange.label.replace(/\s+/g, "_")}`;
+    const headers = ["Incident", "Labor Gross", "Employer Tax (FICA)", "Labor True Cost", "Expenses", "Expense Count", "Total Cost"];
+    const rows = data.rows.map((r) => [
+      r.incidentName, r.laborGross, r.employerTaxes, r.laborTrueCost, r.expenseTotal, r.expenseCount, r.totalCost,
+    ]);
+    const totalsRow = [
+      "TOTAL", data.totals.laborGross, data.totals.employerTaxes, data.totals.laborTrueCost,
+      data.totals.expenseTotal, data.rows.reduce((a, r) => a + r.expenseCount, 0), data.totals.totalCost,
+    ];
+
+    if (fmt === "csv") {
+      return downloadCsv(baseName, headers, [...rows, totalsRow]);
+    }
+    if (fmt === "excel") {
+      return downloadExcel(baseName, [{
+        name: "P&L by Incident",
+        columns: [
+          { header: "Incident", key: "name", width: 28 },
+          { header: "Labor Gross", key: "lg", width: 14, format: "currency" },
+          { header: "Employer FICA", key: "et", width: 14, format: "currency" },
+          { header: "Labor True Cost", key: "lt", width: 16, format: "currency" },
+          { header: "Expenses", key: "ex", width: 14, format: "currency" },
+          { header: "Expense Count", key: "ec", width: 13, format: "int" },
+          { header: "Total Cost", key: "tc", width: 16, format: "currency" },
+        ],
+        rows: [
+          ...data.rows.map((r) => ({
+            name: r.incidentName, lg: r.laborGross, et: r.employerTaxes, lt: r.laborTrueCost,
+            ex: r.expenseTotal, ec: r.expenseCount, tc: r.totalCost,
+          })),
+          {
+            name: "TOTAL", lg: data.totals.laborGross, et: data.totals.employerTaxes,
+            lt: data.totals.laborTrueCost, ex: data.totals.expenseTotal,
+            ec: data.rows.reduce((a, r) => a + r.expenseCount, 0), tc: data.totals.totalCost,
+          },
+        ],
+      }, {
+        name: "Expense Detail",
+        columns: [
+          { header: "Date", key: "date", width: 12 },
+          { header: "Incident", key: "incident", width: 24 },
+          { header: "Vendor", key: "vendor", width: 22 },
+          { header: "Category", key: "cat", width: 16 },
+          { header: "Amount", key: "amt", width: 12, format: "currency" },
+          { header: "Status", key: "status", width: 12 },
+          { header: "Description", key: "desc", width: 36 },
+        ],
+        rows: data.expenseRows.map((e) => ({
+          date: e.date, incident: e.incidentName, vendor: e.vendor ?? "",
+          cat: e.category, amt: e.amount, status: e.status, desc: e.description ?? "",
+        })),
+      }]);
+    }
+
+    const fmtMoney = (v: any) => `$${Number(v).toFixed(2)}`;
+    return downloadTablePdf({
+      title: "P&L by Incident",
+      subtitle: `${effectiveRange.label} · True Cost = Gross + Employer FICA Match`,
+      organizationName,
+      filenameBase: baseName,
+      landscape: true,
+      sections: [
+        {
+          columns: [
+            { header: "Incident", key: "name", width: 180 },
+            { header: "Labor Gross", key: "lg", width: 80, align: "right", format: fmtMoney },
+            { header: "ER FICA", key: "et", width: 75, align: "right", format: fmtMoney },
+            { header: "Labor True Cost", key: "lt", width: 95, align: "right", format: fmtMoney },
+            { header: "Expenses", key: "ex", width: 80, align: "right", format: fmtMoney },
+            { header: "# Exp", key: "ec", width: 45, align: "right" },
+            { header: "Total Cost", key: "tc", width: 95, align: "right", format: fmtMoney },
+          ],
+          rows: [
+            ...data.rows.map((r) => ({
+              name: r.incidentName, lg: r.laborGross, et: r.employerTaxes, lt: r.laborTrueCost,
+              ex: r.expenseTotal, ec: r.expenseCount, tc: r.totalCost,
+            })),
+            {
+              name: "TOTAL", lg: data.totals.laborGross, et: data.totals.employerTaxes,
+              lt: data.totals.laborTrueCost, ex: data.totals.expenseTotal,
+              ec: data.rows.reduce((a, r) => a + r.expenseCount, 0), tc: data.totals.totalCost,
+            },
+          ],
+        },
+        {
+          title: "Expense Detail",
+          columns: [
+            { header: "Date", key: "date", width: 60 },
+            { header: "Incident", key: "incident", width: 140 },
+            { header: "Vendor", key: "vendor", width: 110 },
+            { header: "Category", key: "cat", width: 90 },
+            { header: "Status", key: "status", width: 60 },
+            { header: "Amount", key: "amt", width: 70, align: "right", format: fmtMoney },
+          ],
+          rows: data.expenseRows.map((e) => ({
+            date: e.date, incident: e.incidentName, vendor: e.vendor ?? "",
+            cat: e.category, status: e.status, amt: e.amount,
+          })),
+        },
+      ],
+    });
+  };
+
+  return (
+    <ReportCard
+      icon={TrendingUp}
+      title="P&L by Incident"
+      description="Fully-burdened labor cost (gross + employer FICA match) plus expenses, grouped by fire."
+    >
+      <DateRangePicker value={range} onChange={setRange} />
+      <ScopePicker crewId={scope.crewId} incidentIds={scope.incidentIds} onChange={setScope} />
+      <ReportExportButtons onExport={onExport} />
+    </ReportCard>
+  );
+}
+
 /* ---------------- Crew Roster ---------------- */
 
 function CrewRosterCard({ organizationId, organizationName }: { organizationId: string; organizationName: string }) {
