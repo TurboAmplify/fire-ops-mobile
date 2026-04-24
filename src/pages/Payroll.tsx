@@ -424,7 +424,16 @@ export default function Payroll() {
                       <p className="text-xs text-muted-foreground">{line.role}</p>
                     </div>
                     <div className="text-right ml-3 shrink-0">
-                      <p className="text-sm font-bold">${line.grossPay.toFixed(2)}</p>
+                      <div className="flex items-baseline justify-end gap-1.5">
+                        <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Gross</span>
+                        <span className="text-sm font-bold">${line.grossPay.toFixed(2)}</span>
+                      </div>
+                      {line.netPay != null && line.deductions && line.deductions.total > 0 && (
+                        <div className="flex items-baseline justify-end gap-1.5">
+                          <span className="text-[10px] uppercase tracking-wide text-success/80">Net</span>
+                          <span className="text-sm font-bold text-success">${line.netPay.toFixed(2)}</span>
+                        </div>
+                      )}
                       <p className="text-[11px] text-muted-foreground">
                         {line.payMethod === "daily" && line.shiftCount != null ? (
                           <>{line.shiftCount} {line.shiftCount === 1 ? "shift" : "shifts"} · {line.totalHours.toFixed(1)} hrs</>
