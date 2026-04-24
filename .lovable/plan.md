@@ -1,99 +1,59 @@
 
 
-# Admin Reports — Build Plan
+# One-time fix — Coyote Flats / DL62
 
-## Output formats
-Three buttons per report: **PDF** (jsPDF, print-ready), **CSV** (raw data, accountant-friendly), **Excel** (formatted .xlsx via SheetJS — column widths, bold headers, currency/number formatting, frozen header row).
+## Confirmed data
+- **Incident**: Coyote Flats (`29e18807-c396-4b64-bed7-c1037e374e76`)
+- **Org**: `2ffa93de-506d-4aa7-a53e-a3a04d9626be`
+- **Truck**: DL62 — currently has **8 shift tickets** (3/19 → 3/26), all status `draft`, none signed
+- **Crew across remaining 7 shifts**: Justin Richardson, Bobby Bales, Sheldon Sundstrom (3/19–3/21), Nevaeh Smith (3/22–3/25)
 
-Add `xlsx` (SheetJS) dependency for Excel export.
+## Step 1 — Delete the Thursday 3/26 shift ticket
+Last day worked was Wednesday 3/25, so the 3/26 ticket should not exist.
 
-## Where it lives
-1. **New hub**: `/admin/reports` — central reports landing page with all report types
-2. **Page-level buttons**: Export buttons added to existing Activity Logs (`AdminLogs.tsx`), Audit page (`SuperAdminAudit.tsx`), and Payroll page (`Payroll.tsx`)
-3. **More page**: New "Reports" card in the Admin section linking to `/admin/reports`
+```sql
+DELETE FROM shift_tickets
+WHERE id = '31e14ea4-ce71-46d4-a3c5-5b3a8ac33bea';
+```
 
-## Report types
+After: DL62 has 7 shift tickets — Justin appears on all 7. Matches your "Justin should have 7" requirement.
 
-### 1. Activity Logs Report
-Three filter tabs (Inspections / Signatures / Expenses) — same data as `AdminLogs.tsx` but exportable. Includes date range filter.
+## Step 2 — Add +1 hr travel pay adjustments to each crew member, per shift
 
-### 2. Audit Logs Report (platform admins only)
-- **Shift Ticket Audit** (org-scoped, admin) — all field changes with actor/timestamp
-- **Payroll Adjustment Audit** (org-scoped, admin) — created/deleted adjustments with actor
-- **Platform Admin Audit** (platform admin only) — cross-org actions
+For every remaining DL62 shift (7 days × 3 crew = **21 adjustment rows**), insert a `payroll_adjustments` row:
+- `adjustment_type`: `hours`
+- `hours`: `1`
+- `adjustment_date`: the shift date
+- `incident_id`: Coyote Flats incident
+- `crew_member_id`: matched by name → id
+- `reason`: `"Owner approved +1 hr travel time — Coyote Flats (in addition to shift ticket hours)"`
 
-### 3. Payroll Reports (the big one)
-Each export comes in **PDF / CSV / Excel** flavors. Date range = presets + custom.
+This will auto-trigger `payroll_adjustment_audit_insert` (one audit row per adjustment), so the trail is preserved.
 
-**Scope dropdown:**
-- All crew (org-wide)
-- Single crew member
-- All incidents
-- Single incident
-- Combination: crew × incident
+### Per-shift breakdown
+| Date | Justin | Bobby | Sheldon | Nevaeh |
+|------|--------|-------|---------|--------|
+| 3/19 | +1 | +1 | +1 | — |
+| 3/20 | +1 | +1 | +1 | — |
+| 3/21 | +1 | +1 | +1 | — |
+| 3/22 | +1 | +1 | — | +1 |
+| 3/23 | +1 | +1 | — | +1 |
+| 3/24 | +1 | +1 | — | +1 |
+| 3/25 | +1 | +1 | — | +1 |
+| **Totals** | **+7 hrs** | **+7 hrs** | **+3 hrs** | **+4 hrs** |
 
-**Report variants** (matches your "all three buttons" choice):
-- **Summary** — one row per crew member: reg hrs, OT hrs, H&W, gross, deductions, net
-- **Detail** — summary + per-shift breakdown (date, incident, ticket #, hrs)
-- **Paystubs** — one PDF per crew member (uses existing `generatePaystubPdf`) bundled into a single multi-page PDF, plus cover summary
+The +1 hr per crew per shift will appear:
+- On Payroll page under Adjustments
+- On each crew member's paystub (PDF + on-screen) as line items with the memo
+- In the new Pay Adjustments section on each shift ticket (admin view), with the amber chip indicator
+- In `payroll_adjustment_audit` for full traceability
 
-### 4. Bonus reports (filling in gaps)
-- **Incident Cost Report** — labor + expenses per incident, exportable
-- **Crew Roster Report** — active crew, roles, qualifications, contact info
-- **Expense Report** — date-range filtered expenses by category/incident
+## What this does NOT touch
+- Personnel hours on the OF-297 tickets — unchanged (the +1 is post-script, exactly as the new pay-adjustments feature is designed to work)
+- DL31 truck — untouched
+- Any signed/finalized data — none of the affected tickets are signed
+- Schema, RLS, functions — read-only data fix, no migrations
 
-## Date range UX
-Reusable `<DateRangePicker>` component:
-- Presets: This Week / Last Week / This Month / Last Month / Pay Period (Mon–Sun current week) / Last 30 Days / Year to Date / All Time
-- "Custom..." opens two shadcn Calendar pickers in a Popover
-- Mobile-first: full-width chips for presets, large touch targets
-
-## Files
-
-**New:**
-- `src/pages/AdminReports.tsx` — central hub with cards for each report type
-- `src/components/reports/DateRangePicker.tsx` — reusable preset + custom range
-- `src/components/reports/ReportExportButtons.tsx` — PDF / CSV / Excel button trio
-- `src/components/reports/ScopePicker.tsx` — All / Single crew + All / Single incident
-- `src/services/reports/payroll-report.ts` — aggregates payroll data, calls existing `src/lib/payroll.ts`
-- `src/services/reports/activity-report.ts` — fetches inspections/signatures/expenses with date filter
-- `src/services/reports/audit-report.ts` — fetches shift_ticket_audit + payroll_adjustment_audit + platform_admin_audit
-- `src/services/reports/incident-report.ts` — labor cost + expenses per incident
-- `src/services/reports/exporters/csv.ts` — generic CSV writer
-- `src/services/reports/exporters/excel.ts` — SheetJS-based formatted xlsx writer (bold headers, frozen row, column widths, $ format)
-- `src/services/reports/exporters/pdf-payroll.ts` — payroll summary/detail PDF
-- `src/services/reports/exporters/pdf-activity.ts` — activity log PDF
-- `src/services/reports/exporters/pdf-audit.ts` — audit log PDF
-- `src/services/reports/exporters/pdf-paystubs-bundle.ts` — multi-page paystub bundle (reuses existing `generatePaystubPdf`)
-- `src/services/reports/exporters/share.ts` — single helper that triggers download on web AND opens iOS/Android share sheet via Capacitor when available (so PDFs/CSVs work on the mobile app)
-
-**Edited:**
-- `src/App.tsx` — add `/admin/reports` route gated by `AdminGate`
-- `src/pages/More.tsx` — add "Reports" card in Admin section
-- `src/pages/AdminLogs.tsx` — add `<ReportExportButtons>` for the active tab
-- `src/pages/SuperAdminAudit.tsx` — add export buttons
-- `src/pages/Payroll.tsx` — add export buttons in admin view (top of page, mobile-first)
-
-**Dependencies added:**
-- `xlsx` (SheetJS) for formatted Excel export
-
-## Mobile-first / app store requirements
-- All buttons ≥44px touch targets, full-width on narrow screens, side-by-side on wider
-- Loading spinner during file generation (large payroll reports can take a beat)
-- Empty states ("No data in this date range") with clear messaging
-- Error toasts via `sonner` if generation fails — never silent
-- Capacitor share sheet integration: on iOS/Android the file opens the native "Save to Files" / share UI; on web it triggers a normal download. Single helper, no platform-specific code in components.
-- All admin-gated via `useOrganization().isAdmin` (existing pattern); platform-only audit hidden behind `usePlatformAdmin`
-- Zero changes to data tables, RLS, or existing logic — pure read-only export layer
-- Zero new RLS policies needed (all reads use existing admin RLS)
-
-## What stays unchanged
-- All existing tables, RLS, triggers, functions
-- `src/lib/payroll.ts` aggregation logic
-- `src/components/payroll/generatePaystubPdf.ts` — reused as-is
-- `src/components/shift-tickets/generateOF297Pdf.ts` — untouched
-- Crew users see nothing new (entirely admin-gated)
-
-## Risk surface
-Read-only export feature, no schema changes, no auth changes. The only risk is bundle size from `xlsx` (~400KB gzipped) — mitigated by lazy-loading the exporters with dynamic `import()` so the chunk only ships when an admin actually exports.
+## Execution
+Once approved, I'll run a single insert/delete batch via the data tool — one DELETE + 21 INSERTs — and confirm with a verification query showing the 7 remaining tickets and 21 new adjustment rows grouped by crew.
 
