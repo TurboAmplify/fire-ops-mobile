@@ -43,6 +43,7 @@ export function TruckForm({ truck, onSubmit, isPending }: TruckFormProps) {
   const [lastOilChangeDate, setLastOilChangeDate] = useState(t?.last_oil_change_date ?? "");
   const [lastOilChangeMileage, setLastOilChangeMileage] = useState(t?.last_oil_change_mileage?.toString() ?? "");
   const [nextOilChangeMileage, setNextOilChangeMileage] = useState(t?.next_oil_change_mileage?.toString() ?? "");
+  const [dayRate, setDayRate] = useState(t?.day_rate != null ? String(t.day_rate) : "");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
