@@ -134,6 +134,24 @@ export function PayrollSettingsCard() {
         </div>
       )}
 
+      <div className="pt-2 border-t">
+        <h3 className="text-sm font-bold">Employer Costs</h3>
+        <p className="text-[11px] text-muted-foreground mb-2">
+          Captured in P&L reports as your true cost of labor (in addition to FICA match).
+        </p>
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-muted-foreground">Workers Comp % (of gross)</label>
+          <input
+            type="number" step="0.01" min="0"
+            value={form.workers_comp_pct}
+            onChange={(e) => setForm({ ...form, workers_comp_pct: e.target.value })}
+            className={inputClass}
+            inputMode="decimal"
+            placeholder="e.g. 8.50"
+          />
+        </div>
+      </div>
+
       <button
         onClick={handleSave}
         disabled={save.isPending}
