@@ -15,11 +15,12 @@ export interface PLIncidentRow {
   workersComp: number;      // workers comp insurance cost attributable to this incident
   laborTrueCost: number;    // gross + employer match + workers comp
   expenseTotal: number;     // expenses tied to this incident
-  totalCost: number;        // laborTrueCost + expenseTotal
+  totalCost: number;        // laborTrueCost + expenseTotal + factoringFee
   expenseCount: number;
   revenue: number;          // billable truck day-rate revenue for this incident
   truckDays: number;        // total billable truck-days on this incident
-  profit: number;           // revenue - totalCost
+  factoringFee: number;     // invoice factor fee taken off revenue (when enabled)
+  profit: number;           // revenue - totalCost (totalCost already includes factoring)
 }
 
 export interface PLReportData {
@@ -34,8 +35,11 @@ export interface PLReportData {
     totalCost: number;
     revenue: number;
     truckDays: number;
+    factoringFee: number;
     profit: number;
   };
+  factoringPct: number;        // % applied (0 when disabled)
+  factoringEnabled: boolean;
   rangeLabel: string;
   /** Underlying crew lines (used for the optional detail/expanded variant). */
   crewLines: CrewPayrollLine[];
@@ -134,6 +138,7 @@ export async function fetchPLReport(input: PLInput, rangeLabel: string): Promise
         expenseCount: 0,
         revenue: 0,
         truckDays: 0,
+        factoringFee: 0,
         profit: 0,
       };
       incidentMap.set(key, row);
@@ -240,9 +245,19 @@ export async function fetchPLReport(input: PLInput, rangeLabel: string): Promise
     });
   });
 
+  // Pull factoring settings from org payroll defaults
+  const { data: orgSettings } = await supabase
+    .from("org_payroll_settings")
+    .select("factoring_pct, factoring_enabled")
+    .eq("organization_id", input.organizationId)
+    .maybeSingle();
+  const factoringEnabled = (orgSettings as any)?.factoring_enabled ?? true;
+  const factoringPct = factoringEnabled ? Number((orgSettings as any)?.factoring_pct ?? 4.5) : 0;
+
   const rows = Array.from(incidentMap.values());
   rows.forEach((r) => {
-    r.totalCost = r.laborTrueCost + r.expenseTotal;
+    r.factoringFee = (r.revenue * factoringPct) / 100;
+    r.totalCost = r.laborTrueCost + r.expenseTotal + r.factoringFee;
     r.profit = r.revenue - r.totalCost;
   });
   rows.sort((a, b) => b.totalCost - a.totalCost);
@@ -257,15 +272,18 @@ export async function fetchPLReport(input: PLInput, rangeLabel: string): Promise
       totalCost: acc.totalCost + r.totalCost,
       revenue: acc.revenue + r.revenue,
       truckDays: acc.truckDays + r.truckDays,
+      factoringFee: acc.factoringFee + r.factoringFee,
       profit: acc.profit + r.profit,
     }),
-    { laborGross: 0, employerTaxes: 0, workersComp: 0, laborTrueCost: 0, expenseTotal: 0, totalCost: 0, revenue: 0, truckDays: 0, profit: 0 },
+    { laborGross: 0, employerTaxes: 0, workersComp: 0, laborTrueCost: 0, expenseTotal: 0, totalCost: 0, revenue: 0, truckDays: 0, factoringFee: 0, profit: 0 },
   );
 
   return {
     rows,
     unassignedExpenses,
     totals,
+    factoringPct,
+    factoringEnabled,
     rangeLabel,
     crewLines: payroll.lines,
     expenseRows,

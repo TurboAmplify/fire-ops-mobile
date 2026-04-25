@@ -20,6 +20,8 @@ export function PayrollSettingsCard() {
     state_enabled: DEFAULT_ORG_PAYROLL.state_enabled,
     extra_withholding_default: String(DEFAULT_ORG_PAYROLL.extra_withholding_default),
     workers_comp_pct: String(DEFAULT_ORG_PAYROLL.workers_comp_pct),
+    factoring_pct: String(DEFAULT_ORG_PAYROLL.factoring_pct),
+    factoring_enabled: DEFAULT_ORG_PAYROLL.factoring_enabled,
   });
 
   useEffect(() => {
@@ -32,6 +34,8 @@ export function PayrollSettingsCard() {
         state_enabled: data.state_enabled,
         extra_withholding_default: String(data.extra_withholding_default),
         workers_comp_pct: String(data.workers_comp_pct ?? 0),
+        factoring_pct: String(data.factoring_pct ?? DEFAULT_ORG_PAYROLL.factoring_pct),
+        factoring_enabled: data.factoring_enabled ?? DEFAULT_ORG_PAYROLL.factoring_enabled,
       });
     }
   }, [data]);
@@ -46,6 +50,8 @@ export function PayrollSettingsCard() {
         state_enabled: form.state_enabled,
         extra_withholding_default: Number(form.extra_withholding_default) || 0,
         workers_comp_pct: Number(form.workers_comp_pct) || 0,
+        factoring_pct: Number(form.factoring_pct) || 0,
+        factoring_enabled: form.factoring_enabled,
       });
       toast.success("Payroll defaults saved");
     } catch {
@@ -150,6 +156,58 @@ export function PayrollSettingsCard() {
             placeholder="e.g. 8.50"
           />
         </div>
+      </div>
+
+      <div className="pt-2 border-t">
+        <h3 className="text-sm font-bold">Invoice Factoring</h3>
+        <p className="text-[11px] text-muted-foreground mb-2">
+          Factor fee deducted from revenue in P&L. Toggle off for what-if analysis.
+        </p>
+        <div className="flex items-center justify-between rounded-xl bg-muted/30 p-3 mb-2">
+          <span className="text-sm font-medium">Apply factoring to P&L</span>
+          <Switch
+            checked={form.factoring_enabled}
+            onCheckedChange={(v) => setForm({ ...form, factoring_enabled: v })}
+          />
+        </div>
+        {form.factoring_enabled && (
+          <>
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, factoring_pct: "3" })}
+                className={`rounded-xl py-2 text-sm font-medium transition-colors ${
+                  form.factoring_pct === "3"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted/40 text-foreground hover:bg-muted/60"
+                }`}
+              >
+                3% (paid &lt;45d)
+              </button>
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, factoring_pct: "4.5" })}
+                className={`rounded-xl py-2 text-sm font-medium transition-colors ${
+                  form.factoring_pct === "4.5"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted/40 text-foreground hover:bg-muted/60"
+                }`}
+              >
+                4.5% (45d+)
+              </button>
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-muted-foreground">Custom factor %</label>
+              <input
+                type="number" step="0.01" min="0"
+                value={form.factoring_pct}
+                onChange={(e) => setForm({ ...form, factoring_pct: e.target.value })}
+                className={inputClass}
+                inputMode="decimal"
+              />
+            </div>
+          </>
+        )}
       </div>
 
       <button

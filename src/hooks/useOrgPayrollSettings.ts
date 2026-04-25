@@ -13,7 +13,7 @@ export function useOrgPayrollSettings() {
     queryFn: async (): Promise<OrgPayrollDefaults> => {
       const { data, error } = await supabase
         .from("org_payroll_settings" as any)
-        .select("federal_pct, social_security_pct, medicare_pct, state_pct, state_enabled, extra_withholding_default, workers_comp_pct")
+        .select("federal_pct, social_security_pct, medicare_pct, state_pct, state_enabled, extra_withholding_default, workers_comp_pct, factoring_pct, factoring_enabled")
         .eq("organization_id", orgId!)
         .maybeSingle();
       if (error) throw error;
@@ -27,6 +27,8 @@ export function useOrgPayrollSettings() {
         state_enabled: !!d.state_enabled,
         extra_withholding_default: Number(d.extra_withholding_default ?? 0),
         workers_comp_pct: Number(d.workers_comp_pct ?? 0),
+        factoring_pct: Number(d.factoring_pct ?? DEFAULT_ORG_PAYROLL.factoring_pct),
+        factoring_enabled: d.factoring_enabled ?? DEFAULT_ORG_PAYROLL.factoring_enabled,
       };
     },
   });
@@ -52,6 +54,8 @@ export function useSaveOrgPayrollSettings() {
           state_enabled: values.state_enabled,
           extra_withholding_default: values.extra_withholding_default,
           workers_comp_pct: values.workers_comp_pct,
+          factoring_pct: values.factoring_pct,
+          factoring_enabled: values.factoring_enabled,
         } as any,
         { onConflict: "organization_id" }
       );
