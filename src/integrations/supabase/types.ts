@@ -614,6 +614,8 @@ export type Database = {
       org_payroll_settings: {
         Row: {
           extra_withholding_default: number
+          factoring_enabled: boolean
+          factoring_pct: number
           federal_pct: number
           medicare_pct: number
           organization_id: string
@@ -626,6 +628,8 @@ export type Database = {
         }
         Insert: {
           extra_withholding_default?: number
+          factoring_enabled?: boolean
+          factoring_pct?: number
           federal_pct?: number
           medicare_pct?: number
           organization_id: string
@@ -638,6 +642,8 @@ export type Database = {
         }
         Update: {
           extra_withholding_default?: number
+          factoring_enabled?: boolean
+          factoring_pct?: number
           federal_pct?: number
           medicare_pct?: number
           organization_id?: string
