@@ -58,10 +58,12 @@ export async function generatePaystubPdf({ line, organizationName, periodLabel }
   doc.setLineWidth(1);
   doc.line(margin, y, pageW - margin, y);
   y += 12;
+  const isDaily = line.payMethod === "daily" && (line.dailyRate ?? 0) > 0;
+
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
   doc.text("Earnings", col1, y);
-  doc.text("Hours", col2, y, { align: "right" });
+  doc.text(isDaily ? "Shifts" : "Hours", col2, y, { align: "right" });
   doc.text("Rate", col3, y, { align: "right" });
   doc.text("Amount", col4, y, { align: "right" });
   y += 6;
@@ -76,17 +78,27 @@ export async function generatePaystubPdf({ line, organizationName, periodLabel }
     doc.text(amt, col4, y, { align: "right" });
     y += 14;
   };
-  earningRow("Regular", line.regularHours.toFixed(2), `$${fmt(line.hourlyRate)}`, `$${fmt(line.regularPay)}`);
-  if (line.hwPay > 0) {
-    earningRow("Health & Welfare", line.regularHours.toFixed(2), `$${fmt(line.hwRate)}`, `$${fmt(line.hwPay)}`);
-  }
-  if (line.overtimeHours > 0) {
+  if (isDaily) {
+    const shifts = line.shiftCount ?? 0;
     earningRow(
-      "Overtime (1.5x)",
-      line.overtimeHours.toFixed(2),
-      `$${fmt(line.hourlyRate * 1.5)}`,
-      `$${fmt(line.overtimePay)}`
+      "Daily Flat Rate",
+      String(shifts),
+      `$${fmt(line.dailyRate!)}/shift`,
+      `$${fmt(shifts * (line.dailyRate ?? 0))}`,
     );
+  } else {
+    earningRow("Regular", line.regularHours.toFixed(2), `$${fmt(line.hourlyRate)}/hr`, `$${fmt(line.regularPay)}`);
+    if (line.hwPay > 0) {
+      earningRow("Health & Welfare", line.regularHours.toFixed(2), `$${fmt(line.hwRate)}/hr`, `$${fmt(line.hwPay)}`);
+    }
+    if (line.overtimeHours > 0) {
+      earningRow(
+        "Overtime (1.5x)",
+        line.overtimeHours.toFixed(2),
+        `$${fmt(line.hourlyRate * 1.5)}/hr`,
+        `$${fmt(line.overtimePay)}`,
+      );
+    }
   }
   doc.setLineWidth(1.5);
   doc.line(margin, y, pageW - margin, y);
@@ -107,7 +119,12 @@ export async function generatePaystubPdf({ line, organizationName, periodLabel }
     doc.setFontSize(9);
     line.byIncident.forEach((inc) => {
       doc.text(inc.incidentName, col1, y);
-      doc.text(`${inc.totalHours.toFixed(2)} hrs`, col3, y, { align: "right" });
+      if (isDaily && line.dailyRate) {
+        const incShifts = Math.round(inc.grossPay / line.dailyRate);
+        doc.text(`${incShifts} ${incShifts === 1 ? "shift" : "shifts"}`, col3, y, { align: "right" });
+      } else {
+        doc.text(`${inc.totalHours.toFixed(2)} hrs`, col3, y, { align: "right" });
+      }
       doc.text(`$${fmt(inc.grossPay)}`, col4, y, { align: "right" });
       y += 12;
     });
