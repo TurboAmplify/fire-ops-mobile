@@ -622,6 +622,7 @@ export type Database = {
           state_pct: number
           updated_at: string
           updated_by: string | null
+          workers_comp_pct: number
         }
         Insert: {
           extra_withholding_default?: number
@@ -633,6 +634,7 @@ export type Database = {
           state_pct?: number
           updated_at?: string
           updated_by?: string | null
+          workers_comp_pct?: number
         }
         Update: {
           extra_withholding_default?: number
@@ -644,6 +646,7 @@ export type Database = {
           state_pct?: number
           updated_at?: string
           updated_by?: string | null
+          workers_comp_pct?: number
         }
         Relationships: []
       }
