@@ -12,7 +12,8 @@ export interface PLIncidentRow {
   incidentName: string;
   laborGross: number;       // gross wages for this incident
   employerTaxes: number;    // FICA match attributable to this incident
-  laborTrueCost: number;    // gross + employer match
+  workersComp: number;      // workers comp insurance cost attributable to this incident
+  laborTrueCost: number;    // gross + employer match + workers comp
   expenseTotal: number;     // expenses tied to this incident
   totalCost: number;        // laborTrueCost + expenseTotal
   expenseCount: number;
