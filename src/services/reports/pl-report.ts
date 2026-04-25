@@ -15,11 +15,12 @@ export interface PLIncidentRow {
   workersComp: number;      // workers comp insurance cost attributable to this incident
   laborTrueCost: number;    // gross + employer match + workers comp
   expenseTotal: number;     // expenses tied to this incident
-  totalCost: number;        // laborTrueCost + expenseTotal
+  totalCost: number;        // laborTrueCost + expenseTotal + factoringFee
   expenseCount: number;
   revenue: number;          // billable truck day-rate revenue for this incident
   truckDays: number;        // total billable truck-days on this incident
-  profit: number;           // revenue - totalCost
+  factoringFee: number;     // invoice factor fee taken off revenue (when enabled)
+  profit: number;           // revenue - totalCost (totalCost already includes factoring)
 }
 
 export interface PLReportData {
@@ -34,8 +35,11 @@ export interface PLReportData {
     totalCost: number;
     revenue: number;
     truckDays: number;
+    factoringFee: number;
     profit: number;
   };
+  factoringPct: number;        // % applied (0 when disabled)
+  factoringEnabled: boolean;
   rangeLabel: string;
   /** Underlying crew lines (used for the optional detail/expanded variant). */
   crewLines: CrewPayrollLine[];
