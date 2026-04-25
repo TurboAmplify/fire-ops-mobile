@@ -65,7 +65,7 @@ export async function fetchPayrollReport(
       .eq("organization_id", input.organizationId),
     supabase
       .from("org_payroll_settings")
-      .select("federal_pct, social_security_pct, medicare_pct, state_pct, state_enabled, extra_withholding_default, workers_comp_pct")
+      .select("federal_pct, social_security_pct, medicare_pct, state_pct, state_enabled, extra_withholding_default, workers_comp_pct, factoring_pct, factoring_enabled")
       .eq("organization_id", input.organizationId)
       .maybeSingle(),
     supabase
@@ -122,6 +122,8 @@ export async function fetchPayrollReport(
         state_enabled: !!orgRes.data.state_enabled,
         extra_withholding_default: Number(orgRes.data.extra_withholding_default),
         workers_comp_pct: Number((orgRes.data as any).workers_comp_pct ?? 0),
+        factoring_pct: Number((orgRes.data as any).factoring_pct ?? DEFAULT_ORG_PAYROLL.factoring_pct),
+        factoring_enabled: (orgRes.data as any).factoring_enabled ?? DEFAULT_ORG_PAYROLL.factoring_enabled,
       }
     : DEFAULT_ORG_PAYROLL;
 
