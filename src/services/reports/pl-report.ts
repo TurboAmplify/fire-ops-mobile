@@ -132,6 +132,9 @@ export async function fetchPLReport(input: PLInput, rangeLabel: string): Promise
         expenseTotal: 0,
         totalCost: 0,
         expenseCount: 0,
+        revenue: 0,
+        truckDays: 0,
+        profit: 0,
       };
       incidentMap.set(key, row);
     }
@@ -167,8 +170,81 @@ export async function fetchPLReport(input: PLInput, rangeLabel: string): Promise
     }
   });
 
+  // Revenue: count distinct shift-ticket dates per incident_truck and multiply
+  // by that truck's day_rate. Dates come from each personnel_entry's `date`,
+  // falling back to the ticket's created_at if no entries are present.
+  const { data: ticketRows, error: ticketsErr } = await supabase
+    .from("shift_tickets")
+    .select("id, created_at, personnel_entries, incident_truck_id, incident_trucks:incident_trucks!shift_tickets_incident_truck_id_fkey(incident_id, truck_id, trucks:trucks!incident_trucks_truck_id_fkey(day_rate))")
+    .eq("organization_id", input.organizationId);
+  if (ticketsErr) throw ticketsErr;
+
+  // Group: incident_id -> truck_id -> Set<dateString>
+  const truckDaysByIncident = new Map<string, Map<string, { dates: Set<string>; dayRate: number }>>();
+  (ticketRows ?? []).forEach((t: any) => {
+    const it = t.incident_trucks;
+    if (!it?.incident_id || !it?.truck_id) return;
+    const incidentId: string = it.incident_id;
+    if (allowedIncidents && !allowedIncidents.has(incidentId)) return;
+
+    // Pull all dates from personnel_entries; fall back to created_at
+    const entries: any[] = Array.isArray(t.personnel_entries) ? t.personnel_entries : [];
+    const dateStrings: string[] = entries
+      .map((e) => (typeof e?.date === "string" ? e.date : null))
+      .filter((d): d is string => !!d);
+    if (dateStrings.length === 0 && t.created_at) {
+      dateStrings.push(String(t.created_at).slice(0, 10));
+    }
+
+    // Apply date range filter
+    const filtered = dateStrings.filter((d) => {
+      if (input.rangeStart && d < dateOnlyOrNull(input.rangeStart)!) return false;
+      if (input.rangeEnd && d > dateOnlyOrNull(input.rangeEnd)!) return false;
+      return true;
+    });
+    if (filtered.length === 0) return;
+
+    const dayRate = Number(it.trucks?.day_rate ?? 0) || 0;
+    let truckMap = truckDaysByIncident.get(incidentId);
+    if (!truckMap) {
+      truckMap = new Map();
+      truckDaysByIncident.set(incidentId, truckMap);
+    }
+    let entry = truckMap.get(it.truck_id);
+    if (!entry) {
+      entry = { dates: new Set(), dayRate };
+      truckMap.set(it.truck_id, entry);
+    }
+    filtered.forEach((d) => entry!.dates.add(d));
+  });
+
+  // Pull incident names for any incidents that only show up in revenue (no labor/expense rows yet)
+  const missingIncidentIds = Array.from(truckDaysByIncident.keys()).filter(
+    (id) => !incidentMap.has(id),
+  );
+  let nameLookup: Record<string, string> = {};
+  if (missingIncidentIds.length > 0) {
+    const { data: incRows } = await supabase
+      .from("incidents")
+      .select("id, name")
+      .in("id", missingIncidentIds);
+    (incRows ?? []).forEach((r: any) => { nameLookup[r.id] = r.name; });
+  }
+
+  truckDaysByIncident.forEach((truckMap, incidentId) => {
+    const row = ensureRow(incidentId, nameLookup[incidentId] ?? incidentMap.get(incidentId)?.incidentName ?? "Incident");
+    truckMap.forEach(({ dates, dayRate }) => {
+      const days = dates.size;
+      row.truckDays += days;
+      row.revenue += days * dayRate;
+    });
+  });
+
   const rows = Array.from(incidentMap.values());
-  rows.forEach((r) => { r.totalCost = r.laborTrueCost + r.expenseTotal; });
+  rows.forEach((r) => {
+    r.totalCost = r.laborTrueCost + r.expenseTotal;
+    r.profit = r.revenue - r.totalCost;
+  });
   rows.sort((a, b) => b.totalCost - a.totalCost);
 
   const totals = rows.reduce(
@@ -179,8 +255,11 @@ export async function fetchPLReport(input: PLInput, rangeLabel: string): Promise
       laborTrueCost: acc.laborTrueCost + r.laborTrueCost,
       expenseTotal: acc.expenseTotal + r.expenseTotal,
       totalCost: acc.totalCost + r.totalCost,
+      revenue: acc.revenue + r.revenue,
+      truckDays: acc.truckDays + r.truckDays,
+      profit: acc.profit + r.profit,
     }),
-    { laborGross: 0, employerTaxes: 0, workersComp: 0, laborTrueCost: 0, expenseTotal: 0, totalCost: 0 },
+    { laborGross: 0, employerTaxes: 0, workersComp: 0, laborTrueCost: 0, expenseTotal: 0, totalCost: 0, revenue: 0, truckDays: 0, profit: 0 },
   );
 
   return {
