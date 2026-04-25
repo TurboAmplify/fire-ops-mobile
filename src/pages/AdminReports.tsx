@@ -616,13 +616,14 @@ function PLReportCard({ organizationId, organizationName }: { organizationId: st
     }
 
     const baseName = `pl_${effectiveRange.label.replace(/\s+/g, "_")}`;
-    const headers = ["Incident", "Labor Gross", "Employer FICA", "Workers Comp", "Labor True Cost", "Expenses", "Expense Count", "Total Cost"];
+    const headers = ["Incident", "Labor Gross", "Employer FICA", "Workers Comp", "Labor True Cost", "Expenses", "Expense Count", "Total Cost", "Truck Days", "Revenue", "Profit"];
     const rows = data.rows.map((r) => [
-      r.incidentName, r.laborGross, r.employerTaxes, r.workersComp, r.laborTrueCost, r.expenseTotal, r.expenseCount, r.totalCost,
+      r.incidentName, r.laborGross, r.employerTaxes, r.workersComp, r.laborTrueCost, r.expenseTotal, r.expenseCount, r.totalCost, r.truckDays, r.revenue, r.profit,
     ]);
     const totalsRow = [
       "TOTAL", data.totals.laborGross, data.totals.employerTaxes, data.totals.workersComp, data.totals.laborTrueCost,
       data.totals.expenseTotal, data.rows.reduce((a, r) => a + r.expenseCount, 0), data.totals.totalCost,
+      data.totals.truckDays, data.totals.revenue, data.totals.profit,
     ];
 
     if (fmt === "csv") {
@@ -640,16 +641,20 @@ function PLReportCard({ organizationId, organizationName }: { organizationId: st
           { header: "Expenses", key: "ex", width: 14, format: "currency" },
           { header: "Expense Count", key: "ec", width: 13, format: "int" },
           { header: "Total Cost", key: "tc", width: 16, format: "currency" },
+          { header: "Truck Days", key: "td", width: 12, format: "int" },
+          { header: "Revenue", key: "rv", width: 14, format: "currency" },
+          { header: "Profit", key: "pf", width: 14, format: "currency" },
         ],
         rows: [
           ...data.rows.map((r) => ({
             name: r.incidentName, lg: r.laborGross, et: r.employerTaxes, wc: r.workersComp, lt: r.laborTrueCost,
-            ex: r.expenseTotal, ec: r.expenseCount, tc: r.totalCost,
+            ex: r.expenseTotal, ec: r.expenseCount, tc: r.totalCost, td: r.truckDays, rv: r.revenue, pf: r.profit,
           })),
           {
             name: "TOTAL", lg: data.totals.laborGross, et: data.totals.employerTaxes, wc: data.totals.workersComp,
             lt: data.totals.laborTrueCost, ex: data.totals.expenseTotal,
             ec: data.rows.reduce((a, r) => a + r.expenseCount, 0), tc: data.totals.totalCost,
+            td: data.totals.truckDays, rv: data.totals.revenue, pf: data.totals.profit,
           },
         ],
       }, {
@@ -673,31 +678,33 @@ function PLReportCard({ organizationId, organizationName }: { organizationId: st
     const fmtMoney = (v: any) => `$${Number(v).toFixed(2)}`;
     return downloadTablePdf({
       title: "P&L by Incident",
-      subtitle: `${effectiveRange.label} · True Cost = Gross + Employer FICA + Workers Comp`,
+      subtitle: `${effectiveRange.label} · True Cost = Gross + Employer FICA + Workers Comp · Profit = Revenue - Total Cost`,
       organizationName,
       filenameBase: baseName,
       landscape: true,
       sections: [
         {
           columns: [
-            { header: "Incident", key: "name", width: 165 },
-            { header: "Labor Gross", key: "lg", width: 75, align: "right", format: fmtMoney },
-            { header: "ER FICA", key: "et", width: 65, align: "right", format: fmtMoney },
-            { header: "Workers Comp", key: "wc", width: 75, align: "right", format: fmtMoney },
-            { header: "Labor True Cost", key: "lt", width: 90, align: "right", format: fmtMoney },
-            { header: "Expenses", key: "ex", width: 75, align: "right", format: fmtMoney },
-            { header: "# Exp", key: "ec", width: 40, align: "right" },
-            { header: "Total Cost", key: "tc", width: 90, align: "right", format: fmtMoney },
+            { header: "Incident", key: "name", width: 130 },
+            { header: "Labor Gross", key: "lg", width: 65, align: "right", format: fmtMoney },
+            { header: "ER FICA", key: "et", width: 55, align: "right", format: fmtMoney },
+            { header: "WC", key: "wc", width: 55, align: "right", format: fmtMoney },
+            { header: "Labor TC", key: "lt", width: 70, align: "right", format: fmtMoney },
+            { header: "Expenses", key: "ex", width: 65, align: "right", format: fmtMoney },
+            { header: "Total Cost", key: "tc", width: 75, align: "right", format: fmtMoney },
+            { header: "Days", key: "td", width: 35, align: "right" },
+            { header: "Revenue", key: "rv", width: 75, align: "right", format: fmtMoney },
+            { header: "Profit", key: "pf", width: 75, align: "right", format: fmtMoney },
           ],
           rows: [
             ...data.rows.map((r) => ({
               name: r.incidentName, lg: r.laborGross, et: r.employerTaxes, wc: r.workersComp, lt: r.laborTrueCost,
-              ex: r.expenseTotal, ec: r.expenseCount, tc: r.totalCost,
+              ex: r.expenseTotal, tc: r.totalCost, td: r.truckDays, rv: r.revenue, pf: r.profit,
             })),
             {
               name: "TOTAL", lg: data.totals.laborGross, et: data.totals.employerTaxes, wc: data.totals.workersComp,
-              lt: data.totals.laborTrueCost, ex: data.totals.expenseTotal,
-              ec: data.rows.reduce((a, r) => a + r.expenseCount, 0), tc: data.totals.totalCost,
+              lt: data.totals.laborTrueCost, ex: data.totals.expenseTotal, tc: data.totals.totalCost,
+              td: data.totals.truckDays, rv: data.totals.revenue, pf: data.totals.profit,
             },
           ],
         },
@@ -724,7 +731,7 @@ function PLReportCard({ organizationId, organizationName }: { organizationId: st
     <ReportCard
       icon={TrendingUp}
       title="P&L by Incident"
-      description="Fully-burdened cost: gross labor + employer FICA + workers comp + expenses, grouped by fire."
+      description="Revenue (truck day-rate × days) vs fully-burdened cost (gross labor + employer FICA + workers comp + expenses) and profit, grouped by fire."
     >
       <DateRangePicker value={range} onChange={setRange} />
       <ScopePicker crewId={scope.crewId} incidentIds={scope.incidentIds} onChange={setScope} />

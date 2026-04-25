@@ -1664,6 +1664,7 @@ export type Database = {
           bed_length: string | null
           created_at: string
           current_mileage: number | null
+          day_rate: number
           dot_number: string | null
           engine_type: string | null
           fuel_capacity: number | null
@@ -1696,6 +1697,7 @@ export type Database = {
           bed_length?: string | null
           created_at?: string
           current_mileage?: number | null
+          day_rate?: number
           dot_number?: string | null
           engine_type?: string | null
           fuel_capacity?: number | null
@@ -1728,6 +1730,7 @@ export type Database = {
           bed_length?: string | null
           created_at?: string
           current_mileage?: number | null
+          day_rate?: number
           dot_number?: string | null
           engine_type?: string | null
           fuel_capacity?: number | null

@@ -43,6 +43,7 @@ export function TruckForm({ truck, onSubmit, isPending }: TruckFormProps) {
   const [lastOilChangeDate, setLastOilChangeDate] = useState(t?.last_oil_change_date ?? "");
   const [lastOilChangeMileage, setLastOilChangeMileage] = useState(t?.last_oil_change_mileage?.toString() ?? "");
   const [nextOilChangeMileage, setNextOilChangeMileage] = useState(t?.next_oil_change_mileage?.toString() ?? "");
+  const [dayRate, setDayRate] = useState(t?.day_rate != null ? String(t.day_rate) : "");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,6 +73,7 @@ export function TruckForm({ truck, onSubmit, isPending }: TruckFormProps) {
       last_oil_change_date: lastOilChangeDate || null,
       last_oil_change_mileage: lastOilChangeMileage ? parseInt(lastOilChangeMileage) : null,
       next_oil_change_mileage: nextOilChangeMileage ? parseInt(nextOilChangeMileage) : null,
+      day_rate: dayRate ? parseFloat(dayRate) : 0,
       ...(truck ? {} : { organization_id: membership?.organizationId }),
     };
     await onSubmit(data);
@@ -233,6 +235,25 @@ export function TruckForm({ truck, onSubmit, isPending }: TruckFormProps) {
       <div className="space-y-2">
         <Label htmlFor="nextOilChangeMileage">Next Oil Change (mi)</Label>
         <Input id="nextOilChangeMileage" type="number" value={nextOilChangeMileage} onChange={(e) => setNextOilChangeMileage(e.target.value)} placeholder="Miles" />
+      </div>
+
+      {/* Billing */}
+      <SectionLabel>Billing</SectionLabel>
+
+      <div className="space-y-2">
+        <Label htmlFor="dayRate">Day Rate ($/day on assignment)</Label>
+        <Input
+          id="dayRate"
+          type="number"
+          inputMode="decimal"
+          step="0.01"
+          value={dayRate}
+          onChange={(e) => setDayRate(e.target.value)}
+          placeholder="4000"
+        />
+        <p className="text-xs text-muted-foreground">
+          Used by the P&amp;L report to calculate revenue (day rate × days the truck worked an incident).
+        </p>
       </div>
 
       {/* Notes */}
