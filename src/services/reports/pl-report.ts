@@ -17,6 +17,9 @@ export interface PLIncidentRow {
   expenseTotal: number;     // expenses tied to this incident
   totalCost: number;        // laborTrueCost + expenseTotal
   expenseCount: number;
+  revenue: number;          // billable truck day-rate revenue for this incident
+  truckDays: number;        // total billable truck-days on this incident
+  profit: number;           // revenue - totalCost
 }
 
 export interface PLReportData {
@@ -29,6 +32,9 @@ export interface PLReportData {
     laborTrueCost: number;
     expenseTotal: number;
     totalCost: number;
+    revenue: number;
+    truckDays: number;
+    profit: number;
   };
   rangeLabel: string;
   /** Underlying crew lines (used for the optional detail/expanded variant). */
