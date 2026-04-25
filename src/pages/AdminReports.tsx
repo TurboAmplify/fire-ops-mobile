@@ -724,7 +724,7 @@ function PLReportCard({ organizationId, organizationName }: { organizationId: st
     <ReportCard
       icon={TrendingUp}
       title="P&L by Incident"
-      description="Fully-burdened labor cost (gross + employer FICA match) plus expenses, grouped by fire."
+      description="Fully-burdened cost: gross labor + employer FICA + workers comp + expenses, grouped by fire."
     >
       <DateRangePicker value={range} onChange={setRange} />
       <ScopePicker crewId={scope.crewId} incidentIds={scope.incidentIds} onChange={setScope} />
