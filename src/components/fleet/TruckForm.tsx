@@ -73,6 +73,7 @@ export function TruckForm({ truck, onSubmit, isPending }: TruckFormProps) {
       last_oil_change_date: lastOilChangeDate || null,
       last_oil_change_mileage: lastOilChangeMileage ? parseInt(lastOilChangeMileage) : null,
       next_oil_change_mileage: nextOilChangeMileage ? parseInt(nextOilChangeMileage) : null,
+      day_rate: dayRate ? parseFloat(dayRate) : 0,
       ...(truck ? {} : { organization_id: membership?.organizationId }),
     };
     await onSubmit(data);
