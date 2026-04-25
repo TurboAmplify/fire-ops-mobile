@@ -13,7 +13,7 @@ async function toDataUrl(fileUrl: string): Promise<{ url: string }> {
   if (!res.ok) throw new Error(`Failed to download file: ${res.status}`);
   const contentType = res.headers.get("content-type") || "";
   const bytes = new Uint8Array(await res.arrayBuffer());
-  const b64 = base64Encode(bytes);
+  const b64 = base64Encode(bytes.buffer as ArrayBuffer);
   let mime = contentType.split(";")[0].trim();
   if (!mime || mime === "application/octet-stream") {
     const lower = fileUrl.toLowerCase();

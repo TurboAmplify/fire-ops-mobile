@@ -33,7 +33,7 @@ export function PayrollSettingsCard() {
         state_pct: String(data.state_pct),
         state_enabled: data.state_enabled,
         extra_withholding_default: String(data.extra_withholding_default),
-        workers_comp_pct: String(data.workers_comp_pct ?? 0),
+        workers_comp_pct: String(data.workers_comp_pct ?? DEFAULT_ORG_PAYROLL.workers_comp_pct),
         factoring_pct: String(data.factoring_pct ?? DEFAULT_ORG_PAYROLL.factoring_pct),
         factoring_enabled: data.factoring_enabled ?? DEFAULT_ORG_PAYROLL.factoring_enabled,
       });
@@ -153,7 +153,7 @@ export function PayrollSettingsCard() {
             onChange={(e) => setForm({ ...form, workers_comp_pct: e.target.value })}
             className={inputClass}
             inputMode="decimal"
-            placeholder="e.g. 8.50"
+            placeholder="16"
           />
         </div>
       </div>

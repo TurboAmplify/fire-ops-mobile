@@ -26,7 +26,7 @@ export function useOrgPayrollSettings() {
         state_pct: Number(d.state_pct ?? 0),
         state_enabled: !!d.state_enabled,
         extra_withholding_default: Number(d.extra_withholding_default ?? 0),
-        workers_comp_pct: Number(d.workers_comp_pct ?? 0),
+        workers_comp_pct: Number(d.workers_comp_pct ?? DEFAULT_ORG_PAYROLL.workers_comp_pct),
         factoring_pct: Number(d.factoring_pct ?? DEFAULT_ORG_PAYROLL.factoring_pct),
         factoring_enabled: d.factoring_enabled ?? DEFAULT_ORG_PAYROLL.factoring_enabled,
       };

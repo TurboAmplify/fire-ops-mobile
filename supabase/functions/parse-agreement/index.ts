@@ -14,7 +14,7 @@ async function toDataUrl(fileUrl: string): Promise<{ url: string }> {
 
   const contentType = res.headers.get("content-type") || "";
   const bytes = new Uint8Array(await res.arrayBuffer());
-  const b64 = base64Encode(bytes);
+  const b64 = base64Encode(bytes.buffer as ArrayBuffer);
 
   let mime = contentType.split(";")[0].trim();
   if (!mime || mime === "application/octet-stream") {
@@ -58,8 +58,8 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_ANON_KEY")!,
       { global: { headers: { Authorization: authHeader } } }
     );
-    const { data: claimsData, error: authError } = await supabase.auth.getClaims(authHeader.replace("Bearer ", ""));
-    if (authError || !claimsData?.claims) {
+    const { data: userData, error: authError } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
+    if (authError || !userData?.user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
