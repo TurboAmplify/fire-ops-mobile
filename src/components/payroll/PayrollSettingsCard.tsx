@@ -20,6 +20,8 @@ export function PayrollSettingsCard() {
     state_enabled: DEFAULT_ORG_PAYROLL.state_enabled,
     extra_withholding_default: String(DEFAULT_ORG_PAYROLL.extra_withholding_default),
     workers_comp_pct: String(DEFAULT_ORG_PAYROLL.workers_comp_pct),
+    factoring_pct: String(DEFAULT_ORG_PAYROLL.factoring_pct),
+    factoring_enabled: DEFAULT_ORG_PAYROLL.factoring_enabled,
   });
 
   useEffect(() => {
@@ -32,6 +34,8 @@ export function PayrollSettingsCard() {
         state_enabled: data.state_enabled,
         extra_withholding_default: String(data.extra_withholding_default),
         workers_comp_pct: String(data.workers_comp_pct ?? 0),
+        factoring_pct: String(data.factoring_pct ?? DEFAULT_ORG_PAYROLL.factoring_pct),
+        factoring_enabled: data.factoring_enabled ?? DEFAULT_ORG_PAYROLL.factoring_enabled,
       });
     }
   }, [data]);
@@ -46,6 +50,8 @@ export function PayrollSettingsCard() {
         state_enabled: form.state_enabled,
         extra_withholding_default: Number(form.extra_withholding_default) || 0,
         workers_comp_pct: Number(form.workers_comp_pct) || 0,
+        factoring_pct: Number(form.factoring_pct) || 0,
+        factoring_enabled: form.factoring_enabled,
       });
       toast.success("Payroll defaults saved");
     } catch {
