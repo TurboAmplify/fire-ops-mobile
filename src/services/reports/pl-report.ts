@@ -245,9 +245,19 @@ export async function fetchPLReport(input: PLInput, rangeLabel: string): Promise
     });
   });
 
+  // Pull factoring settings from org payroll defaults
+  const { data: orgSettings } = await supabase
+    .from("org_payroll_settings")
+    .select("factoring_pct, factoring_enabled")
+    .eq("organization_id", input.organizationId)
+    .maybeSingle();
+  const factoringEnabled = (orgSettings as any)?.factoring_enabled ?? true;
+  const factoringPct = factoringEnabled ? Number((orgSettings as any)?.factoring_pct ?? 4.5) : 0;
+
   const rows = Array.from(incidentMap.values());
   rows.forEach((r) => {
-    r.totalCost = r.laborTrueCost + r.expenseTotal;
+    r.factoringFee = (r.revenue * factoringPct) / 100;
+    r.totalCost = r.laborTrueCost + r.expenseTotal + r.factoringFee;
     r.profit = r.revenue - r.totalCost;
   });
   rows.sort((a, b) => b.totalCost - a.totalCost);
@@ -262,15 +272,18 @@ export async function fetchPLReport(input: PLInput, rangeLabel: string): Promise
       totalCost: acc.totalCost + r.totalCost,
       revenue: acc.revenue + r.revenue,
       truckDays: acc.truckDays + r.truckDays,
+      factoringFee: acc.factoringFee + r.factoringFee,
       profit: acc.profit + r.profit,
     }),
-    { laborGross: 0, employerTaxes: 0, workersComp: 0, laborTrueCost: 0, expenseTotal: 0, totalCost: 0, revenue: 0, truckDays: 0, profit: 0 },
+    { laborGross: 0, employerTaxes: 0, workersComp: 0, laborTrueCost: 0, expenseTotal: 0, totalCost: 0, revenue: 0, truckDays: 0, factoringFee: 0, profit: 0 },
   );
 
   return {
     rows,
     unassignedExpenses,
     totals,
+    factoringPct,
+    factoringEnabled,
     rangeLabel,
     crewLines: payroll.lines,
     expenseRows,
