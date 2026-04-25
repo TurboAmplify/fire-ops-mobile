@@ -12,7 +12,8 @@ export interface PLIncidentRow {
   incidentName: string;
   laborGross: number;       // gross wages for this incident
   employerTaxes: number;    // FICA match attributable to this incident
-  laborTrueCost: number;    // gross + employer match
+  workersComp: number;      // workers comp insurance cost attributable to this incident
+  laborTrueCost: number;    // gross + employer match + workers comp
   expenseTotal: number;     // expenses tied to this incident
   totalCost: number;        // laborTrueCost + expenseTotal
   expenseCount: number;
@@ -24,6 +25,7 @@ export interface PLReportData {
   totals: {
     laborGross: number;
     employerTaxes: number;
+    workersComp: number;
     laborTrueCost: number;
     expenseTotal: number;
     totalCost: number;
@@ -119,6 +121,7 @@ export async function fetchPLReport(input: PLInput, rangeLabel: string): Promise
         incidentName: name,
         laborGross: 0,
         employerTaxes: 0,
+        workersComp: 0,
         laborTrueCost: 0,
         expenseTotal: 0,
         totalCost: 0,
@@ -130,14 +133,17 @@ export async function fetchPLReport(input: PLInput, rangeLabel: string): Promise
   };
 
   payroll.lines.forEach((l) => {
-    const employerTotal = l.employer?.total ?? 0;
+    const employerFica = (l.employer?.socialSecurity ?? 0) + (l.employer?.medicare ?? 0);
+    const workersComp = l.employer?.workersComp ?? 0;
     const grossTotal = l.grossPay || 1; // avoid /0
     l.byIncident.forEach((inc) => {
       const row = ensureRow(inc.incidentId, inc.incidentName);
-      const share = (inc.grossPay / grossTotal) * employerTotal;
+      const ficaShare = (inc.grossPay / grossTotal) * employerFica;
+      const wcShare = (inc.grossPay / grossTotal) * workersComp;
       row.laborGross += inc.grossPay;
-      row.employerTaxes += share;
-      row.laborTrueCost += inc.grossPay + share;
+      row.employerTaxes += ficaShare;
+      row.workersComp += wcShare;
+      row.laborTrueCost += inc.grossPay + ficaShare + wcShare;
     });
   });
 
@@ -163,11 +169,12 @@ export async function fetchPLReport(input: PLInput, rangeLabel: string): Promise
     (acc, r) => ({
       laborGross: acc.laborGross + r.laborGross,
       employerTaxes: acc.employerTaxes + r.employerTaxes,
+      workersComp: acc.workersComp + r.workersComp,
       laborTrueCost: acc.laborTrueCost + r.laborTrueCost,
       expenseTotal: acc.expenseTotal + r.expenseTotal,
       totalCost: acc.totalCost + r.totalCost,
     }),
-    { laborGross: 0, employerTaxes: 0, laborTrueCost: 0, expenseTotal: 0, totalCost: 0 },
+    { laborGross: 0, employerTaxes: 0, workersComp: 0, laborTrueCost: 0, expenseTotal: 0, totalCost: 0 },
   );
 
   return {

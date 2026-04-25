@@ -19,6 +19,7 @@ export function PayrollSettingsCard() {
     state_pct: String(DEFAULT_ORG_PAYROLL.state_pct),
     state_enabled: DEFAULT_ORG_PAYROLL.state_enabled,
     extra_withholding_default: String(DEFAULT_ORG_PAYROLL.extra_withholding_default),
+    workers_comp_pct: String(DEFAULT_ORG_PAYROLL.workers_comp_pct),
   });
 
   useEffect(() => {
@@ -30,6 +31,7 @@ export function PayrollSettingsCard() {
         state_pct: String(data.state_pct),
         state_enabled: data.state_enabled,
         extra_withholding_default: String(data.extra_withholding_default),
+        workers_comp_pct: String(data.workers_comp_pct ?? 0),
       });
     }
   }, [data]);
@@ -43,6 +45,7 @@ export function PayrollSettingsCard() {
         state_pct: Number(form.state_pct) || 0,
         state_enabled: form.state_enabled,
         extra_withholding_default: Number(form.extra_withholding_default) || 0,
+        workers_comp_pct: Number(form.workers_comp_pct) || 0,
       });
       toast.success("Payroll defaults saved");
     } catch {
@@ -130,6 +133,24 @@ export function PayrollSettingsCard() {
           />
         </div>
       )}
+
+      <div className="pt-2 border-t">
+        <h3 className="text-sm font-bold">Employer Costs</h3>
+        <p className="text-[11px] text-muted-foreground mb-2">
+          Captured in P&L reports as your true cost of labor (in addition to FICA match).
+        </p>
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-muted-foreground">Workers Comp % (of gross)</label>
+          <input
+            type="number" step="0.01" min="0"
+            value={form.workers_comp_pct}
+            onChange={(e) => setForm({ ...form, workers_comp_pct: e.target.value })}
+            className={inputClass}
+            inputMode="decimal"
+            placeholder="e.g. 8.50"
+          />
+        </div>
+      </div>
 
       <button
         onClick={handleSave}
