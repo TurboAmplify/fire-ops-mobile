@@ -237,6 +237,25 @@ export function TruckForm({ truck, onSubmit, isPending }: TruckFormProps) {
         <Input id="nextOilChangeMileage" type="number" value={nextOilChangeMileage} onChange={(e) => setNextOilChangeMileage(e.target.value)} placeholder="Miles" />
       </div>
 
+      {/* Billing */}
+      <SectionLabel>Billing</SectionLabel>
+
+      <div className="space-y-2">
+        <Label htmlFor="dayRate">Day Rate ($/day on assignment)</Label>
+        <Input
+          id="dayRate"
+          type="number"
+          inputMode="decimal"
+          step="0.01"
+          value={dayRate}
+          onChange={(e) => setDayRate(e.target.value)}
+          placeholder="4000"
+        />
+        <p className="text-xs text-muted-foreground">
+          Used by the P&amp;L report to calculate revenue (day rate × days the truck worked an incident).
+        </p>
+      </div>
+
       {/* Notes */}
       <SectionLabel>Notes</SectionLabel>
 
