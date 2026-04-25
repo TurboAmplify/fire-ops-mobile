@@ -59,7 +59,7 @@ export const DEFAULT_ORG_PAYROLL: OrgPayrollDefaults = {
   state_pct: 0,
   state_enabled: false,
   extra_withholding_default: 0,
-  workers_comp_pct: 0,
+  workers_comp_pct: 16,
   factoring_pct: 4.5,
   factoring_enabled: true,
 };

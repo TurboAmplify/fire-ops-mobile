@@ -121,7 +121,7 @@ export async function fetchPayrollReport(
         state_pct: Number(orgRes.data.state_pct),
         state_enabled: !!orgRes.data.state_enabled,
         extra_withholding_default: Number(orgRes.data.extra_withholding_default),
-        workers_comp_pct: Number((orgRes.data as any).workers_comp_pct ?? 0),
+        workers_comp_pct: Number((orgRes.data as any).workers_comp_pct ?? DEFAULT_ORG_PAYROLL.workers_comp_pct),
         factoring_pct: Number((orgRes.data as any).factoring_pct ?? DEFAULT_ORG_PAYROLL.factoring_pct),
         factoring_enabled: (orgRes.data as any).factoring_enabled ?? DEFAULT_ORG_PAYROLL.factoring_enabled,
       }
