@@ -65,7 +65,7 @@ export async function fetchPayrollReport(
       .eq("organization_id", input.organizationId),
     supabase
       .from("org_payroll_settings")
-      .select("federal_pct, social_security_pct, medicare_pct, state_pct, state_enabled, extra_withholding_default")
+      .select("federal_pct, social_security_pct, medicare_pct, state_pct, state_enabled, extra_withholding_default, workers_comp_pct")
       .eq("organization_id", input.organizationId)
       .maybeSingle(),
     supabase

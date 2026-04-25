@@ -51,6 +51,7 @@ export function useSaveOrgPayrollSettings() {
           state_pct: values.state_pct,
           state_enabled: values.state_enabled,
           extra_withholding_default: values.extra_withholding_default,
+          workers_comp_pct: values.workers_comp_pct,
         } as any,
         { onConflict: "organization_id" }
       );
