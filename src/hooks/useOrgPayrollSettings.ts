@@ -13,7 +13,7 @@ export function useOrgPayrollSettings() {
     queryFn: async (): Promise<OrgPayrollDefaults> => {
       const { data, error } = await supabase
         .from("org_payroll_settings" as any)
-        .select("federal_pct, social_security_pct, medicare_pct, state_pct, state_enabled, extra_withholding_default")
+        .select("federal_pct, social_security_pct, medicare_pct, state_pct, state_enabled, extra_withholding_default, workers_comp_pct")
         .eq("organization_id", orgId!)
         .maybeSingle();
       if (error) throw error;
@@ -26,6 +26,7 @@ export function useOrgPayrollSettings() {
         state_pct: Number(d.state_pct ?? 0),
         state_enabled: !!d.state_enabled,
         extra_withholding_default: Number(d.extra_withholding_default ?? 0),
+        workers_comp_pct: Number(d.workers_comp_pct ?? 0),
       };
     },
   });
