@@ -48,6 +48,8 @@ export interface OrgPayrollDefaults {
   state_enabled: boolean;
   extra_withholding_default: number; // dollars
   workers_comp_pct: number;    // employer-side workers comp insurance %
+  factoring_pct: number;       // % invoice factor fee (3% if paid <45d, 4.5% otherwise)
+  factoring_enabled: boolean;  // when off, factoring is excluded from P&L profit
 }
 
 export const DEFAULT_ORG_PAYROLL: OrgPayrollDefaults = {
@@ -58,6 +60,8 @@ export const DEFAULT_ORG_PAYROLL: OrgPayrollDefaults = {
   state_enabled: false,
   extra_withholding_default: 0,
   workers_comp_pct: 0,
+  factoring_pct: 4.5,
+  factoring_enabled: true,
 };
 
 export interface WithholdingProfile {
