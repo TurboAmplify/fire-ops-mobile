@@ -14,7 +14,7 @@ async function toDataUrl(fileUrl: string): Promise<{ url: string }> {
 
   const contentType = res.headers.get("content-type") || "";
   const bytes = new Uint8Array(await res.arrayBuffer());
-  const b64 = base64Encode(bytes.buffer as ArrayBuffer);
+  const b64 = base64Encode(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer);
 
   let mime = contentType.split(";")[0].trim();
   if (!mime || mime === "application/octet-stream") {
