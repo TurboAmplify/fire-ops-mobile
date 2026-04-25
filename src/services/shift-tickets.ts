@@ -311,13 +311,19 @@ export function splitForLunch(
 export function enforceLunchDeduction(entries: PersonnelEntry[]): PersonnelEntry[] {
   return entries.map((e) => {
     if (!e.remarks || !/30-?min lunch/i.test(e.remarks)) return e;
+    // If the entry has BOTH op and sb segments, the lunch break was already
+    // carved out of the window via splitForLunch — op+sb is already the
+    // post-lunch total. Subtracting again here would double-deduct (the
+    // bug that turned a 15h shift into 14.5h). Leave it alone.
+    const hasSplit = !!(e.sb_start && e.sb_stop);
+    if (hasSplit) return e;
+    // Legacy / hand-edited rows: only an op window with no SB. If the total
+    // matches the full op window, the 30-min break was never deducted —
+    // subtract it now so we don't over-pay crew.
     const opH = computeHours(e.op_start || "", e.op_stop || "");
-    const sbH = computeHours(e.sb_start || "", e.sb_stop || "");
-    const raw = Math.round((opH + sbH) * 10) / 10;
+    const raw = Math.round(opH * 10) / 10;
     const current = Number(e.total) || 0;
-    // If total already reflects the deduction (raw - 0.5) or is otherwise lower, leave alone
     if (current <= raw - 0.4) return e;
-    // If current matches the raw window, deduct the half-hour break
     if (Math.abs(current - raw) < 0.05 && raw > 0.5) {
       return { ...e, total: Math.round((raw - 0.5) * 10) / 10 };
     }
