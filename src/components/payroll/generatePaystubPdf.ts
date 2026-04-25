@@ -119,7 +119,12 @@ export async function generatePaystubPdf({ line, organizationName, periodLabel }
     doc.setFontSize(9);
     line.byIncident.forEach((inc) => {
       doc.text(inc.incidentName, col1, y);
-      doc.text(`${inc.totalHours.toFixed(2)} hrs`, col3, y, { align: "right" });
+      if (isDaily && line.dailyRate) {
+        const incShifts = Math.round(inc.grossPay / line.dailyRate);
+        doc.text(`${incShifts} ${incShifts === 1 ? "shift" : "shifts"}`, col3, y, { align: "right" });
+      } else {
+        doc.text(`${inc.totalHours.toFixed(2)} hrs`, col3, y, { align: "right" });
+      }
       doc.text(`$${fmt(inc.grossPay)}`, col4, y, { align: "right" });
       y += 12;
     });
