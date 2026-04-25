@@ -19,6 +19,7 @@ export function PayrollSettingsCard() {
     state_pct: String(DEFAULT_ORG_PAYROLL.state_pct),
     state_enabled: DEFAULT_ORG_PAYROLL.state_enabled,
     extra_withholding_default: String(DEFAULT_ORG_PAYROLL.extra_withholding_default),
+    workers_comp_pct: String(DEFAULT_ORG_PAYROLL.workers_comp_pct),
   });
 
   useEffect(() => {
@@ -30,6 +31,7 @@ export function PayrollSettingsCard() {
         state_pct: String(data.state_pct),
         state_enabled: data.state_enabled,
         extra_withholding_default: String(data.extra_withholding_default),
+        workers_comp_pct: String(data.workers_comp_pct ?? 0),
       });
     }
   }, [data]);
@@ -43,6 +45,7 @@ export function PayrollSettingsCard() {
         state_pct: Number(form.state_pct) || 0,
         state_enabled: form.state_enabled,
         extra_withholding_default: Number(form.extra_withholding_default) || 0,
+        workers_comp_pct: Number(form.workers_comp_pct) || 0,
       });
       toast.success("Payroll defaults saved");
     } catch {
