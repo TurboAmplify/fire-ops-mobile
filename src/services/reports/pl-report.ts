@@ -138,6 +138,7 @@ export async function fetchPLReport(input: PLInput, rangeLabel: string): Promise
         expenseCount: 0,
         revenue: 0,
         truckDays: 0,
+        factoringFee: 0,
         profit: 0,
       };
       incidentMap.set(key, row);
