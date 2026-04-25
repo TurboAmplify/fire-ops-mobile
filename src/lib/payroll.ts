@@ -47,6 +47,7 @@ export interface OrgPayrollDefaults {
   state_pct: number;           // 0
   state_enabled: boolean;
   extra_withholding_default: number; // dollars
+  workers_comp_pct: number;    // employer-side workers comp insurance %
 }
 
 export const DEFAULT_ORG_PAYROLL: OrgPayrollDefaults = {
@@ -56,6 +57,7 @@ export const DEFAULT_ORG_PAYROLL: OrgPayrollDefaults = {
   state_pct: 0,
   state_enabled: false,
   extra_withholding_default: 0,
+  workers_comp_pct: 0,
 };
 
 export interface WithholdingProfile {
@@ -155,14 +157,18 @@ export function calcDeductions({ grossPay, profile, orgDefaults }: CalcDeduction
 export function calcEmployerCosts({ grossPay, profile, orgDefaults }: CalcDeductionsInput): EmployerCosts {
   const ssPct = profile?.social_security_exempt ? 0 : Number(orgDefaults.social_security_pct);
   const medicarePct = profile?.medicare_exempt ? 0 : Number(orgDefaults.medicare_pct);
+  const wcPct = Number(orgDefaults.workers_comp_pct ?? 0);
   const socialSecurity = (grossPay * ssPct) / 100;
   const medicare = (grossPay * medicarePct) / 100;
-  const total = socialSecurity + medicare;
+  const workersComp = (grossPay * wcPct) / 100;
+  const total = socialSecurity + medicare + workersComp;
   return {
     ssPct,
     socialSecurity,
     medicarePct,
     medicare,
+    workersCompPct: wcPct,
+    workersComp,
     total,
     trueCost: grossPay + total,
   };
@@ -208,8 +214,10 @@ export interface EmployerCosts {
   socialSecurity: number;
   medicarePct: number;
   medicare: number;
-  total: number;          // FICA match (employer share)
-  trueCost: number;       // grossPay + employer match (full burdened labor cost)
+  workersCompPct: number;
+  workersComp: number;
+  total: number;          // FICA match + workers comp (employer share)
+  trueCost: number;       // grossPay + employer total (full burdened labor cost)
 }
 
 export interface CrewPayrollLine {
