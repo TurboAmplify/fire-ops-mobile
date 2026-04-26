@@ -28,7 +28,7 @@ interface Props {
  * Closure of the incident is NOT blocked when missing — but a clear
  * "Missing OF-286" warning is shown until at least one is uploaded.
  */
-export function OF286UploadCard({ incidentId }: Props) {
+export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
   const { membership } = useOrganization();
   const { data: docs, isLoading } = useIncidentDocuments(incidentId, "of286");
   const createMutation = useCreateIncidentDocument(incidentId);
@@ -37,6 +37,8 @@ export function OF286UploadCard({ incidentId }: Props) {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const hasDoc = (docs?.length ?? 0) > 0;
+  // Only treat absence as a problem once the incident is winding down.
+  const flagMissing = !hasDoc && (incidentStatus === "demob" || incidentStatus === "closed");
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
