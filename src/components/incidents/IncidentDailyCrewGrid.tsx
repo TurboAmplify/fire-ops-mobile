@@ -55,10 +55,10 @@ export function IncidentDailyCrewGrid({ incidentId }: Props) {
   }, [data, selectedDateIdx]);
 
   return (
-    <div className="rounded-xl bg-card p-4 space-y-3">
-      <div className="flex items-center gap-2">
-        <Users className="h-4 w-4 text-muted-foreground" />
-        <h3 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
+    <div className="rounded-xl bg-card p-4 space-y-3 card-shadow">
+      <div className="flex items-center gap-1.5">
+        <Users className="h-3.5 w-3.5 text-muted-foreground" />
+        <h3 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
           Daily Crew
         </h3>
       </div>
