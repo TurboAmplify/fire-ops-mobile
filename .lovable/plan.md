@@ -1,103 +1,110 @@
-## Goal
+# App Store Readiness Plan — FireOps HQ
 
-Round out FireOps for App Store launch with the missing **accountant hand-off** layer (year-end summaries, A/R, A/P, mileage) and add a clean **OF-286 invoice workflow** so closing an incident properly feeds Accounts Receivable.
-
-Every new report keeps the existing "Estimated — Not Official Tax Calculation" banner. Nothing here turns FireOps into a tax engine — it produces clean exports the CPA copies into their filing software.
-
----
-
-## 1. OF-286 Upload + Incident Closure Flow
-
-The OF-286 ("Emergency Equipment Use Invoice") is the signed invoice document that drives A/R. We'll wire it into incident closure without blocking the owner.
-
-**Behavior:**
-- New `incident_documents` table (or reuse existing `agreements` pattern) with a `document_type` field — `of286`, `of297`, `agreement`, `other`. Upload to a new `incident-documents` storage bucket (private, signed URLs).
-- On the **Incident Detail** page: an **OF-286 Invoice** card with upload button (camera/file picker, AI parse optional later). Shows file name, upload date, signed-by names if parseable.
-- Closing an incident is **never blocked**. But when an incident is `closed` or `demob` and has no OF-286 attached:
-  - A persistent **amber warning chip** ("OF-286 missing") on the incident header
-  - A row banner on the **Incidents list**
-  - A counter on the **Dashboard**: "X closed incidents missing OF-286"
-  - Filter on Incidents list: "Missing OF-286"
-- When an OF-286 IS uploaded, the chip turns green ("OF-286 on file") and the file is one-tap viewable.
-- The OF-286 file auto-populates an entry in the new **Invoices** table (section 4 below) — `status: ready_to_invoice`, prefilled with revenue from truck-days × day-rate. Owner reviews, edits, marks `sent`.
-
-**Why not block closure:** owners need flexibility in the field; the bright visual indicator + dashboard counter is enough nag without being a wall.
+## Confirmed decisions
+- **Domain layout**: `fireopshq.com` = marketing site (Netlify), `app.fireopshq.com` = this app (Lovable)
+- **Sign-in**: Email + Sign in with Apple
+- **Bundle ID**: `com.fireopshq.app` (changed before first submission)
+- **Leaked-password check**: enabled
+- **Wrapper**: Despia → points at `app.fireopshq.com`
 
 ---
 
-## 2. Year-End Tax Packet (1099 / W-2 prep)
+## Your prep (before I start Wave 1)
 
-Single Reports card producing, for any tax year:
-- **W-2 Wage Summary** per employee: YTD gross, federal w/h, SS wages + w/h, Medicare wages + w/h, state w/h
-- **1099-NEC Summary** per contractor (driven by new `is_1099_contractor` flag on `crew_compensation`); 1099 crew excluded from W-2 sheet
-- **Employer Tax Liability**: total employer SS, Medicare, workers comp YTD, broken out by quarter (Q1-Q4 + Full Year for 941-style totals)
+These three things need to be done by you because they happen outside the codebase. I cannot do them for you, and Wave 1 depends on them.
 
-Output: multi-sheet Excel `tax_packet_{year}.xlsx` + PDF for printing.
+1. **Deploy your marketing site to Netlify** at `fireopshq.com` (and `www.fireopshq.com` redirecting to root). Make sure these three pages exist and are publicly reachable:
+   - `https://fireopshq.com/privacy`
+   - `https://fireopshq.com/support`
+   - `https://fireopshq.com/terms`
+2. **Connect `app.fireopshq.com` to this Lovable project**: Project Settings → Domains → Connect Domain → `app.fireopshq.com`. Add the DNS record Lovable gives you at your registrar. Wait until the domain shows "Active".
+3. **Get your Apple Developer account ready** (paid, $99/yr) and have access to App Store Connect. You'll also need to create a Services ID + .p8 key for Sign in with Apple — I'll give you the exact steps in Wave 1.
 
-## 3. Vendor / Accounts Payable Report
-
-Group existing expense data by `vendor`:
-- Vendor | # expenses | Total | Categories | Last expense date
-- Year/quarter filter
-- **1099-MISC vendor flag** so vendors over $600/year that need a 1099-MISC are surfaced
-
-## 4. Accounts Receivable / Invoice Tracker
-
-New `incident_invoices` table:
-- `incident_id`, `invoice_number`, `invoice_date`, `amount`, `status` (draft/ready/sent/paid), `sent_date`, `paid_date`, `notes`, `of286_document_id` (FK to incident_documents)
-- New **Invoices** screen (admin + payroll-module gated) under `/invoices`: list of all incidents with invoice status, days outstanding, totals by status
-- Reports card: **A/R Aging** — outstanding bucketed 0-30 / 31-60 / 61-90 / 90+ days
-- Auto-creates a draft invoice row when an incident is closed (with prefilled revenue from P&L logic)
-- "Mark sent" / "Mark paid" with date pickers
-- One-tap PDF generation: invoice draft from truck-days × rate, attaches OF-286 if present
-
-## 5. Mileage Log
-
-`shift_tickets.miles` already exists. Add a Reports card:
-- Per-truck and per-incident mileage rollup by date range
-- Editable IRS standard mileage rate in org payroll settings (default $0.67/mi)
-- Calculated deductible mileage value
-- Excel + PDF
-
-## 6. Per-Diem & Lodging Summary
-
-Already captured in shift ticket personnel remarks. New Reports card aggregating per crew member, per incident: # per-diem days, # lodging nights, totals. Useful for reimbursement audits and Schedule C.
+Tell me when those are done and I'll start Wave 1.
 
 ---
 
-## Polish (bundled in)
+## Wave 1 — Hard blockers (anything Apple rejects on)
 
-- **Settings → Payroll → "Tax Year"** field (defaults to current calendar year), used as default range for year-end reports
-- **Compliance footer** on every new export: "Estimated values for accountant reference only. Not an official tax filing."
-- **"Hand off to accountant"** quick action on the Reports page — runs Tax Packet + A/R + Vendor + Mileage + Per-Diem in one click and zips them
-- Dashboard widget: "Closed incidents missing OF-286" counter
+**Domain & branding scrub**
+- Replace every `fire-buddy-mobile.lovable.app`, `fireops-hq.lovable.app`, and `lovable.app` reference in `despia.json`, `index.html` meta tags, README, and all `.md` files with `app.fireopshq.com` (app) or `fireopshq.com` (marketing/legal).
+- Update in-app Privacy Policy and Support links to point to the Netlify pages.
+- Update bundle identifier in `despia.json` to `com.fireopshq.app`.
+- Update app display name, splash, and icon references to FireOps HQ branding (no Lovable mentions).
 
----
+**Sign in with Apple**
+- Wire up Sign in with Apple via the Lovable Cloud auth provider (managed credentials path — fastest, no Apple Developer config needed for v1; we can switch to your own credentials later if you want your name on the Apple sheet).
+- Add the Apple button to the login + signup screens alongside email.
+- Verify the OAuth callback works on `app.fireopshq.com`.
 
-## Technical changes (for reference)
+**Account deletion path** (Apple Guideline 5.1.1(v))
+- Verify the existing `delete_user_data` flow is reachable from Settings, clearly labeled, and works end-to-end.
 
-**Schema:**
-- New table `incident_documents` (id, incident_id, organization_id, document_type, file_url, file_name, uploaded_by_user_id, parsed_data jsonb, created_at) — admin RLS via existing org pattern
-- New table `incident_invoices` (admin RLS)
-- New storage bucket `incident-documents` (private, RLS by org)
-- New columns: `crew_compensation.is_1099_contractor`, `crew_compensation.address jsonb`, `crew_compensation.tin_last4`, `org_payroll_settings.mileage_rate numeric default 0.67`, `org_payroll_settings.tax_year_default int`
+**Password security**
+- Enable HIBP leaked-password check via Cloud auth settings.
 
-**Code:**
-- Service: `src/services/incident-documents.ts`, `src/services/invoices.ts`
-- Hooks: `useIncidentDocuments`, `useInvoices`
-- Components: `src/components/incidents/OF286UploadCard.tsx`, `src/components/incidents/MissingOF286Badge.tsx`
-- Pages: `src/pages/Invoices.tsx`, `src/pages/InvoiceDetail.tsx` — gated by `AdminGate` + `ModuleGate("payroll")`
-- Report fetchers: `tax-packet-report.ts`, `vendor-report.ts`, `ar-invoice-report.ts`, `mileage-report.ts`, `perdiem-report.ts`
-- Updates: `IncidentDetail.tsx` (OF-286 card + status badge), `Incidents.tsx` (missing filter + row indicator), `Dashboard.tsx` (counter), `AdminReports.tsx` (5 new cards + bundle action), `incidents.ts` service (auto-create invoice draft on close)
-- Reuse existing CSV / Excel / PDF / signed-URL infrastructure — no new export plumbing
+**OF-286 workflow smoke test**
+- Verify the upload, missing-document banner, and dashboard chip all work on a real incident.
 
 ---
 
-## What this does NOT do
+## Wave 2 — Feature completeness sweep
 
-- No official IRS form generation (W-2, 1099, 941) — just clean summaries for the CPA
-- No QuickBooks / Xero integration (could be a later add)
-- Does not block incident closure — only flags missing OF-286 visually
-- Does not auto-OCR the OF-286 in v1 (manual upload + manual invoice amount entry; AI parse can come later via a `parse-of286` edge function on the same pattern as `parse-shift-ticket`)
+A pass through every module to confirm: loading state, empty state, error toast, role-gated actions hidden for non-admins, no dead buttons, no `console.log` leaks.
 
-After approval I'll implement all 6 sections plus the polish items in one pass.
+- **Auth**: signup, login, password reset, Sign in with Apple, account deletion
+- **Incidents**: create, edit, close, OF-286 upload, missing-doc banner
+- **Shift Tickets (OF-297)**: create, equipment/personnel entries, signatures, draft → submit
+- **Payroll**: hours, adjustments, exports, audit trail
+- **Expenses**: receipt upload, categorize, approve/reject, admin-only review fields
+- **Crew & Trucks**: CRUD, role assignments, truck access scoping
+- **Inspections**: templates, results, photo uploads
+- **Reports / P&L**: AR (invoices outstanding), AP (expenses), payroll summary — all exportable to CSV/PDF for accountant handoff
+- **Platform admin**: cross-org guards still work, audit log writes correctly
+
+---
+
+## Wave 3 — Security & policy
+
+- Run the security linter on every table, especially `incident_documents` and `payroll_adjustments` (the newest additions).
+- Confirm storage buckets (`incident-documents`, `receipts`, `signatures`, etc.) are private and RLS-scoped to org.
+- Strip debug `console.log` statements from production paths.
+- Verify no API keys or secrets are exposed in client bundles.
+- Confirm session handling uses `onAuthStateChange` listener set up before `getSession()`.
+- Re-run Supabase security advisor and resolve any findings.
+
+---
+
+## Wave 4 — Packaging & submission assets
+
+- Bump app version to `1.0.0` (first submission).
+- Align splash screen background, status bar color, and safe-area insets for iOS notch/Dynamic Island.
+- Verify all required iOS icon sizes and the 1024×1024 App Store icon are present.
+- Confirm screenshots exist for required iPhone sizes (6.7", 6.5", 5.5"). I'll list which screens make the strongest screenshots.
+- Generate a final **Pre-Submit Checklist** document for you with: App Store Connect metadata to copy/paste (description, keywords, support URL, privacy URL, age rating answers, data-collection disclosure), Despia build settings, and the order of operations to submit.
+
+---
+
+## Sign in with Apple — what you'll need from Apple Developer
+
+For the **managed** path (recommended for v1, zero config from you): nothing. I just enable Apple as a provider in Cloud and the buttons work. The Apple consent sheet will say "Lovable" instead of "FireOps HQ" — fine for launch, can be upgraded later.
+
+For the **branded** path (your name on the Apple sheet — optional, can defer to v1.1):
+- Services ID with "Sign In with Apple" enabled
+- .p8 private key + Key ID
+- Team ID
+- Add `app.fireopshq.com` and the Cloud callback URL to the Services ID config
+
+My recommendation: ship v1 with the managed path, switch to branded after the first review passes. One less thing that can go wrong on first submission.
+
+---
+
+## What I deliver at the end
+
+1. A clean, scrubbed codebase with zero `lovable.app` or `fire-buddy` references
+2. Working Sign in with Apple alongside email
+3. A passing security scan with all RLS verified
+4. A pre-submit checklist file you hand to yourself (or your accountant for the AR/AP exports)
+5. A "ready for Despia build" sign-off — you trigger the build, submit through App Store Connect, and the review should pass on first attempt
+
+Approve when you're ready, and tell me once the Netlify site + `app.fireopshq.com` DNS are live so I can start Wave 1.
