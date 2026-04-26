@@ -13,6 +13,9 @@ export default function Incidents() {
   const [filter, setFilter] = useState<IncidentStatus | "all">("all");
   const { data: incidents, isLoading, error } = useIncidents();
 
+  const incidentIds = useMemo(() => (incidents ?? []).map((i) => i.id), [incidents]);
+  const { data: of286Set } = useIncidentsWithOF286(incidentIds);
+
   const filtered =
     incidents && filter === "all"
       ? incidents
