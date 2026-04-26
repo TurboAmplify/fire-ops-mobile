@@ -42,6 +42,16 @@ export default function Privacy() {
               to take or attach a photo, we access your camera or photo library only for that
               action. We do not browse your library in the background.
             </li>
+            <li>
+              <strong className="text-foreground">Payroll data (organizations using the
+              optional payroll module only):</strong> hourly rates, health & welfare rates,
+              filing status, dependents count, withholding percentages, extra withholding,
+              other deductions, and admin notes. Payroll figures are stored only within your
+              organization and are visible only to organization admins. Payroll data is{" "}
+              <strong className="text-foreground">never</strong> shared with third parties or
+              used for tracking or advertising. See our Terms of Use for the payroll module's
+              estimation-only disclaimer.
+            </li>
           </ul>
 
           <h3 className="text-foreground font-semibold pt-2">How We Use Your Information</h3>
