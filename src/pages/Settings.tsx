@@ -42,6 +42,49 @@ export default function Settings() {
   const [showNavCustomizer, setShowNavCustomizer] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [fullName, setFullName] = useState("");
+  const [savedName, setSavedName] = useState("");
+  const [savingName, setSavingName] = useState(false);
+  const [nameLoaded, setNameLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      const v = (data?.full_name ?? "").toString();
+      setFullName(v);
+      setSavedName(v);
+      setNameLoaded(true);
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
+  const handleSaveName = async () => {
+    if (!user) return;
+    const trimmed = fullName.trim().slice(0, 100);
+    if (trimmed === savedName.trim()) return;
+    setSavingName(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ full_name: trimmed })
+        .eq("id", user.id);
+      if (error) throw error;
+      setSavedName(trimmed);
+      setFullName(trimmed);
+      toast({ title: "Name saved" });
+    } catch (err: any) {
+      toast({ title: "Couldn't save name", description: err.message ?? "Try again.", variant: "destructive" });
+    } finally {
+      setSavingName(false);
+    }
+  };
 
   const handleSignOut = async () => {
     await signOut();
