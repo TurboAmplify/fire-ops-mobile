@@ -33,6 +33,7 @@ function SectionHeader({ label, defaultOpen = false, children }: { label: string
   );
 }
 
+
 export function IncidentTruckList({ incidentId, incidentName, organizationId }: Props) {
   const { data: incidentTrucks, isLoading } = useIncidentTrucks(incidentId);
   const { data: allTrucks } = useAvailableTrucks(organizationId ?? undefined);
