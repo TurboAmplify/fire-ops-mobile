@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/hooks/useOrganization";
+import { assertOnlineForWrite } from "@/lib/offline-guard";
 
 export interface PayrollAdjustmentRow {
   id: string;
@@ -54,6 +55,7 @@ export function useCreatePayrollAdjustment() {
 
   return useMutation({
     mutationFn: async (input: NewPayrollAdjustment) => {
+      assertOnlineForWrite();
       if (!orgId) throw new Error("No organization");
       const userRes = await supabase.auth.getUser();
       const userId = userRes.data.user?.id ?? null;
@@ -84,6 +86,7 @@ export function useDeletePayrollAdjustment() {
 
   return useMutation({
     mutationFn: async (id: string) => {
+      assertOnlineForWrite();
       const { error } = await supabase.from("payroll_adjustments" as any).delete().eq("id", id);
       if (error) throw error;
     },

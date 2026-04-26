@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { assertOnlineForWrite } from "@/lib/offline-guard";
 import {
   addTemplateItem,
   createTemplate,
@@ -78,7 +79,10 @@ export function useInspectionDue(truckId: string | undefined) {
 export function useSubmitInspection() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: SubmitInspectionInput) => submitInspection(input),
+    mutationFn: (input: SubmitInspectionInput) => {
+      assertOnlineForWrite();
+      return submitInspection(input);
+    },
     onSuccess: (_data, input) => {
       qc.invalidateQueries({ queryKey: inspectionKeys.truckInspections(input.truckId) });
       qc.invalidateQueries({ queryKey: inspectionKeys.lastInspection(input.truckId) });
@@ -96,8 +100,10 @@ function invalidateTemplates(qc: ReturnType<typeof useQueryClient>, orgId?: stri
 export function useCreateTemplate(orgId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ name, isDefault, templateType }: { name: string; isDefault?: boolean; templateType?: TemplateType }) =>
-      createTemplate(orgId!, name, isDefault, templateType),
+    mutationFn: ({ name, isDefault, templateType }: { name: string; isDefault?: boolean; templateType?: TemplateType }) => {
+      assertOnlineForWrite();
+      return createTemplate(orgId!, name, isDefault, templateType);
+    },
     onSuccess: () => invalidateTemplates(qc, orgId),
   });
 }
@@ -105,8 +111,10 @@ export function useCreateTemplate(orgId: string | undefined) {
 export function useUpdateTemplate(orgId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, patch }: { id: string; patch: Parameters<typeof updateTemplate>[1] }) =>
-      updateTemplate(id, patch, orgId),
+    mutationFn: ({ id, patch }: { id: string; patch: Parameters<typeof updateTemplate>[1] }) => {
+      assertOnlineForWrite();
+      return updateTemplate(id, patch, orgId);
+    },
     onSuccess: () => invalidateTemplates(qc, orgId),
   });
 }
@@ -114,7 +122,10 @@ export function useUpdateTemplate(orgId: string | undefined) {
 export function useDeleteTemplate(orgId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => deleteTemplate(id),
+    mutationFn: (id: string) => {
+      assertOnlineForWrite();
+      return deleteTemplate(id);
+    },
     onSuccess: () => invalidateTemplates(qc, orgId),
   });
 }
@@ -122,8 +133,10 @@ export function useDeleteTemplate(orgId: string | undefined) {
 export function useAddTemplateItem(templateId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ label, sortOrder }: { label: string; sortOrder: number }) =>
-      addTemplateItem(templateId!, label, sortOrder),
+    mutationFn: ({ label, sortOrder }: { label: string; sortOrder: number }) => {
+      assertOnlineForWrite();
+      return addTemplateItem(templateId!, label, sortOrder);
+    },
     onSuccess: () => {
       if (templateId) qc.invalidateQueries({ queryKey: inspectionKeys.templateItems(templateId) });
     },
@@ -133,8 +146,10 @@ export function useAddTemplateItem(templateId: string | undefined) {
 export function useUpdateTemplateItem(templateId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, patch }: { id: string; patch: Parameters<typeof updateTemplateItem>[1] }) =>
-      updateTemplateItem(id, patch),
+    mutationFn: ({ id, patch }: { id: string; patch: Parameters<typeof updateTemplateItem>[1] }) => {
+      assertOnlineForWrite();
+      return updateTemplateItem(id, patch);
+    },
     onSuccess: () => {
       if (templateId) qc.invalidateQueries({ queryKey: inspectionKeys.templateItems(templateId) });
     },
@@ -144,7 +159,10 @@ export function useUpdateTemplateItem(templateId: string | undefined) {
 export function useDeleteTemplateItem(templateId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => deleteTemplateItem(id),
+    mutationFn: (id: string) => {
+      assertOnlineForWrite();
+      return deleteTemplateItem(id);
+    },
     onSuccess: () => {
       if (templateId) qc.invalidateQueries({ queryKey: inspectionKeys.templateItems(templateId) });
     },
