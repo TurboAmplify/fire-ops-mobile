@@ -250,6 +250,7 @@ export default function OrgSettings() {
             : `Invitation sent to ${email}`,
       });
       setInviteEmail("");
+      setInviteName("");
       setInviteRole("crew");
       setInviteOpen(false);
       queryClient.invalidateQueries({ queryKey: ["org-invites", orgId] });
