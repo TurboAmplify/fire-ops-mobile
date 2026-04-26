@@ -101,10 +101,16 @@ export default function Incidents() {
                     {STATUS_LABELS[inc.status as IncidentStatus] || inc.status}
                   </span>
                 </div>
-                <div className="mt-2.5 flex gap-3 text-xs text-muted-foreground">
+                <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
                   {inc.acres != null && <span>{Number(inc.acres).toLocaleString()} acres</span>}
                   {inc.containment != null && <span>{inc.containment}% contained</span>}
                   <span>Started {inc.start_date}</span>
+                  {of286Set && !of286Set.has(inc.id) && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-400">
+                      <AlertTriangle className="h-3 w-3" />
+                      Missing OF-286
+                    </span>
+                  )}
                 </div>
               </Link>
             ))}
