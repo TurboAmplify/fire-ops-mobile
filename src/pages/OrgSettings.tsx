@@ -430,9 +430,16 @@ export default function OrgSettings() {
                       <Clock className="h-4 w-4 text-warning" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{inv.email}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Expires {new Date(inv.expires_at).toLocaleDateString()}
+                      <p className="text-sm font-medium truncate">
+                        {inv.invitee_name?.trim() || inv.email}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {[
+                          inv.invitee_name?.trim() ? inv.email : null,
+                          `Expires ${new Date(inv.expires_at).toLocaleDateString()}`,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </p>
                       {inv.invite_code && (
                         <button
