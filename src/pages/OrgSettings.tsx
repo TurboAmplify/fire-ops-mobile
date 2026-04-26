@@ -167,9 +167,11 @@ export default function OrgSettings() {
   const sendInvite = useMutation({
     mutationFn: async ({
       email,
+      name,
       role,
     }: {
       email: string;
+      name: string;
       role: string;
     }) => {
       if (!orgId || !user) throw new Error("Not authenticated");
