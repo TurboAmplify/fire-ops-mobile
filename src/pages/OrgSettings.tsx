@@ -474,6 +474,21 @@ export default function OrgSettings() {
               </DialogHeader>
               <form onSubmit={handleSendInvite} className="space-y-4 pt-2">
                 <div className="space-y-2">
+                  <Label htmlFor="invite-name">Full Name</Label>
+                  <Input
+                    id="invite-name"
+                    type="text"
+                    value={inviteName}
+                    onChange={(e) => setInviteName(e.target.value)}
+                    placeholder="Dustin Aldrich"
+                    maxLength={100}
+                    autoFocus
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Shown in the team list. They can change it later in their settings.
+                  </p>
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="invite-email">Email Address</Label>
                   <Input
                     id="invite-email"
@@ -482,7 +497,6 @@ export default function OrgSettings() {
                     onChange={(e) => setInviteEmail(e.target.value)}
                     placeholder="crew@example.com"
                     required
-                    autoFocus
                   />
                 </div>
                 <div className="space-y-2">
