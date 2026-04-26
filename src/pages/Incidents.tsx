@@ -1,9 +1,10 @@
 import { AppShell } from "@/components/AppShell";
 import { Link } from "react-router-dom";
-import { Plus, Loader2, FileUp, Flame } from "lucide-react";
+import { Plus, Loader2, FileUp, Flame, AlertTriangle } from "lucide-react";
 import { useIncidents } from "@/hooks/useIncidents";
+import { useIncidentsWithOF286 } from "@/hooks/useIncidentDocuments";
 import { STATUS_LABELS, STATUS_COLORS } from "@/services/incidents";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import type { IncidentStatus } from "@/services/incidents";
 
 const filters: (IncidentStatus | "all")[] = ["all", "active", "demob", "closed"];
