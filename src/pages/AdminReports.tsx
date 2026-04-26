@@ -617,13 +617,16 @@ function PLReportCard({ organizationId, organizationName }: { organizationId: st
 
     const baseName = `pl_${effectiveRange.label.replace(/\s+/g, "_")}`;
     const factoringLabel = data.factoringEnabled ? `Factoring (${data.factoringPct}%)` : "Factoring (off)";
-    const headers = ["Incident", "Labor Gross", "Employer FICA", "Workers Comp", "Labor True Cost", "Expenses", "Expense Count", factoringLabel, "Total Cost", "Truck Days", "Revenue", "Profit"];
+    const headers = ["Incident", "Labor Gross", "Employer FICA", "Workers Comp", "Labor True Cost", "Vendor Expenses", "Crew Reimbursements", "Expenses Total", "Expense Count", factoringLabel, "Total Cost", "Truck Days", "Revenue", "Profit"];
     const rows = data.rows.map((r) => [
-      r.incidentName, r.laborGross, r.employerTaxes, r.workersComp, r.laborTrueCost, r.expenseTotal, r.expenseCount, r.factoringFee, r.totalCost, r.truckDays, r.revenue, r.profit,
+      r.incidentName, r.laborGross, r.employerTaxes, r.workersComp, r.laborTrueCost,
+      r.vendorExpenseTotal, r.reimbursementExpenseTotal, r.expenseTotal, r.expenseCount,
+      r.factoringFee, r.totalCost, r.truckDays, r.revenue, r.profit,
     ]);
     const totalsRow = [
       "TOTAL", data.totals.laborGross, data.totals.employerTaxes, data.totals.workersComp, data.totals.laborTrueCost,
-      data.totals.expenseTotal, data.rows.reduce((a, r) => a + r.expenseCount, 0), data.totals.factoringFee, data.totals.totalCost,
+      data.totals.vendorExpenseTotal, data.totals.reimbursementExpenseTotal, data.totals.expenseTotal,
+      data.rows.reduce((a, r) => a + r.expenseCount, 0), data.totals.factoringFee, data.totals.totalCost,
       data.totals.truckDays, data.totals.revenue, data.totals.profit,
     ];
 
@@ -639,7 +642,9 @@ function PLReportCard({ organizationId, organizationName }: { organizationId: st
           { header: "Employer FICA", key: "et", width: 14, format: "currency" },
           { header: "Workers Comp", key: "wc", width: 14, format: "currency" },
           { header: "Labor True Cost", key: "lt", width: 16, format: "currency" },
-          { header: "Expenses", key: "ex", width: 14, format: "currency" },
+          { header: "Vendor Expenses", key: "vex", width: 16, format: "currency" },
+          { header: "Crew Reimbursements", key: "rex", width: 18, format: "currency" },
+          { header: "Expenses Total", key: "ex", width: 16, format: "currency" },
           { header: "Expense Count", key: "ec", width: 13, format: "int" },
           { header: factoringLabel, key: "ff", width: 16, format: "currency" },
           { header: "Total Cost", key: "tc", width: 16, format: "currency" },
@@ -650,11 +655,14 @@ function PLReportCard({ organizationId, organizationName }: { organizationId: st
         rows: [
           ...data.rows.map((r) => ({
             name: r.incidentName, lg: r.laborGross, et: r.employerTaxes, wc: r.workersComp, lt: r.laborTrueCost,
+            vex: r.vendorExpenseTotal, rex: r.reimbursementExpenseTotal,
             ex: r.expenseTotal, ec: r.expenseCount, ff: r.factoringFee, tc: r.totalCost, td: r.truckDays, rv: r.revenue, pf: r.profit,
           })),
           {
             name: "TOTAL", lg: data.totals.laborGross, et: data.totals.employerTaxes, wc: data.totals.workersComp,
-            lt: data.totals.laborTrueCost, ex: data.totals.expenseTotal,
+            lt: data.totals.laborTrueCost,
+            vex: data.totals.vendorExpenseTotal, rex: data.totals.reimbursementExpenseTotal,
+            ex: data.totals.expenseTotal,
             ec: data.rows.reduce((a, r) => a + r.expenseCount, 0), ff: data.totals.factoringFee, tc: data.totals.totalCost,
             td: data.totals.truckDays, rv: data.totals.revenue, pf: data.totals.profit,
           },
@@ -663,6 +671,7 @@ function PLReportCard({ organizationId, organizationName }: { organizationId: st
         name: "Expense Detail",
         columns: [
           { header: "Date", key: "date", width: 12 },
+          { header: "Type", key: "type", width: 14 },
           { header: "Incident", key: "incident", width: 24 },
           { header: "Vendor", key: "vendor", width: 22 },
           { header: "Category", key: "cat", width: 16 },
@@ -671,7 +680,9 @@ function PLReportCard({ organizationId, organizationName }: { organizationId: st
           { header: "Description", key: "desc", width: 36 },
         ],
         rows: data.expenseRows.map((e) => ({
-          date: e.date, incident: e.incidentName, vendor: e.vendor ?? "",
+          date: e.date,
+          type: e.expenseType === "reimbursement" ? "Reimbursement" : "Vendor",
+          incident: e.incidentName, vendor: e.vendor ?? "",
           cat: e.category, amt: e.amount, status: e.status, desc: e.description ?? "",
         })),
       }]);
@@ -687,26 +698,30 @@ function PLReportCard({ organizationId, organizationName }: { organizationId: st
       sections: [
         {
           columns: [
-            { header: "Incident", key: "name", width: 120 },
-            { header: "Labor Gross", key: "lg", width: 60, align: "right", format: fmtMoney },
-            { header: "ER FICA", key: "et", width: 50, align: "right", format: fmtMoney },
-            { header: "WC", key: "wc", width: 50, align: "right", format: fmtMoney },
-            { header: "Labor TC", key: "lt", width: 65, align: "right", format: fmtMoney },
-            { header: "Expenses", key: "ex", width: 60, align: "right", format: fmtMoney },
-            { header: "Factor", key: "ff", width: 55, align: "right", format: fmtMoney },
-            { header: "Total Cost", key: "tc", width: 70, align: "right", format: fmtMoney },
-            { header: "Days", key: "td", width: 35, align: "right" },
-            { header: "Revenue", key: "rv", width: 70, align: "right", format: fmtMoney },
-            { header: "Profit", key: "pf", width: 70, align: "right", format: fmtMoney },
+            { header: "Incident", key: "name", width: 110 },
+            { header: "Labor Gross", key: "lg", width: 55, align: "right", format: fmtMoney },
+            { header: "ER FICA", key: "et", width: 45, align: "right", format: fmtMoney },
+            { header: "WC", key: "wc", width: 45, align: "right", format: fmtMoney },
+            { header: "Labor TC", key: "lt", width: 60, align: "right", format: fmtMoney },
+            { header: "Vendor Exp", key: "vex", width: 55, align: "right", format: fmtMoney },
+            { header: "Crew Reimb", key: "rex", width: 55, align: "right", format: fmtMoney },
+            { header: "Factor", key: "ff", width: 50, align: "right", format: fmtMoney },
+            { header: "Total Cost", key: "tc", width: 65, align: "right", format: fmtMoney },
+            { header: "Days", key: "td", width: 30, align: "right" },
+            { header: "Revenue", key: "rv", width: 65, align: "right", format: fmtMoney },
+            { header: "Profit", key: "pf", width: 65, align: "right", format: fmtMoney },
           ],
           rows: [
             ...data.rows.map((r) => ({
               name: r.incidentName, lg: r.laborGross, et: r.employerTaxes, wc: r.workersComp, lt: r.laborTrueCost,
-              ex: r.expenseTotal, ff: r.factoringFee, tc: r.totalCost, td: r.truckDays, rv: r.revenue, pf: r.profit,
+              vex: r.vendorExpenseTotal, rex: r.reimbursementExpenseTotal,
+              ff: r.factoringFee, tc: r.totalCost, td: r.truckDays, rv: r.revenue, pf: r.profit,
             })),
             {
               name: "TOTAL", lg: data.totals.laborGross, et: data.totals.employerTaxes, wc: data.totals.workersComp,
-              lt: data.totals.laborTrueCost, ex: data.totals.expenseTotal, ff: data.totals.factoringFee, tc: data.totals.totalCost,
+              lt: data.totals.laborTrueCost,
+              vex: data.totals.vendorExpenseTotal, rex: data.totals.reimbursementExpenseTotal,
+              ff: data.totals.factoringFee, tc: data.totals.totalCost,
               td: data.totals.truckDays, rv: data.totals.revenue, pf: data.totals.profit,
             },
           ],
@@ -714,15 +729,18 @@ function PLReportCard({ organizationId, organizationName }: { organizationId: st
         {
           title: "Expense Detail",
           columns: [
-            { header: "Date", key: "date", width: 60 },
-            { header: "Incident", key: "incident", width: 140 },
-            { header: "Vendor", key: "vendor", width: 110 },
-            { header: "Category", key: "cat", width: 90 },
-            { header: "Status", key: "status", width: 60 },
-            { header: "Amount", key: "amt", width: 70, align: "right", format: fmtMoney },
+            { header: "Date", key: "date", width: 55 },
+            { header: "Type", key: "type", width: 65 },
+            { header: "Incident", key: "incident", width: 130 },
+            { header: "Vendor", key: "vendor", width: 100 },
+            { header: "Category", key: "cat", width: 80 },
+            { header: "Status", key: "status", width: 55 },
+            { header: "Amount", key: "amt", width: 65, align: "right", format: fmtMoney },
           ],
           rows: data.expenseRows.map((e) => ({
-            date: e.date, incident: e.incidentName, vendor: e.vendor ?? "",
+            date: e.date,
+            type: e.expenseType === "reimbursement" ? "Reimburse" : "Vendor",
+            incident: e.incidentName, vendor: e.vendor ?? "",
             cat: e.category, status: e.status, amt: e.amount,
           })),
         },
