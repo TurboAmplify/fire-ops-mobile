@@ -42,6 +42,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { InspectionTemplateEditor } from "@/components/fleet/InspectionTemplateEditor";
 import { CrewAccessManager } from "@/components/settings/CrewAccessManager";
+import { MasterAgreementCard } from "@/components/settings/MasterAgreementCard";
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "Admin",
@@ -592,6 +593,9 @@ export default function OrgSettings() {
             )}
           </div>
         </section>
+
+        {/* Master Agreement (admin only) */}
+        <MasterAgreementCard />
 
         {/* Crew Truck Access (admin only) */}
         {isOwner && (
