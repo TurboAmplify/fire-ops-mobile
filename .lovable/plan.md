@@ -1,140 +1,70 @@
-## Goal
+# Fix the "Finish setup" onboarding alerts
 
-Replace the current org-name-only setup with a fast, multi-step onboarding that gets a contractor or VFD from signup to a usable app in under 5 minutes — with engines (trucks), hand crews, and individual crew members all created at minimal-data depth, then nudged to completion later.
+## What's wrong today
 
-Three confirmed decisions shape this plan:
+The amber **Finish setup** card on the Dashboard fires alerts like *"2 engines need details"* and *"3 crew members are incomplete."* The detection logic works, but tapping an alert just navigates to `/fleet` or `/crew` — the user lands on the full list with **no indication of which items are incomplete or what's missing**, so they have to guess.
 
-- **Engines = trucks.** The `trucks` table stays. We introduce an "Engine" UI label conditionally based on operation type. No `engines` table, no migration of existing fleet code (inspections, shift tickets, P&L, permissions all keep working).
-- **Hand crews are real.** New `crews` table with assignment + shift ticket + payroll plumbing.
-- **Profile completion is computed.** Helper functions read existing fields. No `is_profile_complete` columns, no sync logic to maintain.
+The helpers `truckMissingFields()` and `crewMemberMissingFields()` already exist in `src/lib/profile-completion.ts` and return the exact field names (e.g. `["VIN", "Plate", "Insurance expiry"]`), but nothing in the UI uses them.
 
----
+## What we'll change
 
-## Database changes
+### 1. Expandable alert rows on the dashboard card
+Tapping a row in the **Finish setup** card will expand it inline to show the specific items that need attention — not navigate away immediately.
 
-One migration:
-
-1. **`organizations.operation_type`** — text, default `'engine'`, check constraint `('engine','hand_crew','both')`.
-2. **`crews`** — new table:
-   - `id uuid pk`, `organization_id uuid not null`, `name text not null`, `crew_type text default 'hand_crew'`, `is_active boolean default true`, `notes text`, `created_at timestamptz default now()`
-   - RLS: same `organization_id IN get_user_org_ids(auth.uid())` pattern as `crew_members`.
-3. **`crew_members.crew_id`** — nullable uuid, optional grouping into a hand crew. No FK cascade rules beyond `on delete set null`.
-4. **`incident_crews`** — new join table for assigning a hand crew to an incident (parallel to `incident_trucks`):
-   - `id`, `incident_id`, `crew_id`, `status` (`assigned`/`active`/`demobed`/`completed`), `assigned_at`, unique `(incident_id, crew_id)`.
-   - RLS scoped through `get_org_from_incident()`.
-5. **No** `is_profile_complete` columns. **No** changes to `trucks` schema.
-
----
-
-## Onboarding flow (extends existing `OrgSetup.tsx`)
-
-Today: org type → org name → done. New flow keeps that and appends three steps. The whole thing stays on `/org-setup` — one continuous wizard, no new route.
+Each expanded row lists the actual trucks/crew members with their missing fields:
 
 ```text
-1. Org type           (existing)
-2. Org name           (existing)
-3. Operation type     NEW — engine / hand crew / both
-4. Quick resources    NEW — bulk-add engines and/or crews based on step 3
-5. Crew members       NEW — optional, name only, bulk add
-6. Done               NEW — "You're ready" screen with skip
+Finish setup
+────────────────────────────────────────
+[truck]  2 engines need details              [v]
+   └─ DL31  — Missing: VIN, Plate, Insurance expiry  [Fix >]
+   └─ DL61  — Missing: Insurance expiry              [Fix >]
+
+[users]  3 crew members are incomplete       [v]
+   └─ Dustin Aldrich  — Missing: Role, Phone   [Fix >]
+   └─ Les Madsen      — Missing: Phone         [Fix >]
+   └─ Brandon Aldrich — Missing: Role          [Fix >]
+
+[users]  1 hand crew has no members           [v]
+   └─ Engine Crew A — Add members              [Fix >]
 ```
 
-Each new step has a clear **Skip** affordance. Only step 2 (org name) is truly required — everything after is skippable.
+"Fix >" deep-links to the right place:
+- Truck → `/fleet/:truckId/edit` (already exists)
+- Crew member → `/crew?edit=:memberId` (Crew page opens the edit form via query param)
+- Empty crew → `/crews` (no per-crew detail page exists yet)
 
-### Step 3 — Operation type
-Three large tap targets. Stores `organizations.operation_type`. This drives whether step 4 shows the engines section, the crews section, or both.
+### 2. "Incomplete" badges on the list pages
+On `/fleet` and `/crew`, each list row that's flagged as incomplete will show a small amber **Incomplete** chip next to the status badge. This way, even if a user lands on the list directly (e.g. via the bottom nav or an old bookmark), they can immediately see which items still need work.
 
-### Step 4 — Quick resource setup
-A single screen with one or two sections (depending on step 3):
+### 3. Auto-open the edit form on `/crew` from a query param
+Crew uses an inline `<CrewMemberForm>` (no detail route), so we'll have the page read `?edit=<memberId>` on mount and open the form for that member. This lets the dashboard alert deep-link directly into editing a specific crew member.
 
-- **Engines section** (shown if engine or both): label "Add your engines". One input, type-and-press-enter to add, chips below show what's been added with an X to remove. On step submit, bulk-insert into `trucks` with just `name` + `organization_id` (status defaults to `available`). All other truck fields stay null — they're filled in later.
-- **Hand crews section** (shown if hand_crew or both): same UX, inserts into `crews` with `name` + `organization_id`.
+### 4. Smarter copy on the card
+Update the labels to be clearer about *what* is missing, e.g.:
+- "2 engines missing VIN or insurance details"
+- "3 crew members missing role or phone"
+- "1 hand crew has no members assigned"
 
-No validation beyond non-empty name. Duplicate names allowed (user can sort that out later).
+## Files we'll touch
 
-### Step 5 — Crew members (optional)
-Same chip-input pattern. Bulk-insert into `crew_members` with `name` + `organization_id` and `role = 'crew'` as a placeholder. Skip is prominent.
+- `src/components/dashboard/FinishSetupCard.tsx` — make rows expandable, list specific items + missing fields, deep-link "Fix" buttons, refine copy.
+- `src/pages/Fleet.tsx` — show **Incomplete** chip on rows where `!isTruckComplete(truck)`.
+- `src/pages/Crew.tsx` — show **Incomplete** chip on rows where `!isCrewMemberComplete(member)`; read `?edit=` query param and open the inline edit form.
+- `src/lib/profile-completion.ts` — already has everything we need; no changes.
+- `src/hooks/useSetupCompletion.ts` — extend to also return the actual lists (`incompleteTruckList`, `incompleteMemberList`, `emptyCrewList`) so the card can render line items, not just counts.
 
-### Step 6 — "You're ready"
-Confirmation screen with a "Recommended next steps" preview (see below) and a primary CTA to land on the Dashboard.
+## What stays the same
+- Dismiss-for-7-days behavior.
+- Auto-hide when everything is complete.
+- The completion rules themselves (truck needs VIN/make/model/plate/insurance expiry; crew member needs a real role + phone; hand crew needs ≥1 member).
+- Settings, navigation structure, and all unrelated dashboard sections.
 
----
-
-## Post-onboarding: "Finish setup" surface
-
-A new dismissible card on the Dashboard, shown when any of these are true:
-
-- Any truck is missing core details (computed: missing VIN, make, model, plate, or insurance_expiry)
-- Any crew member has only a name (computed: missing role or phone)
-- Any crew has zero members assigned
-- No agreements uploaded yet
-
-Card shows a count and the top 1–2 next actions, each linking to the right edit screen. User can tap "Hide for now" to collapse it (persisted to localStorage, not the DB — the data drives whether it reappears).
-
-A small `useSetupCompletion()` hook exposes counts so the same data can power a badge in More / Settings.
-
----
-
-## Hand-crew integration points
-
-Hand crews need to be more than a list — they have to plug into the work that already exists:
-
-1. **Crew detail page** (`/crews/:id`) — list members assigned to the crew, add/remove members (just sets `crew_members.crew_id`).
-2. **Incident detail** — new "Hand Crews" section parallel to "Trucks", uses `incident_crews`. Assign/release a crew.
-3. **Shift tickets** — when a hand crew is assigned to an incident, the personnel picker on a shift ticket can "Add all from Crew X" which expands to that crew's members in `personnel_entries`. No schema change to `shift_tickets`.
-4. **Payroll** — works automatically because payroll already aggregates from `personnel_entries` by name. No changes needed.
-
-This is real scope. To keep onboarding shippable for Apple, we'll do these in two phases:
-
-- **Phase A (this plan)**: schema, onboarding flow, basic Crews list page (`/crews`), crew detail with member management, "Finish setup" Dashboard card.
-- **Phase B (follow-up)**: incident_crews UI, "Add all from Crew X" on shift tickets. Filed as docs/build-priority.md note, not built now.
-
----
-
-## Files
-
-**New:**
-- `src/components/onboarding/OperationTypeStep.tsx`
-- `src/components/onboarding/QuickResourcesStep.tsx` (engines + crews chips)
-- `src/components/onboarding/QuickCrewMembersStep.tsx`
-- `src/components/onboarding/ReadyStep.tsx`
-- `src/components/onboarding/ChipInput.tsx` (reusable type-and-add)
-- `src/components/dashboard/FinishSetupCard.tsx`
-- `src/hooks/useCrews.ts`
-- `src/hooks/useSetupCompletion.ts`
-- `src/lib/profile-completion.ts` (`isTruckComplete`, `isCrewMemberComplete`, `isCrewComplete`)
-- `src/lib/operation-type.ts` (`getResourceLabel(opType)` → "Engine" | "Crew" | "Resource")
-- `src/pages/Crews.tsx`
-- `src/pages/CrewDetail.tsx`
-- `src/services/crews.ts`
-
-**Edited:**
-- `src/pages/OrgSetup.tsx` — multi-step state machine, Back/Next/Skip
-- `src/pages/Dashboard.tsx` — render `FinishSetupCard`
-- `src/App.tsx` — routes for `/crews` and `/crews/:id`
-- `src/components/BottomNav.tsx` or `More.tsx` — entry point to Crews when operation_type includes hand crews
-- `docs/build-priority.md` — log Phase B follow-ups
-
-**Migration:** one file adding `operation_type`, `crews`, `incident_crews`, `crew_members.crew_id` with RLS.
-
----
-
-## What this plan deliberately does not do
-
-- No `engines` table.
-- No `is_profile_complete` columns.
-- No billing/seat-counting logic (deferred — there's no payment system yet).
-- No incident_crews UI or "Add all from Crew" on shift tickets — schema is in place, UI is Phase B so it doesn't delay App Store submission.
-- No changes to existing crew assignment flow on trucks (`incident_truck_crew`) — keeps working untouched.
-
----
-
-## Test checklist
-
-After build:
-- New user lands on `/org-setup`, completes org type + name, then operation type, then bulk-adds 3 engines and skips crews — lands on Dashboard with 3 trucks visible in Fleet.
-- Same flow but choosing "Hand crew based" — engines section is hidden, crews section appears, bulk-add 2 crews, skip members → /crews shows both crews.
-- "Both" shows both sections in step 4.
-- After onboarding, Dashboard "Finish setup" card shows the right counts and the Hide button persists across reloads.
-- Crew detail page lets you assign existing crew_members to a crew.
-- Existing users (already have an org) are unaffected — no migration of their data needed.
+## What to test after the change
+1. From the Dashboard, tap the **trucks** alert — row expands and lists each incomplete truck with the exact missing fields.
+2. Tap **Fix** on a truck → lands on the truck's edit page with the missing fields visible.
+3. Tap the **crew members** alert → expands to show Dustin/Les/Brandon (or whoever is incomplete) with their missing fields.
+4. Tap **Fix** on a crew member → `/crew` opens with that member's edit form already open.
+5. Visit `/fleet` directly → incomplete trucks show an amber **Incomplete** chip.
+6. Visit `/crew` directly → incomplete members show an amber **Incomplete** chip.
+7. Fill in the missing fields → the alert count decreases, and when everything is complete the card disappears entirely.

@@ -7,6 +7,7 @@ import { useState } from "react";
 import { SignedImage } from "@/components/ui/SignedImage";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useAppMode } from "@/lib/app-mode";
+import { isTruckComplete } from "@/lib/profile-completion";
 
 const filters: (TruckStatus | "all")[] = ["all", "available", "deployed", "maintenance"];
 
@@ -123,7 +124,14 @@ export default function Fleet() {
                   <div className="flex min-w-0 flex-1 flex-col justify-center py-1 pr-1">
                     <div className="flex items-start justify-between gap-2">
                       <p className="truncate font-semibold text-[15px] leading-tight">{truck.name}</p>
-                      <StatusBadge status={truck.status as TruckStatus} />
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {!isTruckComplete(truck) && (
+                          <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-400">
+                            Incomplete
+                          </span>
+                        )}
+                        <StatusBadge status={truck.status as TruckStatus} />
+                      </div>
                     </div>
                     {subtitle && (
                       <p className="mt-0.5 truncate text-xs text-muted-foreground">{subtitle}</p>
