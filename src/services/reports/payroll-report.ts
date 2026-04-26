@@ -174,6 +174,8 @@ export async function fetchPayrollReport(
     incidentFilter: input.incidentFilter,
     adjustments: (adjRes.data ?? []) as any,
     incidentNames: incidentNamesMap,
+    reimbursements: reimbursementsLite,
+    userToCrewMember,
     withholdings: { profiles: profileMap, orgDefaults },
   });
 
