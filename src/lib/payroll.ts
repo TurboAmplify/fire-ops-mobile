@@ -601,6 +601,8 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
       payMethod,
       adjustments: adjustmentLines,
       adjustmentTotal,
+      reimbursements: crewReimbursements,
+      reimbursementsTotal,
     };
 
     if (isDaily) {
@@ -613,8 +615,12 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
       const profile = withholdings.profiles.get(cm.id) ?? null;
       const deductions = calcDeductions({ grossPay, profile, orgDefaults: withholdings.orgDefaults });
       line.deductions = deductions;
-      line.netPay = grossPay - deductions.total;
+      // Reimbursements are non-taxable — added to net AFTER deductions.
+      line.netPay = grossPay - deductions.total + reimbursementsTotal;
       line.employer = calcEmployerCosts({ grossPay, profile, orgDefaults: withholdings.orgDefaults });
+    } else if (reimbursementsTotal > 0) {
+      // No withholdings context: surface a "net" that at least includes reimbursements
+      line.netPay = grossPay + reimbursementsTotal;
     }
 
     // Reference incidentNames for adjustments shown in UI (no-op consumer hint)
