@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { AppShell } from "@/components/AppShell";
 import { useCrew, useDeleteCrew, useUpdateCrew, useAssignMemberToCrew } from "@/hooks/useCrews";
 import { useCrewMembers } from "@/hooks/useCrewMembers";
-import { ArrowLeft, Loader2, Users, Trash2, UserPlus, UserMinus, Check } from "lucide-react";
+import { Loader2, Users, Trash2, UserPlus, UserMinus, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -99,18 +99,7 @@ export default function CrewDetail() {
   }
 
   return (
-    <AppShell
-      title={crew.name}
-      headerLeft={
-        <button
-          onClick={() => navigate("/crews")}
-          className="flex h-10 w-10 items-center justify-center rounded-full active:bg-secondary touch-target"
-          aria-label="Back"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-      }
-    >
+    <AppShell title={crew.name} showBack onBack={() => navigate("/crews")}>
       <div className="p-4 space-y-5">
         {/* Name editor */}
         <section className="rounded-2xl bg-card border border-border/40 p-4 space-y-3">
