@@ -130,26 +130,23 @@ export function ShiftTicketSection({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">OF-297 Shift Tickets</p>
-        <div className="flex items-center gap-3">
-          {tickets && tickets.length > 0 && (
-            <button
-              onClick={handleBatchDownload}
-              disabled={batchDownloading}
-              className="flex items-center gap-1 text-xs font-bold text-muted-foreground touch-target"
-            >
-              {batchDownloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-              Download All
-            </button>
-          )}
+      <div className="flex items-center justify-end gap-3 -mt-1">
+        {tickets && tickets.length > 0 && (
           <button
-            onClick={() => navigate(`/incidents/${incidentId}/trucks/${incidentTruckId}/shift-ticket/new`, { state: navState })}
-            className="flex items-center gap-1 text-xs font-bold text-primary touch-target"
+            onClick={handleBatchDownload}
+            disabled={batchDownloading}
+            className="flex items-center gap-1 text-xs font-bold text-muted-foreground touch-target"
           >
-            <Plus className="h-3.5 w-3.5" /> New Ticket
+            {batchDownloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+            Download All
           </button>
-        </div>
+        )}
+        <button
+          onClick={() => navigate(`/incidents/${incidentId}/trucks/${incidentTruckId}/shift-ticket/new`, { state: navState })}
+          className="flex items-center gap-1 text-xs font-bold text-primary touch-target"
+        >
+          <Plus className="h-3.5 w-3.5" /> New Ticket
+        </button>
       </div>
 
       {isLoading && (
