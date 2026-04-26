@@ -224,6 +224,26 @@ export interface EmployerCosts {
   trueCost: number;       // grossPay + employer total (full burdened labor cost)
 }
 
+export interface ReimbursementLine {
+  id: string;
+  date: string;
+  vendor: string | null;
+  category: string;
+  amount: number;
+  description: string | null;
+}
+
+export interface ReimbursementLite {
+  id: string;
+  date: string;
+  amount: number;
+  vendor: string | null;
+  category: string;
+  description: string | null;
+  /** auth.users id of the crew member who submitted the expense */
+  submitted_by_user_id: string;
+}
+
 export interface CrewPayrollLine {
   crewMemberId: string;
   name: string;
@@ -246,6 +266,10 @@ export interface CrewPayrollLine {
   // Adjustments (admin-added bonus pay, paid at base rate, no OT/H&W)
   adjustments: AdjustmentLine[];
   adjustmentTotal: number;
+  // Approved reimbursement expenses owed to this crew member for the period.
+  // Non-taxable — added to net pay only, never to gross.
+  reimbursements: ReimbursementLine[];
+  reimbursementsTotal: number;
   // Withholding (optional — only populated when withholdings provided)
   deductions?: DeductionBreakdown;
   netPay?: number;
