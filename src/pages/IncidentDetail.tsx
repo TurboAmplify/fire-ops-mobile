@@ -23,6 +23,8 @@ export default function IncidentDetail() {
   const deleteMutation = useDeleteIncident();
   const [editingStatus, setEditingStatus] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const { data: of286Docs } = useIncidentDocuments(id, "of286");
+  const missingOF286 = !of286Docs || of286Docs.length === 0;
 
   if (isLoading) {
     return (
