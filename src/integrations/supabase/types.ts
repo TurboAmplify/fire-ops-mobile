@@ -305,7 +305,9 @@ export type Database = {
           meal_attendees: string | null
           meal_purpose: string | null
           organization_id: string | null
+          paid_via_payroll_period: string | null
           receipt_url: string | null
+          reimbursed_at: string | null
           review_notes: string | null
           reviewed_at: string | null
           reviewed_by_user_id: string | null
@@ -328,7 +330,9 @@ export type Database = {
           meal_attendees?: string | null
           meal_purpose?: string | null
           organization_id?: string | null
+          paid_via_payroll_period?: string | null
           receipt_url?: string | null
+          reimbursed_at?: string | null
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by_user_id?: string | null
@@ -351,7 +355,9 @@ export type Database = {
           meal_attendees?: string | null
           meal_purpose?: string | null
           organization_id?: string | null
+          paid_via_payroll_period?: string | null
           receipt_url?: string | null
+          reimbursed_at?: string | null
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by_user_id?: string | null
