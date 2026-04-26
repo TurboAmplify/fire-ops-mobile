@@ -180,44 +180,87 @@ export function ShiftTicketSection({
         if (unitLabel) nameParts.push(unitLabel);
         if (dateDisplay) nameParts.push(dateDisplay);
         const label = nameParts.length > 0 ? nameParts.join(" - ") : "OF-297 Shift Ticket";
+        const open = () =>
+          navigate(`/incidents/${incidentId}/trucks/${incidentTruckId}/shift-ticket/${t.id}`);
+
+        const handleDownloadOne = async () => {
+          try {
+            const { blob, fileName } = await generateOF297PdfBlob(t as ShiftTicket);
+            const blobUrl = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = blobUrl;
+            link.download = fileName;
+            link.style.display = "none";
+            document.body.appendChild(link);
+            link.click();
+            setTimeout(() => {
+              document.body.removeChild(link);
+              URL.revokeObjectURL(blobUrl);
+            }, 500);
+          } catch {
+            toast.error("Failed to download PDF");
+          }
+        };
+
         return (
           <div
             key={t.id}
-            className="flex w-full items-center gap-3 rounded-lg bg-secondary p-3"
+            className="relative rounded-lg bg-secondary"
           >
-            <FileText className="h-4 w-4 text-primary shrink-0" />
+            {/* Status pill — top right */}
+            <div className="absolute right-2 top-2 z-10">
+              <StatusBadge ticket={t} />
+            </div>
+
             <button
-              onClick={() => navigate(`/incidents/${incidentId}/trucks/${incidentTruckId}/shift-ticket/${t.id}`)}
-              className="min-w-0 flex-1 text-left touch-target"
+              onClick={open}
+              className="flex w-full items-start gap-3 p-3 pr-10 text-left touch-target"
             >
-              <p className="text-sm font-medium truncate">{label}</p>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <StatusBadge ticket={t} />
-                <span className="text-[10px] text-muted-foreground">{dateDisplay}</span>
+              <FileText className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold truncate pr-16">{label}</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">{dateDisplay}</p>
               </div>
             </button>
-            <button
-              onClick={() => navigate(`/incidents/${incidentId}/trucks/${incidentTruckId}/shift-ticket/${t.id}`)}
-              className="rounded-lg p-2 text-muted-foreground active:bg-accent touch-target"
-              aria-label="Edit shift ticket"
-            >
-              <Pencil className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => handleDuplicate(t)}
-              className="rounded-lg p-2 text-muted-foreground active:bg-accent touch-target"
-              aria-label="Duplicate shift ticket"
-              disabled={duplicateMutation.isPending}
-            >
-              <Copy className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => setDeleteTarget({ id: t.id, label })}
-              className="rounded-lg p-2 text-destructive active:bg-destructive/10 touch-target"
-              aria-label="Delete shift ticket"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+
+            {/* Single ⋯ menu — bottom right */}
+            <div className="absolute right-1.5 bottom-1.5">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="rounded-lg p-2 text-muted-foreground active:bg-accent touch-target"
+                    aria-label="Ticket actions"
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44">
+                  <DropdownMenuItem onClick={open}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleDuplicate(t)}
+                    disabled={duplicateMutation.isPending}
+                  >
+                    <Copy className="mr-2 h-4 w-4" />
+                    Duplicate
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleDownloadOne}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Download PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => setDeleteTarget({ id: t.id, label })}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         );
       })}
