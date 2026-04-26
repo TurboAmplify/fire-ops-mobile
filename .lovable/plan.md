@@ -7,7 +7,7 @@
 - ✅ **Wave 1 — Hard blockers**: Branding scrub, Sign in with Apple, account deletion, HIBP password protection
 - ✅ **Wave 2 — Feature sweep**: Every module has loading/empty/error states; build clean; one debug `console.log` removed; no TODOs/FIXMEs/dead UI found
 - ✅ **Wave 3 — Security**: Linter clean, security scan **0 findings** (added missing `incident-documents` UPDATE storage policy; tightened `orgmem_insert` to block invite-replay + duplicate memberships; added unique constraint on `(organization_id, user_id)`)
-- ⏳ **Wave 4 — Packaging assets**: pending
+- ✅ **Wave 4 — Packaging assets**: package.json bumped to 1.0.0; all 17 iOS icons + 1024 marketing icon present; 8 screenshots at 1290×2796 ready; `docs/pre-submit-checklist.md` generated with paste-ready App Store Connect metadata
 
 ---
 
