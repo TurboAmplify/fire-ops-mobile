@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/hooks/useOrganization";
 import { DEFAULT_ORG_PAYROLL, type OrgPayrollDefaults } from "@/lib/payroll";
+import { assertOnlineForWrite } from "@/lib/offline-guard";
 
 export function useOrgPayrollSettings() {
   const { membership, isAdmin } = useOrganization();
@@ -43,6 +44,7 @@ export function useSaveOrgPayrollSettings() {
 
   return useMutation({
     mutationFn: async (values: OrgPayrollDefaults) => {
+      assertOnlineForWrite();
       if (!orgId) throw new Error("No organization");
       const { error } = await supabase.from("org_payroll_settings" as any).upsert(
         {

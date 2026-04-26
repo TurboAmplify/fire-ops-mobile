@@ -5,6 +5,7 @@ import {
   updateResourceOrderParsed,
 } from "@/services/resource-orders";
 import { useOrganization } from "@/hooks/useOrganization";
+import { assertOnlineForWrite } from "@/lib/offline-guard";
 
 export function useResourceOrders(incidentTruckId: string) {
   return useQuery({
@@ -18,11 +19,13 @@ export function useCreateResourceOrder(incidentTruckId: string) {
   const qc = useQueryClient();
   const { membership } = useOrganization();
   return useMutation({
-    mutationFn: (data: { incident_truck_id: string; file_url: string; file_name: string }) =>
-      createResourceOrder({
+    mutationFn: (data: { incident_truck_id: string; file_url: string; file_name: string }) => {
+      assertOnlineForWrite();
+      return createResourceOrder({
         ...data,
         organization_id: membership?.organizationId ?? null,
-      }),
+      });
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["resource-orders", incidentTruckId] });
     },
@@ -32,8 +35,10 @@ export function useCreateResourceOrder(incidentTruckId: string) {
 export function useUpdateResourceOrderParsed(incidentTruckId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, parsed }: { id: string; parsed: Record<string, any> }) =>
-      updateResourceOrderParsed(id, parsed),
+    mutationFn: ({ id, parsed }: { id: string; parsed: Record<string, any> }) => {
+      assertOnlineForWrite();
+      return updateResourceOrderParsed(id, parsed);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["resource-orders", incidentTruckId] });
     },

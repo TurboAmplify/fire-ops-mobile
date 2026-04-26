@@ -6,12 +6,15 @@ import { useIncidentsWithOF286 } from "@/hooks/useIncidentDocuments";
 import { STATUS_LABELS, STATUS_COLORS } from "@/services/incidents";
 import { useState, useMemo } from "react";
 import type { IncidentStatus } from "@/services/incidents";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { CachedDataPill, OfflineNoCacheEmpty } from "@/components/OfflineIndicators";
 
 const filters: (IncidentStatus | "all")[] = ["all", "active", "demob", "closed"];
 
 export default function Incidents() {
   const [filter, setFilter] = useState<IncidentStatus | "all">("all");
   const { data: incidents, isLoading, error } = useIncidents();
+  const { isOffline } = useOnlineStatus();
 
   const incidentIds = useMemo(() => (incidents ?? []).map((i) => i.id), [incidents]);
   const { data: of286Set } = useIncidentsWithOF286(incidentIds);
@@ -60,6 +63,9 @@ export default function Incidents() {
           ))}
         </div>
 
+        {/* Cached-data indicator */}
+        {isOffline && incidents && incidents.length > 0 && <CachedDataPill />}
+
         {/* States */}
         {isLoading && (
           <div className="flex justify-center py-16">
@@ -67,14 +73,17 @@ export default function Incidents() {
           </div>
         )}
 
-        {error && (
+        {error && !isOffline && (
           <p className="py-16 text-center text-destructive text-sm">
             Failed to load incidents.
           </p>
         )}
 
+        {/* Offline + no cache */}
+        {!isLoading && isOffline && !incidents && <OfflineNoCacheEmpty label="incidents" />}
+
         {/* Incident list */}
-        {!isLoading && !error && (
+        {!isLoading && !error && incidents && (
           <div className="space-y-2">
             {filtered.length === 0 && (
               <div className="py-16 text-center">

@@ -9,6 +9,7 @@ import {
 import type { ExpenseInsert, ExpenseUpdate } from "@/services/expenses";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useAuth } from "@/hooks/useAuth";
+import { assertOnlineForWrite } from "@/lib/offline-guard";
 
 export function useExpenses() {
   const { membership } = useOrganization();
@@ -43,12 +44,14 @@ export function useCreateExpense() {
   const { membership } = useOrganization();
   const { user } = useAuth();
   return useMutation({
-    mutationFn: (data: ExpenseInsert) =>
-      createExpense({
+    mutationFn: (data: ExpenseInsert) => {
+      assertOnlineForWrite();
+      return createExpense({
         ...data,
         organization_id: data.organization_id ?? membership?.organizationId ?? null,
         submitted_by_user_id: data.submitted_by_user_id ?? user?.id ?? null,
-      }),
+      });
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["expenses"] });
     },
@@ -58,8 +61,10 @@ export function useCreateExpense() {
 export function useUpdateExpense() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, updates }: { id: string; updates: ExpenseUpdate }) =>
-      updateExpense(id, updates),
+    mutationFn: ({ id, updates }: { id: string; updates: ExpenseUpdate }) => {
+      assertOnlineForWrite();
+      return updateExpense(id, updates);
+    },
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ["expenses"] });
       qc.invalidateQueries({ queryKey: ["expenses", vars.id] });
@@ -70,7 +75,10 @@ export function useUpdateExpense() {
 export function useDeleteExpense() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => deleteExpense(id),
+    mutationFn: (id: string) => {
+      assertOnlineForWrite();
+      return deleteExpense(id);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["expenses"] });
     },

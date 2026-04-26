@@ -7,6 +7,8 @@ import { CrewMemberForm } from "@/components/crew/CrewMemberForm";
 import { SignedImage } from "@/components/ui/SignedImage";
 import { formatPhone } from "@/lib/phone";
 import { isCrewMemberComplete } from "@/lib/profile-completion";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { CachedDataPill, OfflineNoCacheEmpty } from "@/components/OfflineIndicators";
 
 function getInitials(name: string) {
   return name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
@@ -14,6 +16,7 @@ function getInitials(name: string) {
 
 export default function Crew() {
   const { data: members, isLoading, error } = useCrewMembers();
+  const { isOffline } = useOnlineStatus();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "active" | "inactive">("all");
@@ -78,17 +81,21 @@ export default function Crew() {
           ))}
         </div>
 
+        {isOffline && members && members.length > 0 && <CachedDataPill />}
+
         {isLoading && (
           <div className="flex justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         )}
 
-        {error && (
+        {error && !isOffline && (
           <p className="py-12 text-center text-destructive">Failed to load crew members.</p>
         )}
 
-        {!isLoading && !error && (
+        {!isLoading && isOffline && !members && <OfflineNoCacheEmpty label="crew" />}
+
+        {!isLoading && !error && members && (
           <div className="space-y-2">
             {filtered?.length === 0 && (
               <p className="py-12 text-center text-muted-foreground">No crew members found.</p>

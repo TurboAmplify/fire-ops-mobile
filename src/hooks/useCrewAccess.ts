@@ -5,6 +5,7 @@ import {
   grantTruckAccess,
   revokeTruckAccess,
 } from "@/services/crew-access";
+import { assertOnlineForWrite } from "@/lib/offline-guard";
 
 export function useAccessForUser(orgId: string | undefined, userId: string | undefined) {
   return useQuery({
@@ -25,7 +26,10 @@ export function useAccessForTruck(truckId: string | undefined) {
 export function useGrantAccess() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: grantTruckAccess,
+    mutationFn: (input: Parameters<typeof grantTruckAccess>[0]) => {
+      assertOnlineForWrite();
+      return grantTruckAccess(input);
+    },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["crew-access", "user", vars.organizationId, vars.userId] });
       qc.invalidateQueries({ queryKey: ["crew-access", "truck", vars.truckId] });
@@ -37,7 +41,10 @@ export function useGrantAccess() {
 export function useRevokeAccess() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: revokeTruckAccess,
+    mutationFn: (input: Parameters<typeof revokeTruckAccess>[0]) => {
+      assertOnlineForWrite();
+      return revokeTruckAccess(input);
+    },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["crew-access"] });
       qc.invalidateQueries({ queryKey: ["crew-access", "truck", vars.truckId] });

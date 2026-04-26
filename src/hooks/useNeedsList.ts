@@ -7,6 +7,7 @@ import {
 } from "@/services/needs-list";
 import type { NeedsListInsert, NeedsListUpdate } from "@/services/needs-list";
 import { useOrganization } from "@/hooks/useOrganization";
+import { assertOnlineForWrite } from "@/lib/offline-guard";
 
 export function useNeedsList() {
   const { membership } = useOrganization();
@@ -22,11 +23,13 @@ export function useCreateNeedsListItem() {
   const qc = useQueryClient();
   const { membership } = useOrganization();
   return useMutation({
-    mutationFn: (data: Omit<NeedsListInsert, "organization_id">) =>
-      createNeedsListItem({
+    mutationFn: (data: Omit<NeedsListInsert, "organization_id">) => {
+      assertOnlineForWrite();
+      return createNeedsListItem({
         ...data,
         organization_id: membership?.organizationId ?? "",
-      }),
+      });
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["needs_list"] });
     },
@@ -36,8 +39,10 @@ export function useCreateNeedsListItem() {
 export function useUpdateNeedsListItem() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, updates }: { id: string; updates: NeedsListUpdate }) =>
-      updateNeedsListItem(id, updates),
+    mutationFn: ({ id, updates }: { id: string; updates: NeedsListUpdate }) => {
+      assertOnlineForWrite();
+      return updateNeedsListItem(id, updates);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["needs_list"] });
     },
@@ -47,7 +52,10 @@ export function useUpdateNeedsListItem() {
 export function useDeleteNeedsListItem() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => deleteNeedsListItem(id),
+    mutationFn: (id: string) => {
+      assertOnlineForWrite();
+      return deleteNeedsListItem(id);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["needs_list"] });
     },
