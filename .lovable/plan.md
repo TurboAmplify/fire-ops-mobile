@@ -1,81 +1,111 @@
-## Goals
+# Incident Detail — UX overhaul (round 4)
 
-You're calling out three real problems:
-
-1. **"Incident Agreements" is mislabeled** — what's at the bottom of the Overview tab is really a **Resource Order**, and Resource Orders already exist on each truck. They shouldn't be uploaded twice.
-2. **"Truck Agreements" doesn't belong on a truck** — the Master Agreement (the 100+ page Forest Service contract) is **org-wide and yearly**. It should live in Org Settings, not on each truck card.
-3. **Shift ticket cards look clunky** — title is cramped, status badge is mid-row, and three icon buttons take half the card.
-
-Below is the cleanup plan.
+Goal: make creating shift tickets the fastest possible action, hide noise until it's relevant, and tighten the incident header so the page feels professional and intentional.
 
 ---
 
-## 1. Rename + remove duplicate "Incident Agreement"
+## 1. Tighten the top of the incident page
 
-**Overview tab (`IncidentDetail.tsx`)**
-- Remove the `<AgreementUpload incidentId={...} label="Incident Agreements" />` card entirely.
-- Replace it with a new **"Resource Orders"** card that lists every Resource Order across all trucks on this incident (read-only roll-up — tap to view the file, tap to jump to the truck).
-- This way the RO uploaded during incident creation (or on a truck) shows up here automatically, no re-upload needed.
+- **Stat strip → compact, one line.** Replace the 4-stat card with a single row: `Location · Start Date` (acres / containment only show if set, inline). Removes a tall card that mostly shows two values.
+- **Hide OF-286 entirely** unless `status` is `demob` or `closed`. No upload card, no banner on active incidents — it's irrelevant noise during the fire.
+- **Remove the duplicate "Missing OF-286" banner** at the top of the page. The OF-286 card itself already communicates state via color and copy when it appears.
 
-**Truck card (`IncidentTruckList.tsx`)**
-- Keep the existing per-truck `ResourceOrderSection` (that's where uploads happen — one RO per truck assignment, which matches reality).
+Result: less than half the vertical space before tabs start.
 
 ---
 
-## 2. Move Master Agreement to Org Settings
+## 2. Promote Shift Tickets to a top-level tab
 
-The Master Agreement is yearly and org-wide, so it belongs at the org level.
+Tabs become: `Overview` · `Trucks` · **`Tickets`** · `Crew`
 
-- **Remove** `<AgreementUpload incidentTruckId={it.id} label="Truck Agreements" />` from the truck card's "More info" panel.
-- **Add** a new **"Master Agreement"** section to `OrgSettings.tsx` (admin-only) that uploads/replaces the yearly contract. Stored in the existing `agreements` table with `incident_id = null` and `incident_truck_id = null` (org-wide).
-- Update `useAgreements`/`fetchAgreements` to support an `orgOnly: true` query that returns rows where both `incident_id` and `incident_truck_id` are null for the current org.
-- Show the current Master Agreement (filename, uploaded date) with a "Replace" button — typical use is replacing once or twice a year.
+The new **Tickets tab** is purpose-built for the most common workflow — creating and reviewing shift tickets:
 
-No DB migration needed — existing `agreements` table already supports null FKs.
+- **Big primary CTA at the top:** "+ New Shift Ticket" (one tap → if only 1 truck assigned, jumps straight to the form; if multiple, a quick truck picker bottom sheet).
+- **Today's tickets** section — one card per truck showing today's draft/complete state, tap to resume.
+- **Recent tickets** section — last 10 grouped by date, with the same compact card style we just built (status pill top-right, ⋯ menu).
+
+Shift ticket creation is now **2 taps from anywhere in the app** instead of 5.
+
+The Trucks tab still keeps the inline "OF-297 Shift Tickets" section per truck (no change), so the workflow you already know still works.
 
 ---
 
-## 3. Redesign the shift ticket card
+## 3. Redesign the bottom-nav Shift Tickets shortcut
 
-Current layout (your screenshot): icon · cramped title + status badge stacked below + date · pencil · copy · trash — three icons take ~40% of the card width.
+Current: opens a dialog with a list (the part you don't love).
 
-**New layout** (mobile-first, single tap to open):
+New: opens a focused **action sheet** (Uber/Lyft style):
 
 ```text
-┌─────────────────────────────────────────────────┐
-│ [icon]  FB 17 - Type 6 - 2026-04-25   Complete  │
-│         Updated Apr 25                     ⋯    │
-└─────────────────────────────────────────────────┘
+┌──────────────────────────────────┐
+│  Shift Tickets                   │
+├──────────────────────────────────┤
+│  [ + Start New Shift Ticket ]    │  ← big primary button
+│                                  │
+│  CONTINUE TODAY                  │
+│  ▸ DL31 · FB 17 · Draft          │  ← only today's open drafts
+│  ▸ DL62 · FB 17 · Draft          │
+│                                  │
+│  View all tickets →              │  ← link, not a list
+└──────────────────────────────────┘
 ```
 
-- **Whole card is tappable** → opens the ticket (replaces the pencil button).
-- Title gets the full row width, so no more truncation to "FB 17 - Typ...".
-- **Status badge moves to the top right** of the card.
-- Date sits under the title in muted text.
-- **Edit/Duplicate/Delete collapse into a single `⋯` menu** (shadcn `DropdownMenu`) on the right edge. Tapping it opens a small menu: Edit · Duplicate · Download PDF · Delete. Saves ~120px of horizontal space and feels like Uber/Lyft list rows.
-- Keeps "Download All" + "New Ticket" buttons at the top of the section unchanged.
-
-Files: `src/components/shift-tickets/ShiftTicketSection.tsx`
+Key changes:
+- Default action is **start new**, not browse.
+- Only **today's drafts** are surfaced (the thing you actually need to finish).
+- Full history moved behind a "View all" link → routes to a new `/shift-tickets` page (uses the existing `ShiftTicketLog` if appropriate).
+- "Start new" flow: if exactly 1 active incident + 1 truck, jump straight to the form. Otherwise show a 1-step picker.
 
 ---
 
-## Files changed
+## 4. Tickets tab — visual reference
 
-- `src/pages/IncidentDetail.tsx` — remove Incident Agreements card; add read-only Resource Orders roll-up.
-- `src/components/incidents/IncidentTruckList.tsx` — remove Truck Agreements section from "More info."
-- `src/pages/OrgSettings.tsx` — add Master Agreement upload section (admin-only).
-- `src/services/agreements.ts` + `src/hooks/useAgreements.ts` — add `orgOnly` query support.
-- `src/components/incidents/AgreementUpload.tsx` — small tweak to support `orgOnly` mode (or new lean component if cleaner).
-- `src/components/shift-tickets/ShiftTicketSection.tsx` — new card layout: status top-right, dropdown menu for actions.
-- New small helper component: `IncidentResourceOrdersRollup.tsx` — fetches all incident_trucks for the incident, then ROs per truck, and shows a flat list.
-
-No database migration. No breaking changes to data model.
+```text
+┌──────────────────────────────────┐
+│  [ + New Shift Ticket ]          │  primary, full-width
+│                                  │
+│  TODAY                           │
+│  ┌────────────────────────────┐ │
+│  │ 🛻 DL31              Draft │ │
+│  │    Apr 26 · 0 entries      │ │
+│  └────────────────────────────┘ │
+│                                  │
+│  RECENT                          │
+│  ┌────────────────────────────┐ │
+│  │ 🛻 DL31           Complete │ │
+│  │    Apr 25 · 8 hr · signed  │ │
+│  └────────────────────────────┘ │
+└──────────────────────────────────┘
+```
 
 ---
 
-## What you should test after build
+## Technical notes
 
-- Overview tab: confirm "Incident Agreements" is gone; "Resource Orders" rolls up the RO from the truck.
-- Org Settings (as admin): upload a PDF as Master Agreement, verify it persists and replace works.
-- Truck card → More info: confirm "Truck Agreements" is gone; Truck Details + Resource Orders remain.
-- Shift ticket cards: title shows in full, status pill top-right, single ⋯ menu on right with Edit / Duplicate / Delete.
+Files to edit:
+- `src/pages/IncidentDetail.tsx` — collapse stat strip, hide OF-286 card unless demob/closed, remove duplicate banner, add Tickets tab.
+- `src/components/incidents/IncidentTicketsTab.tsx` (new) — CTA + today + recent grouped lists, reusing `useShiftTickets` per truck.
+- `src/components/shift-tickets/ShiftTicketQuickAccess.tsx` — rewrite to action-sheet pattern: big New CTA, today's drafts only, "View all" link.
+- `src/pages/ShiftTicketLog.tsx` — confirm it already serves as the "All tickets" destination (already exists, just route to it).
+- `src/components/incidents/OF286UploadCard.tsx` — no internal change; gating moves to `IncidentDetail`.
+
+No DB changes. No new hooks needed (existing `useShiftTickets`, `useLatestTicketPerTruck`, `useRecentShiftTickets`, `useIncidentTrucks` cover it).
+
+---
+
+## What stays the same (intentionally)
+
+- Truck cards in the Trucks tab — already cleaned up last round; the inline shift ticket section there stays so the truck-centric workflow still works.
+- Daily Crew tab.
+- Resource Orders rollup on Overview.
+- Master Agreement in Org Settings.
+
+---
+
+## What you should test after
+
+1. Open an active incident → page is noticeably shorter; no OF-286 card visible.
+2. Set incident to Demob → OF-286 card appears in Overview.
+3. Tap the bottom-nav Shift Tickets icon → big "Start New" button is the focus, not a list.
+4. Tap the new "Tickets" tab on an incident → CTA at top, today's tickets visible, no expanding required.
+5. With 1 truck assigned, tap "+ New Shift Ticket" → goes straight to the form (no picker).
