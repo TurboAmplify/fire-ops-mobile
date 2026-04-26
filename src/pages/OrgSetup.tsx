@@ -53,7 +53,7 @@ export default function OrgSetup() {
   const [submitting, setSubmitting] = useState(false);
   const [orgCreated, setOrgCreated] = useState(false);
 
-  const [pendingInvite, setPendingInvite] = useState<{ id: string; organization_id: string; role: string; orgName?: string } | null>(null);
+  const [pendingInvite, setPendingInvite] = useState<{ id: string; organization_id: string; role: string; orgName?: string; invitee_name?: string | null } | null>(null);
   const [checkingInvite, setCheckingInvite] = useState(true);
 
   useEffect(() => {
@@ -62,7 +62,7 @@ export default function OrgSetup() {
       try {
         const { data: invite } = await supabase
           .from("organization_invites")
-          .select("id, organization_id, role, organizations(name)")
+          .select("id, organization_id, role, invitee_name, organizations(name)")
           .eq("email", user.email ?? "")
           .eq("status", "pending")
           .maybeSingle();
@@ -71,6 +71,7 @@ export default function OrgSetup() {
             id: invite.id,
             organization_id: invite.organization_id,
             role: invite.role,
+            invitee_name: (invite as any).invitee_name ?? null,
             orgName: (invite as any).organizations?.name,
           });
         }
@@ -104,6 +105,20 @@ export default function OrgSetup() {
         role: pendingInvite.role,
       });
       await supabase.from("organization_invites").update({ status: "accepted" }).eq("id", pendingInvite.id);
+
+      // Backfill profile name from invite if user hasn't set one
+      const inviteName = pendingInvite.invitee_name?.trim();
+      if (inviteName) {
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (!prof?.full_name || prof.full_name.trim().length === 0) {
+          await supabase.from("profiles").update({ full_name: inviteName }).eq("id", user.id);
+        }
+      }
+
       toast({ title: "Joined organization", description: "You've been added to your team." });
       await refetch();
     } catch (err: any) {

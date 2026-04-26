@@ -69,6 +69,7 @@ export default function OrgSettings() {
   const queryClient = useQueryClient();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteName, setInviteName] = useState("");
   const [inviteRole, setInviteRole] = useState("crew");
   const [editingName, setEditingName] = useState(false);
   const [orgName, setOrgName] = useState("");
@@ -152,7 +153,7 @@ export default function OrgSettings() {
       if (!orgId) return [];
       const { data, error } = await supabase
         .from("organization_invites")
-        .select("id, email, role, status, created_at, expires_at, invite_code")
+        .select("id, email, invitee_name, role, status, created_at, expires_at, invite_code")
         .eq("organization_id", orgId)
         .eq("status", "pending")
         .order("created_at", { ascending: false });
@@ -166,9 +167,11 @@ export default function OrgSettings() {
   const sendInvite = useMutation({
     mutationFn: async ({
       email,
+      name,
       role,
     }: {
       email: string;
+      name: string;
       role: string;
     }) => {
       if (!orgId || !user) throw new Error("Not authenticated");
@@ -211,8 +214,9 @@ export default function OrgSettings() {
             role,
             status: "pending",
             invited_by: user.id,
+            invitee_name: name.trim() || null,
             expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          })
+          } as any)
           .eq("id", existingInvite.id);
 
         if (error) throw error;
@@ -225,6 +229,7 @@ export default function OrgSettings() {
         email: normalizedEmail,
         role,
         invited_by: user.id,
+        invitee_name: name.trim() || null,
       } as any);
 
       if (error) {
@@ -245,6 +250,7 @@ export default function OrgSettings() {
             : `Invitation sent to ${email}`,
       });
       setInviteEmail("");
+      setInviteName("");
       setInviteRole("crew");
       setInviteOpen(false);
       queryClient.invalidateQueries({ queryKey: ["org-invites", orgId] });
@@ -268,7 +274,7 @@ export default function OrgSettings() {
   const handleSendInvite = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inviteEmail.trim()) return;
-    sendInvite.mutate({ email: inviteEmail, role: inviteRole });
+    sendInvite.mutate({ email: inviteEmail, name: inviteName, role: inviteRole });
   };
 
   const isOwner = orgIsAdmin;
@@ -424,9 +430,16 @@ export default function OrgSettings() {
                       <Clock className="h-4 w-4 text-warning" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{inv.email}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Expires {new Date(inv.expires_at).toLocaleDateString()}
+                      <p className="text-sm font-medium truncate">
+                        {inv.invitee_name?.trim() || inv.email}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {[
+                          inv.invitee_name?.trim() ? inv.email : null,
+                          `Expires ${new Date(inv.expires_at).toLocaleDateString()}`,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </p>
                       {inv.invite_code && (
                         <button
@@ -468,6 +481,21 @@ export default function OrgSettings() {
               </DialogHeader>
               <form onSubmit={handleSendInvite} className="space-y-4 pt-2">
                 <div className="space-y-2">
+                  <Label htmlFor="invite-name">Full Name</Label>
+                  <Input
+                    id="invite-name"
+                    type="text"
+                    value={inviteName}
+                    onChange={(e) => setInviteName(e.target.value)}
+                    placeholder="Dustin Aldrich"
+                    maxLength={100}
+                    autoFocus
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Shown in the team list. They can change it later in their settings.
+                  </p>
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="invite-email">Email Address</Label>
                   <Input
                     id="invite-email"
@@ -476,7 +504,6 @@ export default function OrgSettings() {
                     onChange={(e) => setInviteEmail(e.target.value)}
                     placeholder="crew@example.com"
                     required
-                    autoFocus
                   />
                 </div>
                 <div className="space-y-2">

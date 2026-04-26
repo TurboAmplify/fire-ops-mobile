@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/useAuth";
 import { useOrganization } from "@/hooks/useOrganization";
@@ -20,11 +20,15 @@ import {
   Trash2,
   Loader2,
   PlayCircle,
+  User as UserIcon,
+  Check,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { NavBarCustomizer } from "@/components/settings/NavBarCustomizer";
 import { useTutorial } from "@/hooks/useTutorial";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import pkg from "../../package.json";
 
 const APP_VERSION = (pkg as { version?: string }).version || "1.0.0";
@@ -38,6 +42,49 @@ export default function Settings() {
   const [showNavCustomizer, setShowNavCustomizer] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [fullName, setFullName] = useState("");
+  const [savedName, setSavedName] = useState("");
+  const [savingName, setSavingName] = useState(false);
+  const [nameLoaded, setNameLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      const v = (data?.full_name ?? "").toString();
+      setFullName(v);
+      setSavedName(v);
+      setNameLoaded(true);
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
+  const handleSaveName = async () => {
+    if (!user) return;
+    const trimmed = fullName.trim().slice(0, 100);
+    if (trimmed === savedName.trim()) return;
+    setSavingName(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ full_name: trimmed })
+        .eq("id", user.id);
+      if (error) throw error;
+      setSavedName(trimmed);
+      setFullName(trimmed);
+      toast({ title: "Name saved" });
+    } catch (err: any) {
+      toast({ title: "Couldn't save name", description: err.message ?? "Try again.", variant: "destructive" });
+    } finally {
+      setSavingName(false);
+    }
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -85,10 +132,47 @@ export default function Settings() {
             <Mail className="h-5 w-5 text-accent-foreground" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold truncate">{user?.email ?? "—"}</p>
-            <p className="text-[11px] text-muted-foreground">Signed in</p>
+            <p className="text-sm font-semibold truncate">
+              {savedName.trim() || user?.email || "—"}
+            </p>
+            <p className="text-[11px] text-muted-foreground truncate">
+              {savedName.trim() ? user?.email ?? "Signed in" : "Signed in"}
+            </p>
           </div>
         </div>
+
+        {/* Your name */}
+        <section className="space-y-2">
+          <h2 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
+            Your Name
+          </h2>
+          <div className="rounded-2xl bg-card p-4 space-y-2 card-shadow">
+            <div className="flex items-center gap-2">
+              <UserIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Input
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                onBlur={handleSaveName}
+                placeholder="e.g. Dustin Aldrich"
+                maxLength={100}
+                disabled={!nameLoaded || savingName}
+                className="h-10"
+              />
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleSaveName}
+                disabled={savingName || !nameLoaded || fullName.trim() === savedName.trim()}
+                className="shrink-0"
+              >
+                {savingName ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              </Button>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Shown to your team in the org members list. You can leave it blank to show your email instead.
+            </p>
+          </div>
+        </section>
 
         {/* Organization */}
         <section className="space-y-2">
