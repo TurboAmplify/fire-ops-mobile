@@ -132,10 +132,47 @@ export default function Settings() {
             <Mail className="h-5 w-5 text-accent-foreground" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold truncate">{user?.email ?? "—"}</p>
-            <p className="text-[11px] text-muted-foreground">Signed in</p>
+            <p className="text-sm font-semibold truncate">
+              {savedName.trim() || user?.email || "—"}
+            </p>
+            <p className="text-[11px] text-muted-foreground truncate">
+              {savedName.trim() ? user?.email ?? "Signed in" : "Signed in"}
+            </p>
           </div>
         </div>
+
+        {/* Your name */}
+        <section className="space-y-2">
+          <h2 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
+            Your Name
+          </h2>
+          <div className="rounded-2xl bg-card p-4 space-y-2 card-shadow">
+            <div className="flex items-center gap-2">
+              <UserIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Input
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                onBlur={handleSaveName}
+                placeholder="e.g. Dustin Aldrich"
+                maxLength={100}
+                disabled={!nameLoaded || savingName}
+                className="h-10"
+              />
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleSaveName}
+                disabled={savingName || !nameLoaded || fullName.trim() === savedName.trim()}
+                className="shrink-0"
+              >
+                {savingName ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              </Button>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Shown to your team in the org members list. You can leave it blank to show your email instead.
+            </p>
+          </div>
+        </section>
 
         {/* Organization */}
         <section className="space-y-2">
