@@ -312,6 +312,11 @@ interface AggregateOptions {
   adjustments?: PayrollAdjustmentLite[];
   // Optional incident name lookup so adjustments can show fire names
   incidentNames?: Map<string, string>;
+  // Optional reimbursements (approved 'reimbursement' expenses).
+  // userToCrewMember maps profiles.id (auth user) -> crew_member.id so we can
+  // attribute the expense to the correct crew member on the paystub.
+  reimbursements?: ReimbursementLite[];
+  userToCrewMember?: Map<string, string>;
   // Optional withholding context. When provided, each line gets deductions+netPay.
   withholdings?: {
     profiles: Map<string, WithholdingProfile>;
