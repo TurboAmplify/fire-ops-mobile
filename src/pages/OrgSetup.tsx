@@ -53,7 +53,7 @@ export default function OrgSetup() {
   const [submitting, setSubmitting] = useState(false);
   const [orgCreated, setOrgCreated] = useState(false);
 
-  const [pendingInvite, setPendingInvite] = useState<{ id: string; organization_id: string; role: string; orgName?: string } | null>(null);
+  const [pendingInvite, setPendingInvite] = useState<{ id: string; organization_id: string; role: string; orgName?: string; invitee_name?: string | null } | null>(null);
   const [checkingInvite, setCheckingInvite] = useState(true);
 
   useEffect(() => {
