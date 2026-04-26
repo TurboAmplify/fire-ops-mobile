@@ -1,6 +1,13 @@
 # App Store Readiness — Execution Plan
 
-`app.fireopshq.com` is live and connected. Here's what I'll do across the four waves, and what you'll need to do at the end.
+`app.fireopshq.com` is live and connected. **Wave 1, 2, and 3 are complete.** Only Wave 4 (packaging assets) and your final actions remain.
+
+## Status
+
+- ✅ **Wave 1 — Hard blockers**: Branding scrub, Sign in with Apple, account deletion, HIBP password protection
+- ✅ **Wave 2 — Feature sweep**: Every module has loading/empty/error states; build clean; one debug `console.log` removed; no TODOs/FIXMEs/dead UI found
+- ✅ **Wave 3 — Security**: Linter clean, security scan **0 findings** (added missing `incident-documents` UPDATE storage policy; tightened `orgmem_insert` to block invite-replay + duplicate memberships; added unique constraint on `(organization_id, user_id)`)
+- ⏳ **Wave 4 — Packaging assets**: pending
 
 ---
 
