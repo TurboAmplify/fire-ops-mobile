@@ -23,6 +23,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useOrganization } from "@/hooks/useOrganization";
 import { toast } from "sonner";
 import { OrgPayrollToggle } from "@/components/super-admin/PayrollAccessToggle";
+import { SuperAdminBillingCard } from "@/components/super-admin/SuperAdminBillingCard";
+import type { BillingStatus, OrgType } from "@/lib/billing/types";
 
 type OrgDetail = {
   id: string;
@@ -33,6 +35,9 @@ type OrgDetail = {
   accepts_assignments: boolean;
   modules_enabled: Record<string, unknown>;
   created_at: string;
+  billing_status: BillingStatus;
+  plan_code: string;
+  trial_ends_at: string | null;
   members: Array<{
     user_id: string;
     role: string;
@@ -289,6 +294,14 @@ export default function SuperAdminOrgDetail() {
                 value={`$${Number(data.counts.expense_total).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
               />
             </div>
+
+            <SuperAdminBillingCard
+              orgId={data.id}
+              orgType={(data.org_type as OrgType) ?? "contractor"}
+              billingStatus={data.billing_status ?? "active"}
+              planCode={data.plan_code ?? "contractor_active"}
+              trialEndsAt={data.trial_ends_at}
+            />
 
             <OrgPayrollToggle
               orgId={data.id}
