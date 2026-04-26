@@ -13,6 +13,7 @@ import { ShiftTicketQuickAccess } from "@/components/shift-tickets/ShiftTicketQu
 import { InspectionDueBanner } from "@/components/fleet/InspectionDueBanner";
 import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
 import { useTutorial } from "@/hooks/useTutorial";
+import { FinishSetupCard } from "@/components/dashboard/FinishSetupCard";
 import type { LucideIcon } from "lucide-react";
 
 export default function Dashboard() {
@@ -72,6 +73,9 @@ export default function Dashboard() {
       <div className="px-4 pt-4 space-y-3 pb-6">
         {/* Inspection alerts */}
         <InspectionDueBanner />
+
+        {/* Finish-setup nudge for incomplete profiles created during onboarding */}
+        <FinishSetupCard />
 
 
         <section>

@@ -31,6 +31,7 @@ export const ALL_NAV_OPTIONS: NavTabOption[] = [
   { key: "expenses", label: "Expenses", icon: DollarSign, to: "/expenses" },
   { key: "shift-tickets", label: "Shift Tickets", icon: FileText, to: "/shift-tickets/log", module: "shiftTickets" },
   { key: "crew", label: "Crew", icon: Users, to: "/crew" },
+  { key: "crews", label: "Hand Crews", icon: Users, to: "/crews" },
   { key: "fleet", label: "Fleet", icon: Truck, to: "/fleet" },
   { key: "needs", label: "Needs List", icon: ClipboardList, to: "/needs" },
   { key: "training", label: "Training", icon: GraduationCap, to: "/training", module: "training" },

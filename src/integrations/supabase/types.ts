@@ -187,6 +187,7 @@ export type Database = {
         Row: {
           active: boolean
           created_at: string
+          crew_id: string | null
           id: string
           name: string
           notes: string | null
@@ -199,6 +200,7 @@ export type Database = {
         Insert: {
           active?: boolean
           created_at?: string
+          crew_id?: string | null
           id?: string
           name: string
           notes?: string | null
@@ -211,6 +213,7 @@ export type Database = {
         Update: {
           active?: boolean
           created_at?: string
+          crew_id?: string | null
           id?: string
           name?: string
           notes?: string | null
@@ -254,6 +257,36 @@ export type Database = {
           organization_id?: string
           truck_id?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      crews: {
+        Row: {
+          created_at: string
+          crew_type: string
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          organization_id: string
+        }
+        Insert: {
+          created_at?: string
+          crew_type?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          organization_id: string
+        }
+        Update: {
+          created_at?: string
+          crew_type?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          organization_id?: string
         }
         Relationships: []
       }
@@ -350,6 +383,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      incident_crews: {
+        Row: {
+          assigned_at: string
+          crew_id: string
+          id: string
+          incident_id: string
+          notes: string | null
+          released_at: string | null
+          status: string
+        }
+        Insert: {
+          assigned_at?: string
+          crew_id: string
+          id?: string
+          incident_id: string
+          notes?: string | null
+          released_at?: string | null
+          status?: string
+        }
+        Update: {
+          assigned_at?: string
+          crew_id?: string
+          id?: string
+          incident_id?: string
+          notes?: string | null
+          released_at?: string | null
+          status?: string
+        }
+        Relationships: []
       }
       incident_documents: {
         Row: {
@@ -777,6 +840,7 @@ export type Database = {
           inspection_alert_enabled: boolean
           modules_enabled: Json
           name: string
+          operation_type: string
           org_type: string
           seat_limit: number
           tier: string
@@ -790,6 +854,7 @@ export type Database = {
           inspection_alert_enabled?: boolean
           modules_enabled?: Json
           name: string
+          operation_type?: string
           org_type?: string
           seat_limit?: number
           tier?: string
@@ -803,6 +868,7 @@ export type Database = {
           inspection_alert_enabled?: boolean
           modules_enabled?: Json
           name?: string
+          operation_type?: string
           org_type?: string
           seat_limit?: number
           tier?: string
@@ -1896,6 +1962,15 @@ export type Database = {
             Args: {
               _accepts_assignments?: boolean
               _name: string
+              _org_type?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              _accepts_assignments?: boolean
+              _name: string
+              _operation_type?: string
               _org_type?: string
             }
             Returns: string
