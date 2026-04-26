@@ -374,10 +374,15 @@ export default function OrgSettings() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">
-                        {m.profiles?.full_name || "Unnamed User"}
+                        {m.profiles?.full_name?.trim() || m.email || "Unknown user"}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        {m.user_id === user?.id ? "You" : ""}
+                      <p className="text-xs text-muted-foreground truncate">
+                        {[
+                          m.user_id === user?.id ? "You" : null,
+                          m.profiles?.full_name?.trim() && m.email ? m.email : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </p>
                     </div>
                     <Badge variant={roleBadgeVariant(m.role)}>
