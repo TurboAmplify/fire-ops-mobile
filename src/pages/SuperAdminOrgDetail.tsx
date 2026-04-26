@@ -299,13 +299,13 @@ export default function SuperAdminOrgDetail() {
             )}
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <StatCard label="Tier" value={data.tier} />
-              <StatCard label="Seats" value={`${data.members.length} / ${data.seat_limit}`} />
-              <StatCard label="Type" value={data.org_type} />
+              <StatCard label="Plan" value={formatPlanCode(data.plan_code)} />
               <StatCard
-                label="Created"
-                value={format(new Date(data.created_at), "MMM d, yyyy")}
+                label="Billing"
+                value={formatBillingStatus(data.billing_status, data.trial_ends_at)}
               />
+              <StatCard label="Type" value={data.org_type} />
+              <StatCard label="Seats" value={`${data.members.length} / ${data.seat_limit}`} />
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
