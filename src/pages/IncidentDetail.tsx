@@ -110,7 +110,7 @@ export default function IncidentDetail() {
         </div>
 
         {/* Missing OF-286 banner */}
-        {missingOF286 && (
+        {showMissingOF286 && (
           <div
             className={`flex items-start gap-2 rounded-xl border p-3 ${
               incident.status === "closed"
