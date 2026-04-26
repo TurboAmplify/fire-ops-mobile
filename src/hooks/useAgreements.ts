@@ -1,17 +1,31 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchAgreements, createAgreement } from "@/services/agreements";
+import { fetchAgreements, createAgreement, deleteAgreement } from "@/services/agreements";
 import { useOrganization } from "@/hooks/useOrganization";
 import { assertOnlineForWrite } from "@/lib/offline-guard";
 
-export function useAgreements(params: { incidentId?: string; incidentTruckId?: string }) {
+export function useAgreements(params: {
+  incidentId?: string;
+  incidentTruckId?: string;
+  orgOnly?: boolean;
+  organizationId?: string;
+}) {
   return useQuery({
     queryKey: ["agreements", params],
     queryFn: () => fetchAgreements(params),
-    enabled: !!(params.incidentId || params.incidentTruckId),
+    enabled: !!(
+      params.incidentId ||
+      params.incidentTruckId ||
+      (params.orgOnly && params.organizationId)
+    ),
   });
 }
 
-export function useCreateAgreement(queryParams: { incidentId?: string; incidentTruckId?: string }) {
+export function useCreateAgreement(queryParams: {
+  incidentId?: string;
+  incidentTruckId?: string;
+  orgOnly?: boolean;
+  organizationId?: string;
+}) {
   const qc = useQueryClient();
   const { membership } = useOrganization();
   return useMutation({
@@ -27,6 +41,24 @@ export function useCreateAgreement(queryParams: { incidentId?: string; incidentT
         ...data,
         organization_id: membership?.organizationId ?? null,
       });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["agreements", queryParams] });
+    },
+  });
+}
+
+export function useDeleteAgreement(queryParams: {
+  incidentId?: string;
+  incidentTruckId?: string;
+  orgOnly?: boolean;
+  organizationId?: string;
+}) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => {
+      assertOnlineForWrite();
+      return deleteAgreement(id);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["agreements", queryParams] });

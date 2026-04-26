@@ -8,7 +8,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { TruckCrewSection } from "./TruckCrewSection";
 import { ResourceOrderSection } from "./ResourceOrderSection";
-import { AgreementUpload } from "./AgreementUpload";
+
 import { ShiftTicketSection } from "@/components/shift-tickets/ShiftTicketSection";
 import { SignedImage } from "@/components/ui/SignedImage";
 
@@ -383,10 +383,6 @@ function TruckCard({
                   <ResourceOrderSection incidentTruckId={it.id} />
                 </div>
 
-                {/* Truck Agreements */}
-                <div className="space-y-2">
-                  <AgreementUpload incidentTruckId={it.id} label="Truck Agreements" />
-                </div>
               </div>
             )}
           </div>

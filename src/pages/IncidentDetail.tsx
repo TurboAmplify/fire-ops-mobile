@@ -6,7 +6,7 @@ import type { IncidentStatus } from "@/services/incidents";
 import { ArrowLeft, MapPin, Calendar, Flame, TrendingUp, Loader2, Pencil, Trash2, AlertTriangle, ChevronDown } from "lucide-react";
 import { IncidentTruckList } from "@/components/incidents/IncidentTruckList";
 import { IncidentDailyCrewGrid } from "@/components/incidents/IncidentDailyCrewGrid";
-import { AgreementUpload } from "@/components/incidents/AgreementUpload";
+import { IncidentResourceOrdersRollup } from "@/components/incidents/IncidentResourceOrdersRollup";
 import { OF286UploadCard } from "@/components/incidents/OF286UploadCard";
 import { useIncidentDocuments } from "@/hooks/useIncidentDocuments";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -211,9 +211,7 @@ export default function IncidentDetail() {
 
             <OF286UploadCard incidentId={incident.id} incidentStatus={incident.status} />
 
-            <div className="rounded-xl bg-card p-4 card-shadow">
-              <AgreementUpload incidentId={incident.id} label="Incident Agreements" />
-            </div>
+            <IncidentResourceOrdersRollup incidentId={incident.id} />
 
             {/* Delete zone */}
             <div className="pt-2 flex justify-end">
