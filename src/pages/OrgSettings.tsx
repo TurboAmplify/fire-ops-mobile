@@ -69,6 +69,7 @@ export default function OrgSettings() {
   const queryClient = useQueryClient();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteName, setInviteName] = useState("");
   const [inviteRole, setInviteRole] = useState("crew");
   const [editingName, setEditingName] = useState(false);
   const [orgName, setOrgName] = useState("");
