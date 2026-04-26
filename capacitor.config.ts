@@ -15,7 +15,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
  * into a release build.
  */
 const config: CapacitorConfig = {
-  appId: 'app.lovable.63e454bc32e142ee9def17eb4240739a',
+  appId: 'com.fireopshq.app',
   appName: 'FireOps HQ',
   webDir: 'dist',
   ios: {
