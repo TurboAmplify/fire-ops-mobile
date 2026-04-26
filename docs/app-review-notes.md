@@ -57,7 +57,30 @@ The app is offline-tolerant. Reviewers can:
 Settings → Account → Delete Account performs a full data wipe via the
 `delete-account` edge function. Required by App Store Guideline 5.1.1(v).
 
+### Payroll module (admin-only, internal estimation)
+
+The optional **Payroll** tab is admin-only and produces internal operational
+estimates of crew pay and withholdings. **The app does not process money,
+taxes, or financial transactions.**
+
+- No bank, ACH, card, or payment-processor integration of any kind
+- No tax filings, no IRS / state submissions, no e-file
+- No real-money transfers, no buying or selling, no in-app payments
+- Withholding percentages are simplified flat rates configured per-org —
+  not IRS Publication 15-T tax tables
+- Generated paystub PDFs are clearly labeled as estimates only and explicitly
+  state they do not replace W-2s, 1099s, or Form 941
+- First time an admin opens the Payroll tab they must accept a non-dismissable
+  acknowledgment that the module is an estimation tool, not a licensed payroll
+  service or tax advice
+- The disclaimer is also reproduced in the in-app **Terms of Use → Payroll &
+  Tax Estimation** section
+
+This is an internal operations tool for wildland fire contractors to plan crew
+labor cost — not a financial product.
+
 ---
+
 
 ## How to (re)create the demo account
 
