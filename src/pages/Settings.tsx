@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/useAuth";
 import { useOrganization } from "@/hooks/useOrganization";
@@ -20,11 +20,15 @@ import {
   Trash2,
   Loader2,
   PlayCircle,
+  User as UserIcon,
+  Check,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { NavBarCustomizer } from "@/components/settings/NavBarCustomizer";
 import { useTutorial } from "@/hooks/useTutorial";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import pkg from "../../package.json";
 
 const APP_VERSION = (pkg as { version?: string }).version || "1.0.0";
