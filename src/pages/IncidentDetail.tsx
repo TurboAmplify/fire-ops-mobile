@@ -9,6 +9,7 @@ import { IncidentDailyCrewGrid } from "@/components/incidents/IncidentDailyCrewG
 import { AgreementUpload } from "@/components/incidents/AgreementUpload";
 import { OF286UploadCard } from "@/components/incidents/OF286UploadCard";
 import { useIncidentDocuments } from "@/hooks/useIncidentDocuments";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -23,6 +24,7 @@ export default function IncidentDetail() {
   const deleteMutation = useDeleteIncident();
   const [editingStatus, setEditingStatus] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [tab, setTab] = useState<"overview" | "trucks" | "crew">("overview");
   const { data: of286Docs } = useIncidentDocuments(id, "of286");
   const hasNoOF286 = !of286Docs || of286Docs.length === 0;
   // Only flag missing OF-286 once the incident is winding down (demob/closed).
@@ -135,7 +137,29 @@ export default function IncidentDetail() {
           )}
         </header>
 
-        {/* Missing OF-286 banner */}
+        {/* Compact stat strip — always visible across all tabs */}
+        <div className="rounded-xl bg-card p-3 card-shadow">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <Stat icon={MapPin} label="Location" value={incident.location} />
+            <Stat icon={Calendar} label="Start Date" value={incident.start_date} />
+            {incident.acres != null && (
+              <Stat icon={Flame} label="Acres" value={Number(incident.acres).toLocaleString()} />
+            )}
+            {incident.containment != null && (
+              <Stat icon={TrendingUp} label="Containment" value={`${incident.containment}%`} />
+            )}
+          </div>
+          {incident.containment != null && (
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-secondary">
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{ width: `${incident.containment}%` }}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Missing OF-286 banner — surface across tabs */}
         {showMissingOF286 && (
           <div
             className={`flex items-start gap-2 rounded-xl border p-3 ${
@@ -149,98 +173,98 @@ export default function IncidentDetail() {
                 incident.status === "closed" ? "text-destructive" : "text-amber-600"
               }`}
             />
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="text-sm font-bold">Missing OF-286 invoice</p>
               <p className="text-xs text-muted-foreground">
                 {incident.status === "closed"
-                  ? "This incident is closed but no signed OF-286 is on file. Upload it below to enable invoicing."
+                  ? "Incident is closed but no signed OF-286 is on file."
                   : "Upload the signed OF-286 once received. It feeds your accounts receivable."}
               </p>
             </div>
+            {tab !== "overview" && (
+              <button
+                onClick={() => setTab("overview")}
+                className="shrink-0 text-xs font-semibold text-primary touch-target"
+              >
+                Go to Overview
+              </button>
+            )}
           </div>
         )}
 
-        {/* Compact stat strip — replaces the 2x2 InfoCard grid */}
-        <div className="rounded-xl bg-card p-3 card-shadow">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <Stat icon={MapPin} label="Location" value={incident.location} />
-            <Stat icon={Calendar} label="Start Date" value={incident.start_date} />
-            {incident.acres != null && (
-              <Stat icon={Flame} label="Acres" value={Number(incident.acres).toLocaleString()} />
-            )}
-            {incident.containment != null && (
-              <Stat icon={TrendingUp} label="Containment" value={`${incident.containment}%`} />
-            )}
-          </div>
+        {/* Tabs */}
+        <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)} className="space-y-4">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="trucks">Trucks</TabsTrigger>
+            <TabsTrigger value="crew">Daily Crew</TabsTrigger>
+          </TabsList>
 
-          {incident.containment != null && (
-            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-secondary">
-              <div
-                className="h-full rounded-full bg-primary transition-all"
-                style={{ width: `${incident.containment}%` }}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Notes */}
-        {incident.notes && (
-          <div className="rounded-xl bg-card p-3 card-shadow">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Notes</p>
-            <p className="text-sm leading-relaxed">{incident.notes}</p>
-          </div>
-        )}
-
-        {/* OF-286 Invoice */}
-        <OF286UploadCard incidentId={incident.id} incidentStatus={incident.status} />
-
-        {/* Incident-level Agreements */}
-        <AgreementUpload incidentId={incident.id} label="Incident Agreements" />
-
-        {/* Assigned Trucks */}
-        <IncidentTruckList
-          incidentId={incident.id}
-          incidentName={incident.name}
-          organizationId={incident.organization_id}
-        />
-
-        {/* Daily Crew */}
-        <IncidentDailyCrewGrid incidentId={incident.id} />
-
-        {/* Delete zone — quieter ghost button, right aligned */}
-        <div className="pt-4 mt-2 border-t border-border flex justify-end">
-          {!confirmDelete ? (
-            <button
-              onClick={() => setConfirmDelete(true)}
-              className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-colors touch-target"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              Delete Incident
-            </button>
-          ) : (
-            <div className="w-full space-y-3">
-              <p className="text-sm text-destructive font-medium">
-                Are you sure? This cannot be undone.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={handleDelete}
-                  disabled={deleteMutation.isPending}
-                  className="flex-1 rounded-xl bg-destructive py-3 text-sm font-bold text-destructive-foreground touch-target flex items-center justify-center gap-2"
-                >
-                  {deleteMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Yes, Delete
-                </button>
-                <button
-                  onClick={() => setConfirmDelete(false)}
-                  className="flex-1 rounded-xl bg-secondary py-3 text-sm font-bold text-secondary-foreground touch-target"
-                >
-                  Cancel
-                </button>
+          {/* OVERVIEW: documents + notes + delete */}
+          <TabsContent value="overview" className="space-y-4 mt-0">
+            {incident.notes && (
+              <div className="rounded-xl bg-card p-4 card-shadow">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Notes</p>
+                <p className="text-sm leading-relaxed">{incident.notes}</p>
               </div>
+            )}
+
+            <OF286UploadCard incidentId={incident.id} incidentStatus={incident.status} />
+
+            <div className="rounded-xl bg-card p-4 card-shadow">
+              <AgreementUpload incidentId={incident.id} label="Incident Agreements" />
             </div>
-          )}
-        </div>
+
+            {/* Delete zone */}
+            <div className="pt-2 flex justify-end">
+              {!confirmDelete ? (
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-colors touch-target"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete Incident
+                </button>
+              ) : (
+                <div className="w-full space-y-3">
+                  <p className="text-sm text-destructive font-medium">
+                    Are you sure? This cannot be undone.
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleDelete}
+                      disabled={deleteMutation.isPending}
+                      className="flex-1 rounded-xl bg-destructive py-3 text-sm font-bold text-destructive-foreground touch-target flex items-center justify-center gap-2"
+                    >
+                      {deleteMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                      Yes, Delete
+                    </button>
+                    <button
+                      onClick={() => setConfirmDelete(false)}
+                      className="flex-1 rounded-xl bg-secondary py-3 text-sm font-bold text-secondary-foreground touch-target"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* TRUCKS: full vertical room for the truck list */}
+          <TabsContent value="trucks" className="mt-0">
+            <IncidentTruckList
+              incidentId={incident.id}
+              incidentName={incident.name}
+              organizationId={incident.organization_id}
+            />
+          </TabsContent>
+
+          {/* DAILY CREW */}
+          <TabsContent value="crew" className="mt-0">
+            <IncidentDailyCrewGrid incidentId={incident.id} />
+          </TabsContent>
+        </Tabs>
       </div>
     </AppShell>
   );
@@ -257,4 +281,3 @@ function Stat({ icon: Icon, label, value }: { icon: React.ElementType; label: st
     </div>
   );
 }
-
