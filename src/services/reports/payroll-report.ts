@@ -46,7 +46,7 @@ export async function fetchPayrollReport(
   input: PayrollReportInput,
   rangeLabel: string,
 ): Promise<PayrollReportData> {
-  const [ticketsRes, crewRes, compRes, withholdingRes, orgRes, adjRes, incRes] = await Promise.all([
+  const [ticketsRes, crewRes, compRes, withholdingRes, orgRes, adjRes, incRes, reimbRes, memberRes] = await Promise.all([
     supabase
       .from("shift_tickets")
       .select("id, personnel_entries, incident_trucks!inner(incidents:incidents!incident_trucks_incident_id_fkey(id, name))")
@@ -75,6 +75,16 @@ export async function fetchPayrollReport(
     supabase
       .from("incidents")
       .select("id, name")
+      .eq("organization_id", input.organizationId),
+    supabase
+      .from("expenses")
+      .select("id, date, amount, vendor, category, description, submitted_by_user_id, status")
+      .eq("organization_id", input.organizationId)
+      .eq("expense_type", "reimbursement")
+      .eq("status", "approved"),
+    supabase
+      .from("organization_members")
+      .select("user_id")
       .eq("organization_id", input.organizationId),
   ]);
 
