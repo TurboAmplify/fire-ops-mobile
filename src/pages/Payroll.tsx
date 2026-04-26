@@ -282,8 +282,9 @@ export default function Payroll() {
         <div className="flex items-start gap-2 rounded-xl border border-warning/40 bg-warning/10 p-3">
           <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
           <p className="text-[11px] leading-snug text-warning-foreground">
-            <span className="font-bold">Estimated Withholding</span> — Not Official Tax Calculation.
-            For internal operational use only.
+            <span className="font-bold">Estimated payroll for operational use only.</span>{" "}
+            Not a licensed payroll service. Not tax advice. Withholdings are simplified
+            flat rates, not IRS tax tables. Consult a CPA or payroll provider for filing.
           </p>
         </div>
 
