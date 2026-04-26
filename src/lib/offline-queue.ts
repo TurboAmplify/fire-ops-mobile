@@ -99,7 +99,6 @@ export async function replayQueue(): Promise<number> {
       const fresh = queue.filter((m) => now - m.timestamp < MAX_AGE_MS);
       const expired = queue.length - fresh.length;
       if (expired > 0) {
-        console.log(`Removed ${expired} expired offline mutations`);
         queue = fresh;
         await writeQueue(queue);
       }
