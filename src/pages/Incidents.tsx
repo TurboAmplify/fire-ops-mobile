@@ -18,7 +18,10 @@ export default function Incidents() {
 
   const incidentIds = useMemo(() => (incidents ?? []).map((i) => i.id), [incidents]);
   const { data: of286Ids } = useIncidentsWithOF286(incidentIds);
-  const of286Set = useMemo(() => new Set(of286Ids ?? []), [of286Ids]);
+  const of286Set = useMemo(
+    () => new Set(Array.isArray(of286Ids) ? of286Ids : []),
+    [of286Ids],
+  );
 
   const filtered =
     incidents && filter === "all"
