@@ -71,13 +71,13 @@ export async function deleteIncidentDocument(id: string): Promise<void> {
  */
 export async function fetchIncidentsWithOF286(
   incidentIds: string[],
-): Promise<Set<string>> {
-  if (incidentIds.length === 0) return new Set();
+): Promise<string[]> {
+  if (incidentIds.length === 0) return [];
   const { data, error } = await supabase
     .from("incident_documents")
     .select("incident_id")
     .eq("document_type", "of286")
     .in("incident_id", incidentIds);
   if (error) throw error;
-  return new Set((data ?? []).map((r: any) => r.incident_id as string));
+  return Array.from(new Set((data ?? []).map((r: any) => r.incident_id as string)));
 }
