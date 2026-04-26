@@ -2028,6 +2028,17 @@ export type Database = {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
       }
+      list_org_members_with_identity: {
+        Args: { _org_id: string }
+        Returns: {
+          email: string
+          full_name: string
+          joined_at: string
+          member_id: string
+          role: string
+          user_id: string
+        }[]
+      }
       user_can_access_truck: {
         Args: { _truck_id: string; _user_id: string }
         Returns: boolean
