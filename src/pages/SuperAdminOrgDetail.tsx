@@ -315,11 +315,15 @@ export default function SuperAdminOrgDetail() {
               <StatCard label="Shift tickets" value={data.counts.shift_tickets} />
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <StatCard label="Expenses" value={data.counts.expenses} />
               <StatCard
                 label="Expense total"
                 value={`$${Number(data.counts.expense_total).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              />
+              <StatCard
+                label="Created"
+                value={format(new Date(data.created_at), "MMM d, yyyy")}
               />
             </div>
 
