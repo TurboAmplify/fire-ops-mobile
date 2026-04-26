@@ -3,12 +3,12 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useIncident, useUpdateIncident, useDeleteIncident } from "@/hooks/useIncidents";
 import { STATUS_LABELS, STATUS_COLORS, TYPE_LABELS } from "@/services/incidents";
 import type { IncidentStatus } from "@/services/incidents";
-import { ArrowLeft, MapPin, Calendar, Flame, TrendingUp, Loader2, Pencil, Trash2, AlertTriangle, ChevronDown } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, Flame, TrendingUp, Loader2, Pencil, Trash2, ChevronDown } from "lucide-react";
 import { IncidentTruckList } from "@/components/incidents/IncidentTruckList";
 import { IncidentDailyCrewGrid } from "@/components/incidents/IncidentDailyCrewGrid";
 import { IncidentResourceOrdersRollup } from "@/components/incidents/IncidentResourceOrdersRollup";
+import { IncidentTicketsTab } from "@/components/incidents/IncidentTicketsTab";
 import { OF286UploadCard } from "@/components/incidents/OF286UploadCard";
-import { useIncidentDocuments } from "@/hooks/useIncidentDocuments";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -24,12 +24,7 @@ export default function IncidentDetail() {
   const deleteMutation = useDeleteIncident();
   const [editingStatus, setEditingStatus] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [tab, setTab] = useState<"overview" | "trucks" | "crew">("overview");
-  const { data: of286Docs } = useIncidentDocuments(id, "of286");
-  const hasNoOF286 = !of286Docs || of286Docs.length === 0;
-  // Only flag missing OF-286 once the incident is winding down (demob/closed).
-  const showMissingOF286 =
-    hasNoOF286 && (incident?.status === "demob" || incident?.status === "closed");
+  const [tab, setTab] = useState<"overview" | "trucks" | "tickets" | "crew">("tickets");
 
   if (isLoading) {
     return (
@@ -55,6 +50,7 @@ export default function IncidentDetail() {
   }
 
   const statusColor = STATUS_COLORS[incident.status as IncidentStatus] || "bg-secondary text-muted-foreground";
+  const showOF286 = incident.status === "demob" || incident.status === "closed";
 
   const handleStatusChange = async (newStatus: IncidentStatus) => {
     try {
@@ -96,8 +92,8 @@ export default function IncidentDetail() {
         </div>
       }
     >
-      <div className="px-4 py-3 space-y-4">
-        {/* Header — name + type + status pill on one row */}
+      <div className="px-4 py-3 space-y-3">
+        {/* Header — name + type + status pill */}
         <header className="space-y-1">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
@@ -116,7 +112,6 @@ export default function IncidentDetail() {
             </button>
           </div>
 
-          {/* Inline status editor — only when toggled */}
           {editingStatus && (
             <div className="flex gap-2 flex-wrap pt-2 animate-fade-in">
               {statusOptions.map((s) => (
@@ -137,70 +132,59 @@ export default function IncidentDetail() {
           )}
         </header>
 
-        {/* Compact stat strip — always visible across all tabs */}
-        <div className="rounded-xl bg-card p-3 card-shadow">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <Stat icon={MapPin} label="Location" value={incident.location} />
-            <Stat icon={Calendar} label="Start Date" value={incident.start_date} />
-            {incident.acres != null && (
-              <Stat icon={Flame} label="Acres" value={Number(incident.acres).toLocaleString()} />
-            )}
-            {incident.containment != null && (
-              <Stat icon={TrendingUp} label="Containment" value={`${incident.containment}%`} />
-            )}
-          </div>
+        {/* Compact one-line meta strip — pills, no tall card */}
+        <div className="flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground">
+          <span className="inline-flex items-center gap-1 rounded-full bg-secondary/60 px-2 py-1">
+            <MapPin className="h-3 w-3" />
+            <span className="font-medium text-foreground truncate max-w-[180px]">{incident.location}</span>
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-secondary/60 px-2 py-1">
+            <Calendar className="h-3 w-3" />
+            <span className="font-medium text-foreground">{incident.start_date}</span>
+          </span>
+          {incident.acres != null && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-secondary/60 px-2 py-1">
+              <Flame className="h-3 w-3" />
+              <span className="font-medium text-foreground">{Number(incident.acres).toLocaleString()} ac</span>
+            </span>
+          )}
           {incident.containment != null && (
-            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-secondary">
-              <div
-                className="h-full rounded-full bg-primary transition-all"
-                style={{ width: `${incident.containment}%` }}
-              />
-            </div>
+            <span className="inline-flex items-center gap-1 rounded-full bg-secondary/60 px-2 py-1">
+              <TrendingUp className="h-3 w-3" />
+              <span className="font-medium text-foreground">{incident.containment}%</span>
+            </span>
           )}
         </div>
 
-        {/* Missing OF-286 banner — surface across tabs */}
-        {showMissingOF286 && (
-          <div
-            className={`flex items-start gap-2 rounded-xl border p-3 ${
-              incident.status === "closed"
-                ? "border-destructive/40 bg-destructive/10"
-                : "border-amber-500/40 bg-amber-500/10"
-            }`}
-          >
-            <AlertTriangle
-              className={`h-5 w-5 shrink-0 mt-0.5 ${
-                incident.status === "closed" ? "text-destructive" : "text-amber-600"
-              }`}
-            />
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold">Missing OF-286 invoice</p>
-              <p className="text-xs text-muted-foreground">
-                {incident.status === "closed"
-                  ? "Incident is closed but no signed OF-286 is on file."
-                  : "Upload the signed OF-286 once received. It feeds your accounts receivable."}
-              </p>
-            </div>
-            {tab !== "overview" && (
-              <button
-                onClick={() => setTab("overview")}
-                className="shrink-0 text-xs font-semibold text-primary touch-target"
-              >
-                Go to Overview
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Tabs */}
+        {/* Tabs — Tickets is default */}
         <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="tickets">Tickets</TabsTrigger>
             <TabsTrigger value="trucks">Trucks</TabsTrigger>
-            <TabsTrigger value="crew">Daily Crew</TabsTrigger>
+            <TabsTrigger value="crew">Crew</TabsTrigger>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
           </TabsList>
 
-          {/* OVERVIEW: documents + notes + delete */}
+          {/* TICKETS — primary workflow */}
+          <TabsContent value="tickets" className="mt-0">
+            <IncidentTicketsTab incidentId={incident.id} incidentName={incident.name} />
+          </TabsContent>
+
+          {/* TRUCKS */}
+          <TabsContent value="trucks" className="mt-0">
+            <IncidentTruckList
+              incidentId={incident.id}
+              incidentName={incident.name}
+              organizationId={incident.organization_id}
+            />
+          </TabsContent>
+
+          {/* CREW */}
+          <TabsContent value="crew" className="mt-0">
+            <IncidentDailyCrewGrid incidentId={incident.id} />
+          </TabsContent>
+
+          {/* OVERVIEW — notes, documents, danger zone */}
           <TabsContent value="overview" className="space-y-4 mt-0">
             {incident.notes && (
               <div className="rounded-xl bg-card p-4 card-shadow">
@@ -209,11 +193,13 @@ export default function IncidentDetail() {
               </div>
             )}
 
-            <OF286UploadCard incidentId={incident.id} incidentStatus={incident.status} />
-
             <IncidentResourceOrdersRollup incidentId={incident.id} />
 
-            {/* Delete zone */}
+            {/* OF-286 only matters at demob/close */}
+            {showOF286 && (
+              <OF286UploadCard incidentId={incident.id} incidentStatus={incident.status} />
+            )}
+
             <div className="pt-2 flex justify-end">
               {!confirmDelete ? (
                 <button
@@ -248,34 +234,8 @@ export default function IncidentDetail() {
               )}
             </div>
           </TabsContent>
-
-          {/* TRUCKS: full vertical room for the truck list */}
-          <TabsContent value="trucks" className="mt-0">
-            <IncidentTruckList
-              incidentId={incident.id}
-              incidentName={incident.name}
-              organizationId={incident.organization_id}
-            />
-          </TabsContent>
-
-          {/* DAILY CREW */}
-          <TabsContent value="crew" className="mt-0">
-            <IncidentDailyCrewGrid incidentId={incident.id} />
-          </TabsContent>
         </Tabs>
       </div>
     </AppShell>
-  );
-}
-
-function Stat({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
-  return (
-    <div className="min-w-0">
-      <div className="flex items-center gap-1 text-muted-foreground">
-        <Icon className="h-3 w-3 shrink-0" />
-        <span className="text-[10px] font-semibold uppercase tracking-wider truncate">{label}</span>
-      </div>
-      <p className="mt-0.5 text-sm font-semibold truncate">{value}</p>
-    </div>
   );
 }
