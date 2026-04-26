@@ -94,20 +94,46 @@ export default function IncidentDetail() {
         </div>
       }
     >
-      <div className="p-4 space-y-5">
-        {/* Header */}
-        <div>
-          <div className="flex items-start justify-between">
-            <h2 className="text-2xl font-extrabold">{incident.name}</h2>
+      <div className="px-4 py-3 space-y-4">
+        {/* Header — name + type + status pill on one row */}
+        <header className="space-y-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-2xl font-extrabold leading-tight truncate">{incident.name}</h2>
+              <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-wider">
+                {TYPE_LABELS[incident.type as keyof typeof TYPE_LABELS]}
+              </p>
+            </div>
             <button
               onClick={() => setEditingStatus(!editingStatus)}
-              className={`rounded-full px-3 py-1 text-xs font-bold uppercase ${statusColor} touch-target`}
+              className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold uppercase shrink-0 transition-colors active:opacity-80 touch-target ${statusColor}`}
+              aria-label="Change status"
             >
-              {STATUS_LABELS[incident.status as IncidentStatus]}
+              <span>{STATUS_LABELS[incident.status as IncidentStatus]}</span>
+              <ChevronDown className={`h-3 w-3 transition-transform ${editingStatus ? "rotate-180" : ""}`} />
             </button>
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">{TYPE_LABELS[incident.type as keyof typeof TYPE_LABELS]}</p>
-        </div>
+
+          {/* Inline status editor — only when toggled */}
+          {editingStatus && (
+            <div className="flex gap-2 flex-wrap pt-2 animate-fade-in">
+              {statusOptions.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => handleStatusChange(s)}
+                  disabled={updateMutation.isPending}
+                  className={`rounded-full px-3 py-1.5 text-xs font-medium touch-target ${
+                    incident.status === s
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary text-secondary-foreground"
+                  }`}
+                >
+                  {STATUS_LABELS[s]}
+                </button>
+              ))}
+            </div>
+          )}
+        </header>
 
         {/* Missing OF-286 banner */}
         {showMissingOF286 && (
@@ -134,56 +160,34 @@ export default function IncidentDetail() {
           </div>
         )}
 
-        {/* Status editor */}
-        {editingStatus && (
-          <div className="flex gap-2 flex-wrap">
-            {statusOptions.map((s) => (
-              <button
-                key={s}
-                onClick={() => handleStatusChange(s)}
-                disabled={updateMutation.isPending}
-                className={`rounded-full px-4 py-2 text-sm font-medium touch-target ${
-                  incident.status === s
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary text-secondary-foreground"
-                }`}
-              >
-                {STATUS_LABELS[s]}
-              </button>
-            ))}
+        {/* Compact stat strip — replaces the 2x2 InfoCard grid */}
+        <div className="rounded-xl bg-card p-3 card-shadow">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <Stat icon={MapPin} label="Location" value={incident.location} />
+            <Stat icon={Calendar} label="Start Date" value={incident.start_date} />
+            {incident.acres != null && (
+              <Stat icon={Flame} label="Acres" value={Number(incident.acres).toLocaleString()} />
+            )}
+            {incident.containment != null && (
+              <Stat icon={TrendingUp} label="Containment" value={`${incident.containment}%`} />
+            )}
           </div>
-        )}
 
-        {/* Info cards */}
-        <div className="grid grid-cols-2 gap-3">
-          <InfoCard icon={MapPin} label="Location" value={incident.location} />
-          <InfoCard icon={Calendar} label="Start Date" value={incident.start_date} />
-          {incident.acres != null && (
-            <InfoCard icon={Flame} label="Acres" value={Number(incident.acres).toLocaleString()} />
-          )}
           {incident.containment != null && (
-            <InfoCard icon={TrendingUp} label="Containment" value={`${incident.containment}%`} />
-          )}
-        </div>
-
-        {/* Containment bar */}
-        {incident.containment != null && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-muted-foreground">Containment Progress</p>
-            <div className="h-3 overflow-hidden rounded-full bg-secondary">
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-secondary">
               <div
                 className="h-full rounded-full bg-primary transition-all"
                 style={{ width: `${incident.containment}%` }}
               />
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Notes */}
         {incident.notes && (
-          <div className="rounded-xl bg-card p-4">
-            <p className="text-sm font-medium text-muted-foreground mb-1">Notes</p>
-            <p className="text-sm">{incident.notes}</p>
+          <div className="rounded-xl bg-card p-3 card-shadow">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Notes</p>
+            <p className="text-sm leading-relaxed">{incident.notes}</p>
           </div>
         )}
 
@@ -203,18 +207,18 @@ export default function IncidentDetail() {
         {/* Daily Crew */}
         <IncidentDailyCrewGrid incidentId={incident.id} />
 
-        {/* Delete zone */}
-        <div className="pt-4 border-t border-border">
+        {/* Delete zone — quieter ghost button, right aligned */}
+        <div className="pt-4 mt-2 border-t border-border flex justify-end">
           {!confirmDelete ? (
             <button
               onClick={() => setConfirmDelete(true)}
-              className="flex items-center gap-2 text-sm font-medium text-destructive touch-target"
+              className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-colors touch-target"
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-3.5 w-3.5" />
               Delete Incident
             </button>
           ) : (
-            <div className="space-y-3">
+            <div className="w-full space-y-3">
               <p className="text-sm text-destructive font-medium">
                 Are you sure? This cannot be undone.
               </p>
