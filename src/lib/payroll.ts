@@ -356,6 +356,7 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
   const {
     shiftTickets, crewMembers, compensation, rangeStart, rangeEnd,
     incidentFilter, withholdings, adjustments, incidentNames,
+    reimbursements, userToCrewMember,
   } = opts;
 
   const nameMap = new Map<string, CrewMemberLite>();
