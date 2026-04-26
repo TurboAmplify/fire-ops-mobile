@@ -40,22 +40,26 @@ export default function Dashboard() {
         {isPlatformAdmin && (
           <button
             onClick={() => navigate("/super-admin")}
-            className="flex items-center gap-1 h-8 px-2.5 rounded-full bg-primary/15 text-primary text-[11px] font-semibold active:bg-primary/25 transition-colors"
-            aria-label="Super Admin"
+            className="flex items-center gap-1 h-9 min-w-[44px] px-3 rounded-full bg-primary/15 text-primary text-[11px] font-semibold active:bg-primary/25 transition-colors"
+            aria-label="Open Super Admin"
           >
-            <ShieldCheck className="h-3.5 w-3.5" strokeWidth={2} />
+            <ShieldCheck className="h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
             <span>Super</span>
           </button>
         )}
         <button
           onClick={startTutorial}
-          className="flex items-center justify-center h-9 w-9 rounded-full active:bg-secondary transition-colors"
+          className="flex items-center justify-center h-11 w-11 rounded-full active:bg-secondary transition-colors"
           aria-label="Replay tutorial"
         >
-          <HelpCircle className="h-5 w-5 text-muted-foreground" strokeWidth={1.75} />
+          <HelpCircle className="h-5 w-5 text-muted-foreground" strokeWidth={1.75} aria-hidden="true" />
         </button>
-        <button onClick={() => navigate("/settings")} className="flex items-center justify-center h-9 w-9 rounded-full active:bg-secondary transition-colors">
-          <Settings className="h-5 w-5 text-muted-foreground" strokeWidth={1.75} />
+        <button
+          onClick={() => navigate("/settings")}
+          className="flex items-center justify-center h-11 w-11 rounded-full active:bg-secondary transition-colors"
+          aria-label="Open settings"
+        >
+          <Settings className="h-5 w-5 text-muted-foreground" strokeWidth={1.75} aria-hidden="true" />
         </button>
       </>
     }>

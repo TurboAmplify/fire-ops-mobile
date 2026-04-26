@@ -45,10 +45,10 @@ export function AppShell({ children, title, headerRight, showBack, onBack }: App
                 {isNested && (
                   <button
                     onClick={() => onBack ? onBack() : navigate(-1)}
-                    className="flex items-center justify-center -ml-2 mr-0.5 h-9 w-9 rounded-full text-primary active:bg-primary/10 transition-colors"
+                    className="flex items-center justify-center -ml-2 mr-0.5 h-11 w-11 rounded-full text-primary active:bg-primary/10 transition-colors"
                     aria-label="Go back"
                   >
-                    <ChevronLeft className="h-5 w-5" />
+                    <ChevronLeft className="h-5 w-5" aria-hidden="true" />
                   </button>
                 )}
                 {isHome && (

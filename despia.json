@@ -8,6 +8,8 @@
 
   "ios": {
     "minimumOSVersion": "16.0",
+    "orientation": "portrait",
+    "statusBarStyle": "lightContent",
     "permissions": {
       "NSCameraUsageDescription": "FireOps HQ uses the camera to capture receipts, truck photos, inspection photos, crew portraits, and signed documents in the field.",
       "NSPhotoLibraryUsageDescription": "FireOps HQ accesses your photo library so you can attach existing receipts, truck photos, inspection photos, and operational documents.",
@@ -16,6 +18,7 @@
   },
 
   "android": {
+    "orientation": "portrait",
     "permissions": [
       "android.permission.CAMERA",
       "android.permission.READ_MEDIA_IMAGES",

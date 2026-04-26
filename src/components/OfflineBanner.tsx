@@ -24,16 +24,24 @@ export function OfflineBanner() {
 
   if (showReconnected) {
     return (
-      <div className="bg-green-600 text-white text-center text-sm py-1.5 px-4 flex items-center justify-center gap-2">
-        <Wifi className="h-3.5 w-3.5" />
+      <div
+        role="status"
+        aria-live="polite"
+        className="bg-green-600 text-white text-center text-sm py-1.5 px-4 flex items-center justify-center gap-2"
+      >
+        <Wifi className="h-3.5 w-3.5" aria-hidden="true" />
         <span>Back online</span>
       </div>
     );
   }
 
   return (
-    <div className="bg-amber-600 text-white text-center text-sm py-1.5 px-4 flex items-center justify-center gap-2">
-      <WifiOff className="h-3.5 w-3.5" />
+    <div
+      role="status"
+      aria-live="polite"
+      className="bg-amber-600 text-white text-center text-sm py-1.5 px-4 flex items-center justify-center gap-2"
+    >
+      <WifiOff className="h-3.5 w-3.5" aria-hidden="true" />
       <span>
         Offline -- changes will sync when connected
         {pendingCount > 0 && ` (${pendingCount} pending)`}

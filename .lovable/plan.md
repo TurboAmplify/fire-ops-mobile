@@ -99,3 +99,26 @@ Modules in scope:
 5. Submit for review.
 
 Approve and I'll start Wave 1.
+
+---
+
+## Wave 5 — Accessibility & Native-Feel Pass (DONE)
+
+Purpose: lower the chance of an Apple Guideline 4.2 ("web app in a wrapper") rejection and address basic accessibility expectations.
+
+### Changes
+- **Contrast (both themes)**: bumped `--muted-foreground` (light: L42% → L36%, dark: L52% → L64%) so all secondary labels clear WCAG AA 4.5:1.
+- **Tap targets**: header back button, tutorial, settings, super-admin pill all bumped to 44×44pt minimum (Apple HIG).
+- **VoiceOver**: added missing `aria-label` to settings button and bottom-nav items; marked decorative icons `aria-hidden="true"` to stop double-announcement; added `aria-label="Primary navigation"` to bottom nav.
+- **OfflineBanner**: added `role="status"` + `aria-live="polite"` so screen readers announce connectivity changes.
+- **Reduced Motion**: global `@media (prefers-reduced-motion: reduce)` cuts all transitions/animations to 0.01ms.
+- **Reduced Transparency**: `@media (prefers-reduced-transparency: reduce)` swaps `glass` and `glass-tile` blur for solid surfaces in both themes.
+- **Native feel**:
+  - `overscroll-behavior-y: none` on body (kills rubber-band on the document)
+  - `-webkit-touch-callout: none` + `user-select: none` on nav/header/buttons (form fields and prose still selectable)
+  - Status bar meta switched to `black-translucent` to match the dark header
+  - `orientation: "portrait"` locked in `despia.json` (iOS + Android) and `preferredContentMode: "mobile"` in Capacitor
+
+### Verification
+- `bun run build` — passes, no new warnings
+- All edits scoped to presentation/CSS — no business logic changed
