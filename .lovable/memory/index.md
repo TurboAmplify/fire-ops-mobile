@@ -15,3 +15,4 @@ Multi-tenant foundation in place (Step 1 done). org_id columns nullable, RLS sti
 - [Mobile store readiness](mem://features/mobile-store) — iOS + Android packaging checklist, Capacitor config
 - [Cross-platform UI rules](mem://design/cross-platform-ui) — Safe areas, back buttons, no swipe-only nav, platform-neutral icons
 - [Offline tolerance](mem://features/offline-tolerance) — IndexedDB query cache, offline mutation queue, connectivity banner, App Store compliant
+- [OF-286 documents](mem://features/of286-documents) — Per-incident OF-286 upload, missing-form banner & list chip, non-blocking closure, feeds A/R

@@ -3,10 +3,12 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useIncident, useUpdateIncident, useDeleteIncident } from "@/hooks/useIncidents";
 import { STATUS_LABELS, STATUS_COLORS, TYPE_LABELS } from "@/services/incidents";
 import type { IncidentStatus } from "@/services/incidents";
-import { ArrowLeft, MapPin, Calendar, Flame, TrendingUp, Loader2, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, Flame, TrendingUp, Loader2, Pencil, Trash2, AlertTriangle } from "lucide-react";
 import { IncidentTruckList } from "@/components/incidents/IncidentTruckList";
 import { IncidentDailyCrewGrid } from "@/components/incidents/IncidentDailyCrewGrid";
 import { AgreementUpload } from "@/components/incidents/AgreementUpload";
+import { OF286UploadCard } from "@/components/incidents/OF286UploadCard";
+import { useIncidentDocuments } from "@/hooks/useIncidentDocuments";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -21,6 +23,8 @@ export default function IncidentDetail() {
   const deleteMutation = useDeleteIncident();
   const [editingStatus, setEditingStatus] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const { data: of286Docs } = useIncidentDocuments(id, "of286");
+  const missingOF286 = !of286Docs || of286Docs.length === 0;
 
   if (isLoading) {
     return (
@@ -102,6 +106,31 @@ export default function IncidentDetail() {
           <p className="mt-1 text-sm text-muted-foreground">{TYPE_LABELS[incident.type as keyof typeof TYPE_LABELS]}</p>
         </div>
 
+        {/* Missing OF-286 banner */}
+        {missingOF286 && (
+          <div
+            className={`flex items-start gap-2 rounded-xl border p-3 ${
+              incident.status === "closed"
+                ? "border-destructive/40 bg-destructive/10"
+                : "border-amber-500/40 bg-amber-500/10"
+            }`}
+          >
+            <AlertTriangle
+              className={`h-5 w-5 shrink-0 mt-0.5 ${
+                incident.status === "closed" ? "text-destructive" : "text-amber-600"
+              }`}
+            />
+            <div className="min-w-0">
+              <p className="text-sm font-bold">Missing OF-286 invoice</p>
+              <p className="text-xs text-muted-foreground">
+                {incident.status === "closed"
+                  ? "This incident is closed but no signed OF-286 is on file. Upload it below to enable invoicing."
+                  : "Upload the signed OF-286 once received. It feeds your accounts receivable."}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Status editor */}
         {editingStatus && (
           <div className="flex gap-2 flex-wrap">
@@ -154,6 +183,9 @@ export default function IncidentDetail() {
             <p className="text-sm">{incident.notes}</p>
           </div>
         )}
+
+        {/* OF-286 Invoice */}
+        <OF286UploadCard incidentId={incident.id} />
 
         {/* Incident-level Agreements */}
         <AgreementUpload incidentId={incident.id} label="Incident Agreements" />

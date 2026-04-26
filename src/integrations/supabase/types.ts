@@ -351,6 +351,39 @@ export type Database = {
           },
         ]
       }
+      incident_documents: {
+        Row: {
+          created_at: string
+          document_type: string
+          file_name: string
+          file_url: string
+          id: string
+          incident_id: string
+          organization_id: string
+          uploaded_by_user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          document_type?: string
+          file_name: string
+          file_url: string
+          id?: string
+          incident_id: string
+          organization_id: string
+          uploaded_by_user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          document_type?: string
+          file_name?: string
+          file_url?: string
+          id?: string
+          incident_id?: string
+          organization_id?: string
+          uploaded_by_user_id?: string | null
+        }
+        Relationships: []
+      }
       incident_truck_crew: {
         Row: {
           assigned_at: string
