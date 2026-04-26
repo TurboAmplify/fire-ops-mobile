@@ -1,13 +1,13 @@
-## FireOps HQ — Comprehensive Feature Overview
+# FireOps HQ — Comprehensive Feature Overview
 
-A production-grade, mobile-first operations app for wildland firefighting contractors. Built as a cross-platform web/iOS/Android app (React + Capacitor) with a Lovable Cloud backend (Postgres + RLS, Storage, Edge Functions, AI Gateway). Below is a complete feature inventory you can paste into ChatGPT.
+A production-grade, mobile-first operations app for wildland firefighting contractors. Built as a cross-platform web/iOS/Android app (React + Capacitor) with a Lovable Cloud backend (Postgres + RLS, Storage, Edge Functions, AI Gateway).
 
 ---
 
-### 1. Platform & Architecture
+## 1. Platform & Architecture
 
 - Mobile-first responsive web app, packaged for iOS App Store and Google Play via Capacitor
-- React + TypeScript + Vite, Tailwind, shadcn/ui components, Lucide icons
+- React + TypeScript + Vite, Tailwind CSS, shadcn/ui, Lucide icons
 - Backend: Lovable Cloud (Postgres with Row-Level Security, Storage buckets, Edge Functions, AI Gateway)
 - React Query with IndexedDB persistence for offline tolerance
 - Bottom tab navigation (5 tabs max), platform-neutral UI, ≥44px touch targets, no hover-only interactions
@@ -15,11 +15,11 @@ A production-grade, mobile-first operations app for wildland firefighting contra
 
 ---
 
-### 2. Authentication & Multi-Tenancy
+## 2. Authentication & Multi-Tenancy
 
 - Email/password login, password reset flow
 - Google OAuth (where enabled)
-- Multi-organization model: users belong to one or more orgs; can switch active org
+- Multi-organization model: users belong to one or more orgs and can switch active org
 - Org setup flow for new accounts; org settings page
 - Roles: `admin`, `crew`, plus platform-level `super-admin`
 - User invites with seat limits per org and tier-based feature gating
@@ -28,7 +28,7 @@ A production-grade, mobile-first operations app for wildland firefighting contra
 
 ---
 
-### 3. Offline Tolerance
+## 3. Offline Tolerance
 
 - Query cache persisted to IndexedDB (24h, App Store-compliant)
 - Offline mutation queue replays writes on reconnect (72-hour expiry)
@@ -38,7 +38,7 @@ A production-grade, mobile-first operations app for wildland firefighting contra
 
 ---
 
-### 4. Dashboard
+## 4. Dashboard
 
 - Active incidents summary
 - Quick stats (hours, expenses, crew on assignment)
@@ -47,7 +47,7 @@ A production-grade, mobile-first operations app for wildland firefighting contra
 
 ---
 
-### 5. Incident Management
+## 5. Incident Management
 
 - Create/edit incidents (name, type, location, dates, acres, containment, status)
 - **Incident from Agreement**: AI parses uploaded EERA/agreement PDF into incident fields
@@ -60,7 +60,7 @@ A production-grade, mobile-first operations app for wildland firefighting contra
 
 ---
 
-### 6. Shift Tickets (OF-297)
+## 6. Shift Tickets (OF-297)
 
 Federal Emergency Equipment Shift Ticket workflow, fully digital.
 
@@ -79,11 +79,10 @@ Federal Emergency Equipment Shift Ticket workflow, fully digital.
 - Draft save, duplicate ticket (+1 day, clears signatures)
 - AI-powered import: parse a photo/PDF of a hand-written shift ticket into structured entries
 - Recent shift tickets feed (sorted by actual shift date, deduped to latest per truck)
-- Routes under `/incidents/:id/trucks/:itId/shift-ticket/...` and `/shift-tickets/log`
 
 ---
 
-### 7. Crew Management
+## 7. Crew Management
 
 - Crew roster with roles (crew boss, sawyer, EMT, etc.)
 - Photo upload per crew member
@@ -93,7 +92,7 @@ Federal Emergency Equipment Shift Ticket workflow, fully digital.
 
 ---
 
-### 8. Fleet Management
+## 8. Fleet Management
 
 - Truck inventory (name, unit type, status, notes)
 - Truck detail page with sections:
@@ -104,12 +103,12 @@ Federal Emergency Equipment Shift Ticket workflow, fully digital.
   - Inventory checklist
   - Service log
   - **Inspections**: configurable templates, runner UI, due banner for upcoming/overdue
-- **AI truck photo parsing**: extract truck details from a photo via edge function
+- **AI truck photo parsing**: extract truck details from a photo
 - Daily rate per truck ($4k/day default for fire deployments) for P&L revenue calculation
 
 ---
 
-### 9. Expenses
+## 9. Expenses
 
 - Add expense (category: fuel, ppe, food, lodging, equipment, other)
 - Receipt upload (camera or file picker, platform-neutral)
@@ -123,9 +122,9 @@ Federal Emergency Equipment Shift Ticket workflow, fully digital.
 
 ---
 
-### 10. Payroll (Admin-gated, super-admin enabled)
+## 10. Payroll (Admin-gated, super-admin enabled)
 
-- Per-employee compensation (`crew_compensation`): base hourly rate, H&W rate
+- Per-employee compensation: base hourly rate, H&W rate
 - Defaults: $28.73/hr base, $4.93/hr H&W
 - Formula: reg hrs (≤40/wk) × (base + H&W) + OT × base × 1.5
 - Monday week start; H&W only on first 40 hrs (never on OT)
@@ -133,18 +132,18 @@ Federal Emergency Equipment Shift Ticket workflow, fully digital.
 - Per-employee overrides (filing status, dependents, exemptions, other deductions)
 - **Workers Comp**: 16% of gross pay (org-configurable)
 - Org payroll settings card (rates, percentages, factoring %)
-- Live-derived pay from shift ticket personnel entries (no snapshot table)
+- Live-derived pay from shift ticket personnel entries
 - Views: This Week / Pay Period / All Time, grouped By Crew or By Fire
-- **Paystub** on-screen modal + PDF export (jsPDF)
+- **Paystub** on-screen modal + PDF export
 - Payroll adjustments (bonuses, deductions per pay period)
 - Withholding profile form per employee
 - "Estimated Withholding — Not Official Tax Calculation" compliance banner
-- Global kill-switch (`platform_settings.payroll_global_enabled`) + per-org module toggle
+- Global kill-switch + per-org module toggle
 - Hidden from crew users and from non-payroll orgs
 
 ---
 
-### 11. Admin Reports
+## 11. Admin Reports
 
 - **P&L Report**: revenue (truck daily rates × deployed days), labor costs (gross + employer match + workers comp), expenses, factoring fees (3% or 4.5%, default 4.5%, toggleable), net profit
 - **Payroll Report**: aggregated payroll by period
@@ -157,20 +156,20 @@ Federal Emergency Equipment Shift Ticket workflow, fully digital.
 
 ---
 
-### 12. Needs List
+## 12. Needs List
 
 - Per-incident running list of supplies/resources needed
 - Quick add form, status tracking
 
 ---
 
-### 13. Training
+## 13. Training
 
 - Module-gated training section (certifications, course tracking)
 
 ---
 
-### 14. Super Admin (Platform)
+## 14. Super Admin (Platform)
 
 - Organizations list and detail (manage tiers, seats, modules)
 - Users list across all orgs
@@ -181,7 +180,7 @@ Federal Emergency Equipment Shift Ticket workflow, fully digital.
 
 ---
 
-### 15. Settings
+## 15. Settings
 
 - Per-user settings (theme, app background)
 - Organization settings (name, tier, defaults, payroll settings)
@@ -191,7 +190,7 @@ Federal Emergency Equipment Shift Ticket workflow, fully digital.
 
 ---
 
-### 16. Tutorial / Onboarding
+## 16. Tutorial / Onboarding
 
 - In-app tutorial overlay with step-by-step guidance
 - Tutorial mini-bar for resuming
@@ -199,7 +198,7 @@ Federal Emergency Equipment Shift Ticket workflow, fully digital.
 
 ---
 
-### 17. AI Features (via Lovable AI Gateway, no user API key required)
+## 17. AI Features (via Lovable AI Gateway, no user API key required)
 
 Edge Functions powered by Gemini/GPT models:
 
@@ -213,15 +212,15 @@ Edge Functions powered by Gemini/GPT models:
 
 ---
 
-### 18. Storage & Files
+## 18. Storage & Files
 
-- Buckets: `signatures`, receipts, truck photos, crew photos, agreements, resource orders
+- Buckets: signatures, receipts, truck photos, crew photos, agreements, resource orders
 - Signed URL generation for secure access
 - `SignedImage` and `SignedLink` components for time-bound access
 
 ---
 
-### 19. Mobile / Cross-Platform
+## 19. Mobile / Cross-Platform
 
 - Capacitor wrapper for iOS and Android
 - Despia configuration for store packaging
@@ -232,10 +231,6 @@ Edge Functions powered by Gemini/GPT models:
 
 ---
 
-### 20. Data Model (Core Tables)
+## 20. Data Model (Core Tables)
 
 `organizations`, `organization_members`, `organization_invites`, `profiles`, `incidents`, `trucks`, `incident_trucks`, `crew_members`, `incident_truck_crew`, `shifts`, `shift_crew`, `shift_tickets`, `expenses`, `crew_compensation`, `org_payroll_settings`, `payroll_adjustments`, `inspections`, `inspection_templates`, `resource_orders`, `agreements`, `needs_list`, `training`, `platform_settings`, plus audit tables.
-
----
-
-This document covers the full surface area of FireOps HQ as currently built. After you approve, I'll save it as a markdown file (e.g. `docs/feature-overview.md`) in the repo so you can copy it any time, or generate a downloadable `.md` / `.pdf` if you'd prefer.
