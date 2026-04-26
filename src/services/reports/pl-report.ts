@@ -14,7 +14,9 @@ export interface PLIncidentRow {
   employerTaxes: number;    // FICA match attributable to this incident
   workersComp: number;      // workers comp insurance cost attributable to this incident
   laborTrueCost: number;    // gross + employer match + workers comp
-  expenseTotal: number;     // expenses tied to this incident
+  expenseTotal: number;     // ALL expenses tied to this incident (vendor + reimbursement)
+  vendorExpenseTotal: number;        // expense_type = 'company' (paid to vendors)
+  reimbursementExpenseTotal: number; // expense_type = 'reimbursement' (owed to crew)
   totalCost: number;        // laborTrueCost + expenseTotal + factoringFee
   expenseCount: number;
   revenue: number;          // billable truck day-rate revenue for this incident
@@ -32,6 +34,8 @@ export interface PLReportData {
     workersComp: number;
     laborTrueCost: number;
     expenseTotal: number;
+    vendorExpenseTotal: number;
+    reimbursementExpenseTotal: number;
     totalCost: number;
     revenue: number;
     truckDays: number;
@@ -56,6 +60,7 @@ export interface PLExpenseRow {
   amount: number;
   status: string;
   description: string | null;
+  expenseType: "company" | "reimbursement";
 }
 
 interface PLInput {
@@ -85,7 +90,7 @@ export async function fetchPLReport(input: PLInput, rangeLabel: string): Promise
   // Pull expenses for the same scope
   let q = supabase
     .from("expenses")
-    .select("id, date, amount, category, vendor, status, description, incident_id, incidents:incidents!expenses_incident_id_fkey(name)")
+    .select("id, date, amount, category, vendor, status, description, expense_type, incident_id, incidents:incidents!expenses_incident_id_fkey(name)")
     .eq("organization_id", input.organizationId)
     .order("date", { ascending: false });
   if (input.rangeStart) q = q.gte("date", dateOnlyOrNull(input.rangeStart)!);
@@ -112,6 +117,7 @@ export async function fetchPLReport(input: PLInput, rangeLabel: string): Promise
       amount: Number(e.amount) || 0,
       status: e.status,
       description: e.description ?? null,
+      expenseType: (e.expense_type === "reimbursement" ? "reimbursement" : "company") as "company" | "reimbursement",
     }))
     .filter((e) => {
       if (!allowedIncidents) return true;
@@ -134,6 +140,8 @@ export async function fetchPLReport(input: PLInput, rangeLabel: string): Promise
         workersComp: 0,
         laborTrueCost: 0,
         expenseTotal: 0,
+        vendorExpenseTotal: 0,
+        reimbursementExpenseTotal: 0,
         totalCost: 0,
         expenseCount: 0,
         revenue: 0,
@@ -163,15 +171,16 @@ export async function fetchPLReport(input: PLInput, rangeLabel: string): Promise
 
   let unassignedExpenses = 0;
   expenseRows.forEach((e) => {
-    if (!e.incidentId) {
-      unassignedExpenses += e.amount;
-      const row = ensureRow(null, "Unassigned");
-      row.expenseTotal += e.amount;
-      row.expenseCount += 1;
+    const row = e.incidentId
+      ? ensureRow(e.incidentId, e.incidentName)
+      : ensureRow(null, "Unassigned");
+    if (!e.incidentId) unassignedExpenses += e.amount;
+    row.expenseTotal += e.amount;
+    row.expenseCount += 1;
+    if (e.expenseType === "reimbursement") {
+      row.reimbursementExpenseTotal += e.amount;
     } else {
-      const row = ensureRow(e.incidentId, e.incidentName);
-      row.expenseTotal += e.amount;
-      row.expenseCount += 1;
+      row.vendorExpenseTotal += e.amount;
     }
   });
 
@@ -269,13 +278,15 @@ export async function fetchPLReport(input: PLInput, rangeLabel: string): Promise
       workersComp: acc.workersComp + r.workersComp,
       laborTrueCost: acc.laborTrueCost + r.laborTrueCost,
       expenseTotal: acc.expenseTotal + r.expenseTotal,
+      vendorExpenseTotal: acc.vendorExpenseTotal + r.vendorExpenseTotal,
+      reimbursementExpenseTotal: acc.reimbursementExpenseTotal + r.reimbursementExpenseTotal,
       totalCost: acc.totalCost + r.totalCost,
       revenue: acc.revenue + r.revenue,
       truckDays: acc.truckDays + r.truckDays,
       factoringFee: acc.factoringFee + r.factoringFee,
       profit: acc.profit + r.profit,
     }),
-    { laborGross: 0, employerTaxes: 0, workersComp: 0, laborTrueCost: 0, expenseTotal: 0, totalCost: 0, revenue: 0, truckDays: 0, factoringFee: 0, profit: 0 },
+    { laborGross: 0, employerTaxes: 0, workersComp: 0, laborTrueCost: 0, expenseTotal: 0, vendorExpenseTotal: 0, reimbursementExpenseTotal: 0, totalCost: 0, revenue: 0, truckDays: 0, factoringFee: 0, profit: 0 },
   );
 
   return {

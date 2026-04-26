@@ -59,3 +59,14 @@
 - Admin runs payroll → reimbursements appear on each crew member's **paystub** as a non-taxable line and are auto-marked paid
 - **Payroll report** shows wages + reimbursements per person
 - **P&L** shows vendor expenses and crew reimbursements as separate lines per incident
+
+---
+
+## Status (2026-04-26 — completed)
+
+- ✅ #1 **Accounts Payable view** — `/admin/accounts-payable` (admin-gated). Groups approved reimbursement expenses by crew member with running totals, filter chips (Pending / Paid / All), and per-row "Mark Paid" + "Pay via Payroll" actions. Linked from More → Admin section.
+- ✅ #2 **Paystub reimbursements** — wired in `lib/payroll.ts` and rendered in `Paystub.tsx` as a non-taxable line; included in net pay.
+- ✅ #3 **Payroll report rollup** — reimbursement column in CSV/PDF/Excel via `payroll-report.ts`.
+- ✅ #4 **P&L separation** — `pl-report.ts` now exposes `vendorExpenseTotal` and `reimbursementExpenseTotal` per incident and in totals. `expenseTotal` retained for back-compat. Exports updated to show split columns and tag each expense in the detail tab as Vendor vs Reimbursement.
+
+DB columns `expenses.reimbursed_at` and `expenses.paid_via_payroll_period` already exist (migration 20260426210033).
