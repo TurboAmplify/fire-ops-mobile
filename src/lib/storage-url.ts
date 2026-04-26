@@ -33,6 +33,7 @@ const KNOWN_BUCKETS = new Set([
   "crew-photos",
   "signatures",
   "inspection-photos",
+  "incident-documents",
 ]);
 
 /**
