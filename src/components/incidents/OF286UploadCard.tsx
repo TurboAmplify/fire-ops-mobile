@@ -19,6 +19,8 @@ import { toast } from "sonner";
 
 interface Props {
   incidentId: string;
+  /** Incident status — controls whether missing-form is flagged as a warning. */
+  incidentStatus?: string;
 }
 
 /**
