@@ -3,7 +3,7 @@ import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { WifiOff, Wifi } from "lucide-react";
 
 export function OfflineBanner() {
-  const { isOnline, pendingCount } = useNetworkStatus();
+  const { isOnline } = useNetworkStatus();
   const [showReconnected, setShowReconnected] = useState(false);
   const [wasOffline, setWasOffline] = useState(false);
 
@@ -42,10 +42,7 @@ export function OfflineBanner() {
       className="bg-amber-600 text-white text-center text-sm py-1.5 px-4 flex items-center justify-center gap-2"
     >
       <WifiOff className="h-3.5 w-3.5" aria-hidden="true" />
-      <span>
-        Offline -- changes will sync when connected
-        {pendingCount > 0 && ` (${pendingCount} pending)`}
-      </span>
+      <span>Offline — viewing saved data. Changes can't be made until reconnected.</span>
     </div>
   );
 }
