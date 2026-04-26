@@ -174,6 +174,33 @@ export function Paystub({ line, organizationName, periodLabel, payDate = new Dat
         </table>
       )}
 
+      {line.reimbursements && line.reimbursements.length > 0 && (
+        <table className="w-full mb-4 text-sm border-collapse">
+          <thead>
+            <tr className="border-b-2 border-black">
+              <th className="text-left py-1.5">Reimbursements (non-taxable)</th>
+              <th className="text-right py-1.5">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {line.reimbursements.map((r) => (
+              <tr key={r.id} className="border-b border-gray-300">
+                <td className="py-1">
+                  {format(new Date(r.date + "T00:00:00"), "MMM d")}
+                  {r.vendor ? ` · ${r.vendor}` : ""}
+                  {` · ${r.category}`}
+                </td>
+                <td className="text-right py-1">+${fmt(r.amount)}</td>
+              </tr>
+            ))}
+            <tr className="border-t-2 border-black font-bold">
+              <td className="py-1.5">Total Reimbursements</td>
+              <td className="text-right py-1.5">+${fmt(line.reimbursementsTotal)}</td>
+            </tr>
+          </tbody>
+        </table>
+      )}
+
       <div className="border-t-4 border-double border-black pt-3 flex justify-between items-center">
         <span className="text-base font-bold">NET PAY</span>
         <span className="text-2xl font-extrabold">${fmt(net)}</span>
