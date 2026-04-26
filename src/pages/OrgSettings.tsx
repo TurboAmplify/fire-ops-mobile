@@ -274,7 +274,7 @@ export default function OrgSettings() {
   const handleSendInvite = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inviteEmail.trim()) return;
-    sendInvite.mutate({ email: inviteEmail, role: inviteRole });
+    sendInvite.mutate({ email: inviteEmail, name: inviteName, role: inviteRole });
   };
 
   const isOwner = orgIsAdmin;
