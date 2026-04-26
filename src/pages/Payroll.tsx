@@ -249,11 +249,13 @@ export default function Payroll() {
         reason: a.reason,
       })),
       incidentNames: incidentNamesMap,
+      reimbursements: reimbursementsLite,
+      userToCrewMember,
       withholdings: { profiles: profileMap, orgDefaults: orgPayroll ?? DEFAULT_ORG_PAYROLL },
     });
     if (crewFilter !== "all") return lines.filter((l) => l.crewMemberId === crewFilter);
     return lines;
-  }, [normalizedTickets, crewMembers, compMap, rangeStart, rangeEnd, incidentFilter, crewFilter, profileMap, orgPayroll, adjustments, incidentNamesMap]);
+  }, [normalizedTickets, crewMembers, compMap, rangeStart, rangeEnd, incidentFilter, crewFilter, profileMap, orgPayroll, adjustments, incidentNamesMap, reimbursementsLite, userToCrewMember]);
 
   const incidentLines: IncidentPayrollLine[] = useMemo(() => pivotByIncident(crewLines), [crewLines]);
   const totals = useMemo(() => sumTotals(crewLines), [crewLines]);
