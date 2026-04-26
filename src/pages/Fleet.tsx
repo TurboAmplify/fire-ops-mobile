@@ -8,12 +8,15 @@ import { SignedImage } from "@/components/ui/SignedImage";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useAppMode } from "@/lib/app-mode";
 import { isTruckComplete } from "@/lib/profile-completion";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { CachedDataPill, OfflineNoCacheEmpty } from "@/components/OfflineIndicators";
 
 const filters: (TruckStatus | "all")[] = ["all", "available", "deployed", "maintenance"];
 
 export default function Fleet() {
   const [filter, setFilter] = useState<TruckStatus | "all">("all");
   const { data: trucks, isLoading, error } = useTrucks();
+  const { isOffline } = useOnlineStatus();
   const { isAdmin } = useOrganization();
   const { modules } = useAppMode();
   const showRatesLink = isAdmin && modules.payroll;
@@ -71,19 +74,23 @@ export default function Fleet() {
           ))}
         </div>
 
+        {isOffline && trucks && trucks.length > 0 && <CachedDataPill />}
+
         {isLoading && (
           <div className="flex justify-center py-16">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         )}
 
-        {error && (
+        {error && !isOffline && (
           <p className="py-16 text-center text-destructive text-sm">
             Failed to load trucks.
           </p>
         )}
 
-        {!isLoading && !error && (
+        {!isLoading && isOffline && !trucks && <OfflineNoCacheEmpty label="trucks" />}
+
+        {!isLoading && !error && trucks && (
           <div className="space-y-2">
             {filtered.length === 0 && (
               <div className="py-16 text-center">
