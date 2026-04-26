@@ -760,6 +760,7 @@ export type Database = {
           id: string
           invite_code: string
           invited_by: string
+          invitee_name: string | null
           organization_id: string
           role: string
           status: string
@@ -772,6 +773,7 @@ export type Database = {
           id?: string
           invite_code: string
           invited_by: string
+          invitee_name?: string | null
           organization_id: string
           role: string
           status?: string
@@ -784,6 +786,7 @@ export type Database = {
           id?: string
           invite_code?: string
           invited_by?: string
+          invitee_name?: string | null
           organization_id?: string
           role?: string
           status?: string
