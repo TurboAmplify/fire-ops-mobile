@@ -214,8 +214,9 @@ export default function OrgSettings() {
             role,
             status: "pending",
             invited_by: user.id,
+            invitee_name: name.trim() || null,
             expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          })
+          } as any)
           .eq("id", existingInvite.id);
 
         if (error) throw error;
@@ -228,6 +229,7 @@ export default function OrgSettings() {
         email: normalizedEmail,
         role,
         invited_by: user.id,
+        invitee_name: name.trim() || null,
       } as any);
 
       if (error) {
