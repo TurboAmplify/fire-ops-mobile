@@ -11,7 +11,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
  * default `capacitor.config.ts` for store submissions.
  */
 const config: CapacitorConfig = {
-  appId: 'app.lovable.63e454bc32e142ee9def17eb4240739a',
+  appId: 'com.fireopshq.app',
   appName: 'FireOps HQ',
   webDir: 'dist',
   server: {
