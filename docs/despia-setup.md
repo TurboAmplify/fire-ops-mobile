@@ -113,8 +113,8 @@ URLs to paste into App Store Connect:
 
 When you ship updates:
 
-1. Publish your latest changes from Lovable (frontend changes go live on
-   the `.lovable.app` URL)
+1. Publish your latest changes (frontend changes go live at
+   `https://app.fireopshq.com` as soon as you publish)
 2. Bump `appVersion` in `despia.json` and `package.json` (e.g. `1.0.1`)
 3. In Despia, click **Build** again
 4. Upload the new build to App Store Connect / Play Console
