@@ -446,15 +446,18 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
 
   const lines: CrewPayrollLine[] = [];
 
-  // Build the set of crew to render: any with shift hours OR any with adjustments
+  // Build the set of crew to render: any with shift hours OR adjustments OR reimbursements
   const crewIdsToProcess = new Set<string>();
   buckets.forEach((_, id) => crewIdsToProcess.add(id));
   adjByCrew.forEach((_, id) => crewIdsToProcess.add(id));
+  reimbByCrew.forEach((_, id) => crewIdsToProcess.add(id));
 
   crewMembers.forEach((cm) => {
     if (!crewIdsToProcess.has(cm.id)) return;
     const wkMap = buckets.get(cm.id);
     const crewAdjustments = adjByCrew.get(cm.id) ?? [];
+    const crewReimbursements = reimbByCrew.get(cm.id) ?? [];
+    const reimbursementsTotal = crewReimbursements.reduce((s, r) => s + r.amount, 0);
 
     const comp = compensation.get(cm.id);
     const hourlyRate = Number(comp?.hourly_rate) || 0;
