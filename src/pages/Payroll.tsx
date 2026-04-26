@@ -21,8 +21,10 @@ import { useOrgPayrollSettings, useCrewWithholdingProfiles } from "@/hooks/useOr
 import { Paystub } from "@/components/payroll/Paystub";
 import { generatePaystubPdf } from "@/components/payroll/generatePaystubPdf";
 import { PayrollSettingsCard } from "@/components/payroll/PayrollSettingsCard";
+import { PayrollAcknowledgmentDialog } from "@/components/payroll/PayrollAcknowledgmentDialog";
 import { AdjustmentSheet } from "@/components/payroll/AdjustmentSheet";
 import { usePayrollAdjustments, useDeletePayrollAdjustment } from "@/hooks/usePayrollAdjustments";
+import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
 interface ShiftTicketRow {
@@ -55,6 +57,7 @@ type ViewMode = "crew" | "fire";
 
 export default function Payroll() {
   const { isAdmin, membership } = useOrganization();
+  const { user } = useAuth();
   const orgName = membership?.organizationName ?? "Organization";
 
   const [viewRange, setViewRange] = useState<ViewRange>("all");
@@ -277,13 +280,15 @@ export default function Payroll() {
 
   return (
     <AppShell title="Payroll">
+      <PayrollAcknowledgmentDialog orgId={membership?.organizationId} userId={user?.id} />
       <div className="p-4 space-y-4">
         {/* Compliance banner */}
         <div className="flex items-start gap-2 rounded-xl border border-warning/40 bg-warning/10 p-3">
           <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
           <p className="text-[11px] leading-snug text-warning-foreground">
-            <span className="font-bold">Estimated Withholding</span> — Not Official Tax Calculation.
-            For internal operational use only.
+            <span className="font-bold">Estimated payroll for operational use only.</span>{" "}
+            Not a licensed payroll service. Not tax advice. Withholdings are simplified
+            flat rates, not IRS tax tables. Consult a CPA or payroll provider for filing.
           </p>
         </div>
 

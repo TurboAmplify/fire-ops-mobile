@@ -27,6 +27,10 @@ Open these in an incognito browser — they must load without sign-in:
 Apple's reviewer will click these from the App Store listing. If any 404,
 the submission gets rejected on Guideline 5.1.1.
 
+**Verify the marketing site Terms includes the "Payroll & Tax Estimation"
+section** copied from `src/pages/Terms.tsx`. See `docs/marketing-site-sync.md`
+for the exact prompt to send in the marketing site project.
+
 ---
 
 ## 2. App build via Despia (15 min + ~30 min build wait)
