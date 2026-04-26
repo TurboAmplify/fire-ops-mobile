@@ -162,9 +162,10 @@ export function WithholdingProfileForm({ values, onChange }: Props) {
         />
       </div>
 
-      <p className="text-[11px] text-muted-foreground">
-        Estimated Withholding — Not Official Tax Calculation. Changes apply to current and future
-        payroll views; previously downloaded paystubs are unchanged.
+      <p className="text-[11px] text-muted-foreground leading-snug">
+        Estimated payroll only — not a licensed payroll service, not tax advice.
+        Withholdings are simplified flat rates, not IRS tax tables. Changes apply to current
+        and future payroll views; previously downloaded paystubs are unchanged.
       </p>
     </div>
   );

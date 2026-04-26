@@ -219,8 +219,9 @@ export function PayrollSettingsCard() {
         Save Defaults
       </button>
 
-      <p className="text-[11px] text-muted-foreground text-center">
-        Estimated Withholding — Not Official Tax Calculation
+      <p className="text-[11px] text-muted-foreground text-center leading-snug">
+        Estimated payroll only — not a licensed payroll service, not tax advice.
+        Withholdings are simplified flat rates, not IRS tax tables.
       </p>
     </div>
   );
