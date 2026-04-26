@@ -1,10 +1,12 @@
 import { AppShell } from "@/components/AppShell";
 import { useCrewMembers } from "@/hooks/useCrewMembers";
 import { Plus, Loader2, Phone, User } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { CrewMemberForm } from "@/components/crew/CrewMemberForm";
 import { SignedImage } from "@/components/ui/SignedImage";
 import { formatPhone } from "@/lib/phone";
+import { isCrewMemberComplete } from "@/lib/profile-completion";
 
 function getInitials(name: string) {
   return name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
@@ -15,6 +17,16 @@ export default function Crew() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "active" | "inactive">("all");
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Deep-link support: /crew?edit=<memberId> auto-opens that member's edit form
+  useEffect(() => {
+    const editId = searchParams.get("edit");
+    if (editId && members?.some((m) => m.id === editId)) {
+      setEditingId(editId);
+      setShowForm(true);
+    }
+  }, [searchParams, members]);
 
   const filtered = members?.filter((m) => {
     if (filter === "active") return m.active;
@@ -30,6 +42,11 @@ export default function Crew() {
   const handleClose = () => {
     setShowForm(false);
     setEditingId(null);
+    if (searchParams.get("edit")) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("edit");
+      setSearchParams(next, { replace: true });
+    }
   };
 
   return (
