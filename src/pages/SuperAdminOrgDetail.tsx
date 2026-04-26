@@ -25,6 +25,34 @@ import { toast } from "sonner";
 import { OrgPayrollToggle } from "@/components/super-admin/PayrollAccessToggle";
 import { SuperAdminBillingCard } from "@/components/super-admin/SuperAdminBillingCard";
 import type { BillingStatus, OrgType } from "@/lib/billing/types";
+import { daysUntil } from "@/lib/billing/utils";
+
+const BILLING_STATUS_LABEL: Record<BillingStatus, string> = {
+  trial: "Trial",
+  active: "Active",
+  read_only: "Read-only",
+  locked: "Locked",
+};
+
+function formatPlanCode(code: string | null | undefined): string {
+  if (!code) return "—";
+  return code
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function formatBillingStatus(status: BillingStatus, trialEndsAt: string | null): string {
+  const base = BILLING_STATUS_LABEL[status] ?? status;
+  if (status === "trial") {
+    const days = daysUntil(trialEndsAt);
+    if (days === null) return base;
+    if (days < 0) return `${base} — expired`;
+    if (days === 0) return `${base} — ends today`;
+    return `${base} — ${days}d left`;
+  }
+  return base;
+}
 
 type OrgDetail = {
   id: string;
@@ -271,13 +299,13 @@ export default function SuperAdminOrgDetail() {
             )}
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <StatCard label="Tier" value={data.tier} />
-              <StatCard label="Seats" value={`${data.members.length} / ${data.seat_limit}`} />
-              <StatCard label="Type" value={data.org_type} />
+              <StatCard label="Plan" value={formatPlanCode(data.plan_code)} />
               <StatCard
-                label="Created"
-                value={format(new Date(data.created_at), "MMM d, yyyy")}
+                label="Billing"
+                value={formatBillingStatus(data.billing_status, data.trial_ends_at)}
               />
+              <StatCard label="Type" value={data.org_type} />
+              <StatCard label="Seats" value={`${data.members.length} / ${data.seat_limit}`} />
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -287,11 +315,15 @@ export default function SuperAdminOrgDetail() {
               <StatCard label="Shift tickets" value={data.counts.shift_tickets} />
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <StatCard label="Expenses" value={data.counts.expenses} />
               <StatCard
                 label="Expense total"
                 value={`$${Number(data.counts.expense_total).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              />
+              <StatCard
+                label="Created"
+                value={format(new Date(data.created_at), "MMM d, yyyy")}
               />
             </div>
 
