@@ -46,7 +46,10 @@ export function BottomNav() {
 
   return (
     <>
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 bg-background/95 glass safe-area-bottom">
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 bg-background/95 glass safe-area-bottom"
+        aria-label="Primary navigation"
+      >
         <div className="flex items-stretch justify-around">
           {allTabs.map((tab, i) => {
             if (tab.action === "shift-tickets") {
@@ -54,10 +57,11 @@ export function BottomNav() {
                 <button
                   key={`action-${tab.action}`}
                   onClick={() => setShowTickets(true)}
-                  className="flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium text-muted-foreground active:text-foreground transition-all duration-200"
+                  aria-label={`Open ${tab.label}`}
+                  className="flex flex-1 flex-col items-center justify-center gap-0.5 py-2 min-h-[48px] text-[10px] font-medium text-muted-foreground active:text-foreground transition-all duration-200"
                 >
                   <div className="flex items-center justify-center h-7 w-7 rounded-full">
-                    <tab.icon className="h-[18px] w-[18px] stroke-[1.75]" />
+                    <tab.icon className="h-[18px] w-[18px] stroke-[1.75]" aria-hidden="true" />
                   </div>
                   <span>{tab.label}</span>
                 </button>
@@ -68,8 +72,9 @@ export function BottomNav() {
                 key={tab.to + i}
                 to={tab.to}
                 end={tab.to === "/"}
+                aria-label={tab.label}
                 className={({ isActive }) =>
-                  `flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium transition-all duration-200 ${
+                  `flex flex-1 flex-col items-center justify-center gap-0.5 py-2 min-h-[48px] text-[10px] font-medium transition-all duration-200 ${
                     isActive
                       ? "text-primary"
                       : "text-muted-foreground active:text-foreground"
@@ -81,7 +86,10 @@ export function BottomNav() {
                     <div className={`flex items-center justify-center h-7 w-7 rounded-full transition-all duration-200 ${
                       isActive ? "bg-primary/15" : ""
                     }`}>
-                      <tab.icon className={`h-[18px] w-[18px] transition-all duration-200 ${isActive ? "stroke-[2.5]" : "stroke-[1.75]"}`} />
+                      <tab.icon
+                        className={`h-[18px] w-[18px] transition-all duration-200 ${isActive ? "stroke-[2.5]" : "stroke-[1.75]"}`}
+                        aria-hidden="true"
+                      />
                     </div>
                     <span className={`transition-all duration-200 ${isActive ? "font-semibold" : ""}`}>{tab.label}</span>
                   </>
