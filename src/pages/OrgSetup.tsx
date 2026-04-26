@@ -62,7 +62,7 @@ export default function OrgSetup() {
       try {
         const { data: invite } = await supabase
           .from("organization_invites")
-          .select("id, organization_id, role, organizations(name)")
+          .select("id, organization_id, role, invitee_name, organizations(name)")
           .eq("email", user.email ?? "")
           .eq("status", "pending")
           .maybeSingle();
@@ -71,6 +71,7 @@ export default function OrgSetup() {
             id: invite.id,
             organization_id: invite.organization_id,
             role: invite.role,
+            invitee_name: (invite as any).invitee_name ?? null,
             orgName: (invite as any).organizations?.name,
           });
         }
