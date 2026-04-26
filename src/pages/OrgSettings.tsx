@@ -131,11 +131,26 @@ export default function OrgSettings() {
       if (!orgId) return [];
       const { data, error } = await supabase
         .from("organization_members")
-        .select("id, user_id, role, created_at, profiles(full_name)")
+        .select("id, user_id, role, created_at")
         .eq("organization_id", orgId)
         .order("created_at", { ascending: true });
       if (error) throw error;
-      return data ?? [];
+      const rows = data ?? [];
+      const userIds = rows.map((r) => r.user_id).filter(Boolean);
+      let profilesById: Record<string, { full_name: string | null }> = {};
+      if (userIds.length > 0) {
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", userIds);
+        profilesById = Object.fromEntries(
+          (profs ?? []).map((p) => [p.id, { full_name: p.full_name }])
+        );
+      }
+      return rows.map((r) => ({
+        ...r,
+        profiles: profilesById[r.user_id] ?? { full_name: null },
+      }));
     },
     enabled: !!orgId,
   });
