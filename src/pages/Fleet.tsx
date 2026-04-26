@@ -1,16 +1,21 @@
 import { AppShell } from "@/components/AppShell";
 import { Link } from "react-router-dom";
-import { Plus, Loader2, Truck as TruckIcon } from "lucide-react";
+import { Plus, Loader2, Truck as TruckIcon, DollarSign } from "lucide-react";
 import { useTrucks } from "@/hooks/useFleet";
 import { TRUCK_STATUS_LABELS, type TruckStatus } from "@/services/fleet";
 import { useState } from "react";
 import { SignedImage } from "@/components/ui/SignedImage";
+import { useOrganization } from "@/hooks/useOrganization";
+import { useAppMode } from "@/lib/app-mode";
 
 const filters: (TruckStatus | "all")[] = ["all", "available", "deployed", "maintenance"];
 
 export default function Fleet() {
   const [filter, setFilter] = useState<TruckStatus | "all">("all");
   const { data: trucks, isLoading, error } = useTrucks();
+  const { isAdmin } = useOrganization();
+  const { modules } = useAppMode();
+  const showRatesLink = isAdmin && modules.payroll;
 
   const filtered =
     trucks && filter === "all"
@@ -31,6 +36,23 @@ export default function Fleet() {
       }
     >
       <div className="p-4 space-y-3">
+        {showRatesLink && (
+          <Link
+            to="/fleet/rates"
+            className="flex items-center gap-3 rounded-xl bg-primary/8 border border-primary/20 p-3 active:bg-primary/12 transition-colors"
+          >
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/15">
+              <DollarSign className="h-4 w-4 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold leading-tight">Truck Rates</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Set the daily rate each truck earns on assignment
+              </p>
+            </div>
+          </Link>
+        )}
+
         {/* Filter chips */}
         <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-4 px-4 no-scrollbar">
           {filters.map((f) => (
