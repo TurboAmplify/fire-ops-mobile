@@ -384,6 +384,27 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
     adjByCrew.set(adj.crew_member_id, list);
   });
 
+  // Index reimbursements by crew member, filtered by current range.
+  // Reimbursements are not tied to incidents for payroll bundling — even if an
+  // incident filter is active, an approved reimbursement should still surface
+  // on its owner's paystub for the period.
+  const reimbByCrew = new Map<string, ReimbursementLine[]>();
+  (reimbursements ?? []).forEach((r) => {
+    if (!withinRange(r.date, rangeStart, rangeEnd)) return;
+    const crewId = userToCrewMember?.get(r.submitted_by_user_id);
+    if (!crewId) return;
+    const list = reimbByCrew.get(crewId) ?? [];
+    list.push({
+      id: r.id,
+      date: r.date,
+      vendor: r.vendor,
+      category: r.category,
+      amount: Number(r.amount) || 0,
+      description: r.description,
+    });
+    reimbByCrew.set(crewId, list);
+  });
+
   const buckets = new Map<string, Map<string, WeekBucket>>();
 
   shiftTickets.forEach((st) => {
