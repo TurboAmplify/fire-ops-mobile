@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useIncident, useUpdateIncident, useDeleteIncident } from "@/hooks/useIncidents";
 import { STATUS_LABELS, STATUS_COLORS, TYPE_LABELS } from "@/services/incidents";
 import type { IncidentStatus } from "@/services/incidents";
-import { ArrowLeft, MapPin, Calendar, Flame, TrendingUp, Loader2, Pencil, Trash2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, Flame, TrendingUp, Loader2, Pencil, Trash2, AlertTriangle, ChevronDown } from "lucide-react";
 import { IncidentTruckList } from "@/components/incidents/IncidentTruckList";
 import { IncidentDailyCrewGrid } from "@/components/incidents/IncidentDailyCrewGrid";
 import { AgreementUpload } from "@/components/incidents/AgreementUpload";
