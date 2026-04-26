@@ -130,13 +130,20 @@ export default function Crew() {
                             </div>
                           )}
                         </div>
-                        <span
-                          className={`rounded-full px-2.5 py-1 text-xs font-bold uppercase ${
-                            m.active ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"
-                          }`}
-                        >
-                          {m.active ? "Active" : "Inactive"}
-                        </span>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {!isCrewMemberComplete(m) && (
+                            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-400">
+                              Incomplete
+                            </span>
+                          )}
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-xs font-bold uppercase ${
+                              m.active ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"
+                            }`}
+                          >
+                            {m.active ? "Active" : "Inactive"}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
