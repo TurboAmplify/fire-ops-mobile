@@ -106,6 +106,31 @@ export default function IncidentDetail() {
           <p className="mt-1 text-sm text-muted-foreground">{TYPE_LABELS[incident.type as keyof typeof TYPE_LABELS]}</p>
         </div>
 
+        {/* Missing OF-286 banner */}
+        {missingOF286 && (
+          <div
+            className={`flex items-start gap-2 rounded-xl border p-3 ${
+              incident.status === "closed"
+                ? "border-destructive/40 bg-destructive/10"
+                : "border-amber-500/40 bg-amber-500/10"
+            }`}
+          >
+            <AlertTriangle
+              className={`h-5 w-5 shrink-0 mt-0.5 ${
+                incident.status === "closed" ? "text-destructive" : "text-amber-600"
+              }`}
+            />
+            <div className="min-w-0">
+              <p className="text-sm font-bold">Missing OF-286 invoice</p>
+              <p className="text-xs text-muted-foreground">
+                {incident.status === "closed"
+                  ? "This incident is closed but no signed OF-286 is on file. Upload it below to enable invoicing."
+                  : "Upload the signed OF-286 once received. It feeds your accounts receivable."}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Status editor */}
         {editingStatus && (
           <div className="flex gap-2 flex-wrap">
