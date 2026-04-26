@@ -27,6 +27,7 @@ import {
 } from "@/services/fleet";
 import type { TruckInsert, TruckUpdate } from "@/services/fleet";
 import { useOrganization } from "@/hooks/useOrganization";
+import { assertOnlineForWrite } from "@/lib/offline-guard";
 
 export function useTrucks() {
   const { membership } = useOrganization();
@@ -35,6 +36,8 @@ export function useTrucks() {
     queryKey: ["trucks", orgId],
     queryFn: () => fetchTrucks(orgId),
     enabled: !!orgId,
+    staleTime: 1000 * 60 * 10, // 10 min — Phase 1 cache extension
+    gcTime: 1000 * 60 * 60 * 24 * 7, // 7 days — survive multi-day offline
   });
 }
 
@@ -43,13 +46,18 @@ export function useTruck(id: string) {
     queryKey: ["trucks", id],
     queryFn: () => fetchTruck(id),
     enabled: !!id,
+    staleTime: 1000 * 60 * 10,
+    gcTime: 1000 * 60 * 60 * 24 * 7,
   });
 }
 
 export function useCreateTruck() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (truck: TruckInsert) => createTruck(truck),
+    mutationFn: (truck: TruckInsert) => {
+      assertOnlineForWrite();
+      return createTruck(truck);
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["trucks"] }),
   });
 }
@@ -57,7 +65,10 @@ export function useCreateTruck() {
 export function useUpdateTruck(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (updates: TruckUpdate) => updateTruck(id, updates),
+    mutationFn: (updates: TruckUpdate) => {
+      assertOnlineForWrite();
+      return updateTruck(id, updates);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["trucks"] });
       qc.invalidateQueries({ queryKey: ["trucks", id] });
@@ -68,7 +79,10 @@ export function useUpdateTruck(id: string) {
 export function useDeleteTruck() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => deleteTruck(id),
+    mutationFn: (id: string) => {
+      assertOnlineForWrite();
+      return deleteTruck(id);
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["trucks"] }),
   });
 }
@@ -85,8 +99,10 @@ export function useTruckPhotos(truckId: string) {
 export function useUploadTruckPhoto(truckId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ orgId, file }: { orgId: string; file: File }) =>
-      uploadTruckPhoto(truckId, orgId, file),
+    mutationFn: ({ orgId, file }: { orgId: string; file: File }) => {
+      assertOnlineForWrite();
+      return uploadTruckPhoto(truckId, orgId, file);
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["truck-photos", truckId] }),
   });
 }
@@ -94,7 +110,10 @@ export function useUploadTruckPhoto(truckId: string) {
 export function useDeleteTruckPhoto(truckId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => deleteTruckPhoto(id),
+    mutationFn: (id: string) => {
+      assertOnlineForWrite();
+      return deleteTruckPhoto(id);
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["truck-photos", truckId] }),
   });
 }
@@ -121,7 +140,10 @@ export function useUploadTruckDocument(truckId: string) {
       file: File;
       docType: string;
       title?: string;
-    }) => uploadTruckDocument(truckId, orgId, file, docType, title),
+    }) => {
+      assertOnlineForWrite();
+      return uploadTruckDocument(truckId, orgId, file, docType, title);
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["truck-documents", truckId] }),
   });
 }
@@ -129,7 +151,10 @@ export function useUploadTruckDocument(truckId: string) {
 export function useDeleteTruckDocument(truckId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => deleteTruckDocument(id),
+    mutationFn: (id: string) => {
+      assertOnlineForWrite();
+      return deleteTruckDocument(id);
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["truck-documents", truckId] }),
   });
 }
@@ -146,8 +171,10 @@ export function useTruckChecklist(truckId: string) {
 export function useAddChecklistItem(truckId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ orgId, label, sortOrder }: { orgId: string; label: string; sortOrder?: number }) =>
-      addChecklistItem(truckId, orgId, label, sortOrder),
+    mutationFn: ({ orgId, label, sortOrder }: { orgId: string; label: string; sortOrder?: number }) => {
+      assertOnlineForWrite();
+      return addChecklistItem(truckId, orgId, label, sortOrder);
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["truck-checklist", truckId] }),
   });
 }
@@ -155,8 +182,10 @@ export function useAddChecklistItem(truckId: string) {
 export function useToggleChecklistItem(truckId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, isComplete }: { id: string; isComplete: boolean }) =>
-      toggleChecklistItem(id, isComplete),
+    mutationFn: ({ id, isComplete }: { id: string; isComplete: boolean }) => {
+      assertOnlineForWrite();
+      return toggleChecklistItem(id, isComplete);
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["truck-checklist", truckId] }),
   });
 }
@@ -164,8 +193,10 @@ export function useToggleChecklistItem(truckId: string) {
 export function useUpdateChecklistItemNotes(truckId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, notes }: { id: string; notes: string }) =>
-      updateChecklistItemNotes(id, notes),
+    mutationFn: ({ id, notes }: { id: string; notes: string }) => {
+      assertOnlineForWrite();
+      return updateChecklistItemNotes(id, notes);
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["truck-checklist", truckId] }),
   });
 }
@@ -173,7 +204,10 @@ export function useUpdateChecklistItemNotes(truckId: string) {
 export function useDeleteChecklistItem(truckId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => deleteChecklistItem(id),
+    mutationFn: (id: string) => {
+      assertOnlineForWrite();
+      return deleteChecklistItem(id);
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["truck-checklist", truckId] }),
   });
 }
@@ -181,7 +215,10 @@ export function useDeleteChecklistItem(truckId: string) {
 export function useInitializeDefaultChecklist(truckId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (orgId: string) => initializeDefaultChecklist(truckId, orgId),
+    mutationFn: (orgId: string) => {
+      assertOnlineForWrite();
+      return initializeDefaultChecklist(truckId, orgId);
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["truck-checklist", truckId] }),
   });
 }
@@ -189,7 +226,10 @@ export function useInitializeDefaultChecklist(truckId: string) {
 export function useResetChecklist(truckId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => resetChecklist(truckId),
+    mutationFn: () => {
+      assertOnlineForWrite();
+      return resetChecklist(truckId);
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["truck-checklist", truckId] }),
   });
 }
@@ -197,8 +237,10 @@ export function useResetChecklist(truckId: string) {
 export function useUpdateTruckPhotoLabel(truckId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, photoLabel }: { id: string; photoLabel: string }) =>
-      updateTruckPhotoLabel(id, photoLabel),
+    mutationFn: ({ id, photoLabel }: { id: string; photoLabel: string }) => {
+      assertOnlineForWrite();
+      return updateTruckPhotoLabel(id, photoLabel);
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["truck-photos", truckId] }),
   });
 }
@@ -215,7 +257,10 @@ export function useServiceLogs(truckId: string) {
 export function useCreateServiceLog(truckId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (log: Parameters<typeof createServiceLog>[0]) => createServiceLog(log),
+    mutationFn: (log: Parameters<typeof createServiceLog>[0]) => {
+      assertOnlineForWrite();
+      return createServiceLog(log);
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["truck-service-logs", truckId] }),
   });
 }
@@ -223,7 +268,10 @@ export function useCreateServiceLog(truckId: string) {
 export function useDeleteServiceLog(truckId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => deleteServiceLog(id),
+    mutationFn: (id: string) => {
+      assertOnlineForWrite();
+      return deleteServiceLog(id);
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["truck-service-logs", truckId] }),
   });
 }
@@ -232,8 +280,10 @@ export function useDeleteServiceLog(truckId: string) {
 export function useUpdateTruckHeroPhoto(truckId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ orgId, file }: { orgId: string; file: File }) =>
-      updateTruckHeroPhoto(truckId, orgId, file),
+    mutationFn: ({ orgId, file }: { orgId: string; file: File }) => {
+      assertOnlineForWrite();
+      return updateTruckHeroPhoto(truckId, orgId, file);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["trucks"] });
       qc.invalidateQueries({ queryKey: ["trucks", truckId] });
@@ -244,7 +294,10 @@ export function useUpdateTruckHeroPhoto(truckId: string) {
 export function useDeleteTruckHeroPhoto(truckId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => deleteTruckHeroPhoto(truckId),
+    mutationFn: () => {
+      assertOnlineForWrite();
+      return deleteTruckHeroPhoto(truckId);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["trucks"] });
       qc.invalidateQueries({ queryKey: ["trucks", truckId] });

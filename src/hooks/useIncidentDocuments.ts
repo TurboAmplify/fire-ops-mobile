@@ -8,6 +8,7 @@ import {
 } from "@/services/incident-documents";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useAuth } from "@/hooks/useAuth";
+import { assertOnlineForWrite } from "@/lib/offline-guard";
 
 export function useIncidentDocuments(
   incidentId: string | undefined,
@@ -30,6 +31,7 @@ export function useCreateIncidentDocument(incidentId: string | undefined) {
       file_url: string;
       file_name: string;
     }) => {
+      assertOnlineForWrite();
       if (!membership?.organizationId) throw new Error("No organization");
       if (!incidentId) throw new Error("No incident");
       return createIncidentDocument({
@@ -51,7 +53,10 @@ export function useCreateIncidentDocument(incidentId: string | undefined) {
 export function useDeleteIncidentDocument(incidentId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => deleteIncidentDocument(id),
+    mutationFn: (id: string) => {
+      assertOnlineForWrite();
+      return deleteIncidentDocument(id);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["incident-documents", incidentId] });
       qc.invalidateQueries({ queryKey: ["incident-of286-flags"] });

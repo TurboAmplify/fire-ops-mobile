@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchAgreements, createAgreement } from "@/services/agreements";
 import { useOrganization } from "@/hooks/useOrganization";
+import { assertOnlineForWrite } from "@/lib/offline-guard";
 
 export function useAgreements(params: { incidentId?: string; incidentTruckId?: string }) {
   return useQuery({
@@ -20,11 +21,13 @@ export function useCreateAgreement(queryParams: { incidentId?: string; incidentT
       file_url: string;
       file_name: string;
       agreement_number?: string | null;
-    }) =>
-      createAgreement({
+    }) => {
+      assertOnlineForWrite();
+      return createAgreement({
         ...data,
         organization_id: membership?.organizationId ?? null,
-      }),
+      });
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["agreements", queryParams] });
     },

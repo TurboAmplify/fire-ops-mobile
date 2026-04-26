@@ -5,6 +5,7 @@ import {
   assignCrewToTruck,
   releaseCrewFromTruck,
 } from "@/services/incident-truck-crew";
+import { assertOnlineForWrite } from "@/lib/offline-guard";
 
 export function useIncidentTruckCrew(incidentTruckId: string) {
   return useQuery({
@@ -25,8 +26,10 @@ export function useAvailableCrewMembers(organizationId?: string | null) {
 export function useAssignCrew(incidentTruckId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ crewMemberId, role }: { crewMemberId: string; role?: string }) =>
-      assignCrewToTruck(incidentTruckId, crewMemberId, role),
+    mutationFn: ({ crewMemberId, role }: { crewMemberId: string; role?: string }) => {
+      assertOnlineForWrite();
+      return assignCrewToTruck(incidentTruckId, crewMemberId, role);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["incident-truck-crew", incidentTruckId] });
     },
@@ -36,7 +39,10 @@ export function useAssignCrew(incidentTruckId: string) {
 export function useReleaseCrew(incidentTruckId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (assignmentId: string) => releaseCrewFromTruck(assignmentId),
+    mutationFn: (assignmentId: string) => {
+      assertOnlineForWrite();
+      return releaseCrewFromTruck(assignmentId);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["incident-truck-crew", incidentTruckId] });
     },

@@ -10,6 +10,7 @@ import {
   type CrewUpdate,
 } from "@/services/crews";
 import { useOrganization } from "@/hooks/useOrganization";
+import { assertOnlineForWrite } from "@/lib/offline-guard";
 
 export function useCrews() {
   const { membership } = useOrganization();
@@ -33,11 +34,13 @@ export function useCreateCrew() {
   const qc = useQueryClient();
   const { membership } = useOrganization();
   return useMutation({
-    mutationFn: (data: Omit<CrewInsert, "organization_id"> & { organization_id?: string }) =>
-      createCrew({
+    mutationFn: (data: Omit<CrewInsert, "organization_id"> & { organization_id?: string }) => {
+      assertOnlineForWrite();
+      return createCrew({
         ...data,
         organization_id: data.organization_id ?? membership?.organizationId ?? "",
-      } as CrewInsert),
+      } as CrewInsert);
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["crews"] }),
   });
 }
@@ -45,8 +48,10 @@ export function useCreateCrew() {
 export function useUpdateCrew() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, updates }: { id: string; updates: CrewUpdate }) =>
-      updateCrew(id, updates),
+    mutationFn: ({ id, updates }: { id: string; updates: CrewUpdate }) => {
+      assertOnlineForWrite();
+      return updateCrew(id, updates);
+    },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["crews"] });
       qc.invalidateQueries({ queryKey: ["crews", vars.id] });
@@ -57,7 +62,10 @@ export function useUpdateCrew() {
 export function useDeleteCrew() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => deleteCrew(id),
+    mutationFn: (id: string) => {
+      assertOnlineForWrite();
+      return deleteCrew(id);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["crews"] });
       qc.invalidateQueries({ queryKey: ["crew_members"] });
@@ -68,8 +76,10 @@ export function useDeleteCrew() {
 export function useAssignMemberToCrew() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ memberId, crewId }: { memberId: string; crewId: string | null }) =>
-      assignMemberToCrew(memberId, crewId),
+    mutationFn: ({ memberId, crewId }: { memberId: string; crewId: string | null }) => {
+      assertOnlineForWrite();
+      return assignMemberToCrew(memberId, crewId);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["crew_members"] });
       qc.invalidateQueries({ queryKey: ["crews"] });

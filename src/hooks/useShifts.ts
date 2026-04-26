@@ -7,6 +7,7 @@ import {
 } from "@/services/shifts";
 import type { ShiftInsert, ShiftCrewEntry } from "@/services/shifts";
 import { useOrganization } from "@/hooks/useOrganization";
+import { assertOnlineForWrite } from "@/lib/offline-guard";
 
 export function useAllShifts() {
   const { membership } = useOrganization();
@@ -43,7 +44,10 @@ export function useCreateShift(incidentTruckId: string) {
     }: {
       shift: ShiftInsert;
       crew: ShiftCrewEntry[];
-    }) => createShiftWithCrew(shift, crew),
+    }) => {
+      assertOnlineForWrite();
+      return createShiftWithCrew(shift, crew);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["shifts", incidentTruckId] });
     },

@@ -8,6 +8,7 @@ import {
   duplicateShiftTicket,
 } from "@/services/shift-tickets";
 import type { ShiftTicket } from "@/services/shift-tickets";
+import { assertOnlineForWrite } from "@/lib/offline-guard";
 
 export function useShiftTickets(incidentTruckId: string) {
   return useQuery({
@@ -28,7 +29,10 @@ export function useShiftTicket(id: string) {
 export function useCreateShiftTicket(incidentTruckId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (ticket: Parameters<typeof createShiftTicket>[0]) => createShiftTicket(ticket),
+    mutationFn: (ticket: Parameters<typeof createShiftTicket>[0]) => {
+      assertOnlineForWrite();
+      return createShiftTicket(ticket);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["shift-tickets", incidentTruckId] });
       qc.invalidateQueries({ queryKey: ["incident-daily-crew"] });
@@ -40,7 +44,10 @@ export function useCreateShiftTicket(incidentTruckId: string) {
 export function useUpdateShiftTicket(ticketId: string, incidentTruckId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (updates: Partial<ShiftTicket>) => updateShiftTicket(ticketId, updates),
+    mutationFn: (updates: Partial<ShiftTicket>) => {
+      assertOnlineForWrite();
+      return updateShiftTicket(ticketId, updates);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["shift-ticket", ticketId] });
       qc.invalidateQueries({ queryKey: ["shift-tickets", incidentTruckId] });
@@ -53,7 +60,10 @@ export function useUpdateShiftTicket(ticketId: string, incidentTruckId: string) 
 export function useDeleteShiftTicket(incidentTruckId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => deleteShiftTicket(id),
+    mutationFn: (id: string) => {
+      assertOnlineForWrite();
+      return deleteShiftTicket(id);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["shift-tickets", incidentTruckId] });
       qc.invalidateQueries({ queryKey: ["incident-daily-crew"] });
@@ -115,8 +125,10 @@ export function useLatestTicketPerTruck() {
 export function useDuplicateShiftTicket(incidentTruckId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ ticket, organizationId, currentCrewNames }: { ticket: ShiftTicket; organizationId: string; currentCrewNames?: string[] }) =>
-      duplicateShiftTicket(ticket, organizationId, currentCrewNames),
+    mutationFn: ({ ticket, organizationId, currentCrewNames }: { ticket: ShiftTicket; organizationId: string; currentCrewNames?: string[] }) => {
+      assertOnlineForWrite();
+      return duplicateShiftTicket(ticket, organizationId, currentCrewNames);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["shift-tickets", incidentTruckId] });
       qc.invalidateQueries({ queryKey: ["shift-tickets-recent"] });

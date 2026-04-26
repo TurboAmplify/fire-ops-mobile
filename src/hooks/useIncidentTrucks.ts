@@ -7,6 +7,7 @@ import {
   removeTruckFromIncident,
 } from "@/services/incident-trucks";
 import type { IncidentTruckStatus } from "@/services/incident-trucks";
+import { assertOnlineForWrite } from "@/lib/offline-guard";
 
 export function useIncidentTrucks(incidentId: string) {
   return useQuery({
@@ -27,7 +28,10 @@ export function useAvailableTrucks(organizationId?: string) {
 export function useAssignTruck(incidentId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (truckId: string) => assignTruckToIncident(incidentId, truckId),
+    mutationFn: (truckId: string) => {
+      assertOnlineForWrite();
+      return assignTruckToIncident(incidentId, truckId);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["incident-trucks", incidentId] });
     },
@@ -37,8 +41,10 @@ export function useAssignTruck(incidentId: string) {
 export function useUpdateTruckStatus(incidentId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: IncidentTruckStatus }) =>
-      updateIncidentTruckStatus(id, status),
+    mutationFn: ({ id, status }: { id: string; status: IncidentTruckStatus }) => {
+      assertOnlineForWrite();
+      return updateIncidentTruckStatus(id, status);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["incident-trucks", incidentId] });
     },
@@ -48,7 +54,10 @@ export function useUpdateTruckStatus(incidentId: string) {
 export function useRemoveTruck(incidentId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => removeTruckFromIncident(id),
+    mutationFn: (id: string) => {
+      assertOnlineForWrite();
+      return removeTruckFromIncident(id);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["incident-trucks", incidentId] });
     },
