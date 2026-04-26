@@ -224,6 +224,26 @@ export interface EmployerCosts {
   trueCost: number;       // grossPay + employer total (full burdened labor cost)
 }
 
+export interface ReimbursementLine {
+  id: string;
+  date: string;
+  vendor: string | null;
+  category: string;
+  amount: number;
+  description: string | null;
+}
+
+export interface ReimbursementLite {
+  id: string;
+  date: string;
+  amount: number;
+  vendor: string | null;
+  category: string;
+  description: string | null;
+  /** auth.users id of the crew member who submitted the expense */
+  submitted_by_user_id: string;
+}
+
 export interface CrewPayrollLine {
   crewMemberId: string;
   name: string;
@@ -246,6 +266,10 @@ export interface CrewPayrollLine {
   // Adjustments (admin-added bonus pay, paid at base rate, no OT/H&W)
   adjustments: AdjustmentLine[];
   adjustmentTotal: number;
+  // Approved reimbursement expenses owed to this crew member for the period.
+  // Non-taxable — added to net pay only, never to gross.
+  reimbursements: ReimbursementLine[];
+  reimbursementsTotal: number;
   // Withholding (optional — only populated when withholdings provided)
   deductions?: DeductionBreakdown;
   netPay?: number;
@@ -288,6 +312,11 @@ interface AggregateOptions {
   adjustments?: PayrollAdjustmentLite[];
   // Optional incident name lookup so adjustments can show fire names
   incidentNames?: Map<string, string>;
+  // Optional reimbursements (approved 'reimbursement' expenses).
+  // userToCrewMember maps profiles.id (auth user) -> crew_member.id so we can
+  // attribute the expense to the correct crew member on the paystub.
+  reimbursements?: ReimbursementLite[];
+  userToCrewMember?: Map<string, string>;
   // Optional withholding context. When provided, each line gets deductions+netPay.
   withholdings?: {
     profiles: Map<string, WithholdingProfile>;
@@ -327,6 +356,7 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
   const {
     shiftTickets, crewMembers, compensation, rangeStart, rangeEnd,
     incidentFilter, withholdings, adjustments, incidentNames,
+    reimbursements, userToCrewMember,
   } = opts;
 
   const nameMap = new Map<string, CrewMemberLite>();
@@ -352,6 +382,27 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
     const list = adjByCrew.get(adj.crew_member_id) ?? [];
     list.push(adj);
     adjByCrew.set(adj.crew_member_id, list);
+  });
+
+  // Index reimbursements by crew member, filtered by current range.
+  // Reimbursements are not tied to incidents for payroll bundling — even if an
+  // incident filter is active, an approved reimbursement should still surface
+  // on its owner's paystub for the period.
+  const reimbByCrew = new Map<string, ReimbursementLine[]>();
+  (reimbursements ?? []).forEach((r) => {
+    if (!withinRange(r.date, rangeStart, rangeEnd)) return;
+    const crewId = userToCrewMember?.get(r.submitted_by_user_id);
+    if (!crewId) return;
+    const list = reimbByCrew.get(crewId) ?? [];
+    list.push({
+      id: r.id,
+      date: r.date,
+      vendor: r.vendor,
+      category: r.category,
+      amount: Number(r.amount) || 0,
+      description: r.description,
+    });
+    reimbByCrew.set(crewId, list);
   });
 
   const buckets = new Map<string, Map<string, WeekBucket>>();
@@ -395,15 +446,18 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
 
   const lines: CrewPayrollLine[] = [];
 
-  // Build the set of crew to render: any with shift hours OR any with adjustments
+  // Build the set of crew to render: any with shift hours OR adjustments OR reimbursements
   const crewIdsToProcess = new Set<string>();
   buckets.forEach((_, id) => crewIdsToProcess.add(id));
   adjByCrew.forEach((_, id) => crewIdsToProcess.add(id));
+  reimbByCrew.forEach((_, id) => crewIdsToProcess.add(id));
 
   crewMembers.forEach((cm) => {
     if (!crewIdsToProcess.has(cm.id)) return;
     const wkMap = buckets.get(cm.id);
     const crewAdjustments = adjByCrew.get(cm.id) ?? [];
+    const crewReimbursements = reimbByCrew.get(cm.id) ?? [];
+    const reimbursementsTotal = crewReimbursements.reduce((s, r) => s + r.amount, 0);
 
     const comp = compensation.get(cm.id);
     const hourlyRate = Number(comp?.hourly_rate) || 0;
@@ -547,6 +601,8 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
       payMethod,
       adjustments: adjustmentLines,
       adjustmentTotal,
+      reimbursements: crewReimbursements,
+      reimbursementsTotal,
     };
 
     if (isDaily) {
@@ -559,8 +615,12 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
       const profile = withholdings.profiles.get(cm.id) ?? null;
       const deductions = calcDeductions({ grossPay, profile, orgDefaults: withholdings.orgDefaults });
       line.deductions = deductions;
-      line.netPay = grossPay - deductions.total;
+      // Reimbursements are non-taxable — added to net AFTER deductions.
+      line.netPay = grossPay - deductions.total + reimbursementsTotal;
       line.employer = calcEmployerCosts({ grossPay, profile, orgDefaults: withholdings.orgDefaults });
+    } else if (reimbursementsTotal > 0) {
+      // No withholdings context: surface a "net" that at least includes reimbursements
+      line.netPay = grossPay + reimbursementsTotal;
     }
 
     // Reference incidentNames for adjustments shown in UI (no-op consumer hint)

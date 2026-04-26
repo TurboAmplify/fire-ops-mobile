@@ -99,6 +99,75 @@ export default function Payroll() {
     refetchOnMount: "always",
   });
 
+  // Approved reimbursement expenses for the current org. The aggregator filters
+  // by date range; user→crew_member mapping comes from profiles.crew_member_id.
+  const orgIdForQueries = membership?.organizationId ?? null;
+  const { data: reimbursementsRaw } = useQuery({
+    queryKey: ["payroll-reimbursements", orgIdForQueries],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("expenses")
+        .select("id, date, amount, vendor, category, description, submitted_by_user_id, status, expense_type, paid_via_payroll_period")
+        .eq("organization_id", orgIdForQueries!)
+        .eq("expense_type", "reimbursement")
+        .in("status", ["approved", "reimbursed"]);
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+    enabled: isAdmin && !!orgIdForQueries,
+    staleTime: 0,
+    refetchOnMount: "always",
+  });
+
+  const { data: profileLinks } = useQuery({
+    queryKey: ["payroll-profile-links", orgIdForQueries],
+    queryFn: async () => {
+      // Pull profiles whose user belongs to this org, with their crew_member_id link
+      const { data: members, error: memErr } = await supabase
+        .from("organization_members")
+        .select("user_id")
+        .eq("organization_id", orgIdForQueries!);
+      if (memErr) throw memErr;
+      const ids = (members ?? []).map((m: any) => m.user_id);
+      if (ids.length === 0) return [] as { id: string; crew_member_id: string | null }[];
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, crew_member_id")
+        .in("id", ids);
+      if (error) throw error;
+      return (data ?? []) as { id: string; crew_member_id: string | null }[];
+    },
+    enabled: isAdmin && !!orgIdForQueries,
+    staleTime: 0,
+    refetchOnMount: "always",
+  });
+
+  const userToCrewMember = useMemo(() => {
+    const m = new Map<string, string>();
+    (profileLinks ?? []).forEach((p) => {
+      if (p.crew_member_id) m.set(p.id, p.crew_member_id);
+    });
+    return m;
+  }, [profileLinks]);
+
+  const reimbursementsLite = useMemo(() => {
+    return (reimbursementsRaw ?? [])
+      // Only un-paid reimbursements feed live payroll. Paid ones still show on
+      // their original paystub via the `paid_via_payroll_period` tag (handled
+      // separately when reprinting historical paystubs).
+      .filter((r) => r.status === "approved")
+      .map((r) => ({
+        id: r.id,
+        date: r.date,
+        amount: Number(r.amount) || 0,
+        vendor: r.vendor ?? null,
+        category: r.category,
+        description: r.description ?? null,
+        submitted_by_user_id: r.submitted_by_user_id,
+      }))
+      .filter((r) => !!r.submitted_by_user_id);
+  }, [reimbursementsRaw]);
+
   const compMap = useMemo(() => {
     const m = new Map<string, { hourly_rate: number | null; hw_rate: number | null; pay_method?: "hourly" | "daily" | null; daily_rate?: number | null }>();
     (compensation ?? []).forEach((c: any) => m.set(c.crew_member_id, {
@@ -180,11 +249,13 @@ export default function Payroll() {
         reason: a.reason,
       })),
       incidentNames: incidentNamesMap,
+      reimbursements: reimbursementsLite,
+      userToCrewMember,
       withholdings: { profiles: profileMap, orgDefaults: orgPayroll ?? DEFAULT_ORG_PAYROLL },
     });
     if (crewFilter !== "all") return lines.filter((l) => l.crewMemberId === crewFilter);
     return lines;
-  }, [normalizedTickets, crewMembers, compMap, rangeStart, rangeEnd, incidentFilter, crewFilter, profileMap, orgPayroll, adjustments, incidentNamesMap]);
+  }, [normalizedTickets, crewMembers, compMap, rangeStart, rangeEnd, incidentFilter, crewFilter, profileMap, orgPayroll, adjustments, incidentNamesMap, reimbursementsLite, userToCrewMember]);
 
   const incidentLines: IncidentPayrollLine[] = useMemo(() => pivotByIncident(crewLines), [crewLines]);
   const totals = useMemo(() => sumTotals(crewLines), [crewLines]);

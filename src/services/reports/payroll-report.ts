@@ -46,7 +46,7 @@ export async function fetchPayrollReport(
   input: PayrollReportInput,
   rangeLabel: string,
 ): Promise<PayrollReportData> {
-  const [ticketsRes, crewRes, compRes, withholdingRes, orgRes, adjRes, incRes] = await Promise.all([
+  const [ticketsRes, crewRes, compRes, withholdingRes, orgRes, adjRes, incRes, reimbRes, memberRes] = await Promise.all([
     supabase
       .from("shift_tickets")
       .select("id, personnel_entries, incident_trucks!inner(incidents:incidents!incident_trucks_incident_id_fkey(id, name))")
@@ -76,11 +76,46 @@ export async function fetchPayrollReport(
       .from("incidents")
       .select("id, name")
       .eq("organization_id", input.organizationId),
+    supabase
+      .from("expenses")
+      .select("id, date, amount, vendor, category, description, submitted_by_user_id, status")
+      .eq("organization_id", input.organizationId)
+      .eq("expense_type", "reimbursement")
+      .eq("status", "approved"),
+    supabase
+      .from("organization_members")
+      .select("user_id")
+      .eq("organization_id", input.organizationId),
   ]);
 
-  for (const r of [ticketsRes, crewRes, compRes, withholdingRes, adjRes, incRes]) {
+  for (const r of [ticketsRes, crewRes, compRes, withholdingRes, adjRes, incRes, reimbRes, memberRes]) {
     if (r.error) throw r.error;
   }
+
+  // Build user_id -> crew_member_id map (via profiles) for reimbursement attribution
+  const memberUserIds = (memberRes.data ?? []).map((m: any) => m.user_id);
+  const userToCrewMember = new Map<string, string>();
+  if (memberUserIds.length > 0) {
+    const { data: profileRows } = await supabase
+      .from("profiles")
+      .select("id, crew_member_id")
+      .in("id", memberUserIds);
+    (profileRows ?? []).forEach((p: any) => {
+      if (p.crew_member_id) userToCrewMember.set(p.id, p.crew_member_id);
+    });
+  }
+
+  const reimbursementsLite = (reimbRes.data ?? [])
+    .filter((r: any) => !!r.submitted_by_user_id)
+    .map((r: any) => ({
+      id: r.id,
+      date: r.date,
+      amount: Number(r.amount) || 0,
+      vendor: r.vendor ?? null,
+      category: r.category,
+      description: r.description ?? null,
+      submitted_by_user_id: r.submitted_by_user_id,
+    }));
 
   const tickets: ShiftTicketLite[] = (ticketsRes.data ?? []).map((st: any) => ({
     id: st.id,
@@ -139,6 +174,8 @@ export async function fetchPayrollReport(
     incidentFilter: input.incidentFilter,
     adjustments: (adjRes.data ?? []) as any,
     incidentNames: incidentNamesMap,
+    reimbursements: reimbursementsLite,
+    userToCrewMember,
     withholdings: { profiles: profileMap, orgDefaults },
   });
 
