@@ -105,8 +105,12 @@ export default function Incidents() {
                   {inc.acres != null && <span>{Number(inc.acres).toLocaleString()} acres</span>}
                   {inc.containment != null && <span>{inc.containment}% contained</span>}
                   <span>Started {inc.start_date}</span>
-                  {of286Set && !of286Set.has(inc.id) && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-400">
+                  {of286Set && !of286Set.has(inc.id) && (inc.status === "demob" || inc.status === "closed") && (
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                      inc.status === "closed"
+                        ? "bg-destructive/15 text-destructive"
+                        : "bg-amber-500/15 text-amber-700 dark:text-amber-400"
+                    }`}>
                       <AlertTriangle className="h-3 w-3" />
                       Missing OF-286
                     </span>

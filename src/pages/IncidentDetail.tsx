@@ -24,7 +24,10 @@ export default function IncidentDetail() {
   const [editingStatus, setEditingStatus] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const { data: of286Docs } = useIncidentDocuments(id, "of286");
-  const missingOF286 = !of286Docs || of286Docs.length === 0;
+  const hasNoOF286 = !of286Docs || of286Docs.length === 0;
+  // Only flag missing OF-286 once the incident is winding down (demob/closed).
+  const showMissingOF286 =
+    hasNoOF286 && (incident?.status === "demob" || incident?.status === "closed");
 
   if (isLoading) {
     return (
@@ -107,7 +110,7 @@ export default function IncidentDetail() {
         </div>
 
         {/* Missing OF-286 banner */}
-        {missingOF286 && (
+        {showMissingOF286 && (
           <div
             className={`flex items-start gap-2 rounded-xl border p-3 ${
               incident.status === "closed"
@@ -185,7 +188,7 @@ export default function IncidentDetail() {
         )}
 
         {/* OF-286 Invoice */}
-        <OF286UploadCard incidentId={incident.id} />
+        <OF286UploadCard incidentId={incident.id} incidentStatus={incident.status} />
 
         {/* Incident-level Agreements */}
         <AgreementUpload incidentId={incident.id} label="Incident Agreements" />

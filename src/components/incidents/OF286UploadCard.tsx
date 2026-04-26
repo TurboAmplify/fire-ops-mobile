@@ -19,6 +19,8 @@ import { toast } from "sonner";
 
 interface Props {
   incidentId: string;
+  /** Incident status — controls whether missing-form is flagged as a warning. */
+  incidentStatus?: string;
 }
 
 /**
@@ -26,7 +28,7 @@ interface Props {
  * Closure of the incident is NOT blocked when missing — but a clear
  * "Missing OF-286" warning is shown until at least one is uploaded.
  */
-export function OF286UploadCard({ incidentId }: Props) {
+export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
   const { membership } = useOrganization();
   const { data: docs, isLoading } = useIncidentDocuments(incidentId, "of286");
   const createMutation = useCreateIncidentDocument(incidentId);
@@ -35,6 +37,8 @@ export function OF286UploadCard({ incidentId }: Props) {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const hasDoc = (docs?.length ?? 0) > 0;
+  // Only treat absence as a problem once the incident is winding down.
+  const flagMissing = !hasDoc && (incidentStatus === "demob" || incidentStatus === "closed");
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -79,22 +83,28 @@ export function OF286UploadCard({ incidentId }: Props) {
       className={`rounded-xl border p-4 space-y-3 ${
         hasDoc
           ? "border-success/30 bg-success/5"
-          : "border-amber-500/40 bg-amber-500/5"
+          : flagMissing
+            ? "border-amber-500/40 bg-amber-500/5"
+            : "border-border bg-card"
       }`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-2 min-w-0">
           {hasDoc ? (
             <CheckCircle2 className="h-5 w-5 text-success shrink-0 mt-0.5" />
-          ) : (
+          ) : flagMissing ? (
             <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+          ) : (
+            <FileText className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
           )}
           <div className="min-w-0">
             <p className="text-sm font-bold">OF-286 Invoice</p>
             <p className="text-xs text-muted-foreground">
               {hasDoc
                 ? "Signed invoice on file. Required for accounts receivable."
-                : "Missing — upload the signed OF-286 to enable invoicing."}
+                : flagMissing
+                  ? "Missing — upload the signed OF-286 to enable invoicing."
+                  : "Upload the signed OF-286 once received (typically at demob)."}
             </p>
           </div>
         </div>
