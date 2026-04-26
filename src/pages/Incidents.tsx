@@ -17,7 +17,8 @@ export default function Incidents() {
   const { isOffline } = useOnlineStatus();
 
   const incidentIds = useMemo(() => (incidents ?? []).map((i) => i.id), [incidents]);
-  const { data: of286Set } = useIncidentsWithOF286(incidentIds);
+  const { data: of286Ids } = useIncidentsWithOF286(incidentIds);
+  const of286Set = useMemo(() => new Set(of286Ids ?? []), [of286Ids]);
 
   const filtered =
     incidents && filter === "all"
