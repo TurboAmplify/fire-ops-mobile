@@ -20,6 +20,13 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   ios: {
     contentInset: 'always',
+    // Lock to portrait — app is mobile-only and landscape adds no value
+    // for field crews logging time/expenses on a phone.
+    preferredContentMode: 'mobile',
+  },
+  android: {
+    // Despia/Capacitor will honor screenOrientation in the Android manifest.
+    // The lock itself is enforced by Despia config + manifest entry.
   },
   plugins: {
     SplashScreen: {
