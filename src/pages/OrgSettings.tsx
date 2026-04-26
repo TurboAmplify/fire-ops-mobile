@@ -124,32 +124,22 @@ export default function OrgSettings() {
     onError: (err: any) => toast({ title: "Failed", description: err.message, variant: "destructive" }),
   });
 
-  // Fetch members
+  // Fetch members (with email + name via SECURITY DEFINER RPC)
   const { data: members = [], isLoading: membersLoading } = useQuery({
     queryKey: ["org-members", orgId],
     queryFn: async () => {
       if (!orgId) return [];
-      const { data, error } = await supabase
-        .from("organization_members")
-        .select("id, user_id, role, created_at")
-        .eq("organization_id", orgId)
-        .order("created_at", { ascending: true });
+      const { data, error } = await supabase.rpc("list_org_members_with_identity", {
+        _org_id: orgId,
+      });
       if (error) throw error;
-      const rows = data ?? [];
-      const userIds = rows.map((r) => r.user_id).filter(Boolean);
-      let profilesById: Record<string, { full_name: string | null }> = {};
-      if (userIds.length > 0) {
-        const { data: profs } = await supabase
-          .from("profiles")
-          .select("id, full_name")
-          .in("id", userIds);
-        profilesById = Object.fromEntries(
-          (profs ?? []).map((p) => [p.id, { full_name: p.full_name }])
-        );
-      }
-      return rows.map((r) => ({
-        ...r,
-        profiles: profilesById[r.user_id] ?? { full_name: null },
+      return (data ?? []).map((r: any) => ({
+        id: r.member_id,
+        user_id: r.user_id,
+        role: r.role,
+        created_at: r.joined_at,
+        email: r.email,
+        profiles: { full_name: r.full_name },
       }));
     },
     enabled: !!orgId,
