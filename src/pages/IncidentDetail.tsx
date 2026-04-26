@@ -184,6 +184,9 @@ export default function IncidentDetail() {
           </div>
         )}
 
+        {/* OF-286 Invoice */}
+        <OF286UploadCard incidentId={incident.id} />
+
         {/* Incident-level Agreements */}
         <AgreementUpload incidentId={incident.id} label="Incident Agreements" />
 
