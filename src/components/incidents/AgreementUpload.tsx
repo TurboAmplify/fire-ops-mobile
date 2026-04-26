@@ -40,11 +40,18 @@ export function AgreementUpload({ incidentId, incidentTruckId, label = "Agreemen
     }
   };
 
+  const isEmpty = !isLoading && (!agreements || agreements.length === 0);
+
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</p>
-        <label className="flex items-center gap-1 text-xs font-medium text-primary cursor-pointer touch-target">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-baseline gap-2 min-w-0">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</p>
+          {isEmpty && (
+            <p className="text-xs text-muted-foreground normal-case truncate">— No agreements uploaded.</p>
+          )}
+        </div>
+        <label className="flex items-center gap-1 text-xs font-medium text-primary cursor-pointer touch-target shrink-0">
           {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
           <span>{uploading ? "Uploading..." : "Upload"}</span>
           <input type="file" accept="image/*,.pdf,.doc,.docx" onChange={handleUpload} className="hidden" disabled={uploading} />
@@ -53,9 +60,6 @@ export function AgreementUpload({ incidentId, incidentTruckId, label = "Agreemen
 
       {isLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground mx-auto" />}
 
-      {!isLoading && (!agreements || agreements.length === 0) && (
-        <p className="text-xs text-muted-foreground">No agreements uploaded.</p>
-      )}
 
       {agreements?.map((ag) => (
         <SignedLink
