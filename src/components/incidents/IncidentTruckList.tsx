@@ -20,18 +20,42 @@ interface Props {
   organizationId?: string | null;
 }
 
-function SectionHeader({ label, defaultOpen = false, children }: { label: string; defaultOpen?: boolean; children: React.ReactNode }) {
+function SectionHeader({
+  label,
+  defaultOpen = false,
+  children,
+  renderActions,
+}: {
+  label: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+  /** Optional actions shown inline with the label when the section is open. */
+  renderActions?: () => React.ReactNode;
+}) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger className="flex w-full items-center justify-between py-2 touch-target">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{label}</p>
-        <ChevronRight className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${open ? "rotate-90" : ""}`} />
-      </CollapsibleTrigger>
+      <div className="flex w-full items-center justify-between gap-2 py-2">
+        <CollapsibleTrigger className="flex flex-1 items-center justify-between gap-2 touch-target min-w-0">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide truncate">{label}</p>
+          {!open && (
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground transition-transform shrink-0" />
+          )}
+        </CollapsibleTrigger>
+        {open && (
+          <div className="flex items-center gap-3 shrink-0">
+            {renderActions?.()}
+            <CollapsibleTrigger className="touch-target" aria-label="Collapse section">
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground rotate-90 transition-transform" />
+            </CollapsibleTrigger>
+          </div>
+        )}
+      </div>
       <CollapsibleContent>{children}</CollapsibleContent>
     </Collapsible>
   );
 }
+
 
 export function IncidentTruckList({ incidentId, incidentName, organizationId }: Props) {
   const { data: incidentTrucks, isLoading } = useIncidentTrucks(incidentId);
