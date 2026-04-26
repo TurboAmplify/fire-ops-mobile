@@ -7,6 +7,7 @@ import { Loader2, DollarSign, Truck as TruckIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 /**
  * Admin-only screen to set the daily earning rate for each truck.
@@ -17,6 +18,7 @@ export default function FleetTruckRates() {
   const { membership } = useOrganization();
   const orgId = membership?.organizationId ?? null;
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [rates, setRates] = useState<Record<string, string>>({});
 
   const { data: trucks, isLoading } = useQuery({
@@ -73,7 +75,7 @@ export default function FleetTruckRates() {
   };
 
   return (
-    <AppShell title="Truck Rates" showBack backTo="/fleet">
+    <AppShell title="Truck Rates" showBack onBack={() => navigate("/fleet")}>
       <div className="p-4 space-y-3">
         <div className="rounded-xl border bg-muted/30 p-3 text-xs text-muted-foreground flex gap-2">
           <DollarSign className="h-4 w-4 shrink-0 mt-0.5 text-primary" />
