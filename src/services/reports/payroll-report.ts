@@ -88,9 +88,34 @@ export async function fetchPayrollReport(
       .eq("organization_id", input.organizationId),
   ]);
 
-  for (const r of [ticketsRes, crewRes, compRes, withholdingRes, adjRes, incRes]) {
+  for (const r of [ticketsRes, crewRes, compRes, withholdingRes, adjRes, incRes, reimbRes, memberRes]) {
     if (r.error) throw r.error;
   }
+
+  // Build user_id -> crew_member_id map (via profiles) for reimbursement attribution
+  const memberUserIds = (memberRes.data ?? []).map((m: any) => m.user_id);
+  const userToCrewMember = new Map<string, string>();
+  if (memberUserIds.length > 0) {
+    const { data: profileRows } = await supabase
+      .from("profiles")
+      .select("id, crew_member_id")
+      .in("id", memberUserIds);
+    (profileRows ?? []).forEach((p: any) => {
+      if (p.crew_member_id) userToCrewMember.set(p.id, p.crew_member_id);
+    });
+  }
+
+  const reimbursementsLite = (reimbRes.data ?? [])
+    .filter((r: any) => !!r.submitted_by_user_id)
+    .map((r: any) => ({
+      id: r.id,
+      date: r.date,
+      amount: Number(r.amount) || 0,
+      vendor: r.vendor ?? null,
+      category: r.category,
+      description: r.description ?? null,
+      submitted_by_user_id: r.submitted_by_user_id,
+    }));
 
   const tickets: ShiftTicketLite[] = (ticketsRes.data ?? []).map((st: any) => ({
     id: st.id,
