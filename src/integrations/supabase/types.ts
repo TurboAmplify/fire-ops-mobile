@@ -834,6 +834,7 @@ export type Database = {
       organizations: {
         Row: {
           accepts_assignments: boolean
+          billing_status: string
           created_at: string
           default_hw_rate: number | null
           id: string
@@ -842,12 +843,15 @@ export type Database = {
           name: string
           operation_type: string
           org_type: string
+          plan_code: string
           seat_limit: number
           tier: string
+          trial_ends_at: string | null
           walkaround_enabled: boolean
         }
         Insert: {
           accepts_assignments?: boolean
+          billing_status?: string
           created_at?: string
           default_hw_rate?: number | null
           id?: string
@@ -856,12 +860,15 @@ export type Database = {
           name: string
           operation_type?: string
           org_type?: string
+          plan_code?: string
           seat_limit?: number
           tier?: string
+          trial_ends_at?: string | null
           walkaround_enabled?: boolean
         }
         Update: {
           accepts_assignments?: boolean
+          billing_status?: string
           created_at?: string
           default_hw_rate?: number | null
           id?: string
@@ -870,8 +877,10 @@ export type Database = {
           name?: string
           operation_type?: string
           org_type?: string
+          plan_code?: string
           seat_limit?: number
           tier?: string
+          trial_ends_at?: string | null
           walkaround_enabled?: boolean
         }
         Relationships: []
@@ -1884,6 +1893,10 @@ export type Database = {
         Args: { _org_id: string; _reason: string }
         Returns: undefined
       }
+      admin_extend_org_trial: {
+        Args: { _days: number; _org_id: string; _reason?: string }
+        Returns: string
+      }
       admin_get_organization: { Args: { _org_id: string }; Returns: Json }
       admin_list_audit: {
         Args: { _limit?: number }
@@ -1954,6 +1967,16 @@ export type Database = {
       }
       admin_self_remove_from_org: {
         Args: { _org_id: string; _reason?: string }
+        Returns: undefined
+      }
+      admin_set_org_billing: {
+        Args: {
+          _billing_status: string
+          _org_id: string
+          _plan_code?: string
+          _reason?: string
+          _trial_ends_at?: string
+        }
         Returns: undefined
       }
       create_organization_with_owner:

@@ -27,7 +27,7 @@ const ORG_TYPE_OPTIONS: Array<{
   icon: React.ElementType;
 }> = [
   { value: "contractor", title: "Contractor", desc: "Wildland fire contracting business with billable trucks and crews.", icon: Briefcase },
-  { value: "vfd", title: "Volunteer Fire Department", desc: "Local response, structure, EMS — with optional resource-order assignments.", icon: Shield },
+  { value: "vfd", title: "Volunteer Fire Department", desc: "Limited preview — VFD pricing is handled case-by-case. 30-day preview, then read-only until we set up access.", icon: Shield },
   { value: "state_agency", title: "State or Local Agency", desc: "Government or agency crew using internal time reporting.", icon: Landmark },
 ];
 
@@ -300,15 +300,24 @@ export default function OrgSetup() {
             </div>
 
             {orgType === "vfd" && (
-              <div className="rounded-xl bg-card p-4 flex items-start justify-between gap-3 border border-border/40">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold">Accepts assignment work</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Turn on if your department deploys on resource orders. Enables Resource Orders, Shift Tickets, Payroll.
+              <>
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300">
+                  <p className="font-semibold">Limited preview</p>
+                  <p className="mt-1 opacity-90">
+                    VFD accounts get a 30-day preview. After that the account becomes read-only until we
+                    talk pricing. We don't auto-charge VFDs. Contact us anytime at /support.
                   </p>
                 </div>
-                <Switch checked={acceptsAssignments} onCheckedChange={setAcceptsAssignments} />
-              </div>
+                <div className="rounded-xl bg-card p-4 flex items-start justify-between gap-3 border border-border/40">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold">Accepts assignment work</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Turn on if your department deploys on resource orders. Enables Resource Orders, Shift Tickets, Payroll.
+                    </p>
+                  </div>
+                  <Switch checked={acceptsAssignments} onCheckedChange={setAcceptsAssignments} />
+                </div>
+              </>
             )}
 
             <div className="flex gap-2">

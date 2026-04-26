@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { BottomNav } from "./BottomNav";
 import { OfflineBanner } from "./OfflineBanner";
+import { TrialStatusBanner } from "./billing/TrialStatusBanner";
 import { ChevronLeft } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import fireLogo from "@/assets/fire-logo.png";
@@ -63,6 +64,7 @@ export function AppShell({ children, title, headerRight, showBack, onBack }: App
         </>
       )}
       <OfflineBanner />
+      <TrialStatusBanner />
       <main className="flex-1 pb-20">{children}</main>
       <BottomNav />
       </div>
