@@ -105,6 +105,20 @@ export default function OrgSetup() {
         role: pendingInvite.role,
       });
       await supabase.from("organization_invites").update({ status: "accepted" }).eq("id", pendingInvite.id);
+
+      // Backfill profile name from invite if user hasn't set one
+      const inviteName = pendingInvite.invitee_name?.trim();
+      if (inviteName) {
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (!prof?.full_name || prof.full_name.trim().length === 0) {
+          await supabase.from("profiles").update({ full_name: inviteName }).eq("id", user.id);
+        }
+      }
+
       toast({ title: "Joined organization", description: "You've been added to your team." });
       await refetch();
     } catch (err: any) {
