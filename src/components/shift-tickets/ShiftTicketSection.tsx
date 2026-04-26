@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Plus, Loader2, Pencil, Trash2, Copy, Download } from "lucide-react";
+import { FileText, Plus, Loader2, Pencil, Trash2, Copy, Download, MoreVertical } from "lucide-react";
 import { toast } from "sonner";
 import { useShiftTickets, useDeleteShiftTicket, useDuplicateShiftTicket } from "@/hooks/useShiftTickets";
 import { generateOF297PdfBlob, buildOF297FileName } from "@/components/shift-tickets/generateOF297Pdf";
@@ -15,6 +15,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 function StatusBadge({ ticket }: { ticket: any }) {
   const hasContractor = !!ticket.contractor_rep_signature_url;
