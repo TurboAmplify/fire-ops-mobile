@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable/index";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
@@ -27,6 +28,27 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
+
+  const handleAppleSignIn = async () => {
+    setAppleLoading(true);
+    try {
+      const result = await lovable.auth.signInWithOAuth("apple", {
+        redirect_uri: window.location.origin,
+      });
+      if (result.error) {
+        throw result.error instanceof Error ? result.error : new Error(String(result.error));
+      }
+      // If redirected, the browser will navigate away; nothing else to do
+    } catch (err: any) {
+      toast({
+        title: "Sign in with Apple failed",
+        description: err?.message || "Please try again.",
+        variant: "destructive",
+      });
+      setAppleLoading(false);
+    }
+  };
 
   if (authLoading) {
     return (
