@@ -80,7 +80,7 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
 
   return (
     <div
-      className={`rounded-xl border p-4 space-y-3 ${
+      className={`rounded-xl border p-4 space-y-3 card-shadow ${
         hasDoc
           ? "border-success/30 bg-success/5"
           : flagMissing
