@@ -23,7 +23,7 @@
     --secondary-foreground: 220 15% 25%;
 
     --muted: 220 14% 92%;
-    --muted-foreground: 220 10% 42%;
+    --muted-foreground: 220 12% 36%;
 
     --accent: 8 50% 95%;
     --accent-foreground: 8 85% 45%;
@@ -70,7 +70,7 @@
     --secondary-foreground: 220 15% 85%;
 
     --muted: 220 14% 14%;
-    --muted-foreground: 220 10% 52%;
+    --muted-foreground: 220 12% 64%;
 
     --accent: 8 50% 14%;
     --accent-foreground: 8 90% 68%;
@@ -114,6 +114,21 @@
     -webkit-tap-highlight-color: transparent;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Native-feel: prevent rubber-band overscroll on the document */
+    overscroll-behavior-y: none;
+  }
+
+  /* Native-feel: non-content UI shouldn't be selectable or show iOS callout */
+  nav, header, button, [role="button"] {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* But form controls and content should remain selectable */
+  input, textarea, [contenteditable="true"], p, span, h1, h2, h3, h4, h5, h6, li, td {
+    -webkit-user-select: auto;
+    user-select: auto;
   }
 
   input, select, textarea {
@@ -181,5 +196,37 @@
   /* Fire gradient for branded headers */
   .fire-gradient {
     background: linear-gradient(135deg, hsl(8 85% 42%) 0%, hsl(20 90% 48%) 50%, hsl(8 85% 38%) 100%);
+  }
+}
+
+/* Accessibility: respect Reduce Transparency (iOS Settings → Accessibility → Display) */
+@media (prefers-reduced-transparency: reduce) {
+  .glass {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: hsl(var(--background));
+  }
+  .glass-tile {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    box-shadow: none;
+  }
+  .dark .glass-tile {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+  }
+}
+
+/* Accessibility: respect Reduce Motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
