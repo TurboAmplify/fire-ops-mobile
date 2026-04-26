@@ -246,14 +246,15 @@ export default function IncidentDetail() {
   );
 }
 
-function InfoCard({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
+function Stat({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
   return (
-    <div className="rounded-xl bg-card p-3 space-y-1">
-      <div className="flex items-center gap-1.5 text-muted-foreground">
-        <Icon className="h-3.5 w-3.5" />
-        <span className="text-xs font-medium">{label}</span>
+    <div className="min-w-0">
+      <div className="flex items-center gap-1 text-muted-foreground">
+        <Icon className="h-3 w-3 shrink-0" />
+        <span className="text-[10px] font-semibold uppercase tracking-wider truncate">{label}</span>
       </div>
-      <p className="text-sm font-semibold">{value}</p>
+      <p className="mt-0.5 text-sm font-semibold truncate">{value}</p>
     </div>
   );
 }
+
