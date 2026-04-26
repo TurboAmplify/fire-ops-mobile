@@ -25,6 +25,34 @@ import { toast } from "sonner";
 import { OrgPayrollToggle } from "@/components/super-admin/PayrollAccessToggle";
 import { SuperAdminBillingCard } from "@/components/super-admin/SuperAdminBillingCard";
 import type { BillingStatus, OrgType } from "@/lib/billing/types";
+import { daysUntil } from "@/lib/billing/utils";
+
+const BILLING_STATUS_LABEL: Record<BillingStatus, string> = {
+  trial: "Trial",
+  active: "Active",
+  read_only: "Read-only",
+  locked: "Locked",
+};
+
+function formatPlanCode(code: string | null | undefined): string {
+  if (!code) return "—";
+  return code
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function formatBillingStatus(status: BillingStatus, trialEndsAt: string | null): string {
+  const base = BILLING_STATUS_LABEL[status] ?? status;
+  if (status === "trial") {
+    const days = daysUntil(trialEndsAt);
+    if (days === null) return base;
+    if (days < 0) return `${base} — expired`;
+    if (days === 0) return `${base} — ends today`;
+    return `${base} — ${days}d left`;
+  }
+  return base;
+}
 
 type OrgDetail = {
   id: string;
