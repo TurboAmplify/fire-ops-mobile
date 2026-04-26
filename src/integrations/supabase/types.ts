@@ -1966,6 +1966,15 @@ export type Database = {
             }
             Returns: string
           }
+        | {
+            Args: {
+              _accepts_assignments?: boolean
+              _name: string
+              _operation_type?: string
+              _org_type?: string
+            }
+            Returns: string
+          }
       delete_user_data: { Args: { _user_id: string }; Returns: undefined }
       generate_invite_code: { Args: never; Returns: string }
       get_auth_email: { Args: never; Returns: string }
