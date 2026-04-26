@@ -13,8 +13,8 @@ In the Despia dashboard:
 | Field | Value |
 |---|---|
 | App name | `FireOps HQ` |
-| Bundle ID / App ID | `app.lovable.63e454bc32e142ee9def17eb4240739a` |
-| Web app URL | `https://fire-buddy-mobile.lovable.app` |
+| Bundle ID / App ID | `com.fireopshq.app` |
+| Web app URL | `https://app.fireopshq.com` |
 | App version | `1.0.0` |
 | Minimum iOS version | `16.0` |
 | Android target SDK | `34` |
@@ -103,9 +103,9 @@ URLs to paste into App Store Connect:
 
 | Field | URL |
 |---|---|
-| Privacy Policy URL | `https://fire-buddy-mobile.lovable.app/privacy` |
-| Support URL | `https://fire-buddy-mobile.lovable.app/support` |
-| Marketing URL (optional) | `https://fire-buddy-mobile.lovable.app` |
+| Privacy Policy URL | `https://fireopshq.com/privacy` |
+| Support URL | `https://fireopshq.com/support` |
+| Marketing URL (optional) | `https://fireopshq.com` |
 
 ---
 
@@ -113,14 +113,14 @@ URLs to paste into App Store Connect:
 
 When you ship updates:
 
-1. Publish your latest changes from Lovable (frontend changes go live on
-   the `.lovable.app` URL)
+1. Publish your latest changes (frontend changes go live at
+   `https://app.fireopshq.com` as soon as you publish)
 2. Bump `appVersion` in `despia.json` and `package.json` (e.g. `1.0.1`)
 3. In Despia, click **Build** again
 4. Upload the new build to App Store Connect / Play Console
 5. Submit for review with a "What's new" note
 
 Most updates won't require resubmission of the binary — Despia loads your
-web app from the URL, so frontend-only changes go live the moment you click
-Publish in Lovable. You only need a new binary when you change permissions,
-icons, the splash screen, or the app version number.
+web app from `https://app.fireopshq.com`, so frontend-only changes go live
+the moment you publish updates. You only need a new binary when you change
+permissions, icons, the splash screen, or the app version number.

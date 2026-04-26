@@ -1,110 +1,94 @@
-# App Store Readiness Plan — FireOps HQ
+# App Store Readiness — Execution Plan
 
-## Confirmed decisions
-- **Domain layout**: `fireopshq.com` = marketing site (Netlify), `app.fireopshq.com` = this app (Lovable)
-- **Sign-in**: Email + Sign in with Apple
-- **Bundle ID**: `com.fireopshq.app` (changed before first submission)
-- **Leaked-password check**: enabled
-- **Wrapper**: Despia → points at `app.fireopshq.com`
+`app.fireopshq.com` is live and connected. Here's what I'll do across the four waves, and what you'll need to do at the end.
 
 ---
 
-## Your prep (before I start Wave 1)
+## Wave 1 — Hard blockers (Apple auto-rejects)
 
-These three things need to be done by you because they happen outside the codebase. I cannot do them for you, and Wave 1 depends on them.
+**1.1 Domain & branding scrub**
+Three files still reference the old `lovable.app` URLs:
+- `despia.json` — change `url` to `https://app.fireopshq.com` and `appId` to `com.fireopshq.app`
+- `docs/despia-setup.md` — update Privacy / Support / Marketing URLs to `https://fireopshq.com/...`
+- `docs/app-privacy-questionnaire.md` — same URL updates
 
-1. **Deploy your marketing site to Netlify** at `fireopshq.com` (and `www.fireopshq.com` redirecting to root). Make sure these three pages exist and are publicly reachable:
-   - `https://fireopshq.com/privacy`
-   - `https://fireopshq.com/support`
-   - `https://fireopshq.com/terms`
-2. **Connect `app.fireopshq.com` to this Lovable project**: Project Settings → Domains → Connect Domain → `app.fireopshq.com`. Add the DNS record Lovable gives you at your registrar. Wait until the domain shows "Active".
-3. **Get your Apple Developer account ready** (paid, $99/yr) and have access to App Store Connect. You'll also need to create a Services ID + .p8 key for Sign in with Apple — I'll give you the exact steps in Wave 1.
+I'll also scan `index.html`, `README.md`, `public/manifest.webmanifest`, and `capacitor.config.ts` for any straggling references and update them.
 
-Tell me when those are done and I'll start Wave 1.
+**1.2 Legal/support links inside the app**
+- `src/pages/Privacy.tsx`, `src/pages/Support.tsx`, `src/pages/Terms.tsx`: confirm they either render the canonical content in-app OR redirect to `fireopshq.com/{privacy,support,terms}`. Apple requires these to be reachable both inside the binary and from the App Store listing URLs. I'll keep them in-app (safer) and make sure the marketing-site URLs match.
 
----
+**1.3 Sign in with Apple**
+- Use the **Lovable Cloud managed Apple provider** (zero Apple Developer config for v1 — fastest path to first approval).
+- Add a "Continue with Apple" button to `src/pages/Login.tsx` for both login and signup modes, alongside the existing email form.
+- Wire it through `lovable.auth.signInWithOAuth("apple", { redirect_uri: window.location.origin })`.
+- Verify the OAuth callback works on `app.fireopshq.com` (custom domains are supported by the OAuth broker).
 
-## Wave 1 — Hard blockers (anything Apple rejects on)
+**1.4 Account deletion path** (Apple Guideline 5.1.1(v))
+- Already implemented (`Settings.tsx` → `delete-account` edge function → `delete_user_data` RPC). I'll do an end-to-end smoke test and confirm the button is clearly labeled "Delete Account" and reachable in two taps from the home screen.
 
-**Domain & branding scrub**
-- Replace every `fire-buddy-mobile.lovable.app`, `fireops-hq.lovable.app`, and `lovable.app` reference in `despia.json`, `index.html` meta tags, README, and all `.md` files with `app.fireopshq.com` (app) or `fireopshq.com` (marketing/legal).
-- Update in-app Privacy Policy and Support links to point to the Netlify pages.
-- Update bundle identifier in `despia.json` to `com.fireopshq.app`.
-- Update app display name, splash, and icon references to FireOps HQ branding (no Lovable mentions).
-
-**Sign in with Apple**
-- Wire up Sign in with Apple via the Lovable Cloud auth provider (managed credentials path — fastest, no Apple Developer config needed for v1; we can switch to your own credentials later if you want your name on the Apple sheet).
-- Add the Apple button to the login + signup screens alongside email.
-- Verify the OAuth callback works on `app.fireopshq.com`.
-
-**Account deletion path** (Apple Guideline 5.1.1(v))
-- Verify the existing `delete_user_data` flow is reachable from Settings, clearly labeled, and works end-to-end.
-
-**Password security**
+**1.5 Password security**
 - Enable HIBP leaked-password check via Cloud auth settings.
-
-**OF-286 workflow smoke test**
-- Verify the upload, missing-document banner, and dashboard chip all work on a real incident.
 
 ---
 
 ## Wave 2 — Feature completeness sweep
 
-A pass through every module to confirm: loading state, empty state, error toast, role-gated actions hidden for non-admins, no dead buttons, no `console.log` leaks.
+A pass through every module checking: loading state, empty state, error toast, role-gated actions hidden for non-admins, no dead buttons, no stray `console.log`. I'll fix issues as I find them.
 
-- **Auth**: signup, login, password reset, Sign in with Apple, account deletion
-- **Incidents**: create, edit, close, OF-286 upload, missing-doc banner
-- **Shift Tickets (OF-297)**: create, equipment/personnel entries, signatures, draft → submit
-- **Payroll**: hours, adjustments, exports, audit trail
-- **Expenses**: receipt upload, categorize, approve/reject, admin-only review fields
+Modules in scope:
+- **Auth**: signup, login, password reset, Sign in with Apple, account deletion, invite-code flow
+- **Incidents**: create, edit, close, OF-286 upload, missing-doc banner, agreement parsing
+- **Shift Tickets (OF-297)**: create, equipment/personnel entries, signatures, draft → submit, audit trail
+- **Payroll**: hours, adjustments, exports, audit trail, withholding profiles
+- **Expenses**: receipt upload, categorize, fuel-type modal, approve/reject, admin-only review fields
 - **Crew & Trucks**: CRUD, role assignments, truck access scoping
 - **Inspections**: templates, results, photo uploads
-- **Reports / P&L**: AR (invoices outstanding), AP (expenses), payroll summary — all exportable to CSV/PDF for accountant handoff
-- **Platform admin**: cross-org guards still work, audit log writes correctly
+- **Reports / P&L**: AR (invoices outstanding), AP (expenses), payroll summary, CSV/PDF exports
+- **Platform admin**: cross-org guards, audit log writes, impersonation banner
+- **Tutorial / Setup checklist**: completes cleanly for a brand-new user
 
 ---
 
 ## Wave 3 — Security & policy
 
-- Run the security linter on every table, especially `incident_documents` and `payroll_adjustments` (the newest additions).
-- Confirm storage buckets (`incident-documents`, `receipts`, `signatures`, etc.) are private and RLS-scoped to org.
+- Run the Supabase linter and resolve any findings.
+- Run the security scanner and review every RLS policy, with extra attention to the newest tables (`incident_documents`, `payroll_adjustments`, `shift_ticket_audit`, `signature_audit_log`).
+- Confirm all 9 storage buckets are private and have org-scoped RLS (`receipts`, `resource-orders`, `agreements`, `truck-photos`, `truck-documents`, `crew-photos`, `signatures`, `inspection-photos`, `incident-documents`).
 - Strip debug `console.log` statements from production paths.
-- Verify no API keys or secrets are exposed in client bundles.
-- Confirm session handling uses `onAuthStateChange` listener set up before `getSession()`.
-- Re-run Supabase security advisor and resolve any findings.
+- Confirm no API keys or secrets are exposed in the client bundle.
+- Verify session handling uses the `onAuthStateChange` listener set up before `getSession()` (already correct in `useAuth.tsx`).
 
 ---
 
 ## Wave 4 — Packaging & submission assets
 
-- Bump app version to `1.0.0` (first submission).
-- Align splash screen background, status bar color, and safe-area insets for iOS notch/Dynamic Island.
-- Verify all required iOS icon sizes and the 1024×1024 App Store icon are present.
-- Confirm screenshots exist for required iPhone sizes (6.7", 6.5", 5.5"). I'll list which screens make the strongest screenshots.
-- Generate a final **Pre-Submit Checklist** document for you with: App Store Connect metadata to copy/paste (description, keywords, support URL, privacy URL, age rating answers, data-collection disclosure), Despia build settings, and the order of operations to submit.
+- Confirm app version is `1.0.0` in `despia.json` and `package.json`.
+- Verify splash background `#0A0A0A`, status-bar color, and safe-area insets render correctly on iOS notch / Dynamic Island.
+- Verify all required iOS icon sizes plus the 1024×1024 App Store marketing icon exist in `public/icons/`.
+- Confirm screenshots exist for required iPhone sizes (6.7", 6.5", 5.5"); list which app screens to capture if any are missing.
+- Generate a final `docs/pre-submit-checklist.md` you can follow step by step:
+  - Exact App Store Connect metadata (description, keywords, support URL `https://fireopshq.com/support`, privacy URL `https://fireopshq.com/privacy`, age rating answers, data-collection disclosure)
+  - Despia build settings (already aligned via `despia.json`)
+  - Order of operations: Despia build → TestFlight → App Store Connect submit
 
 ---
 
-## Sign in with Apple — what you'll need from Apple Developer
+## Deliverables
 
-For the **managed** path (recommended for v1, zero config from you): nothing. I just enable Apple as a provider in Cloud and the buttons work. The Apple consent sheet will say "Lovable" instead of "FireOps HQ" — fine for launch, can be upgraded later.
-
-For the **branded** path (your name on the Apple sheet — optional, can defer to v1.1):
-- Services ID with "Sign In with Apple" enabled
-- .p8 private key + Key ID
-- Team ID
-- Add `app.fireopshq.com` and the Cloud callback URL to the Services ID config
-
-My recommendation: ship v1 with the managed path, switch to branded after the first review passes. One less thing that can go wrong on first submission.
+1. Clean codebase: zero `lovable.app` / `fire-buddy` / `fireops-hq.lovable.app` references
+2. Sign in with Apple working alongside email
+3. Passing security scan with all RLS verified
+4. `docs/pre-submit-checklist.md` ready to follow
+5. A "ready for Despia build" sign-off — you trigger the Despia build, upload the `.ipa` to App Store Connect, submit for review
 
 ---
 
-## What I deliver at the end
+## What you'll do after I finish
 
-1. A clean, scrubbed codebase with zero `lovable.app` or `fire-buddy` references
-2. Working Sign in with Apple alongside email
-3. A passing security scan with all RLS verified
-4. A pre-submit checklist file you hand to yourself (or your accountant for the AR/AP exports)
-5. A "ready for Despia build" sign-off — you trigger the build, submit through App Store Connect, and the review should pass on first attempt
+1. Verify `https://fireopshq.com/privacy`, `/support`, `/terms` are live on Netlify (Apple will click these from the App Store listing).
+2. In the Despia dashboard, change the **web app URL** to `https://app.fireopshq.com` and the **bundle ID** to `com.fireopshq.app`, then trigger a fresh iOS build.
+3. Upload the `.ipa` to App Store Connect via Transporter (Despia walks you through this).
+4. Paste in the metadata from the pre-submit checklist I'll generate.
+5. Submit for review.
 
-Approve when you're ready, and tell me once the Netlify site + `app.fireopshq.com` DNS are live so I can start Wave 1.
+Approve and I'll start Wave 1.

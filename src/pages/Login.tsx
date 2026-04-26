@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable/index";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
@@ -27,6 +28,27 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
+
+  const handleAppleSignIn = async () => {
+    setAppleLoading(true);
+    try {
+      const result = await lovable.auth.signInWithOAuth("apple", {
+        redirect_uri: window.location.origin,
+      });
+      if (result.error) {
+        throw result.error instanceof Error ? result.error : new Error(String(result.error));
+      }
+      // If redirected, the browser will navigate away; nothing else to do
+    } catch (err: any) {
+      toast({
+        title: "Sign in with Apple failed",
+        description: err?.message || "Please try again.",
+        variant: "destructive",
+      });
+      setAppleLoading(false);
+    }
+  };
 
   if (authLoading) {
     return (
@@ -155,6 +177,37 @@ export default function Login() {
               {mode === "forgot" && "We'll send you a reset link"}
             </p>
           </div>
+
+          {mode !== "forgot" && (
+            <>
+              <Button
+                type="button"
+                onClick={handleAppleSignIn}
+                disabled={appleLoading || loading}
+                className="w-full h-12 rounded-xl bg-white text-black hover:bg-white/90 active:bg-white/80 border-0 text-[15px] font-semibold touch-target"
+              >
+                {appleLoading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <svg
+                    className="mr-2 h-4 w-4"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.377 0-2.332-1.26-3.428-2.8-1.287-1.82-2.323-4.63-2.323-7.28 0-4.28 2.797-6.55 5.552-6.55 1.448 0 2.675.95 3.6.95.865 0 2.222-1.01 3.902-1.01.613 0 2.886.06 4.374 2.19-.13.09-2.383 1.37-2.383 4.19 0 3.26 2.854 4.42 2.955 4.45z" />
+                  </svg>
+                )}
+                Continue with Apple
+              </Button>
+
+              <div className="flex items-center gap-3">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-[11px] uppercase tracking-wider text-muted-foreground">or</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+            </>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">

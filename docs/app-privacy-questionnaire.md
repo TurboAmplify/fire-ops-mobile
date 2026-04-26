@@ -90,8 +90,8 @@ If App Store Connect asks you to list third-party SDKs / services:
 
 | Service | Purpose | Data shared |
 |---|---|---|
-| **Supabase** (Lovable Cloud) | Hosts the database, authentication, file storage | All operational data, account email, uploaded files |
-| **Lovable AI Gateway → Google Gemini** | Extracts structured fields from receipt and document images the user explicitly scans | Only the image the user chose to scan, sent at the moment they tap "Scan" |
+| Cloud backend (Postgres + Auth + Storage) | Hosts the database, authentication, file storage | All operational data, account email, uploaded files |
+| AI document parsing (Google Gemini) | Extracts structured fields from receipt and document images the user explicitly scans | Only the image the user chose to scan, sent at the moment they tap "Scan" |
 
 Neither party uses the data for their own purposes, training, or advertising.
 
@@ -99,7 +99,7 @@ Neither party uses the data for their own purposes, training, or advertising.
 
 ## Privacy Policy URL
 
-`https://fire-buddy-mobile.lovable.app/privacy`
+`https://fireopshq.com/privacy`
 
 This URL must be live and reachable at the time of submission. The Privacy
 Policy page is in `src/pages/Privacy.tsx`.
