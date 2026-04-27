@@ -172,15 +172,30 @@ export default function Payroll() {
   }, [reimbursementsRaw]);
 
   const compMap = useMemo(() => {
-    const m = new Map<string, { hourly_rate: number | null; hw_rate: number | null; pay_method?: "hourly" | "daily" | null; daily_rate?: number | null }>();
+    const m = new Map<string, { hourly_rate: number | null; hw_rate: number | null; pay_method?: "hourly" | "daily" | null; daily_rate?: number | null; use_org_default_rate?: boolean | null }>();
     (compensation ?? []).forEach((c: any) => m.set(c.crew_member_id, {
       hourly_rate: c.hourly_rate,
       hw_rate: c.hw_rate,
       pay_method: c.pay_method,
       daily_rate: c.daily_rate,
+      use_org_default_rate: c.use_org_default_rate,
     }));
     return m;
   }, [compensation]);
+
+  const roleDefaultsMap = useMemo(() => {
+    const m = new Map<string, { role: string; pay_method: "hourly" | "daily"; hourly_rate: number | null; hw_rate: number | null; daily_rate: number | null }>();
+    (roleDefaultsRows ?? []).forEach((r) => {
+      m.set(r.role.trim(), {
+        role: r.role,
+        pay_method: r.pay_method === "daily" ? "daily" : "hourly",
+        hourly_rate: r.hourly_rate,
+        hw_rate: r.hw_rate,
+        daily_rate: r.daily_rate,
+      });
+    });
+    return m;
+  }, [roleDefaultsRows]);
 
   const profileMap = useMemo(() => {
     const m = new Map<string, WithholdingProfile>();
