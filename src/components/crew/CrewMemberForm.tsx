@@ -146,10 +146,11 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
         const compRow: any = {
           crew_member_id: savedId,
           organization_id: membership.organizationId,
-          hourly_rate: hr,
-          hw_rate: hw,
+          hourly_rate: useOrgDefaultRate ? null : hr,
+          hw_rate: useOrgDefaultRate ? null : hw,
           pay_method: payMethod,
-          daily_rate: payMethod === "daily" ? dr : null,
+          daily_rate: useOrgDefaultRate ? null : (payMethod === "daily" ? dr : null),
+          use_org_default_rate: useOrgDefaultRate,
         };
         if (showPayroll) {
           compRow.filing_status = withholding.filing_status;
