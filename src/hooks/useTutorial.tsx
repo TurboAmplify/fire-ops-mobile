@@ -40,6 +40,24 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
   const steps = useMemo(() => getStepsForRole(membership?.role), [membership?.role]);
   const totalSteps = steps.length;
 
+  const persistComplete = useCallback(async () => {
+    try {
+      localStorage.setItem(LS_KEY, new Date().toISOString());
+    } catch {
+      // ignore storage errors
+    }
+    if (user?.id) {
+      try {
+        await supabase
+          .from("profiles")
+          .update({ tutorial_completed_at: new Date().toISOString() })
+          .eq("id", user.id);
+      } catch (err) {
+        console.warn("Failed to persist tutorial completion:", err);
+      }
+    }
+  }, [user?.id]);
+
   const start = useCallback(() => {
     setStepIndex(0);
     setIsMinimized(false);
@@ -52,7 +70,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     // Mark as seen so it doesn't auto-open on every sign-in.
     // Users can always replay from the Help / Settings entry point.
     void persistComplete();
-  }, []);
+  }, [persistComplete]);
 
   const minimize = useCallback(() => {
     setIsOpen(false);
@@ -78,24 +96,6 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     },
     [totalSteps],
   );
-
-  const persistComplete = useCallback(async () => {
-    try {
-      localStorage.setItem(LS_KEY, new Date().toISOString());
-    } catch {
-      // ignore storage errors
-    }
-    if (user?.id) {
-      try {
-        await supabase
-          .from("profiles")
-          .update({ tutorial_completed_at: new Date().toISOString() })
-          .eq("id", user.id);
-      } catch (err) {
-        console.warn("Failed to persist tutorial completion:", err);
-      }
-    }
-  }, [user?.id]);
 
   const complete = useCallback(() => {
     setIsOpen(false);
