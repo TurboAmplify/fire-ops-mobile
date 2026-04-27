@@ -49,6 +49,9 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
   const close = useCallback(() => {
     setIsOpen(false);
     setIsMinimized(false);
+    // Mark as seen so it doesn't auto-open on every sign-in.
+    // Users can always replay from the Help / Settings entry point.
+    void persistComplete();
   }, []);
 
   const minimize = useCallback(() => {
