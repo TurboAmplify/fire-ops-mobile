@@ -107,13 +107,17 @@ the next build.
 6. [ ] App version in `package.json` and `despia.json` match the build
        you're submitting
 
-## Future change — Sign in with Apple
+## Sign-in methods
 
-The app currently offers **only email/password** sign-in, which means
-**Sign in with Apple is NOT required** (Apple Guideline 4.8 only triggers
-it when you offer Google, Facebook, or other third-party social sign-in).
+The app offers:
+- **Email + password** (with password reset via email link)
+- **Sign in with Apple** (the only third-party / social provider)
 
-If you ever add Google sign-in (or any social provider) you must add Sign
-in with Apple at the same time, in the same release, or Apple will reject
-the update.
+Because Apple is the **only** social provider, **Apple Guideline 4.8 is
+satisfied** — Sign in with Apple is offered as an equivalent option and no
+other social provider (Google, Facebook, etc.) is present.
+
+If you ever add Google sign-in or any other social provider, Sign in with
+Apple must remain available in the same release or Apple will reject the
+update under Guideline 4.8.
 
