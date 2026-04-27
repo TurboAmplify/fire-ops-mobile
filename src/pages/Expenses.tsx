@@ -1,20 +1,14 @@
 import { AppShell } from "@/components/AppShell";
 import { Link } from "react-router-dom";
-import { Plus, Loader2, Send, DollarSign, ScanLine, Flame, Truck as TruckIcon, X } from "lucide-react";
+import { Plus, Loader2, Send, DollarSign, ScanLine, Flame, Truck as TruckIcon } from "lucide-react";
 import { useExpenses, useUpdateExpense } from "@/hooks/useExpenses";
 import { CATEGORY_LABELS, CATEGORY_ICON_MAP } from "@/services/expenses";
 import type { ExpenseCategory, ExpenseStatus } from "@/services/expenses";
 import { ExpenseStatusBadge } from "@/components/expenses/ExpenseStatusBadge";
+import { ExpenseFilterBar, UNATTACHED_KEY } from "@/components/expenses/ExpenseFilterBar";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 const categories: (ExpenseCategory | "all")[] = ["all", "fuel", "ppe", "food", "lodging", "equipment", "other"];
 const statusFilters: (ExpenseStatus | "all")[] = ["all", "draft", "submitted", "approved", "rejected", "reimbursed"];
