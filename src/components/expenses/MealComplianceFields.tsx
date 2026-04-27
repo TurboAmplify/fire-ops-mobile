@@ -8,9 +8,10 @@ interface Props {
 export function MealComplianceFields({ attendees, onAttendeesChange, purpose, onPurposeChange }: Props) {
   return (
     <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-3">
-      <p className="text-sm font-semibold text-primary">Meal Compliance (Required)</p>
+      <p className="text-sm font-semibold text-primary">Meal Details</p>
+      <p className="text-xs text-muted-foreground -mt-1">Recommended for IRS / per-diem documentation.</p>
       <div className="space-y-2">
-        <label className="text-sm font-medium text-muted-foreground">Attendees *</label>
+        <label className="text-sm font-medium text-muted-foreground">Attendees (recommended)</label>
         <input
           type="text"
           value={attendees}
