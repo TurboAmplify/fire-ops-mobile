@@ -49,7 +49,7 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
       if (!memberId) return null;
       const { data, error } = await supabase
         .from("crew_compensation" as any)
-        .select("hourly_rate, hw_rate, pay_method, daily_rate, filing_status, dependents_count, use_default_withholding, federal_pct_override, extra_withholding, state_pct_override, social_security_exempt, medicare_exempt, other_deductions, notes")
+        .select("hourly_rate, hw_rate, pay_method, daily_rate, use_org_default_rate, filing_status, dependents_count, use_default_withholding, federal_pct_override, extra_withholding, state_pct_override, social_security_exempt, medicare_exempt, other_deductions, notes")
         .eq("crew_member_id", memberId)
         .maybeSingle();
       if (error) throw error;
