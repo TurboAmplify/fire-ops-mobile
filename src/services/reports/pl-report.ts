@@ -19,10 +19,14 @@ export interface PLIncidentRow {
   reimbursementExpenseTotal: number; // expense_type = 'reimbursement' (owed to crew)
   totalCost: number;        // laborTrueCost + expenseTotal + factoringFee
   expenseCount: number;
-  revenue: number;          // billable truck day-rate revenue for this incident
+  revenue: number;          // projected billable truck day-rate revenue for this incident
   truckDays: number;        // total billable truck-days on this incident
   factoringFee: number;     // invoice factor fee taken off revenue (when enabled)
-  profit: number;           // revenue - totalCost (totalCost already includes factoring)
+  profit: number;           // PROJECTED profit = revenue - totalCost
+  /** Sum of OF-286 invoice totals on file for this incident (null when no OF-286 amount entered). */
+  of286Total: number | null;
+  /** Actual profit = of286Total - totalCost (null when no OF-286 amount entered). */
+  actualProfit: number | null;
 }
 
 export interface PLReportData {
@@ -41,6 +45,8 @@ export interface PLReportData {
     truckDays: number;
     factoringFee: number;
     profit: number;
+    of286Total: number;        // sums only the rows that have an entered total
+    actualProfit: number;      // sums only the rows where actualProfit is non-null
   };
   factoringPct: number;        // % applied (0 when disabled)
   factoringEnabled: boolean;
