@@ -62,7 +62,6 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
 
   const isMeal = category === "food";
   const isFuel = category === "fuel";
-  const mealValid = !isMeal || mealAttendees.trim().length > 0;
 
   const needsIncident = scope === "incident" || scope === "truck";
   const needsTruck = scope === "truck";
@@ -70,7 +69,20 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
   const incidentValid = !needsIncident || !!incidentId;
   const truckValid = !needsTruck || !!incidentTruckId;
 
-  const canSubmit = amount && parseFloat(amount) > 0 && date && mealValid && incidentValid && truckValid && !isPending && !uploading && !parsing;
+  // Only the basics block save. Meal attendees is encouraged but not required —
+  // we don't want a silently-disabled button stopping a quick field entry.
+  const amountValid = !!amount && parseFloat(amount) > 0;
+  const canSubmit = amountValid && !!date && incidentValid && truckValid && !isPending && !uploading && !parsing;
+
+  const disabledReason = !amountValid
+    ? "Enter an amount"
+    : !date
+    ? "Pick a date"
+    : !incidentValid
+    ? "Select an incident"
+    : !truckValid
+    ? "Select a truck"
+    : null;
 
   const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
