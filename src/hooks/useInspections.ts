@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { assertOnlineForWrite } from "@/lib/offline-guard";
 import {
   addTemplateItem,
+  bulkAddTemplateItems,
   createTemplate,
   deleteTemplate,
   deleteTemplateItem,
@@ -136,6 +137,19 @@ export function useAddTemplateItem(templateId: string | undefined) {
     mutationFn: ({ label, sortOrder }: { label: string; sortOrder: number }) => {
       assertOnlineForWrite();
       return addTemplateItem(templateId!, label, sortOrder);
+    },
+    onSuccess: () => {
+      if (templateId) qc.invalidateQueries({ queryKey: inspectionKeys.templateItems(templateId) });
+    },
+  });
+}
+
+export function useBulkAddTemplateItems(templateId: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ labels, startSortOrder = 0 }: { labels: string[]; startSortOrder?: number }) => {
+      assertOnlineForWrite();
+      return bulkAddTemplateItems(templateId!, labels, startSortOrder);
     },
     onSuccess: () => {
       if (templateId) qc.invalidateQueries({ queryKey: inspectionKeys.templateItems(templateId) });
