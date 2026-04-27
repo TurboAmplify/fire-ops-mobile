@@ -151,7 +151,11 @@ For category, use these mappings:
             content: [
               {
                 type: "text",
-                text: `Analyze this receipt image and extract the data. Remember: description must be a short purpose statement, NOT an itemized list.`,
+            text: `Analyze this receipt image and extract the data.
+
+IMPORTANT: Look carefully for HANDWRITTEN numbers (pen/marker writing). When a customer adds a tip or writes a corrected total, the handwritten number is the REAL total paid — use it instead of the printed subtotal. This is especially common at restaurants.
+
+Remember: description must be a short purpose statement, NOT an itemized list.`,
               },
               { type: "image_url", image_url: dataUrl },
             ],
