@@ -510,10 +510,11 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
     const reimbursementsTotal = crewReimbursements.reduce((s, r) => s + r.amount, 0);
 
     const comp = compensation.get(cm.id);
-    const hourlyRate = Number(comp?.hourly_rate) || 0;
-    const hwRate = Number(comp?.hw_rate) || 0;
-    const payMethod: "hourly" | "daily" = comp?.pay_method === "daily" ? "daily" : "hourly";
-    const dailyRate = Number(comp?.daily_rate) || 0;
+    const effective = resolveEffectiveCompensation(comp, cm.role, roleDefaults);
+    const hourlyRate = effective.hourly_rate;
+    const hwRate = effective.hw_rate;
+    const payMethod: "hourly" | "daily" = effective.pay_method;
+    const dailyRate = effective.daily_rate;
 
     let totalHours = 0;
     let regularHours = 0;
