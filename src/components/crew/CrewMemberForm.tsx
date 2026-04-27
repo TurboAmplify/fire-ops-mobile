@@ -250,45 +250,59 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
 
               {isAdmin && (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">Payment Method</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setPayMethod("hourly")}
-                      className={`touch-target rounded-xl py-3 text-sm font-bold transition-colors ${
-                        payMethod === "hourly" ? "bg-primary text-primary-foreground" : "bg-card border text-foreground"
-                      }`}
-                    >
-                      Hourly
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPayMethod("daily")}
-                      className={`touch-target rounded-xl py-3 text-sm font-bold transition-colors ${
-                        payMethod === "daily" ? "bg-primary text-primary-foreground" : "bg-card border text-foreground"
-                      }`}
-                    >
-                      Daily Flat
-                    </button>
+                  <div className="flex items-center justify-between rounded-xl bg-card p-3">
+                    <div>
+                      <p className="text-sm font-medium">Use organization default rate</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {role ? `Auto-applies the saved default for ${role}.` : "Auto-applies the saved default for this role."}
+                      </p>
+                    </div>
+                    <Switch checked={useOrgDefaultRate} onCheckedChange={setUseOrgDefaultRate} />
                   </div>
 
-                  {payMethod === "hourly" ? (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <label className="text-sm font-medium text-muted-foreground">Hourly Rate ($)</label>
-                        <input type="number" step="0.01" min="0" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} className={inputClass} placeholder="0.00" inputMode="decimal" />
+                  {!useOrgDefaultRate && (
+                    <>
+                      <label className="text-sm font-medium text-muted-foreground">Payment Method</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setPayMethod("hourly")}
+                          className={`touch-target rounded-xl py-3 text-sm font-bold transition-colors ${
+                            payMethod === "hourly" ? "bg-primary text-primary-foreground" : "bg-card border text-foreground"
+                          }`}
+                        >
+                          Hourly
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPayMethod("daily")}
+                          className={`touch-target rounded-xl py-3 text-sm font-bold transition-colors ${
+                            payMethod === "daily" ? "bg-primary text-primary-foreground" : "bg-card border text-foreground"
+                          }`}
+                        >
+                          Daily Flat
+                        </button>
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-sm font-medium text-muted-foreground">H&W Rate ($)</label>
-                        <input type="number" step="0.01" min="0" value={hwRate} onChange={(e) => setHwRate(e.target.value)} className={inputClass} placeholder="0.00" inputMode="decimal" />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium text-muted-foreground">Daily Rate ($/shift)</label>
-                      <input type="number" step="0.01" min="0" value={dailyRate} onChange={(e) => setDailyRate(e.target.value)} className={inputClass} placeholder="1000.00" inputMode="decimal" />
-                      <p className="text-[11px] text-muted-foreground">Flat amount paid per shift, regardless of hours. No OT, no H&W.</p>
-                    </div>
+
+                      {payMethod === "hourly" ? (
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-sm font-medium text-muted-foreground">Hourly Rate ($)</label>
+                            <input type="number" step="0.01" min="0" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} className={inputClass} placeholder="0.00" inputMode="decimal" />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-sm font-medium text-muted-foreground">H&W Rate ($)</label>
+                            <input type="number" step="0.01" min="0" value={hwRate} onChange={(e) => setHwRate(e.target.value)} className={inputClass} placeholder="0.00" inputMode="decimal" />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          <label className="text-sm font-medium text-muted-foreground">Daily Rate ($/shift)</label>
+                          <input type="number" step="0.01" min="0" value={dailyRate} onChange={(e) => setDailyRate(e.target.value)} className={inputClass} placeholder="1000.00" inputMode="decimal" />
+                          <p className="text-[11px] text-muted-foreground">Flat amount paid per shift, regardless of hours. No OT, no H&W.</p>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}
