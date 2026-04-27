@@ -109,6 +109,12 @@ serve(async (req) => {
 
 This image may contain MULTIPLE receipts laid out together. Identify and extract data from EACH receipt separately. Return an array of receipts even if there is only one.
 
+CRITICAL RULES FOR AMOUNT:
+- The amount must be the FINAL total the customer actually paid
+- ALWAYS scan for HANDWRITTEN numbers (pen/marker) — these almost always represent the true total when a tip was added or the customer wrote in a corrected total
+- If a handwritten number is LARGER than the printed total, USE THE HANDWRITTEN NUMBER
+- Only fall back to the printed "TOTAL" / "GRAND TOTAL" / "AMOUNT DUE" when there is no handwritten override
+
 CRITICAL RULES FOR DESCRIPTION:
 - Description must be a SHORT, TAX-FRIENDLY purpose statement (5-10 words max)
 - Describe the PURPOSE of the expense, NOT the items purchased
