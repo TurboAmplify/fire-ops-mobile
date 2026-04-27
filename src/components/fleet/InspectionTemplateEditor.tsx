@@ -263,7 +263,19 @@ export function InspectionTemplateEditor() {
           )}
 
           {!loadingItems && (items?.length ?? 0) === 0 && (
-            <p className="text-sm text-muted-foreground">No items yet.</p>
+            <div className="rounded-lg border border-dashed border-border bg-muted/20 p-3 space-y-2">
+              <p className="text-sm text-muted-foreground">No items yet.</p>
+              <Button
+                onClick={handleAddStarterToActive}
+                disabled={bulkAddItems.isPending}
+                size="sm"
+                variant="secondary"
+                className="w-full"
+              >
+                <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                Add {getStarterItems(tab).length} starter items
+              </Button>
+            </div>
           )}
 
           <div className="space-y-1">
