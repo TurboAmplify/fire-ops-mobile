@@ -122,21 +122,9 @@ export default function Crew() {
                       )}
                     </div>
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-0.5">
-                          <p className="font-semibold">{m.name}</p>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <User className="h-3.5 w-3.5" />
-                            <span>{m.role}</span>
-                          </div>
-                          {m.phone && (
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Phone className="h-3.5 w-3.5" />
-                              <span>{formatPhone(m.phone)}</span>
-                            </div>
-                          )}
-                        </div>
+                    <div className="flex-1 min-w-0 space-y-0.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-semibold truncate">{m.name}</p>
                         <div className="flex items-center gap-1.5 shrink-0">
                           {!isCrewMemberComplete(m) && (
                             <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-400">
@@ -144,7 +132,7 @@ export default function Crew() {
                             </span>
                           )}
                           <span
-                            className={`rounded-full px-2.5 py-1 text-xs font-bold uppercase ${
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
                               m.active ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"
                             }`}
                           >
@@ -152,6 +140,16 @@ export default function Crew() {
                           </span>
                         </div>
                       </div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <User className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">{m.role}</span>
+                      </div>
+                      {m.phone && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Phone className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{formatPhone(m.phone)}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </button>
