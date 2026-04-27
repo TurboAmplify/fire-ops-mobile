@@ -1,111 +1,105 @@
-# Incident Detail — UX overhaul (round 4)
+# Actual Profit, Send Shift Ticket & Hotel Folios
 
-Goal: make creating shift tickets the fastest possible action, hide noise until it's relevant, and tighten the incident header so the page feels professional and intentional.
+Three connected pieces of work:
 
----
-
-## 1. Tighten the top of the incident page
-
-- **Stat strip → compact, one line.** Replace the 4-stat card with a single row: `Location · Start Date` (acres / containment only show if set, inline). Removes a tall card that mostly shows two values.
-- **Hide OF-286 entirely** unless `status` is `demob` or `closed`. No upload card, no banner on active incidents — it's irrelevant noise during the fire.
-- **Remove the duplicate "Missing OF-286" banner** at the top of the page. The OF-286 card itself already communicates state via color and copy when it appears.
-
-Result: less than half the vertical space before tabs start.
+1. **P&L:** add an "Actual Profit (OF-286)" column alongside the existing one (which becomes "Projected Profit").
+2. **Shift Tickets:** add a real "Send Ticket" button after supervisor signs that opens the iOS/Android share sheet (Mail, Messages, Gmail, etc.).
+3. **Hotel folios:** when a ticket has Lodging selected, the send flow asks the user to pick an existing lodging expense **or** snap a folio photo on the spot, and attaches it to the email along with the OF-297 PDF.
 
 ---
 
-## 2. Promote Shift Tickets to a top-level tab
+## 1. P&L — Projected vs. Actual Profit
 
-Tabs become: `Overview` · `Trucks` · **`Tickets`** · `Crew`
-
-The new **Tickets tab** is purpose-built for the most common workflow — creating and reviewing shift tickets:
-
-- **Big primary CTA at the top:** "+ New Shift Ticket" (one tap → if only 1 truck assigned, jumps straight to the form; if multiple, a quick truck picker bottom sheet).
-- **Today's tickets** section — one card per truck showing today's draft/complete state, tap to resume.
-- **Recent tickets** section — last 10 grouped by date, with the same compact card style we just built (status pill top-right, ⋯ menu).
-
-Shift ticket creation is now **2 taps from anywhere in the app** instead of 5.
-
-The Trucks tab still keeps the inline "OF-297 Shift Tickets" section per truck (no change), so the workflow you already know still works.
-
----
-
-## 3. Redesign the bottom-nav Shift Tickets shortcut
-
-Current: opens a dialog with a list (the part you don't love).
-
-New: opens a focused **action sheet** (Uber/Lyft style):
+### What the user sees
+The P&L table gets a new money column. Existing "Profit" → renamed **Projected Profit** (revenue from truck day rate × days, today's calculation). New **Actual Profit (OF-286)** column reads the dollar amount actually invoiced on the OF-286 for that incident. Same on PDF/Excel/CSV exports.
 
 ```text
-┌──────────────────────────────────┐
-│  Shift Tickets                   │
-├──────────────────────────────────┤
-│  [ + Start New Shift Ticket ]    │  ← big primary button
-│                                  │
-│  CONTINUE TODAY                  │
-│  ▸ DL31 · FB 17 · Draft          │  ← only today's open drafts
-│  ▸ DL62 · FB 17 · Draft          │
-│                                  │
-│  View all tickets →              │  ← link, not a list
-└──────────────────────────────────┘
+Incident   Labor TC   Vendor Exp   Crew Reimb   Days   Revenue   Projected Profit   OF-286 Total   Actual Profit
 ```
 
-Key changes:
-- Default action is **start new**, not browse.
-- Only **today's drafts** are surfaced (the thing you actually need to finish).
-- Full history moved behind a "View all" link → routes to a new `/shift-tickets` page (uses the existing `ShiftTicketLog` if appropriate).
-- "Start new" flow: if exactly 1 active incident + 1 truck, jump straight to the form. Otherwise show a 1-step picker.
+When no OF-286 has been entered, **OF-286 Total** and **Actual Profit** show "—". A small footer note explains the difference.
+
+### How
+- Add `of286_invoice_total` (numeric) and `of286_entered_at` (timestamptz) columns to `incident_documents` (the existing OF-286 upload row already exists per incident).
+- After uploading an OF-286 PDF, the upload card prompts for the invoice total (single number). Editable later.
+- `pl-report.ts`:
+  - Fetch OF-286 totals per incident in scope.
+  - Compute `actualRevenue = of286Total ?? null` and `actualProfit = of286Total != null ? of286Total - totalCost : null`.
+  - Rename the existing `profit` field to **projected profit** in the column header only (data field stays `profit` to avoid a cascading rename); add `actualRevenue`, `actualProfit`, `of286Total` to the row + totals.
+- `AdminReports.tsx` PLReportCard: add the two columns to CSV / Excel / PDF exporters and the on-screen description.
 
 ---
 
-## 4. Tickets tab — visual reference
+## 2. Send Shift Ticket — native share sheet
+
+### What the user sees
+After supervisor signs (ticket is "Final"), the form shows a new primary **Send Ticket** button next to Export PDF. Tapping it:
+1. Generates the OF-297 PDF.
+2. If the ticket has any personnel entry with **Lodging** checked → opens the Folio Picker sheet (step 3 below). Otherwise skips straight to step 4.
+3. Folio Picker resolves which file(s) to attach.
+4. Opens the native share sheet (iOS: Mail / Messages / Gmail / Outlook / Drive; Android similar) pre-filled with subject, body, and the PDF + folio attachments.
+
+Web fallback: opens a `mailto:` with subject/body and downloads the attachments locally with a toast "Attach the downloaded files to your email."
+
+### How
+- Add `@capacitor/share` and `@capacitor/filesystem` (already on Capacitor; share isn't installed yet).
+- New helper `src/lib/share-ticket.ts` with `shareShiftTicket({ pdfBlob, folioBlobs, subject, body, fileName })`:
+  - On Capacitor: writes blobs to cache dir, calls `Share.share({ files: [...] })`.
+  - On web: triggers download + `mailto:` link.
+- `ShiftTicketForm.tsx`: new `Send Ticket` button visible only when `supervisorSigUrl && !editingLocked` (or always when locked). Wire it through a new `onSendTicket` prop on the form, implemented in `ShiftTicketEdit.tsx` where the PDF generator already runs.
+
+---
+
+## 3. Hotel Folio Picker
+
+Triggered by the Send flow whenever any personnel entry on the ticket has `lodging === true`.
+
+### What the user sees
+A bottom sheet titled **"Attach hotel folio"** showing:
 
 ```text
-┌──────────────────────────────────┐
-│  [ + New Shift Ticket ]          │  primary, full-width
-│                                  │
-│  TODAY                           │
-│  ┌────────────────────────────┐ │
-│  │ 🛻 DL31              Draft │ │
-│  │    Apr 26 · 0 entries      │ │
-│  └────────────────────────────┘ │
-│                                  │
-│  RECENT                          │
-│  ┌────────────────────────────┐ │
-│  │ 🛻 DL31           Complete │ │
-│  │    Apr 25 · 8 hr · signed  │ │
-│  └────────────────────────────┘ │
-└──────────────────────────────────┘
+[ + Take photo of folio ]      ← camera capture
+[ + Pick from photos ]         ← file input
+─────────────────────────────
+Existing lodging expenses for this incident:
+  Best Western — $142.50  (May 14)   [select]
+  Hampton Inn — $158.00   (May 15)   [select]
+─────────────────────────────
+[ Skip — send without folio ]
 ```
 
----
+- One date per lodging entry → if multiple lodging dates, sheet asks one folio per date (or lets user attach one PDF that covers all).
+- "Take photo" goes through the existing receipt-capture path so the photo is **also** saved as an Expense (category = "Lodging", linked to the incident) — this guarantees the folio shows up in the next P&L run as a real cost. After capture, control returns to the Send flow with that file attached.
 
-## Technical notes
-
-Files to edit:
-- `src/pages/IncidentDetail.tsx` — collapse stat strip, hide OF-286 card unless demob/closed, remove duplicate banner, add Tickets tab.
-- `src/components/incidents/IncidentTicketsTab.tsx` (new) — CTA + today + recent grouped lists, reusing `useShiftTickets` per truck.
-- `src/components/shift-tickets/ShiftTicketQuickAccess.tsx` — rewrite to action-sheet pattern: big New CTA, today's drafts only, "View all" link.
-- `src/pages/ShiftTicketLog.tsx` — confirm it already serves as the "All tickets" destination (already exists, just route to it).
-- `src/components/incidents/OF286UploadCard.tsx` — no internal change; gating moves to `IncidentDetail`.
-
-No DB changes. No new hooks needed (existing `useShiftTickets`, `useLatestTicketPerTruck`, `useRecentShiftTickets`, `useIncidentTrucks` cover it).
+### How
+- New `src/components/shift-tickets/FolioPickerSheet.tsx`.
+- Hook `useIncidentLodgingExpenses(incidentId)` filters `expenses` where `category ILIKE 'lodging'` for the incident.
+- "Take photo" reuses `CrewPhotoUpload`-style camera input → uploads to the existing `expense-receipts` bucket → creates an `expenses` row (status `submitted`, category `lodging`, amount blank for user to fill later from the Expenses page) → returns the Blob to the Send flow.
+- Selected expense receipts are downloaded via the existing signed-URL helper and added as attachments.
 
 ---
 
-## What stays the same (intentionally)
+## Files
 
-- Truck cards in the Trucks tab — already cleaned up last round; the inline shift ticket section there stays so the truck-centric workflow still works.
-- Daily Crew tab.
-- Resource Orders rollup on Overview.
-- Master Agreement in Org Settings.
+**New**
+- `src/components/shift-tickets/FolioPickerSheet.tsx`
+- `src/lib/share-ticket.ts`
+- `src/hooks/useIncidentLodgingExpenses.ts`
+- `supabase/migrations/<ts>_of286_invoice_total.sql`
 
----
+**Edited**
+- `src/services/reports/pl-report.ts` — fetch OF-286 totals, add actual columns
+- `src/pages/AdminReports.tsx` — P&L exporters & description
+- `src/components/incidents/OF286UploadCard.tsx` — prompt for invoice total after upload, display & edit
+- `src/hooks/useIncidentDocuments.ts` — pass through new fields
+- `src/components/shift-tickets/ShiftTicketForm.tsx` — Send Ticket button
+- `src/pages/ShiftTicketEdit.tsx` — `onSendTicket` handler that wires PDF + Folio Picker + share helper
+- `package.json` — add `@capacitor/share`, `@capacitor/filesystem`
 
-## What you should test after
-
-1. Open an active incident → page is noticeably shorter; no OF-286 card visible.
-2. Set incident to Demob → OF-286 card appears in Overview.
-3. Tap the bottom-nav Shift Tickets icon → big "Start New" button is the focus, not a list.
-4. Tap the new "Tickets" tab on an incident → CTA at top, today's tickets visible, no expanding required.
-5. With 1 truck assigned, tap "+ New Shift Ticket" → goes straight to the form (no picker).
+## What to test
+1. Upload an OF-286, enter $25,000 invoice total → P&L shows "Actual Profit" = 25,000 − Total Cost.
+2. P&L row with no OF-286 still shows Projected Profit; Actual columns show "—".
+3. Sign a ticket as supervisor, tap Send Ticket on iOS → share sheet opens with PDF attached.
+4. Sign a ticket that has a Lodging row → Folio Picker appears; pick existing expense → share sheet has both PDF + folio image.
+5. Folio Picker → Take photo → photo becomes a lodging expense AND attaches to the email.
+6. Web/desktop fallback: clicking Send downloads files and opens email client with subject/body.

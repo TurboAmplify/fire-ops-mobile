@@ -11,6 +11,23 @@ export interface IncidentDocument {
   file_name: string;
   uploaded_by_user_id: string | null;
   created_at: string;
+  /** Dollar amount actually invoiced on the OF-286 (drives Actual Profit on the P&L). */
+  of286_invoice_total: number | null;
+  of286_entered_at: string | null;
+}
+
+export async function updateIncidentDocumentInvoiceTotal(
+  id: string,
+  total: number | null,
+): Promise<void> {
+  const { error } = await supabase
+    .from("incident_documents")
+    .update({
+      of286_invoice_total: total,
+      of286_entered_at: total != null ? new Date().toISOString() : null,
+    })
+    .eq("id", id);
+  if (error) throw error;
 }
 
 export async function fetchIncidentDocuments(

@@ -617,17 +617,19 @@ function PLReportCard({ organizationId, organizationName }: { organizationId: st
 
     const baseName = `pl_${effectiveRange.label.replace(/\s+/g, "_")}`;
     const factoringLabel = data.factoringEnabled ? `Factoring (${data.factoringPct}%)` : "Factoring (off)";
-    const headers = ["Incident", "Labor Gross", "Employer FICA", "Workers Comp", "Labor True Cost", "Vendor Expenses", "Crew Reimbursements", "Expenses Total", "Expense Count", factoringLabel, "Total Cost", "Truck Days", "Revenue", "Profit"];
+    const headers = ["Incident", "Labor Gross", "Employer FICA", "Workers Comp", "Labor True Cost", "Vendor Expenses", "Crew Reimbursements", "Expenses Total", "Expense Count", factoringLabel, "Total Cost", "Truck Days", "Revenue", "Projected Profit", "OF-286 Total", "Actual Profit"];
     const rows = data.rows.map((r) => [
       r.incidentName, r.laborGross, r.employerTaxes, r.workersComp, r.laborTrueCost,
       r.vendorExpenseTotal, r.reimbursementExpenseTotal, r.expenseTotal, r.expenseCount,
       r.factoringFee, r.totalCost, r.truckDays, r.revenue, r.profit,
+      r.of286Total ?? "", r.actualProfit ?? "",
     ]);
     const totalsRow = [
       "TOTAL", data.totals.laborGross, data.totals.employerTaxes, data.totals.workersComp, data.totals.laborTrueCost,
       data.totals.vendorExpenseTotal, data.totals.reimbursementExpenseTotal, data.totals.expenseTotal,
       data.rows.reduce((a, r) => a + r.expenseCount, 0), data.totals.factoringFee, data.totals.totalCost,
       data.totals.truckDays, data.totals.revenue, data.totals.profit,
+      data.totals.of286Total, data.totals.actualProfit,
     ];
 
     if (fmt === "csv") {
@@ -650,13 +652,16 @@ function PLReportCard({ organizationId, organizationName }: { organizationId: st
           { header: "Total Cost", key: "tc", width: 16, format: "currency" },
           { header: "Truck Days", key: "td", width: 12, format: "int" },
           { header: "Revenue", key: "rv", width: 14, format: "currency" },
-          { header: "Profit", key: "pf", width: 14, format: "currency" },
+          { header: "Projected Profit", key: "pf", width: 16, format: "currency" },
+          { header: "OF-286 Total", key: "of", width: 14, format: "currency" },
+          { header: "Actual Profit", key: "ap", width: 14, format: "currency" },
         ],
         rows: [
           ...data.rows.map((r) => ({
             name: r.incidentName, lg: r.laborGross, et: r.employerTaxes, wc: r.workersComp, lt: r.laborTrueCost,
             vex: r.vendorExpenseTotal, rex: r.reimbursementExpenseTotal,
             ex: r.expenseTotal, ec: r.expenseCount, ff: r.factoringFee, tc: r.totalCost, td: r.truckDays, rv: r.revenue, pf: r.profit,
+            of: r.of286Total ?? "", ap: r.actualProfit ?? "",
           })),
           {
             name: "TOTAL", lg: data.totals.laborGross, et: data.totals.employerTaxes, wc: data.totals.workersComp,
@@ -665,6 +670,7 @@ function PLReportCard({ organizationId, organizationName }: { organizationId: st
             ex: data.totals.expenseTotal,
             ec: data.rows.reduce((a, r) => a + r.expenseCount, 0), ff: data.totals.factoringFee, tc: data.totals.totalCost,
             td: data.totals.truckDays, rv: data.totals.revenue, pf: data.totals.profit,
+            of: data.totals.of286Total, ap: data.totals.actualProfit,
           },
         ],
       }, {
@@ -689,40 +695,42 @@ function PLReportCard({ organizationId, organizationName }: { organizationId: st
     }
 
     const fmtMoney = (v: any) => `$${Number(v).toFixed(2)}`;
+    const fmtMoneyOrDash = (v: any) => (v === "" || v == null ? "—" : `$${Number(v).toFixed(2)}`);
     return downloadTablePdf({
       title: "P&L by Incident",
-      subtitle: `${effectiveRange.label} · True Cost = Gross + Employer FICA + Workers Comp + Expenses + Factoring · Profit = Revenue - Total Cost${data.factoringEnabled ? ` · Factoring ${data.factoringPct}%` : " · Factoring OFF"}`,
+      subtitle: `${effectiveRange.label} · True Cost = Gross + Employer FICA + Workers Comp + Expenses + Factoring · Projected Profit = Revenue (truck day-rate × days) - Total Cost · Actual Profit = OF-286 Total - Total Cost${data.factoringEnabled ? ` · Factoring ${data.factoringPct}%` : " · Factoring OFF"}`,
       organizationName,
       filenameBase: baseName,
       landscape: true,
       sections: [
         {
           columns: [
-            { header: "Incident", key: "name", width: 110 },
-            { header: "Labor Gross", key: "lg", width: 55, align: "right", format: fmtMoney },
-            { header: "ER FICA", key: "et", width: 45, align: "right", format: fmtMoney },
-            { header: "WC", key: "wc", width: 45, align: "right", format: fmtMoney },
-            { header: "Labor TC", key: "lt", width: 60, align: "right", format: fmtMoney },
+            { header: "Incident", key: "name", width: 100 },
+            { header: "Labor TC", key: "lt", width: 55, align: "right", format: fmtMoney },
             { header: "Vendor Exp", key: "vex", width: 55, align: "right", format: fmtMoney },
             { header: "Crew Reimb", key: "rex", width: 55, align: "right", format: fmtMoney },
-            { header: "Factor", key: "ff", width: 50, align: "right", format: fmtMoney },
-            { header: "Total Cost", key: "tc", width: 65, align: "right", format: fmtMoney },
-            { header: "Days", key: "td", width: 30, align: "right" },
-            { header: "Revenue", key: "rv", width: 65, align: "right", format: fmtMoney },
-            { header: "Profit", key: "pf", width: 65, align: "right", format: fmtMoney },
+            { header: "Factor", key: "ff", width: 45, align: "right", format: fmtMoney },
+            { header: "Total Cost", key: "tc", width: 60, align: "right", format: fmtMoney },
+            { header: "Days", key: "td", width: 25, align: "right" },
+            { header: "Revenue", key: "rv", width: 60, align: "right", format: fmtMoney },
+            { header: "Proj Profit", key: "pf", width: 60, align: "right", format: fmtMoney },
+            { header: "OF-286", key: "of", width: 55, align: "right", format: fmtMoneyOrDash },
+            { header: "Actual Profit", key: "ap", width: 65, align: "right", format: fmtMoneyOrDash },
           ],
           rows: [
             ...data.rows.map((r) => ({
-              name: r.incidentName, lg: r.laborGross, et: r.employerTaxes, wc: r.workersComp, lt: r.laborTrueCost,
+              name: r.incidentName, lt: r.laborTrueCost,
               vex: r.vendorExpenseTotal, rex: r.reimbursementExpenseTotal,
               ff: r.factoringFee, tc: r.totalCost, td: r.truckDays, rv: r.revenue, pf: r.profit,
+              of: r.of286Total ?? "", ap: r.actualProfit ?? "",
             })),
             {
-              name: "TOTAL", lg: data.totals.laborGross, et: data.totals.employerTaxes, wc: data.totals.workersComp,
+              name: "TOTAL",
               lt: data.totals.laborTrueCost,
               vex: data.totals.vendorExpenseTotal, rex: data.totals.reimbursementExpenseTotal,
               ff: data.totals.factoringFee, tc: data.totals.totalCost,
               td: data.totals.truckDays, rv: data.totals.revenue, pf: data.totals.profit,
+              of: data.totals.of286Total, ap: data.totals.actualProfit,
             },
           ],
         },
@@ -752,7 +760,7 @@ function PLReportCard({ organizationId, organizationName }: { organizationId: st
     <ReportCard
       icon={TrendingUp}
       title="P&L by Incident"
-      description="Revenue (truck day-rate × days) vs fully-burdened cost (gross labor + employer FICA + workers comp + expenses + factoring) and profit, grouped by fire. Toggle factoring in Payroll Settings."
+      description="Projected Profit = day-rate × days minus burdened cost. Actual Profit = OF-286 invoice total minus burdened cost. Enter the OF-286 amount on each incident to populate Actual."
     >
       <DateRangePicker value={range} onChange={setRange} />
       <ScopePicker crewId={scope.crewId} incidentIds={scope.incidentIds} onChange={setScope} />

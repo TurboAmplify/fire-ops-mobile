@@ -431,6 +431,8 @@ export type Database = {
           file_url: string
           id: string
           incident_id: string
+          of286_entered_at: string | null
+          of286_invoice_total: number | null
           organization_id: string
           uploaded_by_user_id: string | null
         }
@@ -441,6 +443,8 @@ export type Database = {
           file_url: string
           id?: string
           incident_id: string
+          of286_entered_at?: string | null
+          of286_invoice_total?: number | null
           organization_id: string
           uploaded_by_user_id?: string | null
         }
@@ -451,6 +455,8 @@ export type Database = {
           file_url?: string
           id?: string
           incident_id?: string
+          of286_entered_at?: string | null
+          of286_invoice_total?: number | null
           organization_id?: string
           uploaded_by_user_id?: string | null
         }
