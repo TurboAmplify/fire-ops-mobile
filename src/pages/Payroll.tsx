@@ -91,7 +91,7 @@ export default function Payroll() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("crew_compensation" as any)
-        .select("crew_member_id, hourly_rate, hw_rate, pay_method, daily_rate");
+        .select("crew_member_id, hourly_rate, hw_rate, pay_method, daily_rate, use_org_default_rate");
       if (error) throw error;
       return (data as any[]) ?? [];
     },
@@ -99,6 +99,8 @@ export default function Payroll() {
     staleTime: 0,
     refetchOnMount: "always",
   });
+
+  const { data: roleDefaultsRows } = useOrgRoleDefaultRates();
 
   // Approved reimbursement expenses for the current org. The aggregator filters
   // by date range; user→crew_member mapping comes from profiles.crew_member_id.
