@@ -151,82 +151,71 @@ export default function Expenses() {
           ) : null}
         </div>
 
-        {/* Incident filter chips */}
-        <div className="space-y-1.5">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground px-1">Incident</p>
-          <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-4 px-4 no-scrollbar">
-            <button
-              onClick={() => setIncidentFilter("all")}
-              className={`whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-medium transition-all duration-150 ${
-                incidentFilter === "all"
-                  ? "bg-foreground text-background shadow-sm"
-                  : "bg-secondary text-muted-foreground active:bg-secondary/70"
-              }`}
-            >
-              All
-            </button>
-            {incidentBuckets.unattached.count > 0 && (
-              <button
-                onClick={() => setIncidentFilter(UNATTACHED_KEY)}
-                className={`whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-medium transition-all duration-150 ${
-                  incidentFilter === UNATTACHED_KEY
-                    ? "bg-foreground text-background shadow-sm"
-                    : "bg-secondary text-muted-foreground active:bg-secondary/70"
-                }`}
-              >
-                Unattached · ${incidentBuckets.unattached.total.toFixed(0)}
-              </button>
-            )}
-            {incidentBuckets.list.map((inc) => (
-              <button
-                key={inc.id}
-                onClick={() => setIncidentFilter(inc.id)}
-                className={`whitespace-nowrap flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium transition-all duration-150 ${
-                  incidentFilter === inc.id
-                    ? "bg-foreground text-background shadow-sm"
-                    : "bg-secondary text-muted-foreground active:bg-secondary/70"
-                }`}
-              >
-                <Flame className="h-3 w-3" strokeWidth={2} />
-                {inc.name} · ${inc.total.toFixed(0)}
-              </button>
-            ))}
-          </div>
+        {/* Filters: 3 compact dropdowns */}
+        <div className="grid grid-cols-3 gap-1.5">
+          <Select value={incidentFilter} onValueChange={setIncidentFilter}>
+            <SelectTrigger className="h-9 rounded-full bg-secondary border-0 text-[13px] font-medium px-3 [&>svg]:opacity-60">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Flame className="h-3.5 w-3.5 shrink-0 text-muted-foreground" strokeWidth={2} />
+                <SelectValue placeholder="Incident" />
+              </div>
+            </SelectTrigger>
+            <SelectContent className="max-h-[60vh]">
+              <SelectItem value="all">All Incidents</SelectItem>
+              {incidentBuckets.unattached.count > 0 && (
+                <SelectItem value={UNATTACHED_KEY}>
+                  Unattached · ${incidentBuckets.unattached.total.toFixed(0)}
+                </SelectItem>
+              )}
+              {incidentBuckets.list.map((inc) => (
+                <SelectItem key={inc.id} value={inc.id}>
+                  {inc.name} · ${inc.total.toFixed(0)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={filter} onValueChange={(v) => setFilter(v as ExpenseCategory | "all")}>
+            <SelectTrigger className="h-9 rounded-full bg-secondary border-0 text-[13px] font-medium px-3 [&>svg]:opacity-60">
+              <SelectValue placeholder="Type" />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c === "all" ? "All Types" : CATEGORY_LABELS[c]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as ExpenseStatus | "all")}>
+            <SelectTrigger className="h-9 rounded-full bg-secondary border-0 text-[13px] font-medium px-3 [&>svg]:opacity-60">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              {statusFilters.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s === "all" ? "All Statuses" : s.charAt(0).toUpperCase() + s.slice(1)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* Category filter chips */}
-        <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-4 px-4 no-scrollbar">
-          {categories.map((c) => (
-            <button
-              key={c}
-              onClick={() => setFilter(c)}
-              className={`whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-medium transition-all duration-150 ${
-                filter === c
-                  ? "bg-foreground text-background shadow-sm"
-                  : "bg-secondary text-muted-foreground active:bg-secondary/70"
-              }`}
-            >
-              {c === "all" ? "All" : CATEGORY_LABELS[c]}
-            </button>
-          ))}
-        </div>
-
-        {/* Status filter chips */}
-        <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-4 px-4 no-scrollbar">
-          {statusFilters.map((s) => (
-            <button
-              key={s}
-              onClick={() => setStatusFilter(s)}
-              className={`whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] font-medium transition-all duration-150 ${
-                statusFilter === s
-                  ? "bg-foreground/80 text-background"
-                  : "bg-secondary/70 text-muted-foreground active:bg-secondary"
-              }`}
-            >
-              {s === "all" ? "All Status" : s.charAt(0).toUpperCase() + s.slice(1)}
-            </button>
-          ))}
-        </div>
+        {/* Active filters indicator + clear */}
+        {(incidentFilter !== "all" || filter !== "all" || statusFilter !== "all") && (
+          <button
+            onClick={() => {
+              setIncidentFilter("all");
+              setFilter("all");
+              setStatusFilter("all");
+            }}
+            className="flex items-center gap-1 text-[11px] font-semibold text-muted-foreground active:text-foreground px-1"
+          >
+            <X className="h-3 w-3" />
+            Clear filters
+          </button>
+        )}
 
         {/* States */}
         {isLoading && (
