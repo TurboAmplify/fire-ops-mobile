@@ -77,6 +77,41 @@ export function InspectionTemplateEditor() {
     }
   };
 
+  // Create a new template prefilled with the wildland-engine starter list.
+  const handleCreateFromStarter = async () => {
+    const name = getStarterTemplateName(tab);
+    const starter = getStarterItems(tab);
+    try {
+      const t: any = await createTemplate.mutateAsync({
+        name,
+        isDefault: !templates?.length,
+        templateType: tab,
+      });
+      // Bulk-add starter items into the new template directly.
+      const { bulkAddTemplateItems } = await import("@/services/inspections");
+      await bulkAddTemplateItems(t.id, starter, 0);
+      setSelectedId(t.id);
+      toast.success(`Created "${name}" with ${starter.length} items`);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to create starter list");
+    }
+  };
+
+  // Bulk-add the starter items into the currently active (likely empty) template.
+  const handleAddStarterToActive = async () => {
+    if (!active) return;
+    const starter = getStarterItems(tab);
+    try {
+      await bulkAddItems.mutateAsync({
+        labels: starter,
+        startSortOrder: items?.length ?? 0,
+      });
+      toast.success(`Added ${starter.length} starter items`);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to add starter items");
+    }
+  };
+
   const handleSetDefault = async (id: string) => {
     try {
       await updateTemplate.mutateAsync({ id, patch: { is_default: true } });
