@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   useIncidentDocuments,
   useCreateIncidentDocument,
   useDeleteIncidentDocument,
+  useUpdateIncidentDocumentInvoiceTotal,
 } from "@/hooks/useIncidentDocuments";
 import { uploadIncidentDocumentFile } from "@/services/incident-documents";
 import { useOrganization } from "@/hooks/useOrganization";
@@ -10,8 +11,10 @@ import { SignedLink } from "@/components/ui/SignedLink";
 import {
   AlertTriangle,
   CheckCircle2,
+  DollarSign,
   FileText,
   Loader2,
+  Pencil,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -27,18 +30,33 @@ interface Props {
  * OF-286 (Emergency Equipment Use Invoice) upload card.
  * Closure of the incident is NOT blocked when missing — but a clear
  * "Missing OF-286" warning is shown until at least one is uploaded.
+ *
+ * Once uploaded, the user is asked for the invoice total ($) so the P&L
+ * report can show "Actual Profit" alongside Projected Profit.
  */
 export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
   const { membership } = useOrganization();
   const { data: docs, isLoading } = useIncidentDocuments(incidentId, "of286");
   const createMutation = useCreateIncidentDocument(incidentId);
   const deleteMutation = useDeleteIncidentDocument(incidentId);
+  const updateTotalMutation = useUpdateIncidentDocumentInvoiceTotal(incidentId);
   const [uploading, setUploading] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [editingTotalId, setEditingTotalId] = useState<string | null>(null);
+  const [totalDraft, setTotalDraft] = useState("");
 
   const hasDoc = (docs?.length ?? 0) > 0;
-  // Only treat absence as a problem once the incident is winding down.
   const flagMissing = !hasDoc && (incidentStatus === "demob" || incidentStatus === "closed");
+
+  // Auto-prompt for invoice total when a brand-new doc lands without one.
+  useEffect(() => {
+    if (!docs || docs.length === 0) return;
+    const first = docs[0];
+    if (first.of286_invoice_total == null && editingTotalId !== first.id) {
+      setEditingTotalId(first.id);
+      setTotalDraft("");
+    }
+  }, [docs, editingTotalId]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -77,6 +95,26 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
       toast.error("Failed to remove document");
     }
   };
+
+  const handleSaveTotal = async (id: string) => {
+    const cleaned = totalDraft.trim().replace(/[$,]/g, "");
+    const parsed = cleaned === "" ? null : Number(cleaned);
+    if (parsed != null && !Number.isFinite(parsed)) {
+      toast.error("Enter a valid dollar amount");
+      return;
+    }
+    try {
+      await updateTotalMutation.mutateAsync({ id, total: parsed });
+      toast.success(parsed != null ? "Invoice total saved" : "Invoice total cleared");
+      setEditingTotalId(null);
+      setTotalDraft("");
+    } catch {
+      toast.error("Failed to save invoice total");
+    }
+  };
+
+  const fmtMoney = (n: number) =>
+    n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
 
   return (
     <div
@@ -131,50 +169,108 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
 
       {hasDoc && (
         <div className="space-y-2">
-          {docs!.map((doc) => (
-            <div
-              key={doc.id}
-              className="flex items-center gap-2 rounded-lg bg-background/60 p-2.5"
-            >
-              <SignedLink
-                href={doc.file_url}
-                className="flex items-center gap-2 min-w-0 flex-1 touch-target"
+          {docs!.map((doc) => {
+            const isEditing = editingTotalId === doc.id;
+            const total = doc.of286_invoice_total;
+            return (
+              <div
+                key={doc.id}
+                className="rounded-lg bg-background/60 p-2.5 space-y-2"
               >
-                <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{doc.file_name}</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    Uploaded {new Date(doc.created_at).toLocaleDateString()}
-                  </p>
-                </div>
-              </SignedLink>
-              {confirmDeleteId === doc.id ? (
-                <div className="flex gap-1">
-                  <button
-                    onClick={() => handleDelete(doc.id)}
-                    disabled={deleteMutation.isPending}
-                    className="rounded-md bg-destructive px-2 py-1 text-[11px] font-bold text-destructive-foreground touch-target"
+                <div className="flex items-center gap-2">
+                  <SignedLink
+                    href={doc.file_url}
+                    className="flex items-center gap-2 min-w-0 flex-1 touch-target"
                   >
-                    Confirm
-                  </button>
-                  <button
-                    onClick={() => setConfirmDeleteId(null)}
-                    className="rounded-md bg-secondary px-2 py-1 text-[11px] font-bold text-secondary-foreground touch-target"
-                  >
-                    Cancel
-                  </button>
+                    <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{doc.file_name}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        Uploaded {new Date(doc.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </SignedLink>
+                  {confirmDeleteId === doc.id ? (
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => handleDelete(doc.id)}
+                        disabled={deleteMutation.isPending}
+                        className="rounded-md bg-destructive px-2 py-1 text-[11px] font-bold text-destructive-foreground touch-target"
+                      >
+                        Confirm
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="rounded-md bg-secondary px-2 py-1 text-[11px] font-bold text-secondary-foreground touch-target"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDeleteId(doc.id)}
+                      className="text-muted-foreground hover:text-destructive touch-target p-1"
+                      aria-label="Remove document"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
-              ) : (
-                <button
-                  onClick={() => setConfirmDeleteId(doc.id)}
-                  className="text-muted-foreground hover:text-destructive touch-target p-1"
-                  aria-label="Remove document"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-          ))}
+
+                {/* Invoice total — drives Actual Profit on P&L */}
+                {isEditing ? (
+                  <div className="flex items-center gap-2 rounded-md border border-border bg-background p-2">
+                    <DollarSign className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      autoFocus
+                      placeholder="Invoice total (e.g. 24850.00)"
+                      value={totalDraft}
+                      onChange={(e) => setTotalDraft(e.target.value)}
+                      className="flex-1 bg-transparent text-sm outline-none"
+                    />
+                    <button
+                      onClick={() => handleSaveTotal(doc.id)}
+                      disabled={updateTotalMutation.isPending}
+                      className="rounded-md bg-primary px-2.5 py-1 text-[11px] font-bold text-primary-foreground touch-target disabled:opacity-40"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingTotalId(null);
+                        setTotalDraft("");
+                      }}
+                      className="text-[11px] font-semibold text-muted-foreground touch-target px-1"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setEditingTotalId(doc.id);
+                      setTotalDraft(total != null ? String(total) : "");
+                    }}
+                    className="flex w-full items-center justify-between gap-2 rounded-md bg-background/80 px-2.5 py-1.5 text-left touch-target"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <DollarSign className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <span className="text-[11px] text-muted-foreground">Invoice total</span>
+                      <span className="text-sm font-semibold">
+                        {total != null ? fmtMoney(Number(total)) : "Not entered"}
+                      </span>
+                    </div>
+                    <Pencil className="h-3 w-3 text-muted-foreground shrink-0" />
+                  </button>
+                )}
+              </div>
+            );
+          })}
+          <p className="text-[10px] text-muted-foreground px-1">
+            Invoice total powers "Actual Profit" on the P&L report.
+          </p>
         </div>
       )}
     </div>
