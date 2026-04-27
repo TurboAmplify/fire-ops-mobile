@@ -132,67 +132,74 @@ export default function NeedsList() {
         )}
 
         {!isLoading && !error && displayed.length > 0 && (
-          <div className="space-y-2">
+          <div className="overflow-hidden rounded-2xl bg-card card-shadow divide-y divide-border/60">
             {displayed.map((item) => (
               <div
                 key={item.id}
-                className={`rounded-2xl bg-card p-4 card-shadow transition-all ${
-                  item.is_purchased ? "opacity-70" : ""
+                className={`flex items-center gap-2.5 px-3 py-2.5 transition-all ${
+                  item.is_purchased ? "opacity-60" : ""
                 }`}
               >
-                <div className="flex items-start gap-3">
-                  {/* Purchase / Reactivate button */}
-                  <button
-                    onClick={() =>
-                      item.is_purchased ? handleReactivate(item) : handlePurchase(item)
-                    }
-                    className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-all touch-target ${
-                      item.is_purchased
-                        ? "border-green-500 bg-green-500/15 text-green-600"
-                        : "border-border text-transparent hover:border-primary/40"
+                {/* Check / Reactivate */}
+                <button
+                  onClick={() =>
+                    item.is_purchased ? handleReactivate(item) : handlePurchase(item)
+                  }
+                  aria-label={item.is_purchased ? "Mark as needed" : "Mark as purchased"}
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-all ${
+                    item.is_purchased
+                      ? "border-green-500 bg-green-500/15 text-green-600"
+                      : "border-border text-transparent active:border-primary/60 active:bg-primary/5"
+                  }`}
+                >
+                  {item.is_purchased ? (
+                    <Check className="h-3.5 w-3.5" />
+                  ) : (
+                    <Check className="h-3.5 w-3.5" />
+                  )}
+                </button>
+
+                {/* Title + inline tag (single row) */}
+                <button
+                  onClick={() => handleEdit(item)}
+                  className="flex-1 min-w-0 flex items-center gap-2 text-left active:opacity-70"
+                >
+                  <span
+                    className={`font-semibold text-sm truncate ${
+                      item.is_purchased ? "line-through text-muted-foreground" : ""
                     }`}
                   >
-                    <Check className="h-4 w-4" />
+                    {item.title}
+                  </span>
+                  <span
+                    className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${getCategoryColor(
+                      item
+                    )}`}
+                  >
+                    {getLinkedName(item)}
+                  </span>
+                </button>
+
+                {/* Single action: revert or delete */}
+                {item.is_purchased ? (
+                  <button
+                    onClick={() => handleReactivate(item)}
+                    aria-label="Move back to active"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground active:bg-secondary"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
                   </button>
-
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <p
-                      className={`font-semibold text-sm ${
-                        item.is_purchased ? "line-through text-muted-foreground" : ""
-                      }`}
-                    >
-                      {item.title}
-                    </p>
-                    {item.notes && (
-                      <p className="text-xs text-muted-foreground line-clamp-2">{item.notes}</p>
-                    )}
-                    <span
-                      className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${getCategoryColor(
-                        item
-                      )}`}
-                    >
-                      {getLinkedName(item)}
-                    </span>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex gap-1 shrink-0">
-                    <button
-                      onClick={() => handleEdit(item)}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors active:bg-secondary touch-target"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (confirm("Delete this item?")) deleteItem.mutate(item.id);
-                      }}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors active:bg-destructive/10 active:text-destructive touch-target"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      if (confirm("Delete this item?")) deleteItem.mutate(item.id);
+                    }}
+                    aria-label="Delete item"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground active:bg-destructive/10 active:text-destructive"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
             ))}
           </div>
