@@ -423,14 +423,19 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
         </div>
 
         {/* Submit */}
-        <button
-          type="submit"
-          disabled={!canSubmit}
-          className="w-full rounded-xl bg-primary py-4 text-base font-bold text-primary-foreground transition-transform active:scale-[0.98] disabled:opacity-40 touch-target flex items-center justify-center gap-2"
-        >
-          {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-          {submitLabel}
-        </button>
+        <div className="space-y-2">
+          {disabledReason && (
+            <p className="text-xs text-muted-foreground text-center">{disabledReason} to save</p>
+          )}
+          <button
+            type="submit"
+            disabled={!canSubmit}
+            className="w-full rounded-xl bg-primary py-4 text-base font-bold text-primary-foreground transition-transform active:scale-[0.98] disabled:opacity-40 touch-target flex items-center justify-center gap-2"
+          >
+            {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+            {submitLabel}
+          </button>
+        </div>
       </form>
     </>
   );
