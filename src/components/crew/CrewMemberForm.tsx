@@ -12,6 +12,7 @@ import { useAppMode } from "@/lib/app-mode";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
 import { CREW_ROLES } from "@/lib/crew-roles";
+import { useOrgRoleDefaultRates } from "@/hooks/useOrgRoleDefaultRates";
 
 interface Props {
   memberId: string | null;
