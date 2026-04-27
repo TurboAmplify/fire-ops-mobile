@@ -18,6 +18,7 @@ import {
   type WithholdingProfile, DEFAULT_ORG_PAYROLL,
 } from "@/lib/payroll";
 import { useOrgPayrollSettings, useCrewWithholdingProfiles } from "@/hooks/useOrgPayrollSettings";
+import { useOrgRoleDefaultRates } from "@/hooks/useOrgRoleDefaultRates";
 import { Paystub } from "@/components/payroll/Paystub";
 import { generatePaystubPdf } from "@/components/payroll/generatePaystubPdf";
 import { PayrollSettingsCard } from "@/components/payroll/PayrollSettingsCard";
