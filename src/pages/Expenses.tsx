@@ -96,17 +96,17 @@ export default function Expenses() {
     <AppShell
       title="Expenses"
       headerRight={
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <Link
             to="/expenses/batch-scan"
-            className="flex items-center gap-1.5 rounded-full bg-secondary px-3.5 h-9 text-sm font-semibold text-secondary-foreground active:bg-secondary/70"
+            aria-label="Scan receipts"
+            className="flex items-center justify-center rounded-full bg-secondary h-9 w-9 text-secondary-foreground active:bg-secondary/70"
           >
             <ScanLine className="h-4 w-4" />
-            Scan
           </Link>
           <Link
             to="/expenses/new"
-            className="flex items-center gap-1.5 rounded-full bg-primary px-3.5 h-9 text-sm font-semibold text-primary-foreground active:bg-primary/90"
+            className="flex items-center gap-1 rounded-full bg-primary px-3 h-9 text-sm font-semibold text-primary-foreground active:bg-primary/90"
           >
             <Plus className="h-4 w-4" />
             New
