@@ -143,6 +143,25 @@ export async function addTemplateItem(templateId: string, label: string, sortOrd
   return data as InspectionTemplateItem;
 }
 
+export async function bulkAddTemplateItems(
+  templateId: string,
+  labels: string[],
+  startSortOrder = 0,
+): Promise<InspectionTemplateItem[]> {
+  if (labels.length === 0) return [];
+  const rows = labels.map((label, i) => ({
+    template_id: templateId,
+    label,
+    sort_order: startSortOrder + i,
+  }));
+  const { data, error } = await supabase
+    .from("inspection_template_items")
+    .insert(rows)
+    .select();
+  if (error) throw error;
+  return (data ?? []) as InspectionTemplateItem[];
+}
+
 export async function updateTemplateItem(id: string, patch: Partial<Pick<InspectionTemplateItem, "label" | "sort_order">>) {
   const { error } = await supabase.from("inspection_template_items").update(patch).eq("id", id);
   if (error) throw error;
