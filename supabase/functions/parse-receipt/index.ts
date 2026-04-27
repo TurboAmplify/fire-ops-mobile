@@ -112,6 +112,14 @@ serve(async (req) => {
             role: "system",
             content: `You extract structured data from receipt images for expense tracking in a wildland firefighting operations app.
 
+CRITICAL RULES FOR AMOUNT (read carefully — this is the most common mistake):
+- The amount must be the FINAL total the customer actually paid
+- ALWAYS scan the receipt for HANDWRITTEN numbers (pen/marker) — these almost always represent the true total when a tip was added OR when the customer wrote in a corrected total
+- If you see a handwritten number that is LARGER than the printed total, USE THE HANDWRITTEN NUMBER — it is the real total paid
+- If a handwritten number appears next to words like "TOTAL", "TIP", or near the signature line, treat it as authoritative over the printed subtotal
+- Only fall back to the printed "TOTAL" / "GRAND TOTAL" / "AMOUNT DUE" when there is no handwritten override
+- Never use subtotal, tax-only, or single line-item amounts as the total
+
 CRITICAL RULES FOR DESCRIPTION:
 - Description must be a SHORT, TAX-FRIENDLY purpose statement (5-10 words max)
 - Describe the PURPOSE of the expense, NOT the items purchased
