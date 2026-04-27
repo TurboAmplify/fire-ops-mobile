@@ -36,6 +36,7 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
   const [hourlyRate, setHourlyRate] = useState("");
   const [hwRate, setHwRate] = useState("");
   const [dailyRate, setDailyRate] = useState("");
+  const [useOrgDefaultRate, setUseOrgDefaultRate] = useState(true);
   const [withholding, setWithholding] = useState<WithholdingProfileValues>(EMPTY_WITHHOLDING);
 
   const mode = useAppMode();
