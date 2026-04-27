@@ -144,6 +144,19 @@ export function useAddTemplateItem(templateId: string | undefined) {
   });
 }
 
+export function useBulkAddTemplateItems(templateId: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ labels, startSortOrder = 0 }: { labels: string[]; startSortOrder?: number }) => {
+      assertOnlineForWrite();
+      return bulkAddTemplateItems(templateId!, labels, startSortOrder);
+    },
+    onSuccess: () => {
+      if (templateId) qc.invalidateQueries({ queryKey: inspectionKeys.templateItems(templateId) });
+    },
+  });
+}
+
 export function useUpdateTemplateItem(templateId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
