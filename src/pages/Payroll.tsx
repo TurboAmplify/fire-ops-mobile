@@ -255,6 +255,7 @@ export default function Payroll() {
       shiftTickets: normalizedTickets,
       crewMembers: crewMembers.map((c) => ({ id: c.id, name: c.name, role: c.role })),
       compensation: compMap,
+      roleDefaults: roleDefaultsMap,
       rangeStart, rangeEnd, incidentFilter,
       adjustments: (adjustments ?? []).map((a) => ({
         id: a.id,
@@ -273,7 +274,7 @@ export default function Payroll() {
     });
     if (crewFilter !== "all") return lines.filter((l) => l.crewMemberId === crewFilter);
     return lines;
-  }, [normalizedTickets, crewMembers, compMap, rangeStart, rangeEnd, incidentFilter, crewFilter, profileMap, orgPayroll, adjustments, incidentNamesMap, reimbursementsLite, userToCrewMember]);
+  }, [normalizedTickets, crewMembers, compMap, roleDefaultsMap, rangeStart, rangeEnd, incidentFilter, crewFilter, profileMap, orgPayroll, adjustments, incidentNamesMap, reimbursementsLite, userToCrewMember]);
 
   const incidentLines: IncidentPayrollLine[] = useMemo(() => pivotByIncident(crewLines), [crewLines]);
   const totals = useMemo(() => sumTotals(crewLines), [crewLines]);
