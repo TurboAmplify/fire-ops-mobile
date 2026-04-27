@@ -271,11 +271,36 @@ export async function fetchPLReport(input: PLInput, rangeLabel: string): Promise
   const factoringEnabled = (orgSettings as any)?.factoring_enabled ?? true;
   const factoringPct = factoringEnabled ? Number((orgSettings as any)?.factoring_pct ?? 4.5) : 0;
 
+  // Pull OF-286 invoice totals per incident in scope. An incident can have
+  // multiple OF-286 docs (split assignments) — sum the entered totals.
+  const incidentIdsWithRows = Array.from(incidentMap.values())
+    .map((r) => r.incidentId)
+    .filter((id): id is string => !!id);
+  const of286ByIncident = new Map<string, number>();
+  if (incidentIdsWithRows.length > 0) {
+    const { data: of286Rows } = await supabase
+      .from("incident_documents")
+      .select("incident_id, of286_invoice_total")
+      .eq("document_type", "of286")
+      .in("incident_id", incidentIdsWithRows);
+    (of286Rows ?? []).forEach((r: any) => {
+      const total = r.of286_invoice_total;
+      if (total == null) return;
+      const num = Number(total);
+      if (!Number.isFinite(num)) return;
+      of286ByIncident.set(r.incident_id, (of286ByIncident.get(r.incident_id) ?? 0) + num);
+    });
+  }
+
   const rows = Array.from(incidentMap.values());
   rows.forEach((r) => {
     r.factoringFee = (r.revenue * factoringPct) / 100;
     r.totalCost = r.laborTrueCost + r.expenseTotal + r.factoringFee;
     r.profit = r.revenue - r.totalCost;
+    if (r.incidentId && of286ByIncident.has(r.incidentId)) {
+      r.of286Total = of286ByIncident.get(r.incidentId)!;
+      r.actualProfit = r.of286Total - r.totalCost;
+    }
   });
   rows.sort((a, b) => b.totalCost - a.totalCost);
 
@@ -293,8 +318,10 @@ export async function fetchPLReport(input: PLInput, rangeLabel: string): Promise
       truckDays: acc.truckDays + r.truckDays,
       factoringFee: acc.factoringFee + r.factoringFee,
       profit: acc.profit + r.profit,
+      of286Total: acc.of286Total + (r.of286Total ?? 0),
+      actualProfit: acc.actualProfit + (r.actualProfit ?? 0),
     }),
-    { laborGross: 0, employerTaxes: 0, workersComp: 0, laborTrueCost: 0, expenseTotal: 0, vendorExpenseTotal: 0, reimbursementExpenseTotal: 0, totalCost: 0, revenue: 0, truckDays: 0, factoringFee: 0, profit: 0 },
+    { laborGross: 0, employerTaxes: 0, workersComp: 0, laborTrueCost: 0, expenseTotal: 0, vendorExpenseTotal: 0, reimbursementExpenseTotal: 0, totalCost: 0, revenue: 0, truckDays: 0, factoringFee: 0, profit: 0, of286Total: 0, actualProfit: 0 },
   );
 
   return {
