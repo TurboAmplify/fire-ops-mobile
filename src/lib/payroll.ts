@@ -36,6 +36,54 @@ export interface CompensationLite {
   hw_rate: number | null;
   pay_method?: "hourly" | "daily" | null;
   daily_rate?: number | null;
+  /** When true, payroll falls back to org_role_default_rates for the crew
+   *  member's role. Per-employee values still win when set. */
+  use_org_default_rate?: boolean | null;
+}
+
+export interface RoleDefaultRateLite {
+  role: string;
+  pay_method: "hourly" | "daily";
+  hourly_rate: number | null;
+  hw_rate: number | null;
+  daily_rate: number | null;
+}
+
+/**
+ * Resolve the effective pay rates for a single crew member by merging the
+ * per-employee compensation row with the org-level role default. Per-employee
+ * values always win when populated; when the toggle is on (or the per-employee
+ * value is null), we fall back to the role default for the member's role.
+ */
+export function resolveEffectiveCompensation(
+  comp: CompensationLite | undefined,
+  role: string | null | undefined,
+  roleDefaults: Map<string, RoleDefaultRateLite> | undefined
+): { hourly_rate: number; hw_rate: number; daily_rate: number; pay_method: "hourly" | "daily" } {
+  const roleKey = (role ?? "").trim();
+  const def = roleKey && roleDefaults ? roleDefaults.get(roleKey) : undefined;
+  const useDefault = comp?.use_org_default_rate ?? true;
+
+  const pickNumber = (override: number | null | undefined, fallback: number | null | undefined): number => {
+    if (!useDefault && override != null) return Number(override) || 0;
+    if (override != null) return Number(override) || 0;
+    if (fallback != null) return Number(fallback) || 0;
+    return 0;
+  };
+
+  const pickMethod = (): "hourly" | "daily" => {
+    if (!useDefault && comp?.pay_method) return comp.pay_method === "daily" ? "daily" : "hourly";
+    if (comp?.pay_method) return comp.pay_method === "daily" ? "daily" : "hourly";
+    if (def?.pay_method) return def.pay_method;
+    return "hourly";
+  };
+
+  return {
+    hourly_rate: pickNumber(comp?.hourly_rate, def?.hourly_rate),
+    hw_rate: pickNumber(comp?.hw_rate, def?.hw_rate),
+    daily_rate: pickNumber(comp?.daily_rate, def?.daily_rate),
+    pay_method: pickMethod(),
+  };
 }
 
 // === Withholding profile / org defaults =====================================
