@@ -4,6 +4,7 @@ import {
   createIncidentDocument,
   deleteIncidentDocument,
   fetchIncidentsWithOF286,
+  updateIncidentDocumentInvoiceTotal,
   type IncidentDocumentType,
 } from "@/services/incident-documents";
 import { useOrganization } from "@/hooks/useOrganization";
@@ -56,6 +57,21 @@ export function useDeleteIncidentDocument(incidentId: string | undefined) {
     mutationFn: (id: string) => {
       assertOnlineForWrite();
       return deleteIncidentDocument(id);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["incident-documents", incidentId] });
+      qc.invalidateQueries({ queryKey: ["incident-of286-flags"] });
+    },
+  });
+}
+
+/** Set the OF-286 invoice total for one document; refreshes P&L data. */
+export function useUpdateIncidentDocumentInvoiceTotal(incidentId: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, total }: { id: string; total: number | null }) => {
+      assertOnlineForWrite();
+      return updateIncidentDocumentInvoiceTotal(id, total);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["incident-documents", incidentId] });
