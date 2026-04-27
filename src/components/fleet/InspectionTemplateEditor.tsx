@@ -39,6 +39,7 @@ export function InspectionTemplateEditor() {
 
   const { data: items, isLoading: loadingItems } = useInspectionTemplateItems(active?.id);
   const addItem = useAddTemplateItem(active?.id);
+  const bulkAddItems = useBulkAddTemplateItems(active?.id);
   const deleteItem = useDeleteTemplateItem(active?.id);
 
   const [newItemLabel, setNewItemLabel] = useState("");
