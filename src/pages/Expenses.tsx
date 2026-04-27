@@ -13,7 +13,6 @@ import { toast } from "sonner";
 const categories: (ExpenseCategory | "all")[] = ["all", "fuel", "ppe", "food", "lodging", "equipment", "other"];
 const statusFilters: (ExpenseStatus | "all")[] = ["all", "draft", "submitted", "approved", "rejected", "reimbursed"];
 
-const UNATTACHED_KEY = "__unattached__";
 
 export default function Expenses() {
   const { data: expenses, isLoading, error } = useExpenses();
