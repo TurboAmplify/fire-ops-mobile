@@ -77,6 +77,7 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
       setHwRate(comp.hw_rate != null ? String(comp.hw_rate) : "");
       setPayMethod(comp.pay_method === "daily" ? "daily" : "hourly");
       setDailyRate(comp.daily_rate != null ? String(comp.daily_rate) : "");
+      setUseOrgDefaultRate(comp.use_org_default_rate ?? true);
       setWithholding({
         filing_status: (comp.filing_status as any) ?? "single",
         dependents_count: comp.dependents_count != null ? String(comp.dependents_count) : "0",
