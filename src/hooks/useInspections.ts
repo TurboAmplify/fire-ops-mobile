@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { assertOnlineForWrite } from "@/lib/offline-guard";
 import {
   addTemplateItem,
+  bulkAddTemplateItems,
   createTemplate,
   deleteTemplate,
   deleteTemplateItem,
