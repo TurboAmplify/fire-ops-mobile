@@ -1,25 +1,18 @@
 import { AppShell } from "@/components/AppShell";
 import { Link } from "react-router-dom";
-import { Plus, Loader2, Send, DollarSign, ScanLine, Flame, Truck as TruckIcon, X } from "lucide-react";
+import { Plus, Loader2, Send, DollarSign, ScanLine, Flame, Truck as TruckIcon } from "lucide-react";
 import { useExpenses, useUpdateExpense } from "@/hooks/useExpenses";
 import { CATEGORY_LABELS, CATEGORY_ICON_MAP } from "@/services/expenses";
 import type { ExpenseCategory, ExpenseStatus } from "@/services/expenses";
 import { ExpenseStatusBadge } from "@/components/expenses/ExpenseStatusBadge";
+import { ExpenseFilterBar, UNATTACHED_KEY } from "@/components/expenses/ExpenseFilterBar";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 const categories: (ExpenseCategory | "all")[] = ["all", "fuel", "ppe", "food", "lodging", "equipment", "other"];
 const statusFilters: (ExpenseStatus | "all")[] = ["all", "draft", "submitted", "approved", "rejected", "reimbursed"];
 
-const UNATTACHED_KEY = "__unattached__";
 
 export default function Expenses() {
   const { data: expenses, isLoading, error } = useExpenses();
@@ -151,71 +144,18 @@ export default function Expenses() {
           ) : null}
         </div>
 
-        {/* Filters: 3 compact dropdowns */}
-        <div className="grid grid-cols-3 gap-1.5">
-          <Select value={incidentFilter} onValueChange={setIncidentFilter}>
-            <SelectTrigger className="h-9 rounded-full bg-secondary border-0 text-[13px] font-medium px-3 [&>svg]:opacity-60">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <Flame className="h-3.5 w-3.5 shrink-0 text-muted-foreground" strokeWidth={2} />
-                <SelectValue placeholder="Incident" />
-              </div>
-            </SelectTrigger>
-            <SelectContent className="max-h-[60vh]">
-              <SelectItem value="all">All Incidents</SelectItem>
-              {incidentBuckets.unattached.count > 0 && (
-                <SelectItem value={UNATTACHED_KEY}>
-                  Unattached · ${incidentBuckets.unattached.total.toFixed(0)}
-                </SelectItem>
-              )}
-              {incidentBuckets.list.map((inc) => (
-                <SelectItem key={inc.id} value={inc.id}>
-                  {inc.name} · ${inc.total.toFixed(0)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={filter} onValueChange={(v) => setFilter(v as ExpenseCategory | "all")}>
-            <SelectTrigger className="h-9 rounded-full bg-secondary border-0 text-[13px] font-medium px-3 [&>svg]:opacity-60">
-              <SelectValue placeholder="Type" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {c === "all" ? "All Types" : CATEGORY_LABELS[c]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as ExpenseStatus | "all")}>
-            <SelectTrigger className="h-9 rounded-full bg-secondary border-0 text-[13px] font-medium px-3 [&>svg]:opacity-60">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              {statusFilters.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s === "all" ? "All Statuses" : s.charAt(0).toUpperCase() + s.slice(1)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Active filters indicator + clear */}
-        {(incidentFilter !== "all" || filter !== "all" || statusFilter !== "all") && (
-          <button
-            onClick={() => {
-              setIncidentFilter("all");
-              setFilter("all");
-              setStatusFilter("all");
-            }}
-            className="flex items-center gap-1 text-[11px] font-semibold text-muted-foreground active:text-foreground px-1"
-          >
-            <X className="h-3 w-3" />
-            Clear filters
-          </button>
-        )}
+        {/* Uber-style filter bar — pills open bottom sheets */}
+        <ExpenseFilterBar
+          incidentFilter={incidentFilter}
+          setIncidentFilter={setIncidentFilter}
+          filter={filter}
+          setFilter={setFilter}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+          incidentBuckets={incidentBuckets}
+          categories={categories}
+          statusFilters={statusFilters}
+        />
 
         {/* States */}
         {isLoading && (
