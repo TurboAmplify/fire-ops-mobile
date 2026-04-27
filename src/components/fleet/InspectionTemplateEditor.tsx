@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2, Plus, Trash2, Star, StarOff } from "lucide-react";
+import { Loader2, Plus, Trash2, Star, StarOff, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useOrganization } from "@/hooks/useOrganization";
@@ -11,7 +11,9 @@ import {
   useDeleteTemplate,
   useAddTemplateItem,
   useDeleteTemplateItem,
+  useBulkAddTemplateItems,
 } from "@/hooks/useInspections";
+import { getStarterItems, getStarterTemplateName } from "@/lib/inspectionStarterLists";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
