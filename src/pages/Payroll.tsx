@@ -18,9 +18,11 @@ import {
   type WithholdingProfile, DEFAULT_ORG_PAYROLL,
 } from "@/lib/payroll";
 import { useOrgPayrollSettings, useCrewWithholdingProfiles } from "@/hooks/useOrgPayrollSettings";
+import { useOrgRoleDefaultRates } from "@/hooks/useOrgRoleDefaultRates";
 import { Paystub } from "@/components/payroll/Paystub";
 import { generatePaystubPdf } from "@/components/payroll/generatePaystubPdf";
 import { PayrollSettingsCard } from "@/components/payroll/PayrollSettingsCard";
+import { RoleDefaultRatesCard } from "@/components/payroll/RoleDefaultRatesCard";
 import { PayrollAcknowledgmentDialog } from "@/components/payroll/PayrollAcknowledgmentDialog";
 import { AdjustmentSheet } from "@/components/payroll/AdjustmentSheet";
 import { usePayrollAdjustments, useDeletePayrollAdjustment } from "@/hooks/usePayrollAdjustments";
@@ -90,7 +92,7 @@ export default function Payroll() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("crew_compensation" as any)
-        .select("crew_member_id, hourly_rate, hw_rate, pay_method, daily_rate");
+        .select("crew_member_id, hourly_rate, hw_rate, pay_method, daily_rate, use_org_default_rate");
       if (error) throw error;
       return (data as any[]) ?? [];
     },
@@ -98,6 +100,8 @@ export default function Payroll() {
     staleTime: 0,
     refetchOnMount: "always",
   });
+
+  const { data: roleDefaultsRows } = useOrgRoleDefaultRates();
 
   // Approved reimbursement expenses for the current org. The aggregator filters
   // by date range; user→crew_member mapping comes from profiles.crew_member_id.
@@ -169,15 +173,30 @@ export default function Payroll() {
   }, [reimbursementsRaw]);
 
   const compMap = useMemo(() => {
-    const m = new Map<string, { hourly_rate: number | null; hw_rate: number | null; pay_method?: "hourly" | "daily" | null; daily_rate?: number | null }>();
+    const m = new Map<string, { hourly_rate: number | null; hw_rate: number | null; pay_method?: "hourly" | "daily" | null; daily_rate?: number | null; use_org_default_rate?: boolean | null }>();
     (compensation ?? []).forEach((c: any) => m.set(c.crew_member_id, {
       hourly_rate: c.hourly_rate,
       hw_rate: c.hw_rate,
       pay_method: c.pay_method,
       daily_rate: c.daily_rate,
+      use_org_default_rate: c.use_org_default_rate,
     }));
     return m;
   }, [compensation]);
+
+  const roleDefaultsMap = useMemo(() => {
+    const m = new Map<string, { role: string; pay_method: "hourly" | "daily"; hourly_rate: number | null; hw_rate: number | null; daily_rate: number | null }>();
+    (roleDefaultsRows ?? []).forEach((r) => {
+      m.set(r.role.trim(), {
+        role: r.role,
+        pay_method: r.pay_method === "daily" ? "daily" : "hourly",
+        hourly_rate: r.hourly_rate,
+        hw_rate: r.hw_rate,
+        daily_rate: r.daily_rate,
+      });
+    });
+    return m;
+  }, [roleDefaultsRows]);
 
   const profileMap = useMemo(() => {
     const m = new Map<string, WithholdingProfile>();
@@ -237,6 +256,7 @@ export default function Payroll() {
       shiftTickets: normalizedTickets,
       crewMembers: crewMembers.map((c) => ({ id: c.id, name: c.name, role: c.role })),
       compensation: compMap,
+      roleDefaults: roleDefaultsMap,
       rangeStart, rangeEnd, incidentFilter,
       adjustments: (adjustments ?? []).map((a) => ({
         id: a.id,
@@ -255,7 +275,7 @@ export default function Payroll() {
     });
     if (crewFilter !== "all") return lines.filter((l) => l.crewMemberId === crewFilter);
     return lines;
-  }, [normalizedTickets, crewMembers, compMap, rangeStart, rangeEnd, incidentFilter, crewFilter, profileMap, orgPayroll, adjustments, incidentNamesMap, reimbursementsLite, userToCrewMember]);
+  }, [normalizedTickets, crewMembers, compMap, roleDefaultsMap, rangeStart, rangeEnd, incidentFilter, crewFilter, profileMap, orgPayroll, adjustments, incidentNamesMap, reimbursementsLite, userToCrewMember]);
 
   const incidentLines: IncidentPayrollLine[] = useMemo(() => pivotByIncident(crewLines), [crewLines]);
   const totals = useMemo(() => sumTotals(crewLines), [crewLines]);
@@ -370,11 +390,16 @@ export default function Payroll() {
             className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground touch-target px-2 py-1"
           >
             <SettingsIcon className="h-3.5 w-3.5" />
-            {showSettings ? "Hide" : "Withholding"} Settings
+            {showSettings ? "Hide" : "Show"} Pay Rate &amp; Withholding Settings
           </button>
         </div>
 
-        {showSettings && <PayrollSettingsCard />}
+        {showSettings && (
+          <div className="space-y-3">
+            <RoleDefaultRatesCard />
+            <PayrollSettingsCard />
+          </div>
+        )}
 
         {/* Range tabs */}
         <Tabs value={viewRange} onValueChange={(v) => setViewRange(v as ViewRange)}>

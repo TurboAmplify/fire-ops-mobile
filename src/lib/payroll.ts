@@ -36,6 +36,54 @@ export interface CompensationLite {
   hw_rate: number | null;
   pay_method?: "hourly" | "daily" | null;
   daily_rate?: number | null;
+  /** When true, payroll falls back to org_role_default_rates for the crew
+   *  member's role. Per-employee values still win when set. */
+  use_org_default_rate?: boolean | null;
+}
+
+export interface RoleDefaultRateLite {
+  role: string;
+  pay_method: "hourly" | "daily";
+  hourly_rate: number | null;
+  hw_rate: number | null;
+  daily_rate: number | null;
+}
+
+/**
+ * Resolve the effective pay rates for a single crew member by merging the
+ * per-employee compensation row with the org-level role default. Per-employee
+ * values always win when populated; when the toggle is on (or the per-employee
+ * value is null), we fall back to the role default for the member's role.
+ */
+export function resolveEffectiveCompensation(
+  comp: CompensationLite | undefined,
+  role: string | null | undefined,
+  roleDefaults: Map<string, RoleDefaultRateLite> | undefined
+): { hourly_rate: number; hw_rate: number; daily_rate: number; pay_method: "hourly" | "daily" } {
+  const roleKey = (role ?? "").trim();
+  const def = roleKey && roleDefaults ? roleDefaults.get(roleKey) : undefined;
+  const useDefault = comp?.use_org_default_rate ?? true;
+
+  const pickNumber = (override: number | null | undefined, fallback: number | null | undefined): number => {
+    if (!useDefault && override != null) return Number(override) || 0;
+    if (override != null) return Number(override) || 0;
+    if (fallback != null) return Number(fallback) || 0;
+    return 0;
+  };
+
+  const pickMethod = (): "hourly" | "daily" => {
+    if (!useDefault && comp?.pay_method) return comp.pay_method === "daily" ? "daily" : "hourly";
+    if (comp?.pay_method) return comp.pay_method === "daily" ? "daily" : "hourly";
+    if (def?.pay_method) return def.pay_method;
+    return "hourly";
+  };
+
+  return {
+    hourly_rate: pickNumber(comp?.hourly_rate, def?.hourly_rate),
+    hw_rate: pickNumber(comp?.hw_rate, def?.hw_rate),
+    daily_rate: pickNumber(comp?.daily_rate, def?.daily_rate),
+    pay_method: pickMethod(),
+  };
 }
 
 // === Withholding profile / org defaults =====================================
@@ -305,6 +353,8 @@ interface AggregateOptions {
   shiftTickets: ShiftTicketLite[];
   crewMembers: CrewMemberLite[];
   compensation: Map<string, CompensationLite>;
+  /** Optional org-level per-role default rates. Looked up by trimmed role string. */
+  roleDefaults?: Map<string, RoleDefaultRateLite>;
   rangeStart: Date | null;
   rangeEnd: Date | null;
   incidentFilter: string | string[];
@@ -356,7 +406,7 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
   const {
     shiftTickets, crewMembers, compensation, rangeStart, rangeEnd,
     incidentFilter, withholdings, adjustments, incidentNames,
-    reimbursements, userToCrewMember,
+    reimbursements, userToCrewMember, roleDefaults,
   } = opts;
 
   const nameMap = new Map<string, CrewMemberLite>();
@@ -460,10 +510,11 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
     const reimbursementsTotal = crewReimbursements.reduce((s, r) => s + r.amount, 0);
 
     const comp = compensation.get(cm.id);
-    const hourlyRate = Number(comp?.hourly_rate) || 0;
-    const hwRate = Number(comp?.hw_rate) || 0;
-    const payMethod: "hourly" | "daily" = comp?.pay_method === "daily" ? "daily" : "hourly";
-    const dailyRate = Number(comp?.daily_rate) || 0;
+    const effective = resolveEffectiveCompensation(comp, cm.role, roleDefaults);
+    const hourlyRate = effective.hourly_rate;
+    const hwRate = effective.hw_rate;
+    const payMethod: "hourly" | "daily" = effective.pay_method;
+    const dailyRate = effective.daily_rate;
 
     let totalHours = 0;
     let regularHours = 0;
