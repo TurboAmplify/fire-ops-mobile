@@ -390,11 +390,16 @@ export default function Payroll() {
             className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground touch-target px-2 py-1"
           >
             <SettingsIcon className="h-3.5 w-3.5" />
-            {showSettings ? "Hide" : "Withholding"} Settings
+            {showSettings ? "Hide" : "Show"} Pay Rate &amp; Withholding Settings
           </button>
         </div>
 
-        {showSettings && <PayrollSettingsCard />}
+        {showSettings && (
+          <div className="space-y-3">
+            <RoleDefaultRatesCard />
+            <PayrollSettingsCard />
+          </div>
+        )}
 
         {/* Range tabs */}
         <Tabs value={viewRange} onValueChange={(v) => setViewRange(v as ViewRange)}>
