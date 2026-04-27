@@ -127,6 +127,7 @@ export type Database = {
           state_pct_override: number | null
           updated_at: string
           use_default_withholding: boolean
+          use_org_default_rate: boolean
         }
         Insert: {
           crew_member_id: string
@@ -146,6 +147,7 @@ export type Database = {
           state_pct_override?: number | null
           updated_at?: string
           use_default_withholding?: boolean
+          use_org_default_rate?: boolean
         }
         Update: {
           crew_member_id?: string
@@ -165,6 +167,7 @@ export type Database = {
           state_pct_override?: number | null
           updated_at?: string
           use_default_withholding?: boolean
+          use_org_default_rate?: boolean
         }
         Relationships: [
           {
@@ -755,6 +758,42 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           workers_comp_pct?: number
+        }
+        Relationships: []
+      }
+      org_role_default_rates: {
+        Row: {
+          created_at: string
+          daily_rate: number | null
+          hourly_rate: number | null
+          hw_rate: number | null
+          id: string
+          organization_id: string
+          pay_method: string
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          daily_rate?: number | null
+          hourly_rate?: number | null
+          hw_rate?: number | null
+          id?: string
+          organization_id: string
+          pay_method?: string
+          role: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          daily_rate?: number | null
+          hourly_rate?: number | null
+          hw_rate?: number | null
+          id?: string
+          organization_id?: string
+          pay_method?: string
+          role?: string
+          updated_at?: string
         }
         Relationships: []
       }
