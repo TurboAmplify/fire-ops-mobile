@@ -167,13 +167,37 @@ export function InspectionTemplateEditor() {
         </button>
       </div>
 
+      <p className="text-xs text-muted-foreground -mt-2 px-0.5">
+        {tab === "walkaround"
+          ? "Pre-trip safety check items (fluids, lights, tires, pump, etc)."
+          : "Gear & equipment that should be on the truck before rolling."}
+      </p>
+
       {/* Template list */}
       <div className="space-y-2">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
           {tab === "walkaround" ? "Walk-Around Templates" : "Inventory Templates"}
         </p>
         {(templates ?? []).length === 0 && (
-          <p className="text-sm text-muted-foreground">No templates yet — create your first below.</p>
+          <div className="rounded-xl border border-dashed border-border bg-muted/30 p-4 space-y-3">
+            <div>
+              <p className="text-sm font-semibold">No {tab === "walkaround" ? "walk-around" : "inventory"} list yet</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Start with our standard {tab === "walkaround" ? "wildland engine pre-trip" : "wildland engine inventory"} list
+                ({getStarterItems(tab).length} items) — you can edit, remove, or add to it.
+              </p>
+            </div>
+            <Button
+              onClick={handleCreateFromStarter}
+              disabled={createTemplate.isPending}
+              size="sm"
+              className="w-full"
+            >
+              <Sparkles className="h-4 w-4 mr-1.5" />
+              Use Starter List
+            </Button>
+            <p className="text-[11px] text-center text-muted-foreground">or create a blank one below</p>
+          </div>
         )}
         <div className="space-y-1">
           {(templates ?? []).map((t) => (
