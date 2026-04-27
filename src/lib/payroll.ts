@@ -353,6 +353,8 @@ interface AggregateOptions {
   shiftTickets: ShiftTicketLite[];
   crewMembers: CrewMemberLite[];
   compensation: Map<string, CompensationLite>;
+  /** Optional org-level per-role default rates. Looked up by trimmed role string. */
+  roleDefaults?: Map<string, RoleDefaultRateLite>;
   rangeStart: Date | null;
   rangeEnd: Date | null;
   incidentFilter: string | string[];
