@@ -7,6 +7,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2 } from "lucide-react";
 import type { Truck, TruckInsert, TruckUpdate } from "@/services/fleet";
 import { TRUCK_STATUS_LABELS, type TruckStatus } from "@/services/fleet";
+import { z } from "zod";
+import {
+  shortTextSchema,
+  optionalShortTextSchema,
+  optionalLongTextSchema,
+  optionalVinSchema,
+  optionalPlateSchema,
+  optionalVehicleYearSchema,
+  validateOrToast,
+} from "@/lib/validation";
+
+const truckSubmitSchema = z.object({
+  name: shortTextSchema({ min: 1, max: 60, label: "Truck name" }),
+  unitType: optionalShortTextSchema({ max: 60, label: "Unit type" }),
+  make: optionalShortTextSchema({ max: 60, label: "Make" }),
+  model: optionalShortTextSchema({ max: 60, label: "Model" }),
+  year: optionalVehicleYearSchema,
+  plate: optionalPlateSchema,
+  vin: optionalVinSchema,
+  notes: optionalLongTextSchema({ max: 2000, label: "Notes" }),
+});
 
 interface TruckFormProps {
   truck?: Truck | null;
@@ -47,20 +68,33 @@ export function TruckForm({ truck, onSubmit, isPending }: TruckFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const parsed = validateOrToast(truckSubmitSchema, {
+      name,
+      unitType,
+      make,
+      model,
+      year,
+      plate,
+      vin,
+      notes,
+    });
+    if (!parsed) return;
+
     const data: any = {
-      name: name.trim(),
+      name: parsed.name,
       status,
-      unit_type: unitType.trim() || null,
-      make: make.trim() || null,
-      model: model.trim() || null,
-      year: year ? parseInt(year) : null,
-      plate: plate.trim() || null,
-      vin: vin.trim() || null,
+      unit_type: parsed.unitType,
+      make: parsed.make,
+      model: parsed.model,
+      year: parsed.year ?? null,
+      plate: parsed.plate,
+      vin: parsed.vin,
       water_capacity: waterCapacity.trim() || null,
       pump_type: pumpType.trim() || null,
       dot_number: dotNumber.trim() || null,
       current_mileage: currentMileage ? parseInt(currentMileage) : null,
-      notes: notes.trim() || null,
+      notes: parsed.notes,
       weight_empty: weightEmpty ? parseInt(weightEmpty) : null,
       weight_full: weightFull ? parseInt(weightFull) : null,
       gvwr: gvwr ? parseInt(gvwr) : null,

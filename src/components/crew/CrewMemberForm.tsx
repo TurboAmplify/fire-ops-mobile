@@ -12,6 +12,28 @@ import { useAppMode } from "@/lib/app-mode";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
 import { CREW_ROLES } from "@/lib/crew-roles";
+import { z } from "zod";
+import {
+  personNameSchema,
+  optionalPhoneSchema,
+  optionalLongTextSchema,
+  shortTextSchema,
+  validateOrToast,
+} from "@/lib/validation";
+
+/**
+ * Submit-time validation. Mirrors DB CHECK constraints in Step D.
+ * - name: required, 1-100 chars, letters/marks/spaces/hyphens/apostrophes
+ * - role: required, 1-60 chars
+ * - phone: optional, 10-15 digits when present
+ * - notes: optional, capped at 2000 chars
+ */
+const crewMemberSubmitSchema = z.object({
+  name: personNameSchema,
+  role: shortTextSchema({ min: 1, max: 60, label: "Role" }),
+  phone: optionalPhoneSchema,
+  notes: optionalLongTextSchema({ max: 2000, label: "Notes" }),
+});
 
 interface Props {
   memberId: string | null;
@@ -120,12 +142,20 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
     e.preventDefault();
     if (!canSubmit) return;
 
+    const parsed = validateOrToast(crewMemberSubmitSchema, {
+      name,
+      role,
+      phone,
+      notes,
+    });
+    if (!parsed) return;
+
     const payload: any = {
-      name: name.trim(),
-      role: role.trim(),
-      phone: phone.trim() || null,
+      name: parsed.name,
+      role: parsed.role,
+      phone: parsed.phone,
       active,
-      notes: notes.trim() || null,
+      notes: parsed.notes,
     };
 
     try {

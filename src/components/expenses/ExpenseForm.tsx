@@ -13,9 +13,32 @@ import { Loader2, Camera, Sparkles, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { useOrganization } from "@/hooks/useOrganization";
 import { SignedImage } from "@/components/ui/SignedImage";
+import { z } from "zod";
+import {
+  positiveCurrencySchema,
+  pastOrTodayDateSchema,
+  optionalShortTextSchema,
+  optionalLongTextSchema,
+  validateOrToast,
+} from "@/lib/validation";
 
 const categories: ExpenseCategory[] = ["fuel", "ppe", "food", "lodging", "equipment", "other"];
 const scopes: AttachmentScope[] = ["company", "incident", "truck"];
+
+/**
+ * Submit-time validation schema. Mirrors the DB CHECK constraints in Step D.
+ * - amount: > 0, <= $1M, 2 decimals
+ * - date: valid YYYY-MM-DD, not in the future
+ * - vendor / description / meal fields: capped lengths, sanitized
+ */
+const expenseSubmitSchema = z.object({
+  amount: positiveCurrencySchema,
+  date: pastOrTodayDateSchema,
+  vendor: optionalShortTextSchema({ max: 120, label: "Vendor" }),
+  description: optionalLongTextSchema({ max: 1000, label: "Description" }),
+  mealAttendees: optionalLongTextSchema({ max: 500, label: "Meal attendees" }),
+  mealPurpose: optionalShortTextSchema({ max: 200, label: "Meal purpose" }),
+});
 
 function deriveScope(initial?: Partial<Expense>): AttachmentScope {
   if (!initial) return "incident";
@@ -155,19 +178,32 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
+
+    // Defense layer 1: validate + sanitize before sending to the network.
+    // Defense layer 2 (DB CHECK constraints) lives in Step D.
+    const parsed = validateOrToast(expenseSubmitSchema, {
+      amount,
+      date,
+      vendor,
+      description,
+      mealAttendees,
+      mealPurpose,
+    });
+    if (!parsed) return;
+
     await onSubmit({
       incident_id: needsIncident ? incidentId : null,
       incident_truck_id: needsTruck ? incidentTruckId : null,
       category,
-      amount: parseFloat(amount),
-      description: description.trim() || null,
-      date,
+      amount: parsed.amount,
+      description: parsed.description,
+      date: parsed.date,
       receipt_url: receiptUrl || null,
       expense_type: expenseType,
       fuel_type: isFuel && fuelType ? fuelType : null,
-      meal_attendees: isMeal ? mealAttendees.trim() || null : null,
-      meal_purpose: isMeal ? mealPurpose.trim() || null : null,
-      vendor: vendor.trim() || null,
+      meal_attendees: isMeal ? parsed.mealAttendees : null,
+      meal_purpose: isMeal ? parsed.mealPurpose : null,
+      vendor: parsed.vendor,
     } as ExpenseInsert);
   };
 

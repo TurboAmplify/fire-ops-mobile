@@ -40,6 +40,55 @@ import type { ShiftTicket, EquipmentEntry, PersonnelEntry } from "@/services/shi
 import type { IncidentTruckCrewWithMember } from "@/services/incident-truck-crew";
 import { useTicketAdjustments } from "@/hooks/usePayrollAdjustments";
 import { useCrewMembers } from "@/hooks/useCrewMembers";
+import { z } from "zod";
+import {
+  hoursSchema,
+  optionalShortTextSchema,
+  optionalLongTextSchema,
+  pastOrTodayDateSchema,
+  validateOrToast,
+} from "@/lib/validation";
+
+/**
+ * Header-field validation only — entries are validated separately because
+ * they have their own row UI. Only runs on EXPLICIT user save (not on the
+ * 4s auto-save) so we don't toast-spam while the operator is typing.
+ */
+const shiftTicketHeaderSchema = z.object({
+  incident_name: optionalShortTextSchema({ max: 120, label: "Incident name" }),
+  incident_number: optionalShortTextSchema({ max: 60, label: "Incident #" }),
+  agreement_number: optionalShortTextSchema({ max: 60, label: "Agreement #" }),
+  resource_order_number: optionalShortTextSchema({ max: 60, label: "Resource order #" }),
+  financial_code: optionalShortTextSchema({ max: 60, label: "Financial code" }),
+  contractor_name: optionalShortTextSchema({ max: 120, label: "Contractor" }),
+  contractor_rep_name: optionalShortTextSchema({ max: 100, label: "Contractor rep" }),
+  supervisor_name: optionalShortTextSchema({ max: 100, label: "Supervisor" }),
+  remarks: optionalLongTextSchema({ max: 4000, label: "Remarks" }),
+});
+
+/** Per-entry validation. Date and hours are the highest-risk fields. */
+const equipmentEntrySchema = z.object({
+  date: pastOrTodayDateSchema.optional().or(z.literal("").transform(() => undefined)),
+  operating_hours: z.union([z.string(), z.number(), z.null(), z.undefined()])
+    .transform((v) => (v == null || v === "" ? null : typeof v === "number" ? v : parseFloat(v)))
+    .refine((v) => v == null || (Number.isFinite(v) && v >= 0 && v <= 24), {
+      message: "Operating hours must be between 0 and 24",
+    }),
+  standby_hours: z.union([z.string(), z.number(), z.null(), z.undefined()])
+    .transform((v) => (v == null || v === "" ? null : typeof v === "number" ? v : parseFloat(v)))
+    .refine((v) => v == null || (Number.isFinite(v) && v >= 0 && v <= 24), {
+      message: "Standby hours must be between 0 and 24",
+    }),
+});
+
+const personnelEntrySchema = z.object({
+  date: pastOrTodayDateSchema.optional().or(z.literal("").transform(() => undefined)),
+  hours: z.union([z.string(), z.number(), z.null(), z.undefined()])
+    .transform((v) => (v == null || v === "" ? null : typeof v === "number" ? v : parseFloat(v)))
+    .refine((v) => v == null || (Number.isFinite(v) && v >= 0 && v <= 24), {
+      message: "Hours must be between 0 and 24",
+    }),
+});
 
 interface ShiftTicketFormProps {
   ticket: Partial<ShiftTicket> | null;
@@ -417,6 +466,35 @@ export function ShiftTicketForm({
       return;
     }
     const payload = buildSavePayload();
+
+    // Validate ONLY on explicit user save. Silent auto-saves bypass validation
+    // so we don't toast-spam while the operator is mid-typing — DB CHECK
+    // constraints (Step D) catch anything truly malformed.
+    if (!silent) {
+      const headerOk = validateOrToast(shiftTicketHeaderSchema, payload);
+      if (!headerOk) return;
+
+      const eqEntries = (payload.equipment_entries as unknown[]) ?? [];
+      for (let i = 0; i < eqEntries.length; i++) {
+        const result = equipmentEntrySchema.safeParse(eqEntries[i]);
+        if (!result.success) {
+          toast.error(`Equipment row ${i + 1}`, {
+            description: result.error.issues[0]?.message ?? "Invalid entry",
+          });
+          return;
+        }
+      }
+      const peEntries = (payload.personnel_entries as unknown[]) ?? [];
+      for (let i = 0; i < peEntries.length; i++) {
+        const result = personnelEntrySchema.safeParse(peEntries[i]);
+        if (!result.success) {
+          toast.error(`Personnel row ${i + 1}`, {
+            description: result.error.issues[0]?.message ?? "Invalid entry",
+          });
+          return;
+        }
+      }
+    }
     try {
       await writeAuditForSave(payload, { isOverrideEdit: !!unlockedThisSession });
       await Promise.resolve(onSave(payload));
