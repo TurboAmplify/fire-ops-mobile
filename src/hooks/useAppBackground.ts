@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { assertOnlineForWrite } from "@/lib/offline-guard";
 import heroBg from "@/assets/hero-bg.jpg";
 import fireFlagBg from "@/assets/bg-fire-flag.jpg";
 import smokeStripeBg from "@/assets/bg-smoke-stripe.jpg";
@@ -41,6 +42,7 @@ export function useAppBackground() {
 
   const setBackground = useMutation({
     mutationFn: async (variant: BackgroundVariant) => {
+      assertOnlineForWrite();
       const { error } = await supabase
         .from("platform_settings" as any)
         .upsert({ key: "app_background", value: { variant } } as any, { onConflict: "key" });
