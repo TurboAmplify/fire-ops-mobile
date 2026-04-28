@@ -60,7 +60,19 @@ serve(async (req) => {
       });
     }
 
-    const { fileUrl } = await req.json();
+    const rawBody = await req.text();
+    if (rawBody.length > 64 * 1024) {
+      return new Response(JSON.stringify({ error: "Request body too large" }), {
+        status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    let parsedBody: { fileUrl?: unknown };
+    try { parsedBody = JSON.parse(rawBody); } catch {
+      return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const fileUrl = typeof parsedBody.fileUrl === "string" ? parsedBody.fileUrl : "";
     if (!fileUrl) {
       return new Response(JSON.stringify({ error: "fileUrl is required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -79,6 +91,7 @@ serve(async (req) => {
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
+      signal: AbortSignal.timeout(45_000),
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
@@ -177,8 +190,15 @@ Only return values you're confident about. Set fields to null when unsure or not
     });
   } catch (e) {
     console.error("parse-truck-photo error:", e);
+    const isTimeout = e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError");
+    if (isTimeout) {
+      return new Response(
+        JSON.stringify({ error: "AI request timed out. Please try again or enter the data manually." }),
+        { status: 504, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
+      JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
