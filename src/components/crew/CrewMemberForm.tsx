@@ -142,12 +142,20 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
     e.preventDefault();
     if (!canSubmit) return;
 
+    const parsed = validateOrToast(crewMemberSubmitSchema, {
+      name,
+      role,
+      phone,
+      notes,
+    });
+    if (!parsed) return;
+
     const payload: any = {
-      name: name.trim(),
-      role: role.trim(),
-      phone: phone.trim() || null,
+      name: parsed.name,
+      role: parsed.role,
+      phone: parsed.phone,
       active,
-      notes: notes.trim() || null,
+      notes: parsed.notes,
     };
 
     try {
