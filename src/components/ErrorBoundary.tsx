@@ -59,6 +59,15 @@ function DefaultFallback({ reset }: { reset: () => void }) {
           <Button variant="outline" onClick={() => window.location.reload()}>
             Reload app
           </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              window.location.href = "/support";
+            }}
+          >
+            Report issue
+          </Button>
         </div>
       </div>
     </div>
@@ -82,6 +91,15 @@ export function RouteErrorFallback({ reset }: { reset: () => void; error: Error 
           <Button size="sm" onClick={reset}>Try again</Button>
           <Button size="sm" variant="outline" onClick={() => window.history.back()}>
             Go back
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              window.location.href = "/support";
+            }}
+          >
+            Report issue
           </Button>
         </div>
       </div>
