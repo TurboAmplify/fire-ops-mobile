@@ -205,8 +205,15 @@ The document file name is: ${fileName}`;
     });
   } catch (e) {
     console.error("parse-agreement error:", e);
+    const isTimeout = e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError");
+    if (isTimeout) {
+      return new Response(
+        JSON.stringify({ error: "AI request timed out. Please try again or enter the data manually." }),
+        { status: 504, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
+      JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
