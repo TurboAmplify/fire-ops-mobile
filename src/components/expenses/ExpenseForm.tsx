@@ -39,6 +39,7 @@ const expenseSubmitSchema = z.object({
   mealAttendees: optionalLongTextSchema({ max: 500, label: "Meal attendees" }),
   mealPurpose: optionalShortTextSchema({ max: 200, label: "Meal purpose" }),
 });
+
 function deriveScope(initial?: Partial<Expense>): AttachmentScope {
   if (!initial) return "incident";
   if (initial.incident_truck_id) return "truck";
