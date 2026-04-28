@@ -25,6 +25,20 @@ import {
 const categories: ExpenseCategory[] = ["fuel", "ppe", "food", "lodging", "equipment", "other"];
 const scopes: AttachmentScope[] = ["company", "incident", "truck"];
 
+/**
+ * Submit-time validation schema. Mirrors the DB CHECK constraints in Step D.
+ * - amount: > 0, <= $1M, 2 decimals
+ * - date: valid YYYY-MM-DD, not in the future
+ * - vendor / description / meal fields: capped lengths, sanitized
+ */
+const expenseSubmitSchema = z.object({
+  amount: positiveCurrencySchema,
+  date: pastOrTodayDateSchema,
+  vendor: optionalShortTextSchema({ max: 120, label: "Vendor" }),
+  description: optionalLongTextSchema({ max: 1000, label: "Description" }),
+  mealAttendees: optionalLongTextSchema({ max: 500, label: "Meal attendees" }),
+  mealPurpose: optionalShortTextSchema({ max: 200, label: "Meal purpose" }),
+});
 function deriveScope(initial?: Partial<Expense>): AttachmentScope {
   if (!initial) return "incident";
   if (initial.incident_truck_id) return "truck";
