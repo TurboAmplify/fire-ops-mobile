@@ -4,15 +4,14 @@ import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
 import { useOrganization } from "@/hooks/useOrganization";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, ClipboardCheck, FileSignature, Receipt, AlertTriangle, CheckCircle2, Bug, WifiOff } from "lucide-react";
+import { Loader2, ClipboardCheck, FileSignature, Receipt, AlertTriangle, CheckCircle2 } from "lucide-react";
 
-type TabKey = "inspections" | "signatures" | "expenses" | "errors";
+type TabKey = "inspections" | "signatures" | "expenses";
 
 const TABS: { key: TabKey; label: string; icon: any }[] = [
   { key: "inspections", label: "Inspections", icon: ClipboardCheck },
   { key: "signatures", label: "Signatures", icon: FileSignature },
   { key: "expenses", label: "Expenses", icon: Receipt },
-  { key: "errors", label: "Errors", icon: Bug },
 ];
 
 export default function AdminLogs() {
@@ -54,7 +53,6 @@ export default function AdminLogs() {
         {tab === "inspections" && <InspectionsLog orgId={orgId} />}
         {tab === "signatures" && <SignaturesLog orgId={orgId} />}
         {tab === "expenses" && <ExpensesLog orgId={orgId} />}
-        {tab === "errors" && <ErrorsLog orgId={orgId} />}
       </div>
     </AppShell>
   );
