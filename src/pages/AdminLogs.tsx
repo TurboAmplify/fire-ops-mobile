@@ -54,6 +54,7 @@ export default function AdminLogs() {
         {tab === "inspections" && <InspectionsLog orgId={orgId} />}
         {tab === "signatures" && <SignaturesLog orgId={orgId} />}
         {tab === "expenses" && <ExpensesLog orgId={orgId} />}
+        {tab === "errors" && <ErrorsLog orgId={orgId} />}
       </div>
     </AppShell>
   );
