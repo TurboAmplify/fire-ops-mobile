@@ -12,7 +12,7 @@ interface SignedImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, "sr
  * <img> wrapper that loads files from private storage buckets via short-lived
  * signed URLs. For blob:/external URLs, behaves identically to <img>.
  */
-export function SignedImage({ src, fallback, className, alt = "", ...rest }: SignedImageProps) {
+export function SignedImage({ src, fallback, className, alt = "", loading: loadingAttr, decoding, ...rest }: SignedImageProps) {
   const { url, loading } = useSignedUrl(src);
 
   if (loading) {
@@ -25,5 +25,17 @@ export function SignedImage({ src, fallback, className, alt = "", ...rest }: Sig
 
   if (!url) return <>{fallback ?? null}</>;
 
-  return <img src={url} alt={alt} className={className} {...rest} />;
+  // Default to lazy loading + async decoding so off-screen receipts/photos/
+  // signatures don't block the main thread on long lists. Callers can override
+  // by passing loading="eager" for above-the-fold imagery.
+  return (
+    <img
+      src={url}
+      alt={alt}
+      className={className}
+      loading={loadingAttr ?? "lazy"}
+      decoding={decoding ?? "async"}
+      {...rest}
+    />
+  );
 }

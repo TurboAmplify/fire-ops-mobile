@@ -262,7 +262,7 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
           </label>
           {previewSrc && (
             localThumb ? (
-              <img src={previewSrc} alt="Receipt preview" className="w-full max-h-40 object-contain rounded-lg bg-secondary" />
+              <img src={previewSrc} alt="Receipt preview" loading="lazy" decoding="async" className="w-full max-h-40 object-contain rounded-lg bg-secondary" />
             ) : (
               <SignedImage src={previewSrc} alt="Receipt preview" className="w-full max-h-40 object-contain rounded-lg bg-secondary" />
             )
