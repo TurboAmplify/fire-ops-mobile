@@ -178,9 +178,10 @@ export default function OrgSettings() {
       if (!orgId || !user) throw new Error("Not authenticated");
 
       // Seat-limit check
+      // NOTE (Apple 3.1.1): no upgrade/sales language in-app — direct to admin.
       if (membership && membership.seatsUsed >= membership.seatLimit) {
         throw new Error(
-          `Seat limit reached (${membership.seatsUsed}/${membership.seatLimit}). Upgrade your plan to add more crew.`
+          `Seat limit reached (${membership.seatsUsed}/${membership.seatLimit}). Please contact your administrator to add more crew.`
         );
       }
 

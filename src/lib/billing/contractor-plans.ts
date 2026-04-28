@@ -22,31 +22,34 @@ export function resolveContractorPlan(input: OrgBillingInput): PlanResolution {
 
   let banner: PlanResolution["banner"] = null;
 
+  // NOTE (App Store / Apple Guideline 3.1.1): in-app messaging must not
+  // function as a sales funnel. No "Upgrade", "Subscribe", pricing, or
+  // external payment links. Direct affected users to their administrator.
   if (isLocked) {
     banner = {
       variant: "destructive",
-      title: "Account locked",
-      message: "Your account is locked. Contact support to restore access.",
-      cta: { label: "Contact support", href: "/support" },
+      title: "Account inactive",
+      message: "This account is inactive. Please contact your administrator.",
+      cta: { label: "Get help", href: "/support" },
     };
   } else if (isReadOnly) {
     banner = {
       variant: "destructive",
-      title: "Trial ended — read-only mode",
+      title: "Read-only mode",
       message:
-        "Your contractor trial has ended. Upgrade to keep creating incidents, shifts, and expenses.",
-      cta: { label: "Contact support", href: "/support" },
+        "This account is in read-only mode. Please contact your administrator to restore full access.",
+      cta: { label: "Get help", href: "/support" },
     };
   } else if (input.billingStatus === "trial") {
     if (days !== null && days <= 7) {
       banner = {
         variant: days <= 3 ? "warning" : "info",
-        title: days <= 0 ? "Trial expired" : `Trial ends in ${days} day${days === 1 ? "" : "s"}`,
+        title: days <= 0 ? "Account inactive" : `${days} day${days === 1 ? "" : "s"} remaining`,
         message:
           days <= 0
-            ? "Your trial has expired. Reach out to keep your account active."
-            : "Reach out to set up billing before your trial ends.",
-        cta: { label: "Contact support", href: "/support" },
+            ? "Please contact your administrator to keep this account active."
+            : "Please contact your administrator before access becomes read-only.",
+        cta: { label: "Get help", href: "/support" },
       };
     }
   }

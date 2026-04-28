@@ -33,28 +33,30 @@ export function resolveVfdPlan(input: OrgBillingInput): PlanResolution {
 
   let banner: PlanResolution["banner"] = null;
 
+  // NOTE (App Store / Apple Guideline 3.1.1): no pricing or sales language
+  // in-app. Direct users to their administrator instead.
   if (isLocked) {
     banner = {
       variant: "destructive",
-      title: "VFD account locked",
-      message: "This VFD account is locked. Contact us to discuss access.",
-      cta: { label: "Contact us", href: "/support" },
+      title: "Account inactive",
+      message: "This account is inactive. Please contact your administrator.",
+      cta: { label: "Get help", href: "/support" },
     };
   } else if (isReadOnly) {
     banner = {
       variant: "warning",
-      title: "VFD preview ended",
+      title: "Read-only mode",
       message:
-        "Your VFD preview is read-only. Contact us to discuss continued access — we handle VFD pricing case-by-case.",
-      cta: { label: "Contact us", href: "/support" },
+        "This account is in read-only mode. Please contact your administrator to restore full access.",
+      cta: { label: "Get help", href: "/support" },
     };
   } else if (input.billingStatus === "trial" && days !== null && days <= 10) {
     banner = {
       variant: days <= 3 ? "warning" : "info",
-      title: `VFD preview ends in ${days} day${days === 1 ? "" : "s"}`,
+      title: `${days} day${days === 1 ? "" : "s"} remaining`,
       message:
-        "After preview ends, your account moves to read-only until we set up access. Reach out anytime.",
-      cta: { label: "Contact us", href: "/support" },
+        "After this period, the account moves to read-only. Please contact your administrator with any questions.",
+      cta: { label: "Get help", href: "/support" },
     };
   }
 
