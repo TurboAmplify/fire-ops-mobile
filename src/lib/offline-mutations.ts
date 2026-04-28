@@ -1,63 +1,32 @@
-import { useMutation, useQueryClient, type UseMutationOptions } from "@tanstack/react-query";
-import { enqueue, type QueuedMutation } from "./offline-queue";
-import { toast } from "sonner";
-
-interface OfflineMutationOptions<TData, TVariables> extends Omit<UseMutationOptions<TData, Error, TVariables>, "mutationFn"> {
-  mutationFn: (variables: TVariables) => Promise<TData>;
-  /** Table name for the offline queue */
-  table: string;
-  /** Operation type */
-  operation: QueuedMutation["operation"];
-  /** Extract the row id from variables (for update/delete) */
-  getRowId?: (variables: TVariables) => string;
-  /** Extract the payload to queue (defaults to variables as-is) */
-  getPayload?: (variables: TVariables) => Record<string, unknown>;
-  /** Query keys to invalidate on success */
-  invalidateKeys?: string[][];
-}
-
-export function useOfflineMutation<TData = unknown, TVariables = unknown>({
-  mutationFn,
-  table,
-  operation,
-  getRowId,
-  getPayload,
-  invalidateKeys,
-  ...options
-}: OfflineMutationOptions<TData, TVariables>) {
-  const queryClient = useQueryClient();
-
-  return useMutation<TData, Error, TVariables>({
-    ...options,
-    mutationFn: async (variables) => {
-      if (!navigator.onLine) {
-        // Queue the mutation for later
-        const payload = getPayload ? getPayload(variables) : (variables as unknown as Record<string, unknown>);
-        await enqueue({
-          table,
-          operation,
-          payload,
-          rowId: getRowId?.(variables),
-        });
-        toast("Saved offline -- will sync when connected");
-        // Return a fake result so the UI can proceed
-        throw new OfflineQueuedError("Mutation queued for offline sync");
-      }
-      return mutationFn(variables);
-    },
-    onSuccess: (data, variables, context) => {
-      if (invalidateKeys) {
-        invalidateKeys.forEach((key) => queryClient.invalidateQueries({ queryKey: key }));
-      }
-      options.onSuccess?.(data, variables, context);
-    },
-  });
-}
+/**
+ * PHASE 2 — DO NOT USE.
+ *
+ * This file previously implemented an offline write queue + replay loop.
+ * It is intentionally disabled because the queue requires a sync engine
+ * and conflict resolution that have NOT been built yet.
+ *
+ * Enabling silent queueing without sync = silent data loss in the field.
+ *
+ * For now, every mutation must call `assertOnlineForWrite()` from
+ * `src/lib/offline-guard.ts`. When offline, writes are blocked and the
+ * user gets a clear toast.
+ *
+ * When Phase 2 is built, restore this file from git history and add the
+ * sync engine, conflict resolution, and the failed-mutations review UI
+ * before wiring it back into any hook.
+ */
 
 export class OfflineQueuedError extends Error {
   readonly isOfflineQueued = true;
-  constructor(message: string) {
+  constructor(message = "Mutation queued for offline sync") {
     super(message);
     this.name = "OfflineQueuedError";
   }
+}
+
+export function useOfflineMutation(): never {
+  throw new Error(
+    "useOfflineMutation is disabled. The offline write queue is a Phase 2 feature " +
+      "that requires a sync engine. Use a normal useMutation with assertOnlineForWrite() instead."
+  );
 }
