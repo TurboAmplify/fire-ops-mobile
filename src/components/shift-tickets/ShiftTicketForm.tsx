@@ -28,6 +28,7 @@ import type { ParsedShiftTicket } from "@/services/shift-ticket-import";
 import { SuccessOverlay } from "@/components/ui/SuccessOverlay";
 import { SignedImage } from "@/components/ui/SignedImage";
 import { uploadSignature, computeHours, buildRemarksString, insertSignatureAuditLog, enforceLunchDeduction } from "@/services/shift-tickets";
+import { handleMutationError } from "@/lib/offline-guard";
 import {
   diffTicket,
   hasAnySignature,
@@ -521,9 +522,11 @@ export function ShiftTicketForm({
       await Promise.resolve(onSave({ ...buildSavePayload(), ...sigUpdate }));
       setIsDirty(false);
       showSuccess("Signature saved");
-    } catch {
+    } catch (err) {
       // M2-H3: Show failure as an error toast, not the green success overlay.
-      toast.error("Failed to save signature");
+      // Offline writes get a friendly toast via handleMutationError; otherwise
+      // fall back to the generic signature-failed message.
+      handleMutationError(err, "Failed to save signature");
     } finally {
       setUploadingSig(false);
     }

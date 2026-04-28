@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { assertOnlineForWrite } from "@/lib/offline-guard";
 
 export interface EquipmentEntry {
   date: string;
@@ -100,6 +101,7 @@ export async function duplicateShiftTicket(
    *  the source ticket's operators (which may be stale). */
   currentCrewNames?: string[]
 ): Promise<ShiftTicket> {
+  assertOnlineForWrite();
   // M2-M8: Advance dates by 1 day using UTC arithmetic to avoid DST shifts
   const advanceDate = (dateStr: string) => {
     if (!dateStr) return dateStr;
@@ -175,6 +177,7 @@ export async function fetchShiftTicket(id: string): Promise<ShiftTicket | null> 
 }
 
 export async function createShiftTicket(ticket: Partial<ShiftTicket> & { incident_truck_id: string; organization_id: string }): Promise<ShiftTicket> {
+  assertOnlineForWrite();
   const { data, error } = await supabase
     .from("shift_tickets")
     .insert(ticket as any)
@@ -185,6 +188,7 @@ export async function createShiftTicket(ticket: Partial<ShiftTicket> & { inciden
 }
 
 export async function updateShiftTicket(id: string, updates: Partial<ShiftTicket>): Promise<void> {
+  assertOnlineForWrite();
   const { error } = await supabase
     .from("shift_tickets")
     .update({ ...updates, updated_at: new Date().toISOString() } as any)
@@ -193,6 +197,7 @@ export async function updateShiftTicket(id: string, updates: Partial<ShiftTicket
 }
 
 export async function deleteShiftTicket(id: string): Promise<void> {
+  assertOnlineForWrite();
   const { error } = await supabase
     .from("shift_tickets")
     .delete()
@@ -212,6 +217,7 @@ export interface SignatureAuditEntry {
 }
 
 export async function insertSignatureAuditLog(entry: SignatureAuditEntry): Promise<void> {
+  assertOnlineForWrite();
   const { error } = await supabase.from("signature_audit_log" as any).insert(entry as any);
   if (error) {
     console.error("Failed to insert signature audit log:", error);
@@ -220,6 +226,7 @@ export async function insertSignatureAuditLog(entry: SignatureAuditEntry): Promi
 }
 
 export async function uploadSignature(file: Blob, ticketId: string, type: "contractor" | "supervisor"): Promise<string> {
+  assertOnlineForWrite();
   const path = `${ticketId}/${type}-${Date.now()}.png`;
   const { error } = await supabase.storage.from("signatures").upload(path, file, { contentType: "image/png" });
   if (error) throw error;

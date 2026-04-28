@@ -7,6 +7,7 @@ import { CheckCircle2, Clock, FileText, Pencil, FileDown, Loader2, ArrowUp, Arro
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { PersonnelEntry, ShiftTicket } from "@/services/shift-tickets";
 import { deleteShiftTicket } from "@/services/shift-tickets";
+import { handleMutationError } from "@/lib/offline-guard";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
@@ -267,7 +268,7 @@ export default function ShiftTicketLog() {
       setDeleteConfirmText("");
     } catch (err) {
       console.error("Delete failed:", err);
-      toast.error("Failed to delete shift ticket");
+      handleMutationError(err, "Failed to delete shift ticket");
     } finally {
       setDeleteLoading(false);
     }
