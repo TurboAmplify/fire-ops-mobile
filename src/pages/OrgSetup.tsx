@@ -27,7 +27,7 @@ const ORG_TYPE_OPTIONS: Array<{
   icon: React.ElementType;
 }> = [
   { value: "contractor", title: "Contractor", desc: "Wildland fire contracting business with billable trucks and crews.", icon: Briefcase },
-  { value: "vfd", title: "Volunteer Fire Department", desc: "Limited preview — VFD pricing is handled case-by-case. 30-day preview, then read-only until we set up access.", icon: Shield },
+  { value: "vfd", title: "Volunteer Fire Department", desc: "Limited 30-day preview. After that the account moves to read-only — your administrator can request continued access.", icon: Shield },
   { value: "state_agency", title: "State or Local Agency", desc: "Government or agency crew using internal time reporting.", icon: Landmark },
 ];
 
@@ -319,8 +319,8 @@ export default function OrgSetup() {
                 <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300">
                   <p className="font-semibold">Limited preview</p>
                   <p className="mt-1 opacity-90">
-                    VFD accounts get a 30-day preview. After that the account becomes read-only until we
-                    talk pricing. We don't auto-charge VFDs. Contact us anytime at /support.
+                    VFD accounts get a 30-day preview. After that the account moves to read-only.
+                    Your administrator can reach out from the Support screen anytime.
                   </p>
                 </div>
                 <div className="rounded-xl bg-card p-4 flex items-start justify-between gap-3 border border-border/40">

@@ -38,6 +38,12 @@ export default function Privacy() {
               error diagnosis.
             </li>
             <li>
+              <strong className="text-foreground">Diagnostic logs:</strong> when the app
+              encounters an unexpected error, we record the technical error details (page
+              path, stack trace, app version, online/offline state) so we can fix it.
+              We do not log message content, location data, or your operational records.
+            </li>
+            <li>
               <strong className="text-foreground">Camera and Photos:</strong> when you choose
               to take or attach a photo, we access your camera or photo library only for that
               action. We do not browse your library in the background.
