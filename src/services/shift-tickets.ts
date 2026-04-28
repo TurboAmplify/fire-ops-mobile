@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { assertOnlineForWrite } from "@/lib/offline-guard";
 
 export interface EquipmentEntry {
   date: string;
