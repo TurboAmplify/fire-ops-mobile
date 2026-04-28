@@ -94,7 +94,7 @@ export function TruckForm({ truck, onSubmit, isPending }: TruckFormProps) {
       pump_type: pumpType.trim() || null,
       dot_number: dotNumber.trim() || null,
       current_mileage: currentMileage ? parseInt(currentMileage) : null,
-      notes: notes.trim() || null,
+      notes: parsed.notes,
       weight_empty: weightEmpty ? parseInt(weightEmpty) : null,
       weight_full: weightFull ? parseInt(weightFull) : null,
       gvwr: gvwr ? parseInt(gvwr) : null,
