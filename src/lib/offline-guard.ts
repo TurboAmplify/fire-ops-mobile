@@ -71,7 +71,7 @@ function isLikelyNetworkError(err: unknown): boolean {
  * or show their own error UI.
  */
 export function handleMutationError(err: unknown, fallbackMessage = "Something went wrong. Please try again."): boolean {
-  if (isOfflineWriteBlocked(err)) {
+  if (isOfflineWriteBlocked(err) || isLikelyNetworkError(err)) {
     toast.error("You're offline", {
       description: "Reconnect to save your changes.",
     });
