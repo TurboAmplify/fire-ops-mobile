@@ -50,6 +50,17 @@ export function isOfflineWriteBlocked(err: unknown): err is OfflineWriteBlockedE
 }
 
 /**
+ * Detect raw network failures (fetch errors when offline or DNS unreachable).
+ * Treated the same as an offline-write block for user messaging.
+ */
+function isLikelyNetworkError(err: unknown): boolean {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return true;
+  if (!err) return false;
+  const message = err instanceof Error ? err.message : String(err);
+  return /failed to fetch|network ?error|networkerror|load failed|fetch failed/i.test(message);
+}
+
+/**
  * Standard mutation error handler for forms.
  *
  * - If the error is an offline-write block, shows the friendly offline toast.
