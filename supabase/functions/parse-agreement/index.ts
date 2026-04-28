@@ -65,7 +65,21 @@ serve(async (req) => {
       });
     }
 
-    const { fileUrl, fileName } = await req.json();
+    // Cap raw request body at 64KB — this endpoint only takes URLs/filenames.
+    const rawBody = await req.text();
+    if (rawBody.length > 64 * 1024) {
+      return new Response(JSON.stringify({ error: "Request body too large" }), {
+        status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    let parsedBody: { fileUrl?: unknown; fileName?: unknown };
+    try { parsedBody = JSON.parse(rawBody); } catch {
+      return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const fileUrl = typeof parsedBody.fileUrl === "string" ? parsedBody.fileUrl : "";
+    const fileName = typeof parsedBody.fileName === "string" ? parsedBody.fileName.slice(0, 255) : "";
     if (!fileUrl) {
       return new Response(JSON.stringify({ error: "fileUrl is required" }), {
         status: 400,
@@ -105,6 +119,7 @@ The document file name is: ${fileName}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
+      signal: AbortSignal.timeout(45_000),
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
