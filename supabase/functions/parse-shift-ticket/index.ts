@@ -61,7 +61,20 @@ serve(async (req) => {
       });
     }
 
-    const { fileUrl, fileName } = await req.json();
+    const rawBody = await req.text();
+    if (rawBody.length > 64 * 1024) {
+      return new Response(JSON.stringify({ error: "Request body too large" }), {
+        status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    let parsedBody: { fileUrl?: unknown; fileName?: unknown };
+    try { parsedBody = JSON.parse(rawBody); } catch {
+      return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const fileUrl = typeof parsedBody.fileUrl === "string" ? parsedBody.fileUrl : "";
+    const fileName = typeof parsedBody.fileName === "string" ? parsedBody.fileName.slice(0, 255) : "";
     if (!fileUrl) {
       return new Response(JSON.stringify({ error: "fileUrl is required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -114,6 +127,7 @@ Return data via the provided tool. The document file name is: ${fileName ?? "(un
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
+      signal: AbortSignal.timeout(45_000),
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
