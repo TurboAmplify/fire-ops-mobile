@@ -29,10 +29,10 @@ const sections = [
   },
   {
     title: "Errors",
-    description: "Crash reports and edge function failures",
+    description: "Crash reports across all orgs",
     icon: AlertTriangle,
     to: "/super-admin/errors",
-    ready: false,
+    ready: true,
   },
   {
     title: "Audit log",
