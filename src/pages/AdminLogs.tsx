@@ -4,14 +4,15 @@ import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
 import { useOrganization } from "@/hooks/useOrganization";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, ClipboardCheck, FileSignature, Receipt, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Loader2, ClipboardCheck, FileSignature, Receipt, AlertTriangle, CheckCircle2, Bug, WifiOff } from "lucide-react";
 
-type TabKey = "inspections" | "signatures" | "expenses";
+type TabKey = "inspections" | "signatures" | "expenses" | "errors";
 
 const TABS: { key: TabKey; label: string; icon: any }[] = [
   { key: "inspections", label: "Inspections", icon: ClipboardCheck },
   { key: "signatures", label: "Signatures", icon: FileSignature },
   { key: "expenses", label: "Expenses", icon: Receipt },
+  { key: "errors", label: "Errors", icon: Bug },
 ];
 
 export default function AdminLogs() {
@@ -53,6 +54,7 @@ export default function AdminLogs() {
         {tab === "inspections" && <InspectionsLog orgId={orgId} />}
         {tab === "signatures" && <SignaturesLog orgId={orgId} />}
         {tab === "expenses" && <ExpensesLog orgId={orgId} />}
+        {tab === "errors" && <ErrorsLog orgId={orgId} />}
       </div>
     </AppShell>
   );
@@ -186,6 +188,51 @@ function ExpensesLog({ orgId }: { orgId?: string }) {
           }`}>
             {row.status}
           </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ErrorsLog({ orgId }: { orgId?: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin-error-logs", orgId],
+    enabled: !!orgId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("error_logs")
+        .select("id, occurred_at, route, message, app_version, online, user_id")
+        .eq("organization_id", orgId!)
+        .order("occurred_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  if (isLoading) return <Loading />;
+  if (!data?.length) return <Empty message="No errors logged. Nice." />;
+
+  return (
+    <div className="rounded-xl bg-card divide-y divide-border overflow-hidden">
+      {data.map((row: any) => (
+        <div key={row.id} className="flex items-start gap-3 px-4 py-3">
+          <Bug className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium break-words">{row.message}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {new Date(row.occurred_at).toLocaleString([], {
+                month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+              })}
+              {row.route ? ` · ${row.route}` : ""}
+              {row.app_version ? ` · v${row.app_version}` : ""}
+            </p>
+          </div>
+          {row.online === false && (
+            <span title="Offline when error occurred">
+              <WifiOff className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            </span>
+          )}
         </div>
       ))}
     </div>
