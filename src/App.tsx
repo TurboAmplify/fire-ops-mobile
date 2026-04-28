@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -15,56 +16,63 @@ import { queryClient, asyncPersister } from "@/lib/query-client";
 import "@/lib/offline-queue";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RouteBoundary } from "@/components/RouteBoundary";
+import { StuckLoading } from "@/components/StuckLoading";
 import { installGlobalErrorHandlers } from "@/lib/error-tracking";
 
 installGlobalErrorHandlers();
+
+// Eagerly loaded — core hot paths used immediately after auth, plus auth screens.
+// Keeping these in the main bundle avoids a Suspense flash on the most common entry points.
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import OrgSetup from "./pages/OrgSetup";
-import OrgSettings from "./pages/OrgSettings";
 import Dashboard from "./pages/Dashboard";
 import Incidents from "./pages/Incidents";
-import IncidentCreate from "./pages/IncidentCreate";
-import IncidentFromAgreement from "./pages/IncidentFromAgreement";
 import IncidentDetail from "./pages/IncidentDetail";
-import IncidentEdit from "./pages/IncidentEdit";
-import ShiftTicketCreate from "./pages/ShiftTicketCreate";
-import ShiftTicketEdit from "./pages/ShiftTicketEdit";
-import ShiftTicketLog from "./pages/ShiftTicketLog";
-import Crew from "./pages/Crew";
-import Crews from "./pages/Crews";
-import CrewDetail from "./pages/CrewDetail";
-import Fleet from "./pages/Fleet";
-import FleetTruckCreate from "./pages/FleetTruckCreate";
-import FleetTruckDetail from "./pages/FleetTruckDetail";
-import FleetTruckEdit from "./pages/FleetTruckEdit";
-import FleetTruckRates from "./pages/FleetTruckRates";
-import Expenses from "./pages/Expenses";
-import ExpenseEdit from "./pages/ExpenseEdit";
-import ExpenseDetail from "./pages/ExpenseDetail";
-import ExpenseReview from "./pages/ExpenseReview";
-import BatchReceiptScan from "./pages/BatchReceiptScan";
-import Settings from "./pages/Settings";
-import Privacy from "./pages/Privacy";
-import Terms from "./pages/Terms";
-import Support from "./pages/Support";
-import Payroll from "./pages/Payroll";
 import More from "./pages/More";
-import NeedsList from "./pages/NeedsList";
-import AdminLogs from "./pages/AdminLogs";
-import AdminReports from "./pages/AdminReports";
-import AccountsPayable from "./pages/AccountsPayable";
-import Training from "./pages/Training";
+import Settings from "./pages/Settings";
+import NotFound from "./pages/NotFound";
 import { ModuleGate, AdminGate } from "@/components/ModuleGate";
 import { PlatformAdminGate } from "@/components/PlatformAdminGate";
-import SuperAdmin from "./pages/SuperAdmin";
-import SuperAdminOrgs from "./pages/SuperAdminOrgs";
-import SuperAdminOrgDetail from "./pages/SuperAdminOrgDetail";
-import SuperAdminUsers from "./pages/SuperAdminUsers";
-import SuperAdminActivity from "./pages/SuperAdminActivity";
-import SuperAdminAudit from "./pages/SuperAdminAudit";
-import SuperAdminErrors from "./pages/SuperAdminErrors";
-import NotFound from "./pages/NotFound";
+
+// Lazy-loaded — secondary flows, heavy PDF/xlsx pages, admin & super-admin surfaces.
+// These ship as separate chunks so first paint stays fast.
+const OrgSettings = lazy(() => import("./pages/OrgSettings"));
+const IncidentCreate = lazy(() => import("./pages/IncidentCreate"));
+const IncidentFromAgreement = lazy(() => import("./pages/IncidentFromAgreement"));
+const IncidentEdit = lazy(() => import("./pages/IncidentEdit"));
+const ShiftTicketCreate = lazy(() => import("./pages/ShiftTicketCreate"));
+const ShiftTicketEdit = lazy(() => import("./pages/ShiftTicketEdit"));
+const ShiftTicketLog = lazy(() => import("./pages/ShiftTicketLog"));
+const Crew = lazy(() => import("./pages/Crew"));
+const Crews = lazy(() => import("./pages/Crews"));
+const CrewDetail = lazy(() => import("./pages/CrewDetail"));
+const Fleet = lazy(() => import("./pages/Fleet"));
+const FleetTruckCreate = lazy(() => import("./pages/FleetTruckCreate"));
+const FleetTruckDetail = lazy(() => import("./pages/FleetTruckDetail"));
+const FleetTruckEdit = lazy(() => import("./pages/FleetTruckEdit"));
+const FleetTruckRates = lazy(() => import("./pages/FleetTruckRates"));
+const Expenses = lazy(() => import("./pages/Expenses"));
+const ExpenseEdit = lazy(() => import("./pages/ExpenseEdit"));
+const ExpenseDetail = lazy(() => import("./pages/ExpenseDetail"));
+const ExpenseReview = lazy(() => import("./pages/ExpenseReview"));
+const BatchReceiptScan = lazy(() => import("./pages/BatchReceiptScan"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const Terms = lazy(() => import("./pages/Terms"));
+const Support = lazy(() => import("./pages/Support"));
+const Payroll = lazy(() => import("./pages/Payroll"));
+const NeedsList = lazy(() => import("./pages/NeedsList"));
+const Training = lazy(() => import("./pages/Training"));
+const AdminLogs = lazy(() => import("./pages/AdminLogs"));
+const AdminReports = lazy(() => import("./pages/AdminReports"));
+const AccountsPayable = lazy(() => import("./pages/AccountsPayable"));
+const SuperAdmin = lazy(() => import("./pages/SuperAdmin"));
+const SuperAdminOrgs = lazy(() => import("./pages/SuperAdminOrgs"));
+const SuperAdminOrgDetail = lazy(() => import("./pages/SuperAdminOrgDetail"));
+const SuperAdminUsers = lazy(() => import("./pages/SuperAdminUsers"));
+const SuperAdminActivity = lazy(() => import("./pages/SuperAdminActivity"));
+const SuperAdminAudit = lazy(() => import("./pages/SuperAdminAudit"));
+const SuperAdminErrors = lazy(() => import("./pages/SuperAdminErrors"));
 
 const App = () => (
   <ErrorBoundary scope="root">
@@ -81,54 +89,56 @@ const App = () => (
               <TutorialOverlay />
               <TutorialMiniBar />
               <RouteBoundary>
-                <Routes>
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/reset-password" element={<ResetPassword />} />
-                  <Route path="/org-setup" element={<OrgSetup />} />
-                  <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                  <Route path="/incidents" element={<ProtectedRoute><Incidents /></ProtectedRoute>} />
-                  <Route path="/incidents/new" element={<ProtectedRoute><IncidentCreate /></ProtectedRoute>} />
-                  <Route path="/incidents/from-agreement" element={<ProtectedRoute><IncidentFromAgreement /></ProtectedRoute>} />
-                  <Route path="/incidents/:incidentId" element={<ProtectedRoute><IncidentDetail /></ProtectedRoute>} />
-                  <Route path="/incidents/:incidentId/edit" element={<ProtectedRoute><IncidentEdit /></ProtectedRoute>} />
-                  <Route path="/incidents/:incidentId/trucks/:incidentTruckId/shift-ticket/new" element={<ProtectedRoute><ShiftTicketCreate /></ProtectedRoute>} />
-                  <Route path="/incidents/:incidentId/trucks/:incidentTruckId/shift-ticket/:ticketId" element={<ProtectedRoute><ShiftTicketEdit /></ProtectedRoute>} />
-                  <Route path="/shift-tickets/log" element={<ProtectedRoute><ShiftTicketLog /></ProtectedRoute>} />
-                  <Route path="/crew" element={<ProtectedRoute><Crew /></ProtectedRoute>} />
-                  <Route path="/crews" element={<ProtectedRoute><Crews /></ProtectedRoute>} />
-                  <Route path="/crews/:crewId" element={<ProtectedRoute><CrewDetail /></ProtectedRoute>} />
-                  <Route path="/fleet" element={<ProtectedRoute><Fleet /></ProtectedRoute>} />
-                  <Route path="/fleet/rates" element={<ProtectedRoute><AdminGate><ModuleGate module="payroll"><FleetTruckRates /></ModuleGate></AdminGate></ProtectedRoute>} />
-                  <Route path="/fleet/new" element={<ProtectedRoute><FleetTruckCreate /></ProtectedRoute>} />
-                  <Route path="/fleet/:truckId" element={<ProtectedRoute><FleetTruckDetail /></ProtectedRoute>} />
-                  <Route path="/fleet/:truckId/edit" element={<ProtectedRoute><FleetTruckEdit /></ProtectedRoute>} />
-                  <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
-                  <Route path="/expenses/new" element={<ProtectedRoute><ExpenseEdit /></ProtectedRoute>} />
-                  <Route path="/expenses/review" element={<ProtectedRoute><ExpenseReview /></ProtectedRoute>} />
-                  <Route path="/expenses/:id" element={<ProtectedRoute><ExpenseDetail /></ProtectedRoute>} />
-                  <Route path="/expenses/:id/edit" element={<ProtectedRoute><ExpenseEdit /></ProtectedRoute>} />
-                  <Route path="/expenses/batch-scan" element={<ProtectedRoute><BatchReceiptScan /></ProtectedRoute>} />
-                  <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-                  <Route path="/settings/organization" element={<ProtectedRoute><OrgSettings /></ProtectedRoute>} />
-                  <Route path="/privacy" element={<Privacy />} />
-                  <Route path="/terms" element={<Terms />} />
-                  <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
-                  <Route path="/payroll" element={<ProtectedRoute><AdminGate><ModuleGate module="payroll"><Payroll /></ModuleGate></AdminGate></ProtectedRoute>} />
-                  <Route path="/more" element={<ProtectedRoute><More /></ProtectedRoute>} />
-                  <Route path="/needs" element={<ProtectedRoute><NeedsList /></ProtectedRoute>} />
-                  <Route path="/training" element={<ProtectedRoute><ModuleGate module="training"><Training /></ModuleGate></ProtectedRoute>} />
-                  <Route path="/admin/logs" element={<ProtectedRoute><AdminGate><AdminLogs /></AdminGate></ProtectedRoute>} />
-                  <Route path="/admin/reports" element={<ProtectedRoute><AdminGate><AdminReports /></AdminGate></ProtectedRoute>} />
-                  <Route path="/admin/accounts-payable" element={<ProtectedRoute><AdminGate><AccountsPayable /></AdminGate></ProtectedRoute>} />
-                  <Route path="/super-admin" element={<ProtectedRoute><PlatformAdminGate><SuperAdmin /></PlatformAdminGate></ProtectedRoute>} />
-                  <Route path="/super-admin/organizations" element={<ProtectedRoute><PlatformAdminGate><SuperAdminOrgs /></PlatformAdminGate></ProtectedRoute>} />
-                  <Route path="/super-admin/organizations/:orgId" element={<ProtectedRoute><PlatformAdminGate><SuperAdminOrgDetail /></PlatformAdminGate></ProtectedRoute>} />
-                  <Route path="/super-admin/users" element={<ProtectedRoute><PlatformAdminGate><SuperAdminUsers /></PlatformAdminGate></ProtectedRoute>} />
-                  <Route path="/super-admin/activity" element={<ProtectedRoute><PlatformAdminGate><SuperAdminActivity /></PlatformAdminGate></ProtectedRoute>} />
-                  <Route path="/super-admin/audit" element={<ProtectedRoute><PlatformAdminGate><SuperAdminAudit /></PlatformAdminGate></ProtectedRoute>} />
-                  <Route path="/super-admin/errors" element={<ProtectedRoute><PlatformAdminGate><SuperAdminErrors /></PlatformAdminGate></ProtectedRoute>} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
+                <Suspense fallback={<StuckLoading label="Loading page…" />}>
+                  <Routes>
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
+                    <Route path="/org-setup" element={<OrgSetup />} />
+                    <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                    <Route path="/incidents" element={<ProtectedRoute><Incidents /></ProtectedRoute>} />
+                    <Route path="/incidents/new" element={<ProtectedRoute><IncidentCreate /></ProtectedRoute>} />
+                    <Route path="/incidents/from-agreement" element={<ProtectedRoute><IncidentFromAgreement /></ProtectedRoute>} />
+                    <Route path="/incidents/:incidentId" element={<ProtectedRoute><IncidentDetail /></ProtectedRoute>} />
+                    <Route path="/incidents/:incidentId/edit" element={<ProtectedRoute><IncidentEdit /></ProtectedRoute>} />
+                    <Route path="/incidents/:incidentId/trucks/:incidentTruckId/shift-ticket/new" element={<ProtectedRoute><ShiftTicketCreate /></ProtectedRoute>} />
+                    <Route path="/incidents/:incidentId/trucks/:incidentTruckId/shift-ticket/:ticketId" element={<ProtectedRoute><ShiftTicketEdit /></ProtectedRoute>} />
+                    <Route path="/shift-tickets/log" element={<ProtectedRoute><ShiftTicketLog /></ProtectedRoute>} />
+                    <Route path="/crew" element={<ProtectedRoute><Crew /></ProtectedRoute>} />
+                    <Route path="/crews" element={<ProtectedRoute><Crews /></ProtectedRoute>} />
+                    <Route path="/crews/:crewId" element={<ProtectedRoute><CrewDetail /></ProtectedRoute>} />
+                    <Route path="/fleet" element={<ProtectedRoute><Fleet /></ProtectedRoute>} />
+                    <Route path="/fleet/rates" element={<ProtectedRoute><AdminGate><ModuleGate module="payroll"><FleetTruckRates /></ModuleGate></AdminGate></ProtectedRoute>} />
+                    <Route path="/fleet/new" element={<ProtectedRoute><FleetTruckCreate /></ProtectedRoute>} />
+                    <Route path="/fleet/:truckId" element={<ProtectedRoute><FleetTruckDetail /></ProtectedRoute>} />
+                    <Route path="/fleet/:truckId/edit" element={<ProtectedRoute><FleetTruckEdit /></ProtectedRoute>} />
+                    <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
+                    <Route path="/expenses/new" element={<ProtectedRoute><ExpenseEdit /></ProtectedRoute>} />
+                    <Route path="/expenses/review" element={<ProtectedRoute><ExpenseReview /></ProtectedRoute>} />
+                    <Route path="/expenses/:id" element={<ProtectedRoute><ExpenseDetail /></ProtectedRoute>} />
+                    <Route path="/expenses/:id/edit" element={<ProtectedRoute><ExpenseEdit /></ProtectedRoute>} />
+                    <Route path="/expenses/batch-scan" element={<ProtectedRoute><BatchReceiptScan /></ProtectedRoute>} />
+                    <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                    <Route path="/settings/organization" element={<ProtectedRoute><OrgSettings /></ProtectedRoute>} />
+                    <Route path="/privacy" element={<Privacy />} />
+                    <Route path="/terms" element={<Terms />} />
+                    <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
+                    <Route path="/payroll" element={<ProtectedRoute><AdminGate><ModuleGate module="payroll"><Payroll /></ModuleGate></AdminGate></ProtectedRoute>} />
+                    <Route path="/more" element={<ProtectedRoute><More /></ProtectedRoute>} />
+                    <Route path="/needs" element={<ProtectedRoute><NeedsList /></ProtectedRoute>} />
+                    <Route path="/training" element={<ProtectedRoute><ModuleGate module="training"><Training /></ModuleGate></ProtectedRoute>} />
+                    <Route path="/admin/logs" element={<ProtectedRoute><AdminGate><AdminLogs /></AdminGate></ProtectedRoute>} />
+                    <Route path="/admin/reports" element={<ProtectedRoute><AdminGate><AdminReports /></AdminGate></ProtectedRoute>} />
+                    <Route path="/admin/accounts-payable" element={<ProtectedRoute><AdminGate><AccountsPayable /></AdminGate></ProtectedRoute>} />
+                    <Route path="/super-admin" element={<ProtectedRoute><PlatformAdminGate><SuperAdmin /></PlatformAdminGate></ProtectedRoute>} />
+                    <Route path="/super-admin/organizations" element={<ProtectedRoute><PlatformAdminGate><SuperAdminOrgs /></PlatformAdminGate></ProtectedRoute>} />
+                    <Route path="/super-admin/organizations/:orgId" element={<ProtectedRoute><PlatformAdminGate><SuperAdminOrgDetail /></PlatformAdminGate></ProtectedRoute>} />
+                    <Route path="/super-admin/users" element={<ProtectedRoute><PlatformAdminGate><SuperAdminUsers /></PlatformAdminGate></ProtectedRoute>} />
+                    <Route path="/super-admin/activity" element={<ProtectedRoute><PlatformAdminGate><SuperAdminActivity /></PlatformAdminGate></ProtectedRoute>} />
+                    <Route path="/super-admin/audit" element={<ProtectedRoute><PlatformAdminGate><SuperAdminAudit /></PlatformAdminGate></ProtectedRoute>} />
+                    <Route path="/super-admin/errors" element={<ProtectedRoute><PlatformAdminGate><SuperAdminErrors /></PlatformAdminGate></ProtectedRoute>} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </Suspense>
               </RouteBoundary>
               </TutorialProvider>
             </BrowserRouter>
