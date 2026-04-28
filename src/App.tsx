@@ -13,6 +13,11 @@ import { TutorialOverlay } from "@/components/tutorial/TutorialOverlay";
 import { TutorialMiniBar } from "@/components/tutorial/TutorialMiniBar";
 import { queryClient, asyncPersister } from "@/lib/query-client";
 import "@/lib/offline-queue";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { RouteBoundary } from "@/components/RouteBoundary";
+import { installGlobalErrorHandlers } from "@/lib/error-tracking";
+
+installGlobalErrorHandlers();
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import OrgSetup from "./pages/OrgSetup";
@@ -61,72 +66,76 @@ import SuperAdminAudit from "./pages/SuperAdminAudit";
 import NotFound from "./pages/NotFound";
 
 const App = () => (
-  <PersistQueryClientProvider client={queryClient} persistOptions={{ persister: asyncPersister, maxAge: 1000 * 60 * 60 * 24 }}>
-    <AuthProvider>
-      <ImpersonationProvider>
-        <OrganizationProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <TutorialProvider>
-            <ImpersonationBanner />
-            <TutorialOverlay />
-            <TutorialMiniBar />
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/org-setup" element={<OrgSetup />} />
-              <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/incidents" element={<ProtectedRoute><Incidents /></ProtectedRoute>} />
-              <Route path="/incidents/new" element={<ProtectedRoute><IncidentCreate /></ProtectedRoute>} />
-              <Route path="/incidents/from-agreement" element={<ProtectedRoute><IncidentFromAgreement /></ProtectedRoute>} />
-              <Route path="/incidents/:incidentId" element={<ProtectedRoute><IncidentDetail /></ProtectedRoute>} />
-              <Route path="/incidents/:incidentId/edit" element={<ProtectedRoute><IncidentEdit /></ProtectedRoute>} />
-              <Route path="/incidents/:incidentId/trucks/:incidentTruckId/shift-ticket/new" element={<ProtectedRoute><ShiftTicketCreate /></ProtectedRoute>} />
-              <Route path="/incidents/:incidentId/trucks/:incidentTruckId/shift-ticket/:ticketId" element={<ProtectedRoute><ShiftTicketEdit /></ProtectedRoute>} />
-              <Route path="/shift-tickets/log" element={<ProtectedRoute><ShiftTicketLog /></ProtectedRoute>} />
-              <Route path="/crew" element={<ProtectedRoute><Crew /></ProtectedRoute>} />
-              <Route path="/crews" element={<ProtectedRoute><Crews /></ProtectedRoute>} />
-              <Route path="/crews/:crewId" element={<ProtectedRoute><CrewDetail /></ProtectedRoute>} />
-              <Route path="/fleet" element={<ProtectedRoute><Fleet /></ProtectedRoute>} />
-              <Route path="/fleet/rates" element={<ProtectedRoute><AdminGate><ModuleGate module="payroll"><FleetTruckRates /></ModuleGate></AdminGate></ProtectedRoute>} />
-              <Route path="/fleet/new" element={<ProtectedRoute><FleetTruckCreate /></ProtectedRoute>} />
-              <Route path="/fleet/:truckId" element={<ProtectedRoute><FleetTruckDetail /></ProtectedRoute>} />
-              <Route path="/fleet/:truckId/edit" element={<ProtectedRoute><FleetTruckEdit /></ProtectedRoute>} />
-              <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
-              <Route path="/expenses/new" element={<ProtectedRoute><ExpenseEdit /></ProtectedRoute>} />
-              <Route path="/expenses/review" element={<ProtectedRoute><ExpenseReview /></ProtectedRoute>} />
-              <Route path="/expenses/:id" element={<ProtectedRoute><ExpenseDetail /></ProtectedRoute>} />
-              <Route path="/expenses/:id/edit" element={<ProtectedRoute><ExpenseEdit /></ProtectedRoute>} />
-              <Route path="/expenses/batch-scan" element={<ProtectedRoute><BatchReceiptScan /></ProtectedRoute>} />
-              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/settings/organization" element={<ProtectedRoute><OrgSettings /></ProtectedRoute>} />
-              <Route path="/privacy" element={<Privacy />} />
-              <Route path="/terms" element={<Terms />} />
-              <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
-              <Route path="/payroll" element={<ProtectedRoute><AdminGate><ModuleGate module="payroll"><Payroll /></ModuleGate></AdminGate></ProtectedRoute>} />
-              <Route path="/more" element={<ProtectedRoute><More /></ProtectedRoute>} />
-              <Route path="/needs" element={<ProtectedRoute><NeedsList /></ProtectedRoute>} />
-              <Route path="/training" element={<ProtectedRoute><ModuleGate module="training"><Training /></ModuleGate></ProtectedRoute>} />
-              <Route path="/admin/logs" element={<ProtectedRoute><AdminGate><AdminLogs /></AdminGate></ProtectedRoute>} />
-              <Route path="/admin/reports" element={<ProtectedRoute><AdminGate><AdminReports /></AdminGate></ProtectedRoute>} />
-              <Route path="/admin/accounts-payable" element={<ProtectedRoute><AdminGate><AccountsPayable /></AdminGate></ProtectedRoute>} />
-              <Route path="/super-admin" element={<ProtectedRoute><PlatformAdminGate><SuperAdmin /></PlatformAdminGate></ProtectedRoute>} />
-              <Route path="/super-admin/organizations" element={<ProtectedRoute><PlatformAdminGate><SuperAdminOrgs /></PlatformAdminGate></ProtectedRoute>} />
-              <Route path="/super-admin/organizations/:orgId" element={<ProtectedRoute><PlatformAdminGate><SuperAdminOrgDetail /></PlatformAdminGate></ProtectedRoute>} />
-              <Route path="/super-admin/users" element={<ProtectedRoute><PlatformAdminGate><SuperAdminUsers /></PlatformAdminGate></ProtectedRoute>} />
-              <Route path="/super-admin/activity" element={<ProtectedRoute><PlatformAdminGate><SuperAdminActivity /></PlatformAdminGate></ProtectedRoute>} />
-              <Route path="/super-admin/audit" element={<ProtectedRoute><PlatformAdminGate><SuperAdminAudit /></PlatformAdminGate></ProtectedRoute>} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-            </TutorialProvider>
-          </BrowserRouter>
-        </TooltipProvider>
-        </OrganizationProvider>
-      </ImpersonationProvider>
-    </AuthProvider>
-  </PersistQueryClientProvider>
+  <ErrorBoundary scope="root">
+    <PersistQueryClientProvider client={queryClient} persistOptions={{ persister: asyncPersister, maxAge: 1000 * 60 * 60 * 24 }}>
+      <AuthProvider>
+        <ImpersonationProvider>
+          <OrganizationProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <TutorialProvider>
+              <ImpersonationBanner />
+              <TutorialOverlay />
+              <TutorialMiniBar />
+              <RouteBoundary>
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route path="/org-setup" element={<OrgSetup />} />
+                  <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                  <Route path="/incidents" element={<ProtectedRoute><Incidents /></ProtectedRoute>} />
+                  <Route path="/incidents/new" element={<ProtectedRoute><IncidentCreate /></ProtectedRoute>} />
+                  <Route path="/incidents/from-agreement" element={<ProtectedRoute><IncidentFromAgreement /></ProtectedRoute>} />
+                  <Route path="/incidents/:incidentId" element={<ProtectedRoute><IncidentDetail /></ProtectedRoute>} />
+                  <Route path="/incidents/:incidentId/edit" element={<ProtectedRoute><IncidentEdit /></ProtectedRoute>} />
+                  <Route path="/incidents/:incidentId/trucks/:incidentTruckId/shift-ticket/new" element={<ProtectedRoute><ShiftTicketCreate /></ProtectedRoute>} />
+                  <Route path="/incidents/:incidentId/trucks/:incidentTruckId/shift-ticket/:ticketId" element={<ProtectedRoute><ShiftTicketEdit /></ProtectedRoute>} />
+                  <Route path="/shift-tickets/log" element={<ProtectedRoute><ShiftTicketLog /></ProtectedRoute>} />
+                  <Route path="/crew" element={<ProtectedRoute><Crew /></ProtectedRoute>} />
+                  <Route path="/crews" element={<ProtectedRoute><Crews /></ProtectedRoute>} />
+                  <Route path="/crews/:crewId" element={<ProtectedRoute><CrewDetail /></ProtectedRoute>} />
+                  <Route path="/fleet" element={<ProtectedRoute><Fleet /></ProtectedRoute>} />
+                  <Route path="/fleet/rates" element={<ProtectedRoute><AdminGate><ModuleGate module="payroll"><FleetTruckRates /></ModuleGate></AdminGate></ProtectedRoute>} />
+                  <Route path="/fleet/new" element={<ProtectedRoute><FleetTruckCreate /></ProtectedRoute>} />
+                  <Route path="/fleet/:truckId" element={<ProtectedRoute><FleetTruckDetail /></ProtectedRoute>} />
+                  <Route path="/fleet/:truckId/edit" element={<ProtectedRoute><FleetTruckEdit /></ProtectedRoute>} />
+                  <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
+                  <Route path="/expenses/new" element={<ProtectedRoute><ExpenseEdit /></ProtectedRoute>} />
+                  <Route path="/expenses/review" element={<ProtectedRoute><ExpenseReview /></ProtectedRoute>} />
+                  <Route path="/expenses/:id" element={<ProtectedRoute><ExpenseDetail /></ProtectedRoute>} />
+                  <Route path="/expenses/:id/edit" element={<ProtectedRoute><ExpenseEdit /></ProtectedRoute>} />
+                  <Route path="/expenses/batch-scan" element={<ProtectedRoute><BatchReceiptScan /></ProtectedRoute>} />
+                  <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                  <Route path="/settings/organization" element={<ProtectedRoute><OrgSettings /></ProtectedRoute>} />
+                  <Route path="/privacy" element={<Privacy />} />
+                  <Route path="/terms" element={<Terms />} />
+                  <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
+                  <Route path="/payroll" element={<ProtectedRoute><AdminGate><ModuleGate module="payroll"><Payroll /></ModuleGate></AdminGate></ProtectedRoute>} />
+                  <Route path="/more" element={<ProtectedRoute><More /></ProtectedRoute>} />
+                  <Route path="/needs" element={<ProtectedRoute><NeedsList /></ProtectedRoute>} />
+                  <Route path="/training" element={<ProtectedRoute><ModuleGate module="training"><Training /></ModuleGate></ProtectedRoute>} />
+                  <Route path="/admin/logs" element={<ProtectedRoute><AdminGate><AdminLogs /></AdminGate></ProtectedRoute>} />
+                  <Route path="/admin/reports" element={<ProtectedRoute><AdminGate><AdminReports /></AdminGate></ProtectedRoute>} />
+                  <Route path="/admin/accounts-payable" element={<ProtectedRoute><AdminGate><AccountsPayable /></AdminGate></ProtectedRoute>} />
+                  <Route path="/super-admin" element={<ProtectedRoute><PlatformAdminGate><SuperAdmin /></PlatformAdminGate></ProtectedRoute>} />
+                  <Route path="/super-admin/organizations" element={<ProtectedRoute><PlatformAdminGate><SuperAdminOrgs /></PlatformAdminGate></ProtectedRoute>} />
+                  <Route path="/super-admin/organizations/:orgId" element={<ProtectedRoute><PlatformAdminGate><SuperAdminOrgDetail /></PlatformAdminGate></ProtectedRoute>} />
+                  <Route path="/super-admin/users" element={<ProtectedRoute><PlatformAdminGate><SuperAdminUsers /></PlatformAdminGate></ProtectedRoute>} />
+                  <Route path="/super-admin/activity" element={<ProtectedRoute><PlatformAdminGate><SuperAdminActivity /></PlatformAdminGate></ProtectedRoute>} />
+                  <Route path="/super-admin/audit" element={<ProtectedRoute><PlatformAdminGate><SuperAdminAudit /></PlatformAdminGate></ProtectedRoute>} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </RouteBoundary>
+              </TutorialProvider>
+            </BrowserRouter>
+          </TooltipProvider>
+          </OrganizationProvider>
+        </ImpersonationProvider>
+      </AuthProvider>
+    </PersistQueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
