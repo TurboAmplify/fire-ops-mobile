@@ -466,6 +466,35 @@ export function ShiftTicketForm({
       return;
     }
     const payload = buildSavePayload();
+
+    // Validate ONLY on explicit user save. Silent auto-saves bypass validation
+    // so we don't toast-spam while the operator is mid-typing — DB CHECK
+    // constraints (Step D) catch anything truly malformed.
+    if (!silent) {
+      const headerOk = validateOrToast(shiftTicketHeaderSchema, payload);
+      if (!headerOk) return;
+
+      const eqEntries = (payload.equipment_entries as unknown[]) ?? [];
+      for (let i = 0; i < eqEntries.length; i++) {
+        const result = equipmentEntrySchema.safeParse(eqEntries[i]);
+        if (!result.success) {
+          toast.error(`Equipment row ${i + 1}`, {
+            description: result.error.issues[0]?.message ?? "Invalid entry",
+          });
+          return;
+        }
+      }
+      const peEntries = (payload.personnel_entries as unknown[]) ?? [];
+      for (let i = 0; i < peEntries.length; i++) {
+        const result = personnelEntrySchema.safeParse(peEntries[i]);
+        if (!result.success) {
+          toast.error(`Personnel row ${i + 1}`, {
+            description: result.error.issues[0]?.message ?? "Invalid entry",
+          });
+          return;
+        }
+      }
+    }
     try {
       await writeAuditForSave(payload, { isOverrideEdit: !!unlockedThisSession });
       await Promise.resolve(onSave(payload));
