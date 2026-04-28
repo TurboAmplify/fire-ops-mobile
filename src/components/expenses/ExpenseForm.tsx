@@ -13,6 +13,14 @@ import { Loader2, Camera, Sparkles, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { useOrganization } from "@/hooks/useOrganization";
 import { SignedImage } from "@/components/ui/SignedImage";
+import { z } from "zod";
+import {
+  positiveCurrencySchema,
+  pastOrTodayDateSchema,
+  optionalShortTextSchema,
+  optionalLongTextSchema,
+  validateOrToast,
+} from "@/lib/validation";
 
 const categories: ExpenseCategory[] = ["fuel", "ppe", "food", "lodging", "equipment", "other"];
 const scopes: AttachmentScope[] = ["company", "incident", "truck"];
