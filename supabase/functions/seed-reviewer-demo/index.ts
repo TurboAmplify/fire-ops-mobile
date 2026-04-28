@@ -164,13 +164,13 @@ Deno.serve(async (req) => {
 
     // Trucks
     const truckRows = [
-      { unit_number: "E-71", make: "International", model: "7400", year: 2018, type: "Type 6 Engine" },
-      { unit_number: "E-72", make: "Ford", model: "F-550", year: 2020, type: "Type 6 Engine" },
+      { name: "E-71", make: "International", model: "7400", year: 2018, unit_type: "Type 6 Engine" },
+      { name: "E-72", make: "Ford", model: "F-550", year: 2020, unit_type: "Type 6 Engine" },
     ].map((t) => ({ ...t, organization_id: orgId, status: "available" }));
     const { data: trucks, error: tErr } = await admin
       .from("trucks")
       .insert(truckRows)
-      .select("id, unit_number");
+      .select("id, name");
     if (tErr) return json({ error: `Trucks insert: ${tErr.message}` }, 500);
 
     // Grant the demo admin access to both trucks
