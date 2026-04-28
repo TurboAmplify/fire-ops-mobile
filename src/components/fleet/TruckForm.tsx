@@ -68,15 +68,28 @@ export function TruckForm({ truck, onSubmit, isPending }: TruckFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const parsed = validateOrToast(truckSubmitSchema, {
+      name,
+      unitType,
+      make,
+      model,
+      year,
+      plate,
+      vin,
+      notes,
+    });
+    if (!parsed) return;
+
     const data: any = {
-      name: name.trim(),
+      name: parsed.name,
       status,
-      unit_type: unitType.trim() || null,
-      make: make.trim() || null,
-      model: model.trim() || null,
-      year: year ? parseInt(year) : null,
-      plate: plate.trim() || null,
-      vin: vin.trim() || null,
+      unit_type: parsed.unitType,
+      make: parsed.make,
+      model: parsed.model,
+      year: parsed.year ?? null,
+      plate: parsed.plate,
+      vin: parsed.vin,
       water_capacity: waterCapacity.trim() || null,
       pump_type: pumpType.trim() || null,
       dot_number: dotNumber.trim() || null,
