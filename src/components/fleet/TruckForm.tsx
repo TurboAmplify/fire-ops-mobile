@@ -7,6 +7,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2 } from "lucide-react";
 import type { Truck, TruckInsert, TruckUpdate } from "@/services/fleet";
 import { TRUCK_STATUS_LABELS, type TruckStatus } from "@/services/fleet";
+import { z } from "zod";
+import {
+  shortTextSchema,
+  optionalShortTextSchema,
+  optionalLongTextSchema,
+  optionalVinSchema,
+  optionalPlateSchema,
+  optionalVehicleYearSchema,
+  validateOrToast,
+} from "@/lib/validation";
+
+const truckSubmitSchema = z.object({
+  name: shortTextSchema({ min: 1, max: 60, label: "Truck name" }),
+  unitType: optionalShortTextSchema({ max: 60, label: "Unit type" }),
+  make: optionalShortTextSchema({ max: 60, label: "Make" }),
+  model: optionalShortTextSchema({ max: 60, label: "Model" }),
+  year: optionalVehicleYearSchema,
+  plate: optionalPlateSchema,
+  vin: optionalVinSchema,
+  notes: optionalLongTextSchema({ max: 2000, label: "Notes" }),
+});
 
 interface TruckFormProps {
   truck?: Truck | null;
