@@ -13,6 +13,11 @@ import { TutorialOverlay } from "@/components/tutorial/TutorialOverlay";
 import { TutorialMiniBar } from "@/components/tutorial/TutorialMiniBar";
 import { queryClient, asyncPersister } from "@/lib/query-client";
 import "@/lib/offline-queue";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { RouteBoundary } from "@/components/RouteBoundary";
+import { installGlobalErrorHandlers } from "@/lib/error-tracking";
+
+installGlobalErrorHandlers();
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import OrgSetup from "./pages/OrgSetup";
