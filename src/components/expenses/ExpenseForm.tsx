@@ -178,19 +178,32 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
+
+    // Defense layer 1: validate + sanitize before sending to the network.
+    // Defense layer 2 (DB CHECK constraints) lives in Step D.
+    const parsed = validateOrToast(expenseSubmitSchema, {
+      amount,
+      date,
+      vendor,
+      description,
+      mealAttendees,
+      mealPurpose,
+    });
+    if (!parsed) return;
+
     await onSubmit({
       incident_id: needsIncident ? incidentId : null,
       incident_truck_id: needsTruck ? incidentTruckId : null,
       category,
-      amount: parseFloat(amount),
-      description: description.trim() || null,
-      date,
+      amount: parsed.amount,
+      description: parsed.description,
+      date: parsed.date,
       receipt_url: receiptUrl || null,
       expense_type: expenseType,
       fuel_type: isFuel && fuelType ? fuelType : null,
-      meal_attendees: isMeal ? mealAttendees.trim() || null : null,
-      meal_purpose: isMeal ? mealPurpose.trim() || null : null,
-      vendor: vendor.trim() || null,
+      meal_attendees: isMeal ? parsed.mealAttendees : null,
+      meal_purpose: isMeal ? parsed.mealPurpose : null,
+      vendor: parsed.vendor,
     } as ExpenseInsert);
   };
 
