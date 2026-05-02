@@ -216,8 +216,8 @@ export default function Expenses() {
                     <p className="text-[11px] text-muted-foreground">{exp.date}</p>
                   </div>
                 </Link>
-                {/* Quick submit button for drafts */}
-                {exp.status === "draft" && (
+                {/* Quick submit button for drafts — only for reimbursement expenses */}
+                {exp.status === "draft" && exp.expense_type === "reimbursement" && (
                   <div className="border-t border-border/60 px-4 py-2.5">
                     <button
                       onClick={() => handleSubmitExpense(exp.id)}
