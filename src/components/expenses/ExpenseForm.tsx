@@ -475,6 +475,21 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
           />
         </div>
 
+        {/* Duplicate warning */}
+        {duplicate && (
+          <div className="rounded-xl border border-[hsl(var(--warning,38_92%_50%))]/40 bg-[hsl(var(--warning,38_92%_50%))]/10 p-3 flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-[hsl(var(--warning,38_92%_50%))] shrink-0 mt-0.5" />
+            <div className="text-xs">
+              <p className="font-semibold text-foreground">Possible duplicate</p>
+              <p className="text-muted-foreground mt-0.5">
+                An expense already exists with the same vendor, amount, and date
+                {duplicate.description ? ` ("${duplicate.description}")` : ""}.
+                You can still save if this is intentional.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Submit */}
         <div className="space-y-2">
           {disabledReason && (
