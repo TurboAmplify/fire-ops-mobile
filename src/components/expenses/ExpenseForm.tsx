@@ -83,6 +83,22 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
 
   const { data: incidents } = useIncidents();
   const { data: incidentTrucks } = useIncidentTrucks(incidentId);
+  const { data: allExpenses } = useExpenses();
+
+  // Duplicate detection: same vendor (case-insensitive), amount, and date.
+  // Excludes the current expense when editing.
+  const duplicate = useMemo(() => {
+    const v = vendor.trim().toLowerCase();
+    const amt = parseFloat(amount);
+    if (!v || !date || !amt || isNaN(amt)) return null;
+    return (allExpenses ?? []).find((e) => {
+      if (initial?.id && e.id === initial.id) return false;
+      if (e.date !== date) return false;
+      if (Math.abs(Number(e.amount) - amt) > 0.001) return false;
+      const ev = (e.vendor ?? "").trim().toLowerCase();
+      return ev && ev === v;
+    }) ?? null;
+  }, [allExpenses, vendor, amount, date, initial?.id]);
 
   const isMeal = category === "food";
   const isFuel = category === "fuel";
