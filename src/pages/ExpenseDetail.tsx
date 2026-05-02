@@ -154,8 +154,8 @@ export default function ExpenseDetail() {
           <ReceiptViewer url={expense.receipt_url} />
         )}
 
-        {/* Submit button for drafts (own only) */}
-        {isOwnExpense && status === "draft" && (
+        {/* Submit button for drafts (own only, reimbursements only) */}
+        {isOwnExpense && status === "draft" && expense.expense_type === "reimbursement" && (
           <button
             onClick={handleSubmit}
             disabled={updateMutation.isPending}
