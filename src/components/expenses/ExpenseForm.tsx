@@ -8,8 +8,9 @@ import { parseReceiptAI } from "@/services/ai-parsing";
 import { FuelTypeModal } from "./FuelTypeModal";
 import { MealComplianceFields } from "./MealComplianceFields";
 import { IncidentAttachSheet } from "./IncidentAttachSheet";
-import { useState } from "react";
-import { Loader2, Camera, Sparkles, ChevronDown } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Loader2, Camera, Sparkles, ChevronDown, AlertTriangle } from "lucide-react";
+import { useExpenses } from "@/hooks/useExpenses";
 import { toast } from "sonner";
 import { useOrganization } from "@/hooks/useOrganization";
 import { SignedImage } from "@/components/ui/SignedImage";
@@ -82,6 +83,22 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
 
   const { data: incidents } = useIncidents();
   const { data: incidentTrucks } = useIncidentTrucks(incidentId);
+  const { data: allExpenses } = useExpenses();
+
+  // Duplicate detection: same vendor (case-insensitive), amount, and date.
+  // Excludes the current expense when editing.
+  const duplicate = useMemo(() => {
+    const v = vendor.trim().toLowerCase();
+    const amt = parseFloat(amount);
+    if (!v || !date || !amt || isNaN(amt)) return null;
+    return (allExpenses ?? []).find((e) => {
+      if (initial?.id && e.id === initial.id) return false;
+      if (e.date !== date) return false;
+      if (Math.abs(Number(e.amount) - amt) > 0.001) return false;
+      const ev = (e.vendor ?? "").trim().toLowerCase();
+      return ev && ev === v;
+    }) ?? null;
+  }, [allExpenses, vendor, amount, date, initial?.id]);
 
   const isMeal = category === "food";
   const isFuel = category === "fuel";
@@ -457,6 +474,21 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
             className="w-full rounded-xl border bg-card px-4 py-3 text-base outline-none focus:ring-2 focus:ring-ring touch-target"
           />
         </div>
+
+        {/* Duplicate warning */}
+        {duplicate && (
+          <div className="rounded-xl border border-[hsl(var(--warning,38_92%_50%))]/40 bg-[hsl(var(--warning,38_92%_50%))]/10 p-3 flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-[hsl(var(--warning,38_92%_50%))] shrink-0 mt-0.5" />
+            <div className="text-xs">
+              <p className="font-semibold text-foreground">Possible duplicate</p>
+              <p className="text-muted-foreground mt-0.5">
+                An expense already exists with the same vendor, amount, and date
+                {duplicate.description ? ` ("${duplicate.description}")` : ""}.
+                You can still save if this is intentional.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Submit */}
         <div className="space-y-2">
