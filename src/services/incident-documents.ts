@@ -1,19 +1,40 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export type IncidentDocumentType = "of286" | "other";
+export type IncidentDocumentStage = "original" | "contractor_signed" | "finance_signed";
 
 export interface IncidentDocument {
   id: string;
   incident_id: string;
   organization_id: string;
   document_type: string;
+  stage: IncidentDocumentStage;
+  parent_document_id: string | null;
   file_url: string;
   file_name: string;
   uploaded_by_user_id: string | null;
+  signature_url: string | null;
+  signed_by_user_id: string | null;
+  signed_by_name: string | null;
+  signed_at: string | null;
   created_at: string;
-  /** Dollar amount actually invoiced on the OF-286 (drives Actual Profit on the P&L). */
   of286_invoice_total: number | null;
   of286_entered_at: string | null;
+}
+
+export interface IncidentDocumentAuditEntry {
+  id: string;
+  organization_id: string;
+  incident_id: string;
+  document_id: string | null;
+  document_type: string;
+  stage: string | null;
+  event_type: string;
+  actor_user_id: string | null;
+  actor_name: string | null;
+  file_name: string | null;
+  notes: string | null;
+  occurred_at: string;
 }
 
 export async function updateIncidentDocumentInvoiceTotal(
@@ -46,11 +67,13 @@ export async function fetchIncidentDocuments(
 }
 
 export async function uploadIncidentDocumentFile(
-  file: File,
+  file: File | Blob,
   organizationId: string,
   incidentId: string,
+  fileName?: string,
 ): Promise<string> {
-  const ext = file.name.split(".").pop() || "pdf";
+  const name = fileName || (file as File).name || "file.pdf";
+  const ext = name.split(".").pop() || "pdf";
   const path = `${organizationId}/${incidentId}/${crypto.randomUUID()}.${ext}`;
   const { error } = await supabase.storage
     .from("incident-documents")
@@ -60,13 +83,33 @@ export async function uploadIncidentDocumentFile(
   return data.publicUrl;
 }
 
+export async function uploadSignatureImage(
+  blob: Blob,
+  organizationId: string,
+  incidentId: string,
+): Promise<string> {
+  const path = `${organizationId}/${incidentId}/sig-${crypto.randomUUID()}.png`;
+  const { error } = await supabase.storage
+    .from("incident-documents")
+    .upload(path, blob, { contentType: "image/png" });
+  if (error) throw error;
+  const { data } = supabase.storage.from("incident-documents").getPublicUrl(path);
+  return data.publicUrl;
+}
+
 export async function createIncidentDocument(doc: {
   incident_id: string;
   organization_id: string;
   document_type: IncidentDocumentType;
+  stage?: IncidentDocumentStage;
+  parent_document_id?: string | null;
   file_url: string;
   file_name: string;
   uploaded_by_user_id?: string | null;
+  signature_url?: string | null;
+  signed_by_user_id?: string | null;
+  signed_by_name?: string | null;
+  signed_at?: string | null;
 }): Promise<IncidentDocument> {
   const { data, error } = await supabase
     .from("incident_documents")
@@ -84,7 +127,6 @@ export async function deleteIncidentDocument(id: string): Promise<void> {
 
 /**
  * Bulk: returns a Set of incident IDs that have at least one OF-286 document.
- * Used to flag missing-form indicators on lists.
  */
 export async function fetchIncidentsWithOF286(
   incidentIds: string[],
@@ -97,4 +139,42 @@ export async function fetchIncidentsWithOF286(
     .in("incident_id", incidentIds);
   if (error) throw error;
   return Array.from(new Set((data ?? []).map((r: any) => r.incident_id as string)));
+}
+
+// ---------------- Audit log ----------------
+
+export async function logIncidentDocumentEvent(entry: {
+  organization_id: string;
+  incident_id: string;
+  document_id: string | null;
+  document_type?: string;
+  stage?: string | null;
+  event_type: "uploaded" | "signed" | "downloaded" | "replaced" | "deleted";
+  actor_user_id?: string | null;
+  actor_name?: string | null;
+  file_name?: string | null;
+  notes?: string | null;
+}): Promise<void> {
+  const { error } = await supabase.from("incident_document_audit").insert({
+    document_type: "of286",
+    ...entry,
+  });
+  if (error) {
+    // Audit failures shouldn't block primary actions; surface to console.
+    console.warn("incident_document_audit insert failed:", error.message);
+  }
+}
+
+export async function fetchIncidentDocumentAudit(
+  incidentId: string,
+  documentType: string = "of286",
+): Promise<IncidentDocumentAuditEntry[]> {
+  const { data, error } = await supabase
+    .from("incident_document_audit")
+    .select("*")
+    .eq("incident_id", incidentId)
+    .eq("document_type", documentType)
+    .order("occurred_at", { ascending: false });
+  if (error) throw error;
+  return data as IncidentDocumentAuditEntry[];
 }
