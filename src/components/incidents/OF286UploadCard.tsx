@@ -227,7 +227,20 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
       toast.error("Could not generate download link");
       return;
     }
-    window.open(url, "_blank", "noopener,noreferrer");
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("fetch failed");
+      const blob = await res.blob();
+      downloadBlob(blob, doc.file_name);
+    } catch {
+      // Fallback: trigger anchor download directly
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = doc.file_name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
     await logEvent.mutateAsync({
       document_id: doc.id,
       stage: doc.stage,
