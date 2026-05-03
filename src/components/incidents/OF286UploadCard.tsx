@@ -177,10 +177,8 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
         signedAt,
       });
 
-      const signedFileName = signingDoc.file_name.replace(
-        /(\.[^.]+)?$/,
-        "-contractor-signed.pdf",
-      );
+      const baseName = signingDoc.file_name.replace(/\.[^.]+$/, "");
+      const signedFileName = `${baseName} - signed by contractor.pdf`;
       const fileUrl = await uploadIncidentDocumentFile(
         signedPdf,
         membership.organizationId,
