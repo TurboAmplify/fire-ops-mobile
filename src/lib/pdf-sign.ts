@@ -65,7 +65,7 @@ export async function stampSignatureOntoPdf(opts: {
   });
 
   const out = await pdfDoc.save();
-  return new Blob([out], { type: "application/pdf" });
+  return new Blob([out.slice().buffer as ArrayBuffer], { type: "application/pdf" });
 }
 
 export async function downloadBlob(blob: Blob, fileName: string) {
