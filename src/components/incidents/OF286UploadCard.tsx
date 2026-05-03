@@ -417,6 +417,15 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
                         Download for finance
                       </button>
                     )}
+                    {stage === "finance_signed" && (
+                      <button
+                        onClick={() => handleDownload(doc)}
+                        className="flex items-center gap-1 rounded-md bg-secondary px-2.5 py-1 text-[11px] font-bold text-secondary-foreground touch-target"
+                      >
+                        <Download className="h-3 w-3" />
+                        Download
+                      </button>
+                    )}
                     {/* Replace */}
                     <label className="flex items-center gap-1 rounded-md border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground cursor-pointer touch-target">
                       {isUploading ? (
