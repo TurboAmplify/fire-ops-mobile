@@ -462,6 +462,51 @@ export type Database = {
         }
         Relationships: []
       }
+      incident_document_audit: {
+        Row: {
+          actor_name: string | null
+          actor_user_id: string | null
+          document_id: string | null
+          document_type: string
+          event_type: string
+          file_name: string | null
+          id: string
+          incident_id: string
+          notes: string | null
+          occurred_at: string
+          organization_id: string
+          stage: string | null
+        }
+        Insert: {
+          actor_name?: string | null
+          actor_user_id?: string | null
+          document_id?: string | null
+          document_type?: string
+          event_type: string
+          file_name?: string | null
+          id?: string
+          incident_id: string
+          notes?: string | null
+          occurred_at?: string
+          organization_id: string
+          stage?: string | null
+        }
+        Update: {
+          actor_name?: string | null
+          actor_user_id?: string | null
+          document_id?: string | null
+          document_type?: string
+          event_type?: string
+          file_name?: string | null
+          id?: string
+          incident_id?: string
+          notes?: string | null
+          occurred_at?: string
+          organization_id?: string
+          stage?: string | null
+        }
+        Relationships: []
+      }
       incident_documents: {
         Row: {
           created_at: string
@@ -473,6 +518,12 @@ export type Database = {
           of286_entered_at: string | null
           of286_invoice_total: number | null
           organization_id: string
+          parent_document_id: string | null
+          signature_url: string | null
+          signed_at: string | null
+          signed_by_name: string | null
+          signed_by_user_id: string | null
+          stage: string
           uploaded_by_user_id: string | null
         }
         Insert: {
@@ -485,6 +536,12 @@ export type Database = {
           of286_entered_at?: string | null
           of286_invoice_total?: number | null
           organization_id: string
+          parent_document_id?: string | null
+          signature_url?: string | null
+          signed_at?: string | null
+          signed_by_name?: string | null
+          signed_by_user_id?: string | null
+          stage?: string
           uploaded_by_user_id?: string | null
         }
         Update: {
@@ -497,9 +554,23 @@ export type Database = {
           of286_entered_at?: string | null
           of286_invoice_total?: number | null
           organization_id?: string
+          parent_document_id?: string | null
+          signature_url?: string | null
+          signed_at?: string | null
+          signed_by_name?: string | null
+          signed_by_user_id?: string | null
+          stage?: string
           uploaded_by_user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "incident_documents_parent_document_id_fkey"
+            columns: ["parent_document_id"]
+            isOneToOne: false
+            referencedRelation: "incident_documents"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       incident_truck_crew: {
         Row: {
