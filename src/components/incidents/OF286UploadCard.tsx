@@ -120,11 +120,18 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
     }
     setUploadingStage(stage);
     try {
+      // For the finance-signed stage, rename the file to match our convention.
+      let uploadName = file.name;
+      if (stage === "finance_signed") {
+        const sourceBase =
+          (original?.file_name ?? file.name).replace(/\.[^.]+$/, "");
+        uploadName = `${sourceBase} - signed - completed.pdf`;
+      }
       const fileUrl = await uploadIncidentDocumentFile(
         file,
         membership.organizationId,
         incidentId,
-        file.name,
+        uploadName,
       );
       const replacingExisting = !!byStage[stage];
       await createMutation.mutateAsync({
@@ -132,7 +139,7 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
         stage,
         parent_document_id: stage === "finance_signed" ? contractorSigned?.id ?? null : null,
         file_url: fileUrl,
-        file_name: file.name,
+        file_name: uploadName,
       });
       if (replacingExisting) {
         await logEvent.mutateAsync({
@@ -177,10 +184,8 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
         signedAt,
       });
 
-      const signedFileName = signingDoc.file_name.replace(
-        /(\.[^.]+)?$/,
-        "-contractor-signed.pdf",
-      );
+      const baseName = signingDoc.file_name.replace(/\.[^.]+$/, "");
+      const signedFileName = `${baseName} - signed by contractor.pdf`;
       const fileUrl = await uploadIncidentDocumentFile(
         signedPdf,
         membership.organizationId,
@@ -222,7 +227,20 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
       toast.error("Could not generate download link");
       return;
     }
-    window.open(url, "_blank", "noopener,noreferrer");
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("fetch failed");
+      const blob = await res.blob();
+      downloadBlob(blob, doc.file_name);
+    } catch {
+      // Fallback: trigger anchor download directly
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = doc.file_name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
     await logEvent.mutateAsync({
       document_id: doc.id,
       stage: doc.stage,
@@ -397,6 +415,15 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
                       >
                         <Download className="h-3 w-3" />
                         Download for finance
+                      </button>
+                    )}
+                    {stage === "finance_signed" && (
+                      <button
+                        onClick={() => handleDownload(doc)}
+                        className="flex items-center gap-1 rounded-md bg-secondary px-2.5 py-1 text-[11px] font-bold text-secondary-foreground touch-target"
+                      >
+                        <Download className="h-3 w-3" />
+                        Download
                       </button>
                     )}
                     {/* Replace */}
