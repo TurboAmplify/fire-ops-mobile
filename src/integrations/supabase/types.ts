@@ -67,6 +67,13 @@ export type Database = {
             foreignKeyName: "agreements_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "agreements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -181,6 +188,13 @@ export type Database = {
             foreignKeyName: "crew_compensation_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "crew_compensation_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -227,6 +241,13 @@ export type Database = {
           role?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "crew_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
+          },
           {
             foreignKeyName: "crew_members_organization_id_fkey"
             columns: ["organization_id"]
@@ -422,6 +443,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "incident_trucks"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
           },
           {
             foreignKeyName: "expenses_organization_id_fkey"
@@ -704,6 +732,13 @@ export type Database = {
             foreignKeyName: "incidents_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "incidents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -815,6 +850,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "crew_members"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "needs_list_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
           },
           {
             foreignKeyName: "needs_list_items_organization_id_fkey"
@@ -958,6 +1000,13 @@ export type Database = {
             foreignKeyName: "organization_invites_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "organization_invites_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -986,6 +1035,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
+          },
           {
             foreignKeyName: "organization_members_organization_id_fkey"
             columns: ["organization_id"]
@@ -1280,6 +1336,13 @@ export type Database = {
             foreignKeyName: "resource_orders_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "resource_orders_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -1493,6 +1556,13 @@ export type Database = {
             foreignKeyName: "shift_tickets_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "shift_tickets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -1675,6 +1745,13 @@ export type Database = {
             foreignKeyName: "truck_checklist_items_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "truck_checklist_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -1725,6 +1802,13 @@ export type Database = {
           truck_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "truck_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
+          },
           {
             foreignKeyName: "truck_documents_organization_id_fkey"
             columns: ["organization_id"]
@@ -1862,6 +1946,13 @@ export type Database = {
             foreignKeyName: "truck_photos_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "truck_photos_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -1921,6 +2012,13 @@ export type Database = {
           truck_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "truck_service_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
+          },
           {
             foreignKeyName: "truck_service_logs_organization_id_fkey"
             columns: ["organization_id"]
@@ -2042,6 +2140,13 @@ export type Database = {
             foreignKeyName: "trucks_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "trucks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -2049,7 +2154,15 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      app_review_protected: {
+        Row: {
+          organization_id: string | null
+          organization_name: string | null
+          plan_code: string | null
+          protected_user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       accept_invite_by_code: { Args: { _code: string }; Returns: string }
