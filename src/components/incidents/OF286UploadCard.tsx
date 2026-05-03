@@ -120,11 +120,18 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
     }
     setUploadingStage(stage);
     try {
+      // For the finance-signed stage, rename the file to match our convention.
+      let uploadName = file.name;
+      if (stage === "finance_signed") {
+        const sourceBase =
+          (original?.file_name ?? file.name).replace(/\.[^.]+$/, "");
+        uploadName = `${sourceBase} - signed - completed.pdf`;
+      }
       const fileUrl = await uploadIncidentDocumentFile(
         file,
         membership.organizationId,
         incidentId,
-        file.name,
+        uploadName,
       );
       const replacingExisting = !!byStage[stage];
       await createMutation.mutateAsync({
@@ -132,7 +139,7 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
         stage,
         parent_document_id: stage === "finance_signed" ? contractorSigned?.id ?? null : null,
         file_url: fileUrl,
-        file_name: file.name,
+        file_name: uploadName,
       });
       if (replacingExisting) {
         await logEvent.mutateAsync({
