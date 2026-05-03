@@ -1,17 +1,33 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   useIncidentDocuments,
   useCreateIncidentDocument,
   useDeleteIncidentDocument,
   useUpdateIncidentDocumentInvoiceTotal,
+  useIncidentDocumentAudit,
+  useLogIncidentDocumentEvent,
 } from "@/hooks/useIncidentDocuments";
-import { uploadIncidentDocumentFile } from "@/services/incident-documents";
+import {
+  uploadIncidentDocumentFile,
+  uploadSignatureImage,
+  type IncidentDocument,
+  type IncidentDocumentStage,
+} from "@/services/incident-documents";
 import { useOrganization } from "@/hooks/useOrganization";
+import { useAuth } from "@/hooks/useAuth";
 import { SignedLink } from "@/components/ui/SignedLink";
+import { SignaturePicker } from "@/components/shift-tickets/SignaturePicker";
+import { stampSignatureOntoPdf, downloadBlob } from "@/lib/pdf-sign";
+import { getViewableUrl } from "@/lib/storage-url";
 import {
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  Download,
   DollarSign,
+  FileSignature,
   FileText,
   Loader2,
   Pencil,
@@ -22,74 +38,207 @@ import { toast } from "sonner";
 
 interface Props {
   incidentId: string;
-  /** Incident status — controls whether missing-form is flagged as a warning. */
   incidentStatus?: string;
 }
 
-/**
- * OF-286 (Emergency Equipment Use Invoice) upload card.
- * Closure of the incident is NOT blocked when missing — but a clear
- * "Missing OF-286" warning is shown until at least one is uploaded.
- *
- * Once uploaded, the user is asked for the invoice total ($) so the P&L
- * report can show "Actual Profit" alongside Projected Profit.
- */
+const STAGE_LABEL: Record<IncidentDocumentStage, string> = {
+  original: "Original (unsigned)",
+  contractor_signed: "Contractor signed",
+  finance_signed: "Finance signed (final)",
+};
+
+const STAGE_ORDER: IncidentDocumentStage[] = [
+  "original",
+  "contractor_signed",
+  "finance_signed",
+];
+
 export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
   const { membership } = useOrganization();
+  const { user } = useAuth();
   const { data: docs, isLoading } = useIncidentDocuments(incidentId, "of286");
+  const { data: auditEntries } = useIncidentDocumentAudit(incidentId, "of286");
   const createMutation = useCreateIncidentDocument(incidentId);
   const deleteMutation = useDeleteIncidentDocument(incidentId);
   const updateTotalMutation = useUpdateIncidentDocumentInvoiceTotal(incidentId);
-  const [uploading, setUploading] = useState(false);
+  const logEvent = useLogIncidentDocumentEvent(incidentId);
+
+  const [uploadingStage, setUploadingStage] = useState<IncidentDocumentStage | null>(
+    null,
+  );
+  const [signingDoc, setSigningDoc] = useState<IncidentDocument | null>(null);
+  const [signatureOpen, setSignatureOpen] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [editingTotalId, setEditingTotalId] = useState<string | null>(null);
   const [totalDraft, setTotalDraft] = useState("");
+  const [showAudit, setShowAudit] = useState(false);
+  const [stamping, setStamping] = useState(false);
 
-  const hasDoc = (docs?.length ?? 0) > 0;
-  const flagMissing = !hasDoc && (incidentStatus === "demob" || incidentStatus === "closed");
+  // Group docs by stage; pick the most recent of each.
+  const byStage = useMemo(() => {
+    const map: Partial<Record<IncidentDocumentStage, IncidentDocument>> = {};
+    for (const d of docs ?? []) {
+      const stage = (d.stage as IncidentDocumentStage) ?? "original";
+      if (!map[stage]) map[stage] = d;
+    }
+    return map;
+  }, [docs]);
 
-  // Auto-prompt for invoice total when a brand-new doc lands without one.
+  const original = byStage.original;
+  const contractorSigned = byStage.contractor_signed;
+  const financeSigned = byStage.finance_signed;
+  const finalDoc = financeSigned ?? contractorSigned ?? original;
+
+  const flagMissing =
+    !original && (incidentStatus === "demob" || incidentStatus === "closed");
+
+  // Auto-prompt for invoice total once finance-signed is uploaded.
   useEffect(() => {
-    if (!docs || docs.length === 0) return;
-    const first = docs[0];
-    if (first.of286_invoice_total == null && editingTotalId !== first.id) {
-      setEditingTotalId(first.id);
+    const target = finalDoc;
+    if (!target) return;
+    if (
+      target.of286_invoice_total == null &&
+      editingTotalId !== target.id &&
+      target.stage === "finance_signed"
+    ) {
+      setEditingTotalId(target.id);
       setTotalDraft("");
     }
-  }, [docs, editingTotalId]);
+  }, [finalDoc, editingTotalId]);
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // ------- File upload (original or finance-signed) -------
+  const handleStageUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    stage: IncidentDocumentStage,
+  ) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
     if (!membership?.organizationId) {
       toast.error("No organization selected");
       return;
     }
-    setUploading(true);
+    setUploadingStage(stage);
     try {
       const fileUrl = await uploadIncidentDocumentFile(
         file,
         membership.organizationId,
         incidentId,
+        file.name,
       );
+      const replacingExisting = !!byStage[stage];
       await createMutation.mutateAsync({
         document_type: "of286",
+        stage,
+        parent_document_id: stage === "finance_signed" ? contractorSigned?.id ?? null : null,
         file_url: fileUrl,
         file_name: file.name,
       });
-      toast.success("OF-286 uploaded");
+      if (replacingExisting) {
+        await logEvent.mutateAsync({
+          document_id: byStage[stage]?.id ?? null,
+          stage,
+          event_type: "replaced",
+          file_name: byStage[stage]?.file_name ?? null,
+          notes: `Replaced with ${file.name}`,
+        });
+      }
+      toast.success(`${STAGE_LABEL[stage]} uploaded`);
     } catch (err: any) {
-      toast.error(err?.message || "Failed to upload OF-286");
+      toast.error(err?.message || "Upload failed");
     } finally {
-      setUploading(false);
-      e.target.value = "";
+      setUploadingStage(null);
     }
   };
 
-  const handleDelete = async (id: string) => {
+  // ------- Contractor signing flow -------
+  const beginSign = (doc: IncidentDocument) => {
+    setSigningDoc(doc);
+    setSignatureOpen(true);
+  };
+
+  const handleSignatureSave = async (sigBlob: Blob) => {
+    if (!signingDoc || !membership?.organizationId) {
+      setSignatureOpen(false);
+      return;
+    }
+    setSignatureOpen(false);
+    setStamping(true);
     try {
-      await deleteMutation.mutateAsync(id);
-      toast.success("OF-286 removed");
+      const sourceUrl = await getViewableUrl(signingDoc.file_url);
+      if (!sourceUrl) throw new Error("Could not access source document");
+
+      const signerName = user?.email ?? "Contractor";
+      const signedAt = new Date();
+      const signedPdf = await stampSignatureOntoPdf({
+        sourceUrl,
+        signaturePngBlob: sigBlob,
+        signerName,
+        signedAt,
+      });
+
+      const signedFileName = signingDoc.file_name.replace(
+        /(\.[^.]+)?$/,
+        "-contractor-signed.pdf",
+      );
+      const fileUrl = await uploadIncidentDocumentFile(
+        signedPdf,
+        membership.organizationId,
+        incidentId,
+        signedFileName,
+      );
+      const sigUrl = await uploadSignatureImage(
+        sigBlob,
+        membership.organizationId,
+        incidentId,
+      );
+
+      await createMutation.mutateAsync({
+        document_type: "of286",
+        stage: "contractor_signed",
+        parent_document_id: signingDoc.id,
+        file_url: fileUrl,
+        file_name: signedFileName,
+        signature_url: sigUrl,
+        signed_by_name: signerName,
+        signed_at: signedAt.toISOString(),
+      });
+
+      // Auto-download for the user to email to finance.
+      downloadBlob(signedPdf, signedFileName);
+      toast.success("Signed and downloaded — send to finance");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to sign document");
+    } finally {
+      setStamping(false);
+      setSigningDoc(null);
+    }
+  };
+
+  // ------- Download with audit log -------
+  const handleDownload = async (doc: IncidentDocument) => {
+    const url = await getViewableUrl(doc.file_url);
+    if (!url) {
+      toast.error("Could not generate download link");
+      return;
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
+    await logEvent.mutateAsync({
+      document_id: doc.id,
+      stage: doc.stage,
+      event_type: "downloaded",
+      file_name: doc.file_name,
+    });
+  };
+
+  const handleDelete = async (doc: IncidentDocument) => {
+    try {
+      await deleteMutation.mutateAsync({
+        id: doc.id,
+        stage: doc.stage,
+        file_name: doc.file_name,
+      });
+      toast.success("Document removed");
       setConfirmDeleteId(null);
     } catch {
       toast.error("Failed to remove document");
@@ -114,165 +263,339 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
   };
 
   const fmtMoney = (n: number) =>
-    n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
+    n.toLocaleString("en-US", { style: "currency", currency: "USD" });
+
+  const allComplete = !!financeSigned;
+  const cardBorder = allComplete
+    ? "border-success/30 bg-success/5"
+    : flagMissing
+      ? "border-amber-500/40 bg-amber-500/5"
+      : "border-border bg-card";
 
   return (
-    <div
-      className={`rounded-xl border p-4 space-y-3 card-shadow ${
-        hasDoc
-          ? "border-success/30 bg-success/5"
-          : flagMissing
-            ? "border-amber-500/40 bg-amber-500/5"
-            : "border-border bg-card"
-      }`}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-2 min-w-0">
-          {hasDoc ? (
-            <CheckCircle2 className="h-5 w-5 text-success shrink-0 mt-0.5" />
-          ) : flagMissing ? (
-            <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-          ) : (
-            <FileText className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-          )}
-          <div className="min-w-0">
-            <p className="text-sm font-bold">OF-286 Invoice</p>
-            <p className="text-xs text-muted-foreground">
-              {hasDoc
-                ? "Signed invoice on file. Required for accounts receivable."
-                : flagMissing
-                  ? "Missing — upload the signed OF-286 to enable invoicing."
-                  : "Upload the signed OF-286 once received (typically at demob)."}
-            </p>
-          </div>
+    <div className={`rounded-xl border p-4 space-y-3 card-shadow ${cardBorder}`}>
+      <div className="flex items-start gap-2">
+        {allComplete ? (
+          <CheckCircle2 className="h-5 w-5 text-success shrink-0 mt-0.5" />
+        ) : flagMissing ? (
+          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+        ) : (
+          <FileText className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold">OF-286 Invoice</p>
+          <p className="text-xs text-muted-foreground">
+            Three-stage workflow: upload original, sign and send to finance, then upload the
+            finance-signed final.
+          </p>
         </div>
-        <label className="flex items-center gap-1 text-xs font-semibold text-primary cursor-pointer touch-target shrink-0">
-          {uploading ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <Upload className="h-3.5 w-3.5" />
-          )}
-          <span>{uploading ? "Uploading..." : hasDoc ? "Replace" : "Upload"}</span>
-          <input
-            type="file"
-            accept="image/*,.pdf,.doc,.docx"
-            onChange={handleUpload}
-            className="hidden"
-            disabled={uploading}
-          />
-        </label>
       </div>
 
       {isLoading && (
         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground mx-auto" />
       )}
 
-      {hasDoc && (
-        <div className="space-y-2">
-          {docs!.map((doc) => {
-            const isEditing = editingTotalId === doc.id;
-            const total = doc.of286_invoice_total;
-            return (
-              <div
-                key={doc.id}
-                className="rounded-lg bg-background/60 p-2.5 space-y-2"
-              >
-                <div className="flex items-center gap-2">
-                  <SignedLink
-                    href={doc.file_url}
-                    className="flex items-center gap-2 min-w-0 flex-1 touch-target"
-                  >
-                    <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{doc.file_name}</p>
-                      <p className="text-[11px] text-muted-foreground">
-                        Uploaded {new Date(doc.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </SignedLink>
-                  {confirmDeleteId === doc.id ? (
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => handleDelete(doc.id)}
-                        disabled={deleteMutation.isPending}
-                        className="rounded-md bg-destructive px-2 py-1 text-[11px] font-bold text-destructive-foreground touch-target"
-                      >
-                        Confirm
-                      </button>
-                      <button
-                        onClick={() => setConfirmDeleteId(null)}
-                        className="rounded-md bg-secondary px-2 py-1 text-[11px] font-bold text-secondary-foreground touch-target"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setConfirmDeleteId(doc.id)}
-                      className="text-muted-foreground hover:text-destructive touch-target p-1"
-                      aria-label="Remove document"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
+      {/* STAGE LIST */}
+      <div className="space-y-2">
+        {STAGE_ORDER.map((stage) => {
+          const doc = byStage[stage];
+          const stageNum = STAGE_ORDER.indexOf(stage) + 1;
+          const isUploading = uploadingStage === stage;
 
-                {/* Invoice total — drives Actual Profit on P&L */}
-                {isEditing ? (
-                  <div className="flex items-center gap-2 rounded-md border border-border bg-background p-2">
-                    <DollarSign className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      autoFocus
-                      placeholder="Invoice total (e.g. 24850.00)"
-                      value={totalDraft}
-                      onChange={(e) => setTotalDraft(e.target.value)}
-                      className="flex-1 bg-transparent text-sm outline-none"
-                    />
-                    <button
-                      onClick={() => handleSaveTotal(doc.id)}
-                      disabled={updateTotalMutation.isPending}
-                      className="rounded-md bg-primary px-2.5 py-1 text-[11px] font-bold text-primary-foreground touch-target disabled:opacity-40"
-                    >
-                      Save
-                    </button>
-                    <button
+          return (
+            <div
+              key={stage}
+              className={`rounded-lg border p-2.5 ${
+                doc ? "border-border bg-background/60" : "border-dashed border-border bg-background/30"
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-1.5">
+                <span
+                  className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${
+                    doc
+                      ? "bg-success text-success-foreground"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {stageNum}
+                </span>
+                <span className="text-xs font-semibold">{STAGE_LABEL[stage]}</span>
+              </div>
+
+              {doc ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <SignedLink
+                      href={doc.file_url}
                       onClick={() => {
+                        // log download as well (SignedLink opens in new tab)
+                        logEvent.mutate({
+                          document_id: doc.id,
+                          stage: doc.stage,
+                          event_type: "downloaded",
+                          file_name: doc.file_name,
+                        });
+                      }}
+                      className="flex items-center gap-2 min-w-0 flex-1 touch-target"
+                    >
+                      <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{doc.file_name}</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {new Date(doc.created_at).toLocaleDateString()}
+                          {doc.signed_by_name ? ` • Signed by ${doc.signed_by_name}` : ""}
+                        </p>
+                      </div>
+                    </SignedLink>
+                    {confirmDeleteId === doc.id ? (
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => handleDelete(doc)}
+                          disabled={deleteMutation.isPending}
+                          className="rounded-md bg-destructive px-2 py-1 text-[11px] font-bold text-destructive-foreground touch-target"
+                        >
+                          Confirm
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteId(null)}
+                          className="rounded-md bg-secondary px-2 py-1 text-[11px] font-bold text-secondary-foreground touch-target"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDeleteId(doc.id)}
+                        className="text-muted-foreground hover:text-destructive touch-target p-1"
+                        aria-label="Remove"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Stage-specific actions */}
+                  <div className="flex flex-wrap gap-2">
+                    {stage === "original" && !contractorSigned && (
+                      <button
+                        onClick={() => beginSign(doc)}
+                        disabled={stamping}
+                        className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-[11px] font-bold text-primary-foreground touch-target disabled:opacity-40"
+                      >
+                        {stamping ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <FileSignature className="h-3 w-3" />
+                        )}
+                        Sign &amp; download
+                      </button>
+                    )}
+                    {stage === "contractor_signed" && (
+                      <button
+                        onClick={() => handleDownload(doc)}
+                        className="flex items-center gap-1 rounded-md bg-secondary px-2.5 py-1 text-[11px] font-bold text-secondary-foreground touch-target"
+                      >
+                        <Download className="h-3 w-3" />
+                        Download for finance
+                      </button>
+                    )}
+                    {/* Replace */}
+                    <label className="flex items-center gap-1 rounded-md border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground cursor-pointer touch-target">
+                      {isUploading ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Upload className="h-3 w-3" />
+                      )}
+                      Replace
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        className="hidden"
+                        onChange={(e) => handleStageUpload(e, stage)}
+                        disabled={isUploading}
+                      />
+                    </label>
+                  </div>
+
+                  {/* Invoice total — only on finance-signed stage */}
+                  {stage === "finance_signed" && (
+                    <InvoiceTotalRow
+                      doc={doc}
+                      isEditing={editingTotalId === doc.id}
+                      totalDraft={totalDraft}
+                      onStart={() => {
+                        setEditingTotalId(doc.id);
+                        setTotalDraft(
+                          doc.of286_invoice_total != null
+                            ? String(doc.of286_invoice_total)
+                            : "",
+                        );
+                      }}
+                      onChange={setTotalDraft}
+                      onSave={() => handleSaveTotal(doc.id)}
+                      onCancel={() => {
                         setEditingTotalId(null);
                         setTotalDraft("");
                       }}
-                      className="text-[11px] font-semibold text-muted-foreground touch-target px-1"
-                    >
-                      Cancel
-                    </button>
+                      saving={updateTotalMutation.isPending}
+                      fmtMoney={fmtMoney}
+                    />
+                  )}
+                </div>
+              ) : (
+                <>
+                  {stage === "contractor_signed" ? (
+                    <p className="text-[11px] text-muted-foreground italic px-1">
+                      {original
+                        ? "Use \"Sign & download\" on the original to create this version."
+                        : "Upload the original first."}
+                    </p>
+                  ) : (
+                    <label className="flex items-center justify-center gap-1.5 rounded-md border border-dashed border-border py-2 text-xs font-semibold text-primary cursor-pointer touch-target">
+                      {isUploading ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Upload className="h-3.5 w-3.5" />
+                      )}
+                      {isUploading ? "Uploading…" : `Upload ${STAGE_LABEL[stage].toLowerCase()}`}
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        className="hidden"
+                        onChange={(e) => handleStageUpload(e, stage)}
+                        disabled={isUploading || (stage === "finance_signed" && !contractorSigned)}
+                      />
+                    </label>
+                  )}
+                  {stage === "finance_signed" && !contractorSigned && (
+                    <p className="text-[10px] text-muted-foreground italic px-1 mt-1">
+                      Available once the contractor-signed version exists.
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* AUDIT TRAIL */}
+      <div className="pt-1 border-t border-border">
+        <button
+          onClick={() => setShowAudit((v) => !v)}
+          className="flex w-full items-center justify-between text-[11px] font-semibold text-muted-foreground hover:text-foreground touch-target px-1 py-1.5"
+        >
+          <span className="flex items-center gap-1.5">
+            <Clock className="h-3 w-3" />
+            Audit trail ({auditEntries?.length ?? 0})
+          </span>
+          {showAudit ? (
+            <ChevronUp className="h-3 w-3" />
+          ) : (
+            <ChevronDown className="h-3 w-3" />
+          )}
+        </button>
+        {showAudit && (
+          <div className="space-y-1.5 pt-1 max-h-64 overflow-y-auto">
+            {(auditEntries ?? []).length === 0 ? (
+              <p className="text-[11px] text-muted-foreground italic px-1">
+                No events yet.
+              </p>
+            ) : (
+              (auditEntries ?? []).map((e) => (
+                <div
+                  key={e.id}
+                  className="flex items-start gap-2 rounded-md bg-background/50 px-2 py-1.5 text-[11px]"
+                >
+                  <span className="font-bold uppercase tracking-wide text-muted-foreground shrink-0 w-20">
+                    {e.event_type}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate">
+                      {e.stage ? STAGE_LABEL[e.stage as IncidentDocumentStage] ?? e.stage : ""}
+                      {e.file_name ? ` — ${e.file_name}` : ""}
+                    </p>
+                    <p className="text-muted-foreground">
+                      {new Date(e.occurred_at).toLocaleString()}
+                      {e.actor_name ? ` • ${e.actor_name}` : ""}
+                    </p>
                   </div>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setEditingTotalId(doc.id);
-                      setTotalDraft(total != null ? String(total) : "");
-                    }}
-                    className="flex w-full items-center justify-between gap-2 rounded-md bg-background/80 px-2.5 py-1.5 text-left touch-target"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <DollarSign className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      <span className="text-[11px] text-muted-foreground">Invoice total</span>
-                      <span className="text-sm font-semibold">
-                        {total != null ? fmtMoney(Number(total)) : "Not entered"}
-                      </span>
-                    </div>
-                    <Pencil className="h-3 w-3 text-muted-foreground shrink-0" />
-                  </button>
-                )}
-              </div>
-            );
-          })}
-          <p className="text-[10px] text-muted-foreground px-1">
-            Invoice total powers "Actual Profit" on the P&L report.
-          </p>
-        </div>
-      )}
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+
+      <SignaturePicker
+        open={signatureOpen}
+        onClose={() => {
+          setSignatureOpen(false);
+          setSigningDoc(null);
+        }}
+        onSave={handleSignatureSave}
+        title="Sign OF-286"
+        defaultName={user?.email ?? ""}
+      />
     </div>
+  );
+}
+
+function InvoiceTotalRow(props: {
+  doc: IncidentDocument;
+  isEditing: boolean;
+  totalDraft: string;
+  saving: boolean;
+  onStart: () => void;
+  onChange: (v: string) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  fmtMoney: (n: number) => string;
+}) {
+  const { doc, isEditing, totalDraft, saving, onStart, onChange, onSave, onCancel, fmtMoney } = props;
+  const total = doc.of286_invoice_total;
+  if (isEditing) {
+    return (
+      <div className="flex items-center gap-2 rounded-md border border-border bg-background p-2">
+        <DollarSign className="h-4 w-4 text-muted-foreground shrink-0" />
+        <input
+          type="text"
+          inputMode="decimal"
+          autoFocus
+          placeholder="Invoice total (e.g. 24850.00)"
+          value={totalDraft}
+          onChange={(e) => onChange(e.target.value)}
+          className="flex-1 bg-transparent text-sm outline-none"
+        />
+        <button
+          onClick={onSave}
+          disabled={saving}
+          className="rounded-md bg-primary px-2.5 py-1 text-[11px] font-bold text-primary-foreground touch-target disabled:opacity-40"
+        >
+          Save
+        </button>
+        <button
+          onClick={onCancel}
+          className="text-[11px] font-semibold text-muted-foreground touch-target px-1"
+        >
+          Cancel
+        </button>
+      </div>
+    );
+  }
+  return (
+    <button
+      onClick={onStart}
+      className="flex w-full items-center justify-between gap-2 rounded-md bg-background/80 px-2.5 py-1.5 text-left touch-target"
+    >
+      <div className="flex items-center gap-2 min-w-0">
+        <DollarSign className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+        <span className="text-[11px] text-muted-foreground">Invoice total</span>
+        <span className="text-sm font-semibold">
+          {total != null ? fmtMoney(Number(total)) : "Not entered"}
+        </span>
+      </div>
+      <Pencil className="h-3 w-3 text-muted-foreground shrink-0" />
+    </button>
   );
 }

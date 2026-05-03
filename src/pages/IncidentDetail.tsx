@@ -50,7 +50,7 @@ export default function IncidentDetail() {
   }
 
   const statusColor = STATUS_COLORS[incident.status as IncidentStatus] || "bg-secondary text-muted-foreground";
-  const showOF286 = incident.status === "demob" || incident.status === "closed";
+  // OF-286 is a multi-stage workflow that can start before demob — always show.
 
   const handleStatusChange = async (newStatus: IncidentStatus) => {
     try {
@@ -196,9 +196,7 @@ export default function IncidentDetail() {
             <IncidentResourceOrdersRollup incidentId={incident.id} />
 
             {/* OF-286 only matters at demob/close */}
-            {showOF286 && (
-              <OF286UploadCard incidentId={incident.id} incidentStatus={incident.status} />
-            )}
+            <OF286UploadCard incidentId={incident.id} incidentStatus={incident.status} />
 
             <div className="pt-2 flex justify-end">
               {!confirmDelete ? (
