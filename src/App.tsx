@@ -26,6 +26,7 @@ installGlobalErrorHandlers();
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import OrgSetup from "./pages/OrgSetup";
+import AccountUnavailable from "./pages/AccountUnavailable";
 import Dashboard from "./pages/Dashboard";
 import Incidents from "./pages/Incidents";
 import IncidentDetail from "./pages/IncidentDetail";
