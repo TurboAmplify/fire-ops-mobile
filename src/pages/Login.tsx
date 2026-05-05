@@ -18,12 +18,18 @@ const passwordSchema = z
   .min(8, "Password must be at least 8 characters")
   .max(72, "Password too long");
 
+// Generic error copy — never references billing, marketing, or external sites.
+// Apple-safe: app shows no path to create a paid account.
+const GENERIC_AUTH_ERROR =
+  "We couldn't sign you in. If you don't have an account, please contact your team administrator.";
+
 export default function Login() {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const { src: heroBg } = useAppBackground();
-  const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
-  const [hasInviteCode, setHasInviteCode] = useState(false);
+  // Modes: sign in (existing user), join (invite code only), forgot.
+  // There is intentionally no "create new organization" path in the app.
+  const [mode, setMode] = useState<"login" | "join" | "forgot">("login");
   const [inviteCode, setInviteCode] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,11 +45,10 @@ export default function Login() {
       if (result.error) {
         throw result.error instanceof Error ? result.error : new Error(String(result.error));
       }
-      // If redirected, the browser will navigate away; nothing else to do
     } catch (err: any) {
       toast({
-        title: "Sign in with Apple failed",
-        description: err?.message || "Please try again.",
+        title: "Sign in failed",
+        description: GENERIC_AUTH_ERROR,
         variant: "destructive",
       });
       setAppleLoading(false);
@@ -59,7 +64,6 @@ export default function Login() {
   }
 
   if (user) {
-    // ProtectedRoute on "/" will route platform admins onward to /super-admin.
     return <Navigate to="/" replace />;
   }
 
@@ -68,7 +72,6 @@ export default function Login() {
     setLoading(true);
 
     try {
-      // Validate inputs before hitting auth
       const emailResult = emailSchema.safeParse(email);
       if (!emailResult.success) {
         throw new Error(emailResult.error.issues[0]?.message ?? "Invalid email");
@@ -87,14 +90,14 @@ export default function Login() {
           redirectTo: `${window.location.origin}/reset-password`,
         });
         if (error) throw error;
-        toast({ title: "Check your email", description: "Password reset link sent." });
+        toast({ title: "Check your email", description: "If an account exists, a reset link has been sent." });
         setMode("login");
-      } else if (mode === "signup") {
-        // If they have an invite code, normalize and validate it before creating the account
-        const normalizedCode = hasInviteCode
-          ? inviteCode.toUpperCase().replace(/[^A-Z0-9]/g, "")
-          : "";
-        if (hasInviteCode && normalizedCode.length < 6) {
+      } else if (mode === "join") {
+        // Invite code is required for in-app account creation. The DB also
+        // enforces this via an auth.users trigger that blocks any signup
+        // without a pending invite or marketing-site provisioning token.
+        const normalizedCode = inviteCode.toUpperCase().replace(/[^A-Z0-9]/g, "");
+        if (normalizedCode.length < 6) {
           throw new Error("Enter the invite code your team admin gave you.");
         }
 
@@ -103,40 +106,37 @@ export default function Login() {
           password,
           options: { emailRedirectTo: window.location.origin },
         });
-        if (error) throw error;
+        if (error) {
+          // The DB trigger raises "Signup blocked" with a clear message;
+          // surface a generic message to keep things Apple-safe.
+          throw new Error(GENERIC_AUTH_ERROR);
+        }
 
-        // If signup auto-confirms (no email verification), session is present and
-        // we can immediately accept the invite. Otherwise, the code is preserved
-        // server-side and the user can finish via the email confirmation link.
-        if (hasInviteCode && signUpData.session) {
+        if (signUpData.session) {
           const { error: rpcError } = await supabase.rpc(
             "accept_invite_by_code" as any,
             { _code: normalizedCode } as any,
           );
           if (rpcError) throw rpcError;
-          toast({
-            title: "Welcome aboard",
-            description: "You've joined your team.",
-          });
-          // ProtectedRoute will route to the org dashboard now that membership exists
+          toast({ title: "Welcome aboard", description: "You've joined your team." });
           return;
         }
 
         toast({
           title: "Account created",
-          description: hasInviteCode
-            ? "Verify your email, then sign in to join your team."
-            : "Check your email to verify your account before signing in.",
+          description: "Check your email to verify your account, then sign in to join your team.",
         });
         setMode("login");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
-        if (error) throw error;
+        if (error) {
+          throw new Error(GENERIC_AUTH_ERROR);
+        }
       }
     } catch (err: any) {
       toast({
-        title: "Error",
-        description: err.message || "Something went wrong.",
+        title: "Sign in",
+        description: err.message || GENERIC_AUTH_ERROR,
         variant: "destructive",
       });
     } finally {
@@ -146,7 +146,6 @@ export default function Login() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      {/* Cinematic hero header */}
       <div className="relative overflow-hidden safe-area-top">
         <img
           src={heroBg}
@@ -162,18 +161,17 @@ export default function Login() {
         </div>
       </div>
 
-      {/* Form */}
       <div className="flex-1 -mt-1 rounded-t-3xl bg-background px-6 pt-6 pb-8 relative z-10">
         <div className="mx-auto w-full max-w-sm space-y-6">
           <div className="text-center space-y-1">
             <h2 className="text-xl font-bold">
               {mode === "login" && "Welcome back"}
-              {mode === "signup" && "Create your account"}
+              {mode === "join" && "Join your team"}
               {mode === "forgot" && "Reset password"}
             </h2>
             <p className="text-sm text-muted-foreground">
               {mode === "login" && "Sign in to continue"}
-              {mode === "signup" && "Get started with FireOps"}
+              {mode === "join" && "Use the invite code from your admin"}
               {mode === "forgot" && "We'll send you a reset link"}
             </p>
           </div>
@@ -189,12 +187,7 @@ export default function Login() {
                 {appleLoading ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
-                  <svg
-                    className="mr-2 h-4 w-4"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    aria-hidden="true"
-                  >
+                  <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                     <path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.377 0-2.332-1.26-3.428-2.8-1.287-1.82-2.323-4.63-2.323-7.28 0-4.28 2.797-6.55 5.552-6.55 1.448 0 2.675.95 3.6.95.865 0 2.222-1.01 3.902-1.01.613 0 2.886.06 4.374 2.19-.13.09-2.383 1.37-2.383 4.19 0 3.26 2.854 4.42 2.955 4.45z" />
                   </svg>
                 )}
@@ -235,42 +228,32 @@ export default function Login() {
                   placeholder="••••••••"
                   required
                   minLength={8}
-                  autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                  autoComplete={mode === "join" ? "new-password" : "current-password"}
                   className="h-12 rounded-xl bg-secondary border-border text-[15px] placeholder:text-muted-foreground/50"
                 />
               </div>
             )}
 
-            {mode === "signup" && (
-              <div className="space-y-2">
-                <button
-                  type="button"
-                  onClick={() => setHasInviteCode((v) => !v)}
-                  className="text-xs font-medium text-primary"
-                >
-                  {hasInviteCode ? "I'm starting a new team instead" : "I have an invite code"}
-                </button>
-                {hasInviteCode && (
-                  <div className="space-y-1.5">
-                    <Label htmlFor="invite-code" className="text-xs font-medium text-muted-foreground">
-                      Invite Code
-                    </Label>
-                    <Input
-                      id="invite-code"
-                      value={inviteCode}
-                      onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                      placeholder="e.g. K7M2X9PQ"
-                      autoCapitalize="characters"
-                      autoCorrect="off"
-                      spellCheck={false}
-                      maxLength={12}
-                      className="h-12 rounded-xl bg-secondary border-border text-[15px] tracking-widest font-mono placeholder:text-muted-foreground/50 placeholder:font-sans placeholder:tracking-normal"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Ask your team admin for this code.
-                    </p>
-                  </div>
-                )}
+            {mode === "join" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="invite-code" className="text-xs font-medium text-muted-foreground">
+                  Invite Code
+                </Label>
+                <Input
+                  id="invite-code"
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                  placeholder="e.g. K7M2X9PQ"
+                  autoCapitalize="characters"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  maxLength={12}
+                  required
+                  className="h-12 rounded-xl bg-secondary border-border text-[15px] tracking-widest font-mono placeholder:text-muted-foreground/50 placeholder:font-sans placeholder:tracking-normal"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Ask your team admin for this code.
+                </p>
               </div>
             )}
 
@@ -281,7 +264,7 @@ export default function Login() {
             >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {mode === "login" && "Sign In"}
-              {mode === "signup" && "Create Account"}
+              {mode === "join" && "Join Team"}
               {mode === "forgot" && "Send Reset Link"}
             </Button>
           </form>
@@ -296,17 +279,17 @@ export default function Login() {
                   Forgot password?
                 </button>
                 <p className="text-muted-foreground">
-                  No account?{" "}
+                  Have an invite code?{" "}
                   <button
-                    onClick={() => setMode("signup")}
+                    onClick={() => setMode("join")}
                     className="text-primary font-semibold"
                   >
-                    Sign up
+                    Join your team
                   </button>
                 </p>
               </>
             )}
-            {(mode === "signup" || mode === "forgot") && (
+            {(mode === "join" || mode === "forgot") && (
               <p className="text-muted-foreground">
                 Back to{" "}
                 <button

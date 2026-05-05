@@ -26,6 +26,7 @@ installGlobalErrorHandlers();
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import OrgSetup from "./pages/OrgSetup";
+import AccountUnavailable from "./pages/AccountUnavailable";
 import Dashboard from "./pages/Dashboard";
 import Incidents from "./pages/Incidents";
 import IncidentDetail from "./pages/IncidentDetail";
@@ -94,6 +95,7 @@ const App = () => (
                     <Route path="/login" element={<Login />} />
                     <Route path="/reset-password" element={<ResetPassword />} />
                     <Route path="/org-setup" element={<OrgSetup />} />
+                    <Route path="/account-unavailable" element={<AccountUnavailable />} />
                     <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                     <Route path="/incidents" element={<ProtectedRoute><Incidents /></ProtectedRoute>} />
                     <Route path="/incidents/new" element={<ProtectedRoute><IncidentCreate /></ProtectedRoute>} />

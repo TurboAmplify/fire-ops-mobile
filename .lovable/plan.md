@@ -1,99 +1,150 @@
+# Marketing-site signup + app lockdown — combined plan
 
-## What's actually happening
-
-Brianna Aldrich (Apple sign-in, user `3d612567…`) has:
-- 0 rows in `organization_members`
-- 0 rows in `organization_invites` for her email
-- not in `platform_admins`
-- `get_user_org_ids()` returns 0 rows for her
-- `is_platform_admin()` returns false for her
-
-So the DB cannot legitimately serve her any Dry Lightning data. The "she can see Dry Lightning Crew" symptom is almost certainly a **client-side state leak** at sign-in: either the previous user's React Query cache + the `fireops_active_org_id` localStorage key were not cleared between sessions, or a stale session in the browser flashed cached data before her queries refetched.
-
-I'll fix both the leak (the actual exploit path) and add belt-and-suspenders DB-level guards so nothing can ever leak this way again.
+Two projects, built in parallel. The iOS app becomes "sign-in only" (Apple-safe). The marketing site at fireopshq.com becomes the only place an organization can be created and the only place subscriptions are managed. Stripe lives entirely on the marketing side; the iOS app never sees billing.
 
 ---
 
-## 1. Stop the cross-user cache leak (the real cause)
-
-**File: `src/hooks/useAuth.tsx`** (and wherever sign-in/sign-out happen)
-- On `SIGNED_IN`: if the new user.id differs from the previously cached user.id, call `queryClient.clear()` and remove `fireops_active_org_id` from localStorage **before** any org query runs.
-- On `SIGNED_OUT`: same — `queryClient.clear()` + clear `fireops_active_org_id`, `fireops_tutorial_completed_at`, and any other per-user keys.
-- On `USER_UPDATED` with a different id: same.
-
-**File: `src/hooks/useOrganization.tsx`**
-- Make `activeOrgId` keyed per user (e.g. `fireops_active_org_id:<userId>`) so a stale value from another user can never select an org the new user isn't in.
-- After loading memberships, if `activeOrgId` isn't in the new user's memberships, drop it instead of falling back to `[0]` only — and never persist any orgId not in the loaded list.
-
-**File: `src/lib/query-client.ts`**
-- Add `userId` to the queryKey for every org-scoped query (we already key on `orgId`, but if `orgId` is stale that doesn't help). Centralize a `useScopedQueryKey(...)` helper or just include `user.id` in the keys for `org-mode`, org membership, etc.
-
-This eliminates the only realistic path that produced what Brianna saw.
+## Apple posture (locked in)
+- App has no Sign Up button, no marketing-site URL, no pricing copy, no billing strings anywhere.
+- Failed sign-in shows: "We couldn't sign you in. If you don't have an account, please contact your team admin."
+- Suspended/closed orgs: members see a generic "Account unavailable. Contact your administrator." screen. **Owners** see "There's an issue with your account — please check your email" (still no URL, no billing words).
+- App Review account (`plan_code='app_review'`) is always treated as active.
 
 ---
 
-## 2. Lock down `organizations` SELECT (defense in depth)
+## Project A — FireOps HQ (this app)
 
-Today: a user can SELECT an org they're a member of OR have an invite for OR are a platform admin for. That's correct. But `get_user_org_ids` unions in **every org** for platform admins, which is fine — Brianna isn't one. We will add one extra rule:
+### A1. Login screen lockdown (`src/pages/Login.tsx`)
+- Remove "No account? Sign up" link.
+- Remove "I'm starting a new team instead" toggle.
+- Rename `signup` mode to `join` — invite code becomes mandatory. Email + password + invite code is the only way to create an account in-app.
+- Generic error copy on auth failure (no URL).
+- Keep "Continue with Apple" but only as a sign-in path (existing users only — see A3).
 
-- New migration: tighten `organizations` SELECT policy to require **either** `EXISTS organization_members for auth.uid()`, **or** `EXISTS pending invite to get_auth_email()`, **or** `is_platform_admin(auth.uid())`. Drop the legacy "id IN get_user_org_ids" branch which double-evaluates and is harder to audit.
-- Add a regression-test SQL block at the bottom of the migration: `SELECT count(*) FROM organizations WHERE …` impersonated as Brianna's id should be 0.
+### A2. Org status column + gate
+Add to `organizations`:
+- `status text not null default 'active'` — values: `active | suspended | closed | app_review_protected`
+- `stripe_customer_id text` (nullable, marketing site fills in)
+- `stripe_subscription_id text` (nullable)
+- `provisioned_via text` — `marketing_site | invite | legacy | app_review`
+
+App-side:
+- New `useOrgStatus()` hook checks `organizations.status` for the active org.
+- `ProtectedRoute` redirects non-`active` orgs to `/account-unavailable` (a new minimal screen — generic copy for members, slightly more helpful copy for owners; never mentions billing or URLs).
+- `plan_code='app_review'` always passes the gate.
+
+### A3. Database trigger: block unauthorized signups
+New `BEFORE INSERT` trigger on `auth.users` (`enforce_signup_path()`):
+
+A new user is allowed to be created **only if** one of:
+1. Their email matches a `pending` row in `organization_invites` (invite-code flow), OR
+2. A `provisioning_tokens` row exists for that email (marketing-site provisioning, see A4), OR
+3. The inserting role is `service_role` AND a `pending` provisioning token exists, OR
+4. The user is the protected App Review user.
+
+Anything else → `RAISE EXCEPTION`. This is the real teeth: even direct API calls to Supabase Auth can't create rogue accounts.
+
+### A4. Provisioning edge functions (called by marketing site)
+All HMAC-signed with shared secret `MARKETING_SITE_HMAC_SECRET`. Reject anything without a valid signature.
+
+| Function | Behavior |
+|---|---|
+| `provision-org` | Input: `{email, full_name, org_name, org_type, plan_code, stripe_customer_id, stripe_subscription_id}`. Creates a `provisioning_tokens` row, creates the auth user via service role, creates the org, makes user the admin owner, sets status `active`, emails them a "set your password" link via Supabase recovery. |
+| `update-org-billing` | Input: `{stripe_customer_id, plan_code, status}`. Updates plan/status. Used for plan changes. |
+| `suspend-org` | Sets `status='suspended'`. Caller is Stripe webhook → marketing site. |
+| `reactivate-org` | Sets `status='active'`. |
+| `close-org` | Sets `status='closed'`. Soft only — no data deletion. Matches your "no real deletes except super-admin" rule. App Review org rejected. |
+| `sync-stripe-customer` | One-way: marketing site can read org status if needed. |
+
+All actions log to `platform_admin_audit` with `actor_user_id=null, action='marketing_site:*'`.
+
+### A5. Grandfathering (existing accounts)
+On migration:
+- App Review org → `status='active', plan_code='app_review'` (unchanged).
+- Any org with non-null `plan_code` that isn't `*_trial` → `status='active'` (treat as paid).
+- Trial / unmarked orgs → `status='active'` BUT add a one-time backfill flag `legacy_grandfathered=true`. They keep working, no disruption.
+- Going forward, only the marketing site or invites create new orgs.
+
+### A6. Cleanup
+- Remove `seed-reviewer-demo` paths users can hit.
+- Remove the "starting a new team" branch from `useOrganization` setup flow.
+- `OrgSetup.tsx` becomes invite-code-only (no "create new org" button).
 
 ---
 
-## 3. Hide platform admins from everyone except platform admins
+## Project B — FireOps HQ Marketing (sibling project)
 
-You're the only platform admin (`14867e36…`). Today `platform_admins` already restricts SELECT to platform admins themselves, which is correct. But we'll harden the surrounding surface:
+### B1. Public pages already exist
+Privacy, Terms, Support — keep. Update homepage to remove "Coming Soon".
 
-- Audit `usePlatformAdmin` / `PlatformAdminGate`: confirm a non-admin reading `platform_admins` returns no row. Already true via RLS — verified.
-- The `More` page only renders the Super Admin entry when `isPlatformAdmin` is true. Confirmed.
-- New migration: ensure `profiles_select_same_org` cannot expose your profile to a user who shares no org with you. Today that policy uses an `EXISTS` join through `organization_members`; since Brianna has no memberships, she can't see your profile. We'll add a RESTRICTIVE policy as a hard floor:
-  - "A profile of a platform admin is only visible to: that user themselves, or another platform admin."
-- Re-confirm `admin_list_*` RPCs all start with `IF NOT is_platform_admin(auth.uid()) THEN RAISE EXCEPTION` — they do; no change needed.
+### B2. New: `/signup` flow
+Multi-step:
+1. Pick plan (Stripe Checkout via Stripe Elements or hosted checkout).
+2. Collect: email, full name, org name, org type (contractor/VFD/agency), operation type.
+3. On Stripe `checkout.session.completed` webhook → call `provision-org` on this app.
+4. Show "Check your email — we sent a link to set your password and open the FireOps HQ app."
+
+### B3. New: `/account` portal (auth required)
+Owners can:
+- View current plan, seats, billing status.
+- Update card / billing email (Stripe Customer Portal embed).
+- Cancel → calls `close-org`. Confirms: data preserved, can be restored by support.
+- Pause → not exposed (only Stripe failures trigger suspension).
+
+### B4. Stripe webhooks → app
+- `customer.subscription.deleted` → `close-org`
+- `invoice.payment_failed` (after retries) → `suspend-org`
+- `invoice.payment_succeeded` after a suspension → `reactivate-org`
+- `customer.subscription.updated` (plan change) → `update-org-billing`
+
+All HMAC-signed when calling this app.
+
+### B5. Marketing-site auth
+Separate Supabase project on the marketing side (or shared — your call). Owner-only login, used solely for the `/account` portal. End users never see this; they live in the iOS app.
 
 ---
 
-## 4. Verify and clean up Brianna's session
-
-- Run a one-time data check: confirm `organization_members` / `organization_invites` / `platform_admins` truly have nothing for her id. (Already verified — 0 rows everywhere.)
-- No data deletion needed. Her account stays as-is.
-- After the fix is deployed, ask her to fully sign out and sign back in once so her client picks up clean state. (Optional: bump a `cacheVersion` constant in `query-client.ts` so every existing client invalidates on next load.)
+## Shared secret model
+- `MARKETING_SITE_HMAC_SECRET` — set in both projects' Lovable Cloud secrets.
+- Marketing site signs every call to this app's edge functions with HMAC-SHA256 over `timestamp + body`. App rejects requests older than 5 minutes (replay protection).
 
 ---
 
-## Technical details
+## Will Apple approve?
+Yes, with this posture. The pattern matches Slack/Asana/Basecamp/ServiceTitan. Key compliance points:
+- No external link to purchase = no 3.1.1 violation, no entitlement needed.
+- "Contact your admin" copy = no in-app sign-up funnel.
+- B2B operations app = Reader/Business rule applies; subscriptions sold off-app are explicitly allowed.
+- App Review test account stays untouched and pre-seeded.
 
-ASCII of the cache-leak that produced the bug:
+If you later want a softer path for prospects who downloaded the app first, we apply for the **External Link Account Entitlement** (free, ~1 day) — that's a v2 toggle, not a launch blocker.
+
+---
+
+## Build order
+1. **App side first (this plan, Project A items)** — locks down signup immediately so nothing slips through during marketing build.
+2. **Then Project B** — I switch to FireOps HQ Marketing, build Stripe + portal + webhooks against the edge functions we just shipped.
+3. **End-to-end test** — provision → email → set password → sign in to app → suspend via Stripe test failure → confirm app blocks → reactivate → confirm app restores.
+
+---
+
+## Files changed (Project A)
 
 ```text
-[Browser]
-  prev session (Dustin)  → localStorage: fireops_active_org_id = <DryLightning>
-                            React Query cache: orgs/incidents under key ['org-mode', <DryLightning>]
-  Brianna signs in       → onAuthStateChange SIGNED_IN, but:
-                            - queryClient still has Dustin's cached data
-                            - localStorage active_org_id still points at DryLightning
-                            - useOrganization picks active_org_id from LS first,
-                              then verifies against memberships AFTER first paint
-  Result: Brianna sees DryLightning briefly until refetch resolves to {}
+src/pages/Login.tsx                          rewrite (no signup mode)
+src/pages/OrgSetup.tsx                       invite-only
+src/pages/AccountUnavailable.tsx             new
+src/components/ProtectedRoute.tsx            add status gate
+src/hooks/useOrgStatus.ts                    new
+src/hooks/useOrganization.tsx                drop "new team" branch
+supabase/functions/provision-org/            new
+supabase/functions/update-org-billing/       new
+supabase/functions/suspend-org/              new
+supabase/functions/reactivate-org/           new
+supabase/functions/close-org/                new
+supabase/functions/_shared/hmac.ts           new
+migration: add status/stripe cols, enforce_signup_path trigger,
+           grandfather backfill, audit log entries
 ```
 
-After the fix:
-
-```text
-SIGNED_IN with new user.id
-  → queryClient.clear()
-  → drop active_org_id (it's namespaced per user.id now)
-  → useOrganization runs with userId in queryKey, returns []
-  → no org selected → router sends to /org-setup
-```
-
----
-
-## Files I expect to touch
-- `src/hooks/useAuth.tsx` — clear caches on auth changes
-- `src/hooks/useOrganization.tsx` — namespace active_org_id, validate before use
-- `src/lib/query-client.ts` — add user-scoped helper / cacheVersion
-- `supabase/migrations/<new>.sql` — tighten `organizations` SELECT, add RESTRICTIVE policy hiding platform-admin profiles from non-admins
-- (Verification only, no edits): `src/components/PlatformAdminGate.tsx`, `src/pages/More.tsx`, `usePlatformAdmin.ts`
-
-No data is deleted. App Review account protections (`plan_code='app_review'`) remain untouched.
+Approve and I'll execute Project A in this run, then switch to the Marketing project to build Project B.
