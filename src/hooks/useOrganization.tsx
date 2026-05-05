@@ -43,12 +43,28 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const { isImpersonating, target } = useImpersonation();
   const [allMemberships, setAllMemberships] = useState<OrgMembership[]>([]);
-  const [activeOrgId, setActiveOrgIdState] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null;
-    return localStorage.getItem(ACTIVE_ORG_KEY);
-  });
+  const [activeOrgId, setActiveOrgIdState] = useState<string | null>(null);
   const [impersonatedMembership, setImpersonatedMembership] = useState<OrgMembership | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Load the per-user active org id whenever the user changes. Never fall
+  // back to a value written by a different user — that's how cross-user
+  // data leaks happen.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!user?.id) {
+      setActiveOrgIdState(null);
+      return;
+    }
+    try {
+      // Drop any legacy un-namespaced value so it can never be reused.
+      localStorage.removeItem(LEGACY_ACTIVE_ORG_KEY);
+      const key = activeOrgKeyFor(user.id)!;
+      setActiveOrgIdState(localStorage.getItem(key));
+    } catch {
+      setActiveOrgIdState(null);
+    }
+  }, [user?.id]);
 
   const fetchMembership = useCallback(async () => {
     if (!user) {
@@ -144,13 +160,15 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   }, [user, activeOrgId, allMemberships, fetchMembership]);
 
   const setActiveOrgId = useCallback((orgId: string) => {
+    const key = activeOrgKeyFor(user?.id);
+    if (!key) return;
     try {
-      localStorage.setItem(ACTIVE_ORG_KEY, orgId);
+      localStorage.setItem(key, orgId);
     } catch {
       // ignore quota / privacy errors
     }
     setActiveOrgIdState(orgId);
-  }, []);
+  }, [user?.id]);
 
   // When impersonating, build a synthetic membership for the target org so all
   // org-scoped queries/mutations transparently target the impersonated org.
