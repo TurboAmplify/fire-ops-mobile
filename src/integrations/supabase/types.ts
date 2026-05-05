@@ -1059,12 +1059,17 @@ export type Database = {
           default_hw_rate: number | null
           id: string
           inspection_alert_enabled: boolean
+          legacy_grandfathered: boolean
           modules_enabled: Json
           name: string
           operation_type: string
           org_type: string
           plan_code: string
+          provisioned_via: string
           seat_limit: number
+          status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
           tier: string
           trial_ends_at: string | null
           walkaround_enabled: boolean
@@ -1076,12 +1081,17 @@ export type Database = {
           default_hw_rate?: number | null
           id?: string
           inspection_alert_enabled?: boolean
+          legacy_grandfathered?: boolean
           modules_enabled?: Json
           name: string
           operation_type?: string
           org_type?: string
           plan_code?: string
+          provisioned_via?: string
           seat_limit?: number
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           tier?: string
           trial_ends_at?: string | null
           walkaround_enabled?: boolean
@@ -1093,12 +1103,17 @@ export type Database = {
           default_hw_rate?: number | null
           id?: string
           inspection_alert_enabled?: boolean
+          legacy_grandfathered?: boolean
           modules_enabled?: Json
           name?: string
           operation_type?: string
           org_type?: string
           plan_code?: string
+          provisioned_via?: string
           seat_limit?: number
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           tier?: string
           trial_ends_at?: string | null
           walkaround_enabled?: boolean
@@ -1286,6 +1301,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      provisioning_tokens: {
+        Row: {
+          consumed_at: string | null
+          consumed_org_id: string | null
+          consumed_user_id: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          full_name: string | null
+          id: string
+          org_name: string
+          org_type: string
+          plan_code: string | null
+          status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+        }
+        Insert: {
+          consumed_at?: string | null
+          consumed_org_id?: string | null
+          consumed_user_id?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          full_name?: string | null
+          id?: string
+          org_name: string
+          org_type?: string
+          plan_code?: string | null
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+        }
+        Update: {
+          consumed_at?: string | null
+          consumed_org_id?: string | null
+          consumed_user_id?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          full_name?: string | null
+          id?: string
+          org_name?: string
+          org_type?: string
+          plan_code?: string | null
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+        }
+        Relationships: []
       }
       resource_orders: {
         Row: {
@@ -2316,6 +2382,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      org_effective_status: { Args: { _org_id: string }; Returns: string }
       user_can_access_truck: {
         Args: { _truck_id: string; _user_id: string }
         Returns: boolean
