@@ -23,7 +23,12 @@ interface OrganizationContextType {
   refetch: () => Promise<void>;
 }
 
-const ACTIVE_ORG_KEY = "fireops_active_org_id";
+const ACTIVE_ORG_KEY_PREFIX = "fireops_active_org_id:";
+const LEGACY_ACTIVE_ORG_KEY = "fireops_active_org_id";
+
+function activeOrgKeyFor(userId: string | null | undefined) {
+  return userId ? `${ACTIVE_ORG_KEY_PREFIX}${userId}` : null;
+}
 
 const OrganizationContext = createContext<OrganizationContextType>({
   membership: null,
