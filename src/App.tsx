@@ -95,6 +95,7 @@ const App = () => (
                     <Route path="/login" element={<Login />} />
                     <Route path="/reset-password" element={<ResetPassword />} />
                     <Route path="/org-setup" element={<OrgSetup />} />
+                    <Route path="/account-unavailable" element={<AccountUnavailable />} />
                     <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                     <Route path="/incidents" element={<ProtectedRoute><Incidents /></ProtectedRoute>} />
                     <Route path="/incidents/new" element={<ProtectedRoute><IncidentCreate /></ProtectedRoute>} />
