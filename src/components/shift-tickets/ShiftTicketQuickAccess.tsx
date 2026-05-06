@@ -112,6 +112,17 @@ export function ShiftTicketQuickAccess({ open, onOpenChange }: Props) {
     setStep("pick-incident");
   };
 
+  const handleStartImport = () => {
+    setMode("import");
+    if (activeIncidents.length === 0) return;
+    if (activeIncidents.length === 1) {
+      setSelectedIncidentId(activeIncidents[0].id);
+      setStep("pick-truck");
+      return;
+    }
+    setStep("pick-incident");
+  };
+
   const handleBrowse = () => {
     setMode("browse");
     if (visibleIncidents.length === 1) {
