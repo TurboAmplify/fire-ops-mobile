@@ -243,6 +243,15 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* One-tap paper ticket attach */}
+      <QuickAttachPaperTicketSheet
+        open={showQuickAttach}
+        onClose={() => setShowQuickAttach(false)}
+        incidentId={incidentId}
+        incidentName={incidentName}
+        defaultIncidentTruckId={trucks?.length === 1 ? trucks[0].id : undefined}
+      />
     </div>
   );
 }
