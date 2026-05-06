@@ -690,7 +690,7 @@ export function ShiftTicketForm({
   };
 
   // Apply parsed shift ticket from imported photo/scan into form state.
-  const handleImportApply = (parsed: ParsedShiftTicket, mode: "fill-empty" | "replace") => {
+  const handleImportApply = async (parsed: ParsedShiftTicket, mode: "fill-empty" | "replace", sourceFile: File | null) => {
     const fill = (current: string, next: string | undefined) => {
       const v = (next ?? "").trim();
       if (!v) return current;
