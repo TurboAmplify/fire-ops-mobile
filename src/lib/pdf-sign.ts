@@ -127,13 +127,6 @@ export async function stampSignatureOntoPdf(opts: {
       font: helv,
       color: rgb(0, 0, 0),
     });
-    page.drawText(signerName, {
-      x: nameX,
-      y: nameY,
-      size: 9,
-      font: helv,
-      color: rgb(0, 0, 0),
-    });
   }
 
   const out = await pdfDoc.save();
