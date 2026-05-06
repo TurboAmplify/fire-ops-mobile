@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Loader2, ChevronRight, ChevronLeft, Flame, Truck as TruckIcon, History, FileText, Search } from "lucide-react";
+import { Plus, Loader2, ChevronRight, ChevronLeft, Flame, Truck as TruckIcon, History, FileText, Search, Camera } from "lucide-react";
 import { useLatestTicketPerTruck, useShiftTickets } from "@/hooks/useShiftTickets";
 import { useIncidents } from "@/hooks/useIncidents";
 import { useIncidentTrucks } from "@/hooks/useIncidentTrucks";
@@ -50,7 +50,7 @@ function ticketStatusBadge(t: any): { label: string; cls: string } {
 // Mode: "new" walks user through creating a ticket. "browse" walks user
 // through finding an existing ticket. We keep them on separate step machines
 // so they can never accidentally cross-route (e.g. browse landing on /new).
-type Mode = "new" | "browse";
+type Mode = "new" | "browse" | "import";
 type Step =
   | "home"
   | "pick-incident"
@@ -112,6 +112,17 @@ export function ShiftTicketQuickAccess({ open, onOpenChange }: Props) {
     setStep("pick-incident");
   };
 
+  const handleStartImport = () => {
+    setMode("import");
+    if (activeIncidents.length === 0) return;
+    if (activeIncidents.length === 1) {
+      setSelectedIncidentId(activeIncidents[0].id);
+      setStep("pick-truck");
+      return;
+    }
+    setStep("pick-incident");
+  };
+
   const handleBrowse = () => {
     setMode("browse");
     if (visibleIncidents.length === 1) {
@@ -124,9 +135,11 @@ export function ShiftTicketQuickAccess({ open, onOpenChange }: Props) {
 
   // Truck-pick handler differs by mode
   const handleTruckPicked = (itId: string, incId: string, truckLabel: string) => {
-    if (mode === "new") {
+    if (mode === "new" || mode === "import") {
       resetAndClose();
-      navigate(`/incidents/${incId}/trucks/${itId}/shift-ticket/new`);
+      navigate(`/incidents/${incId}/trucks/${itId}/shift-ticket/new`, {
+        state: mode === "import" ? { openImport: true } : undefined,
+      });
       return;
     }
     setSelectedTruck({ itId, name: truckLabel });
@@ -148,14 +161,14 @@ export function ShiftTicketQuickAccess({ open, onOpenChange }: Props) {
         <SheetHeader>
           <SheetTitle className="text-base">
             {step === "home" && "Shift Tickets"}
-            {step === "pick-incident" && (mode === "new" ? "Select Incident" : "Browse — Select Incident")}
-            {step === "pick-truck" && (mode === "new" ? "Select Truck" : "Browse — Select Truck")}
+            {step === "pick-incident" && (mode === "new" ? "Select Incident" : mode === "import" ? "Import — Select Incident" : "Browse — Select Incident")}
+            {step === "pick-truck" && (mode === "new" ? "Select Truck" : mode === "import" ? "Import — Select Truck" : "Browse — Select Truck")}
             {step === "browse-tickets" && (selectedTruck?.name ?? "Tickets")}
           </SheetTitle>
         </SheetHeader>
 
         {step === "home" && (
-          <div className="mt-4 space-y-5 pb-4">
+          <div className="mt-4 space-y-3 pb-4">
             {/* Primary action — unchanged */}
             <button
               onClick={handleStartNew}
@@ -164,6 +177,16 @@ export function ShiftTicketQuickAccess({ open, onOpenChange }: Props) {
             >
               <Plus className="h-5 w-5" />
               Start New Shift Ticket
+            </button>
+
+            {/* Import paper ticket */}
+            <button
+              onClick={handleStartImport}
+              disabled={activeIncidents.length === 0}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-primary/40 bg-primary/10 py-4 text-sm font-bold text-primary active:scale-[0.99] transition-transform touch-target disabled:opacity-40"
+            >
+              <Camera className="h-5 w-5" />
+              Import Paper Ticket
             </button>
 
             {/* Secondary: browse existing tickets by truck */}

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Plus, Loader2, Pencil, Trash2, Copy, Download, MoreVertical } from "lucide-react";
+import { FileText, Plus, Loader2, Pencil, Trash2, Copy, Download, MoreVertical, Camera } from "lucide-react";
 import { toast } from "sonner";
 import { useShiftTickets, useDeleteShiftTicket, useDuplicateShiftTicket } from "@/hooks/useShiftTickets";
 import { generateOF297PdfBlob, buildOF297FileName } from "@/components/shift-tickets/generateOF297Pdf";
@@ -148,6 +148,13 @@ export function ShiftTicketSection({
             Download All
           </button>
         )}
+        <button
+          onClick={() => navigate(`/incidents/${incidentId}/trucks/${incidentTruckId}/shift-ticket/new`, { state: { ...(navState as object), openImport: true } })}
+          className="flex items-center gap-1 text-xs font-bold text-primary touch-target"
+          title="Import from photo or PDF"
+        >
+          <Camera className="h-3.5 w-3.5" /> Import
+        </button>
         <button
           onClick={() => navigate(`/incidents/${incidentId}/trucks/${incidentTruckId}/shift-ticket/new`, { state: navState })}
           className="flex items-center gap-1 text-xs font-bold text-primary touch-target"

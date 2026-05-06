@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Loader2, FileText, ChevronRight, Truck as TruckIcon } from "lucide-react";
+import { Plus, Loader2, FileText, ChevronRight, Truck as TruckIcon, Camera } from "lucide-react";
 import { useIncidentTrucks } from "@/hooks/useIncidentTrucks";
 import { useShiftTickets } from "@/hooks/useShiftTickets";
 import { getLocalDateString } from "@/lib/local-date";
@@ -66,6 +66,7 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
   const navigate = useNavigate();
   const { data: trucks, isLoading: loadingTrucks } = useIncidentTrucks(incidentId);
   const [showTruckPicker, setShowTruckPicker] = useState(false);
+  const [pickerMode, setPickerMode] = useState<"new" | "import">("new");
 
   // Fetch all tickets for this incident in one query
   const truckIds = useMemo(() => trucks?.map((t) => t.id) ?? [], [trucks]);
@@ -100,14 +101,20 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
   // Sort recent by shift date desc
   recent.sort((a, b) => getShiftDate(b).localeCompare(getShiftDate(a)));
 
-  const handleNewClick = () => {
+  const handleNewClick = (mode: "new" | "import" = "new") => {
     if (!trucks || trucks.length === 0) return;
     if (trucks.length === 1) {
       navigate(`/incidents/${incidentId}/trucks/${trucks[0].id}/shift-ticket/new`, {
-        state: { incidentName, truckName: trucks[0].trucks.name, truckUnitType: trucks[0].trucks.unit_type },
+        state: {
+          incidentName,
+          truckName: trucks[0].trucks.name,
+          truckUnitType: trucks[0].trucks.unit_type,
+          openImport: mode === "import",
+        },
       });
       return;
     }
+    setPickerMode(mode);
     setShowTruckPicker(true);
   };
 
@@ -144,15 +151,25 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
 
   return (
     <div className="space-y-5">
-      {/* Primary CTA */}
-      <button
-        onClick={handleNewClick}
-        disabled={noTrucks}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-sm font-bold text-primary-foreground shadow-md active:scale-[0.99] transition-transform touch-target disabled:opacity-40"
-      >
-        <Plus className="h-5 w-5" />
-        New Shift Ticket
-      </button>
+      {/* Primary CTA + Import */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <button
+          onClick={() => handleNewClick("new")}
+          disabled={noTrucks}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-sm font-bold text-primary-foreground shadow-md active:scale-[0.99] transition-transform touch-target disabled:opacity-40"
+        >
+          <Plus className="h-5 w-5" />
+          New Shift Ticket
+        </button>
+        <button
+          onClick={() => handleNewClick("import")}
+          disabled={noTrucks}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-primary/40 bg-primary/10 py-4 text-sm font-bold text-primary active:scale-[0.99] transition-transform touch-target disabled:opacity-40"
+        >
+          <Camera className="h-5 w-5" />
+          Import paper ticket
+        </button>
+      </div>
 
       {noTrucks && (
         <p className="text-xs text-muted-foreground text-center">
@@ -192,7 +209,7 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
       <Sheet open={showTruckPicker} onOpenChange={setShowTruckPicker}>
         <SheetContent side="bottom" className="rounded-t-2xl">
           <SheetHeader>
-            <SheetTitle>Select a truck</SheetTitle>
+            <SheetTitle>{pickerMode === "import" ? "Import for which truck?" : "Select a truck"}</SheetTitle>
           </SheetHeader>
           <div className="mt-4 space-y-2 pb-4">
             {trucks?.map((it) => (
@@ -201,7 +218,12 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
                 onClick={() => {
                   setShowTruckPicker(false);
                   navigate(`/incidents/${incidentId}/trucks/${it.id}/shift-ticket/new`, {
-                    state: { incidentName, truckName: it.trucks.name, truckUnitType: it.trucks.unit_type },
+                    state: {
+                      incidentName,
+                      truckName: it.trucks.name,
+                      truckUnitType: it.trucks.unit_type,
+                      openImport: pickerMode === "import",
+                    },
                   });
                 }}
                 className="flex w-full items-center gap-3 rounded-xl bg-card border border-border/30 p-4 text-left active:scale-[0.99] transition-transform touch-target"

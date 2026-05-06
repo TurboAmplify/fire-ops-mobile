@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { Plus, Loader2, FileText, Save, Download, AlertTriangle, Copy, Lock, Unlock, RefreshCw, Info, Camera, DollarSign } from "lucide-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
@@ -227,6 +228,15 @@ export function ShiftTicketForm({
   const [showSupervisorSheet, setShowSupervisorSheet] = useState(false);
   // Import-from-photo sheet
   const [showImportSheet, setShowImportSheet] = useState(false);
+  const location = useLocation();
+  const importAutoOpenedRef = useRef(false);
+  useEffect(() => {
+    const state = location.state as { openImport?: boolean } | null;
+    if (state?.openImport && !importAutoOpenedRef.current) {
+      importAutoOpenedRef.current = true;
+      setShowImportSheet(true);
+    }
+  }, [location.state]);
   const { data: availableCrewMembers = [] } = useAvailableCrewMembers(organizationId || undefined);
 
   const selectedCrewNames = new Set(
@@ -780,13 +790,24 @@ export function ShiftTicketForm({
               <DollarSign className="h-3 w-3" /> Pay adjustments ({adjustmentsCount})
             </button>
           )}
+          {!editingLocked && (
+            <button
+              type="button"
+              onClick={() => setShowImportSheet(true)}
+              title="Import from photo or PDF of paper ticket"
+              className={`${onRefreshFromSources && ticket?.id ? "" : "ml-auto"} flex shrink-0 items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1.5 text-[11px] font-semibold text-primary touch-target active:bg-primary/20`}
+            >
+              <Camera className="h-3 w-3" />
+              Import paper ticket
+            </button>
+          )}
           {onRefreshFromSources && ticket?.id && !editingLocked && (
             <button
               type="button"
               onClick={handleRefresh}
               disabled={refreshing}
               title="Refresh from Truck & Resource Order"
-              className="ml-auto flex shrink-0 items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1.5 text-[11px] font-semibold text-foreground touch-target active:bg-accent/40 disabled:opacity-50"
+              className="flex shrink-0 items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1.5 text-[11px] font-semibold text-foreground touch-target active:bg-accent/40 disabled:opacity-50"
             >
               {refreshing ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
               Refresh
@@ -1341,6 +1362,17 @@ export function ShiftTicketForm({
         message={successMsg || ""}
         show={!!successMsg}
         onDone={() => setSuccessMsg(null)}
+      />
+
+      {/* Import paper ticket from photo/PDF */}
+      <ShiftTicketImportSheet
+        open={showImportSheet}
+        onClose={() => setShowImportSheet(false)}
+        organizationId={organizationId || ""}
+        onApply={(parsed, mode) => {
+          handleImportApply(parsed, mode);
+          setShowImportSheet(false);
+        }}
       />
     </AppShell>
   );

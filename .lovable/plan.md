@@ -1,32 +1,54 @@
-## Wrap Project A and hand off to the marketing project
+## Problem
 
-Project A (app lockdown + provisioning webhook) is already shipped. Two small things left before you switch projects.
+The `ShiftTicketImportSheet` and its parser exist and work, but no UI ever opens them. `ShiftTicketForm.tsx` imports the sheet and declares `showImportSheet` state, but never renders the sheet and never exposes a trigger. Result: users have no way to import a photo/PDF of a paper OF-297 anywhere in the app.
 
-### 1. Add the shared HMAC secret to this app
+## Goal
 
-I'll prompt you for a secret named `MARKETING_SITE_HMAC_SECRET`. You paste in any 32+ char random string (e.g. `openssl rand -hex 32`, or a 64-char password from a password manager).
+Make "Import paper ticket" a first-class, visible action everywhere a user enters or starts a shift ticket — without disrupting the existing manual flow.
 
-**Save that exact string somewhere safe** — the marketing project needs the identical value, or signed calls will fail.
+## Where it needs to appear
 
-### 2. You manually switch to the marketing project
+1. **Inside the shift ticket form itself** (`ShiftTicketForm.tsx`) — used by both `ShiftTicketCreate` and `ShiftTicketEdit`. Primary place.
+2. **Incident → Tickets tab** (`IncidentTicketsTab.tsx`) — next to "New Shift Ticket".
+3. **Truck → Shift Tickets section** (`ShiftTicketSection.tsx`) — next to "New Ticket".
+4. **Shift Ticket Quick Access dashboard widget** (`ShiftTicketQuickAccess.tsx`) — secondary action next to "Start New Shift Ticket".
 
-Open: [FireOps HQ Marketing](/projects/abeaf81a-daee-4065-8ed1-085b9efbbb97)
+## Changes
 
-Paste this prompt into its chat to start Project B:
+### 1. `ShiftTicketForm.tsx`
+- Add a compact **"Import from photo/PDF"** button in the title row (right side, near Refresh), shown only when `!editingLocked`. Icon: `Camera` + label "Import paper ticket".
+- Render `<ShiftTicketImportSheet>` at the bottom of the form (alongside other sheets), wired to `showImportSheet`, `organizationId`, and the existing `handleImportApply`.
+- When the form mounts with `location.state.openImport === true`, auto-open the sheet (so external "Import" buttons can route into the form and pop the sheet immediately).
 
-> Build the FireOps HQ signup, billing, and account portal. The companion iOS app project (`63e454bc-32e1-42ee-9def-17eb4240739a`, Supabase URL `https://ipfuaywcilpcmguhbjmj.supabase.co`) already has an HMAC-signed `marketing-webhook` edge function with actions: `provision-org`, `update-org-billing`, `suspend-org`, `reactivate-org`, `close-org`. Add `MARKETING_SITE_HMAC_SECRET` to this project's secrets — I'll paste the same value used in the app.
->
-> Build:
-> 1. `/signup` flow — pick plan, collect email + full_name + org_name + org_type (contractor/vfd/state_agency) + operation_type (engine/hand_crew/both), Stripe Checkout via Lovable's built-in Stripe payments. On `checkout.session.completed`, call app's `marketing-webhook` with `{action:'provision-org', ...}`. Success page: "Check your email to set your password."
-> 2. `/account` portal — separate Supabase auth here for owners. Show plan/billing status, Stripe Customer Portal link, Cancel button → `close-org`.
-> 3. Stripe webhooks → `customer.subscription.deleted` → `close-org`, `invoice.payment_failed` final → `suspend-org`, `invoice.payment_succeeded` after suspension → `reactivate-org`, `customer.subscription.updated` → `update-org-billing`.
-> 4. HMAC: every call to `marketing-webhook` must include header `x-fireops-signature: t=<unix_ts>,v1=<hmac_sha256(timestamp + "." + raw_body, MARKETING_SITE_HMAC_SECRET)>`. 5-min replay window.
-> 5. Update homepage — remove "Coming Soon", real CTA to `/signup`.
->
-> Reference plan codes in app's `src/lib/billing/{contractor,vfd,agency}-plans.ts` via cross-project tools.
+### 2. `IncidentTicketsTab.tsx`
+- Convert the single "New Shift Ticket" button into a row: primary **"New Shift Ticket"** + secondary **"Import paper ticket"** (outline button, same width on mobile, side-by-side on wider).
+- Import handler: same truck-resolution logic as `handleNewClick`, then `navigate(..., { state: { ..., openImport: true } })`.
 
-### Why you have to switch manually
+### 3. `ShiftTicketSection.tsx` (truck-level)
+- Add a small **"Import"** ghost button next to the existing "+ New Ticket" pill, navigating to the same `/new` route with `state.openImport = true`.
 
-Each Lovable project is its own codebase + chat. I can read across with cross-project tools, but I can't write into another project's files. The marketing project's agent will handle Project B in its own thread.
+### 4. `ShiftTicketQuickAccess.tsx`
+- Add a secondary **"Import paper ticket"** button under "Start New Shift Ticket" CTA. Reuses the same incident/truck resolution as `handleStartNew`, then routes with `state.openImport`.
+- In the per-truck `TruckCard` (the one with `onNewTicket`), add a second small "Import" link beside "New ticket for this truck".
 
-Approve this plan and I'll trigger the secret form.
+### 5. No changes needed to
+- `ShiftTicketImportSheet.tsx` (already complete)
+- `services/shift-ticket-import.ts` (already complete)
+- `parse-shift-ticket` edge function (already deployed)
+
+## UX details
+
+- Label everywhere: **"Import paper ticket"** (clear, distinguishes from manual entry).
+- Icon: `Camera` (matches the field-use mental model — snap a photo).
+- Button style: outline / secondary so it doesn't compete with the primary "New" CTA.
+- On mobile (primary target), buttons stack full-width; on wider, they sit side-by-side.
+- In the form, the button is hidden once `editingLocked` (signed/finalized tickets) to avoid implying you can overwrite a locked ticket.
+
+## Test checklist
+
+- From Incident → Tickets tab: tap "Import paper ticket" → form opens with import sheet already showing.
+- From a Truck's shift ticket section: same.
+- From Dashboard quick access: same.
+- Inside an existing draft ticket: button visible in header; tapping opens sheet; applying parsed data fills empty fields without wiping user input (existing `fill-empty` mode).
+- Locked/signed ticket: button hidden.
+- Cancel / close sheet: returns to form with no state changes.
