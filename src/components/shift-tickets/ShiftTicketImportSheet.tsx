@@ -33,11 +33,13 @@ export function ShiftTicketImportSheet({ open, onClose, organizationId, onApply 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [stage, setStage] = useState<"pick" | "uploading" | "parsing" | "review">("pick");
   const [parsed, setParsed] = useState<ParsedShiftTicket | null>(null);
+  const [sourceFile, setSourceFile] = useState<File | null>(null);
   const [mode, setMode] = useState<"fill-empty" | "replace">("fill-empty");
 
   const reset = () => {
     setStage("pick");
     setParsed(null);
+    setSourceFile(null);
     setMode("fill-empty");
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
