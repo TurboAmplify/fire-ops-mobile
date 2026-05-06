@@ -15,6 +15,7 @@ const FONT_OPTIONS = [
 export interface SignatureMetadata {
   method: "typed" | "drawn";
   font?: string;
+  name?: string;
 }
 
 interface SignaturePickerProps {
