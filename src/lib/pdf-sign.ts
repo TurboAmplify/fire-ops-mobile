@@ -118,9 +118,10 @@ export async function stampSignatureOntoPdf(opts: {
       color: rgb(0, 0, 0),
     });
 
-    // Block 34 — Print Name and Title (below Block 30)
+    // Block 34 — Print Name and Title (row directly below Block 30,
+    // above the "Printed:" footer line).
     const nameX = pw * 0.02;
-    const nameY = ph * 0.028;
+    const nameY = ph * 0.042;
     page.drawText(signerName, {
       x: nameX,
       y: nameY,
