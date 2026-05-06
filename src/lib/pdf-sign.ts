@@ -122,7 +122,7 @@ export async function stampSignatureOntoPdf(opts: {
     // Place clearly inside the cell, away from the page edge and above the
     // "Printed:" footer line.
     const nameX = pw * 0.06;
-    const nameY = ph * 0.048;
+    const nameY = ph * 0.058;
     page.drawText(signerName, {
       x: nameX,
       y: nameY,
