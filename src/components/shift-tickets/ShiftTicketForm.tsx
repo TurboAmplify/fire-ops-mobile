@@ -909,6 +909,26 @@ export function ShiftTicketForm({
           </div>
         )}
 
+        {/* Paper ticket photo (when attached via Quick Attach) */}
+        {(ticket as any)?.paper_ticket_photo_url && (
+          <a
+            href={(ticket as any).paper_ticket_photo_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 p-3 active:bg-primary/10 transition-colors"
+          >
+            <SignedImage
+              src={(ticket as any).paper_ticket_photo_url}
+              alt="Paper shift ticket"
+              className="h-14 w-14 rounded-lg object-cover border border-border shrink-0"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-primary">Paper ticket attached</p>
+              <p className="text-[11px] text-muted-foreground">Tap to view full photo</p>
+            </div>
+          </a>
+        )}
+
         {/* ── Chip row for secondary info ── */}
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
           {([
