@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Loader2, ChevronRight, ChevronLeft, Flame, Truck as TruckIcon, History, FileText, Search } from "lucide-react";
+import { Plus, Loader2, ChevronRight, ChevronLeft, Flame, Truck as TruckIcon, History, FileText, Search, Camera } from "lucide-react";
 import { useLatestTicketPerTruck, useShiftTickets } from "@/hooks/useShiftTickets";
 import { useIncidents } from "@/hooks/useIncidents";
 import { useIncidentTrucks } from "@/hooks/useIncidentTrucks";
