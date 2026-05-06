@@ -1363,6 +1363,17 @@ export function ShiftTicketForm({
         show={!!successMsg}
         onDone={() => setSuccessMsg(null)}
       />
+
+      {/* Import paper ticket from photo/PDF */}
+      <ShiftTicketImportSheet
+        open={showImportSheet}
+        onClose={() => setShowImportSheet(false)}
+        organizationId={organizationId || ""}
+        onApply={(parsed, mode) => {
+          handleImportApply(parsed, mode);
+          setShowImportSheet(false);
+        }}
+      />
     </AppShell>
   );
 }
