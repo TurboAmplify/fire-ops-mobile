@@ -101,14 +101,20 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
   // Sort recent by shift date desc
   recent.sort((a, b) => getShiftDate(b).localeCompare(getShiftDate(a)));
 
-  const handleNewClick = () => {
+  const handleNewClick = (mode: "new" | "import" = "new") => {
     if (!trucks || trucks.length === 0) return;
     if (trucks.length === 1) {
       navigate(`/incidents/${incidentId}/trucks/${trucks[0].id}/shift-ticket/new`, {
-        state: { incidentName, truckName: trucks[0].trucks.name, truckUnitType: trucks[0].trucks.unit_type },
+        state: {
+          incidentName,
+          truckName: trucks[0].trucks.name,
+          truckUnitType: trucks[0].trucks.unit_type,
+          openImport: mode === "import",
+        },
       });
       return;
     }
+    setPickerMode(mode);
     setShowTruckPicker(true);
   };
 
