@@ -50,7 +50,7 @@ function ticketStatusBadge(t: any): { label: string; cls: string } {
 // Mode: "new" walks user through creating a ticket. "browse" walks user
 // through finding an existing ticket. We keep them on separate step machines
 // so they can never accidentally cross-route (e.g. browse landing on /new).
-type Mode = "new" | "browse";
+type Mode = "new" | "browse" | "import";
 type Step =
   | "home"
   | "pick-incident"
