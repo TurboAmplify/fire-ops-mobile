@@ -164,12 +164,12 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
           New Shift Ticket
         </button>
         <button
-          onClick={() => handleNewClick("import")}
+          onClick={() => setShowQuickAttach(true)}
           disabled={noTrucks}
           className="flex w-full items-center justify-center gap-2 rounded-2xl border border-primary/40 bg-primary/10 py-4 text-sm font-bold text-primary active:scale-[0.99] transition-transform touch-target disabled:opacity-40"
         >
           <Camera className="h-5 w-5" />
-          Import paper ticket
+          Attach paper ticket
         </button>
       </div>
 
