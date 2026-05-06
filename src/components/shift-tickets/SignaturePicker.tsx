@@ -291,6 +291,16 @@ export function SignaturePicker({ open, onClose, onSave, title, defaultName = ""
         ) : (
           <>
             {/* Draw mode */}
+            <div>
+              <label className="text-[11px] font-medium text-muted-foreground">Printed name</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Full name"
+                className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-ring touch-target"
+              />
+            </div>
             <p className="text-xs text-muted-foreground text-center">Sign below</p>
             <canvas
               ref={drawCanvasRef}
