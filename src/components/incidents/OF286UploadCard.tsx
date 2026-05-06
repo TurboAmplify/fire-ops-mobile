@@ -394,7 +394,7 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
 
                   {/* Stage-specific actions */}
                   <div className="flex flex-wrap gap-2">
-                    {stage === "original" && !contractorSigned && (
+                    {stage === "original" && (
                       <button
                         onClick={() => beginSign(doc)}
                         disabled={stamping}
@@ -405,7 +405,17 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
                         ) : (
                           <FileSignature className="h-3 w-3" />
                         )}
-                        Sign &amp; download
+                        {contractorSigned ? "Re-sign & download" : "Sign & download"}
+                      </button>
+                    )}
+                    {stage === "contractor_signed" && (
+                      <button
+                        onClick={() => beginSign(original ?? doc)}
+                        disabled={stamping || !original}
+                        className="flex items-center gap-1 rounded-md border border-primary/40 bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary touch-target disabled:opacity-40"
+                      >
+                        <FileSignature className="h-3 w-3" />
+                        Re-sign
                       </button>
                     )}
                     {stage === "contractor_signed" && (
