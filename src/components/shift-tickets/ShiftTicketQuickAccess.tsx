@@ -135,9 +135,11 @@ export function ShiftTicketQuickAccess({ open, onOpenChange }: Props) {
 
   // Truck-pick handler differs by mode
   const handleTruckPicked = (itId: string, incId: string, truckLabel: string) => {
-    if (mode === "new") {
+    if (mode === "new" || mode === "import") {
       resetAndClose();
-      navigate(`/incidents/${incId}/trucks/${itId}/shift-ticket/new`);
+      navigate(`/incidents/${incId}/trucks/${itId}/shift-ticket/new`, {
+        state: mode === "import" ? { openImport: true } : undefined,
+      });
       return;
     }
     setSelectedTruck({ itId, name: truckLabel });
