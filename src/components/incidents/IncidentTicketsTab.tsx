@@ -68,6 +68,7 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
   const { data: trucks, isLoading: loadingTrucks } = useIncidentTrucks(incidentId);
   const [showTruckPicker, setShowTruckPicker] = useState(false);
   const [pickerMode, setPickerMode] = useState<"new" | "import">("new");
+  const [showQuickAttach, setShowQuickAttach] = useState(false);
 
   // Fetch all tickets for this incident in one query
   const truckIds = useMemo(() => trucks?.map((t) => t.id) ?? [], [trucks]);
