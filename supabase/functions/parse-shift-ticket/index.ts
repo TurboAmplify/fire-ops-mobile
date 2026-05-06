@@ -123,6 +123,11 @@ Other:
 - contractor_rep_name
 - supervisor_name
 
+Signature regions (CRITICAL — used to crop the actual ink off the photo so the digital record shows the real signatures):
+- contractor_signature_box: bounding box around the contractor / equipment owner signature in the "Equipment Owner / Operator" or "Contractor Representative" signature area. Use normalized coordinates 0..1 relative to the FULL image (x = left edge, y = top edge, w = width, h = height). Tighten the box around the visible ink — do NOT include the printed name line, label text, or large white margins. If no signature ink is visible, omit the field entirely.
+- supervisor_signature_box: same idea for the Government / Supervisor signature box.
+- contractor_signed_date / supervisor_signed_date: date next to each signature, normalized to YYYY-MM-DD if legible.
+
 Return data via the provided tool. The document file name is: ${fileName ?? "(unknown)"}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
