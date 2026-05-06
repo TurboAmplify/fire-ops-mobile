@@ -119,9 +119,10 @@ export async function stampSignatureOntoPdf(opts: {
     });
 
     // Block 34 — Print Name and Title (row directly below Block 30).
-    // Sits inside the cell, above the "Printed:" footer line.
-    const nameX = pw * 0.03;
-    const nameY = ph * 0.054;
+    // Place clearly inside the cell, away from the page edge and above the
+    // "Printed:" footer line.
+    const nameX = pw * 0.06;
+    const nameY = ph * 0.048;
     page.drawText(signerName, {
       x: nameX,
       y: nameY,
