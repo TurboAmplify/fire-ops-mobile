@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Loader2, FileText, ChevronRight, Truck as TruckIcon } from "lucide-react";
+import { Plus, Loader2, FileText, ChevronRight, Truck as TruckIcon, Camera } from "lucide-react";
 import { useIncidentTrucks } from "@/hooks/useIncidentTrucks";
 import { useShiftTickets } from "@/hooks/useShiftTickets";
 import { getLocalDateString } from "@/lib/local-date";
