@@ -88,14 +88,16 @@ export async function stampSignatureOntoPdf(opts: {
   for (const page of pages) {
     const { width: pw, height: ph } = page.getSize();
 
-    // Block 30 — Contractor Signature (bottom-left)
-    // Approx box: x [0.01..0.38] of pw, y [0.058..0.115] of ph
-    const sigBoxX = pw * 0.015;
-    const sigBoxY = ph * 0.062;
-    const sigBoxW = pw * 0.36;
-    const sigBoxH = ph * 0.05;
+    // Coordinates were measured against an actual OF-286 export
+    // (page 620 x 792 pt). Y values are PDF-space (origin = bottom-left).
 
-    // Fit signature inside the box, preserving aspect ratio.
+    // Block 30 — Contractor Signature cell (under "30. CONTRACTOR SIGNATURE"
+    // label at normY ~0.10, above Block 34 label at normY ~0.066).
+    const sigBoxX = pw * 0.045;
+    const sigBoxY = ph * 0.068;
+    const sigBoxW = pw * 0.30;
+    const sigBoxH = ph * 0.028;
+
     const aspect = sigImage.width / sigImage.height;
     let drawW = sigBoxW;
     let drawH = drawW / aspect;
@@ -103,28 +105,24 @@ export async function stampSignatureOntoPdf(opts: {
       drawH = sigBoxH;
       drawW = drawH * aspect;
     }
-    const drawX = sigBoxX + (sigBoxW - drawW) / 2;
+    const drawX = sigBoxX;
     const drawY = sigBoxY + (sigBoxH - drawH) / 2;
     page.drawImage(sigImage, { x: drawX, y: drawY, width: drawW, height: drawH });
 
-    // Block 31 — Date (right of signature)
-    const dateX = pw * 0.39;
-    const dateY = ph * 0.078;
+    // Block 31 — Date (cell to the right of signature).
     page.drawText(dateStr, {
-      x: dateX,
-      y: dateY,
+      x: pw * 0.36,
+      y: ph * 0.078,
       size: 10,
       font: helv,
       color: rgb(0, 0, 0),
     });
 
-    // Block 34 — Print Name and Title (row directly below Block 30).
-    // Sits inside the cell, above the "Printed:" footer line.
-    const nameX = pw * 0.03;
-    const nameY = ph * 0.054;
+    // Block 34 — Print Name and Title. Cell interior is roughly normY
+    // 0.027–0.066. Baseline at ~0.038 sits cleanly inside.
     page.drawText(signerName, {
-      x: nameX,
-      y: nameY,
+      x: pw * 0.05,
+      y: ph * 0.038,
       size: 9,
       font: helv,
       color: rgb(0, 0, 0),
