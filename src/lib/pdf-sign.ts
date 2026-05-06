@@ -1,18 +1,151 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import * as pdfjsLib from "pdfjs-dist";
+// Vite worker import
+// @ts-ignore
+import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+
+(pdfjsLib as any).GlobalWorkerOptions.workerSrc = pdfjsWorker;
+
+interface BoxRect {
+  x: number; // PDF-space, origin bottom-left
+  y: number;
+  w: number;
+  h: number;
+}
+
+interface PageAnchors {
+  pageIndex: number;
+  pageWidth: number;
+  pageHeight: number;
+  signatureBox?: BoxRect;
+  dateBox?: BoxRect;
+  nameBox?: BoxRect;
+}
 
 /**
- * Stamp a signature image onto every page of a PDF in the OF-286 contractor
- * signature region (Block 30 — bottom-left of each page), along with the date
- * (Block 31) and printed name (Block 34).
+ * Scan every page of the PDF for the OF-286 signature row labels and return
+ * the rectangles where we should stamp the signature, date, and printed name.
  *
- * The OF-286 has a signature row near the bottom of every page. Layout varies
- * slightly between agency exports, but the contractor signature box is always
- * the leftmost cell of the signature row, roughly:
- *   - x: ~1% to ~38% of page width
- *   - y: ~6% to ~12% of page height (above the print-name row and footer)
+ * The OF-286 layout always contains four labels arranged horizontally:
+ *   "30. CONTRACTOR SIGNATURE" | "31. DATE" | "32. RECEIVING OFFICER..." | "33. DATE"
+ * with "34. PRINT NAME AND TITLE" directly below #30.
+ *
+ * We anchor to those text labels (case-insensitive) so the placement adapts to
+ * any agency variant of the form, regardless of margins or scaling.
+ */
+async function findOf286Anchors(pdfBytes: Uint8Array): Promise<PageAnchors[]> {
+  const doc = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
+  const results: PageAnchors[] = [];
+
+  for (let p = 0; p < doc.numPages; p++) {
+    const page = await doc.getPage(p + 1);
+    const viewport = page.getViewport({ scale: 1 });
+    const pw = viewport.width;
+    const ph = viewport.height;
+    const textContent = await page.getTextContent();
+
+    // Each item has transform [a,b,c,d,e,f] where (e,f) is the position in
+    // PDF user-space (origin bottom-left). `str` is the text.
+    type Item = { str: string; x: number; y: number; w: number; h: number };
+    const items: Item[] = [];
+    for (const it of textContent.items as any[]) {
+      const t = it.transform;
+      const x = t[4];
+      const y = t[5];
+      const h = it.height ?? Math.abs(t[3]) ?? 10;
+      const w = it.width ?? 0;
+      const s = String(it.str ?? "").trim();
+      if (s) items.push({ str: s, x, y, w, h });
+    }
+
+    const findFirst = (re: RegExp) => items.find((i) => re.test(i.str));
+
+    // Concatenate adjacent items so multi-fragment labels still match.
+    const findCompound = (re: RegExp) => {
+      // try single
+      const single = findFirst(re);
+      if (single) return single;
+      // try pairs (rare for OF-286 but cheap)
+      for (let i = 0; i < items.length - 1; i++) {
+        const merged = `${items[i].str} ${items[i + 1].str}`;
+        if (re.test(merged)) {
+          return {
+            ...items[i],
+            str: merged,
+            w: (items[i + 1].x + items[i + 1].w) - items[i].x,
+          };
+        }
+      }
+      return undefined;
+    };
+
+    const labelSig = findCompound(/^30\.?\s*CONTRACTOR\s*SIGNATURE/i);
+    const labelDate = findCompound(/^31\.?\s*DATE/i);
+    const labelRecv = findCompound(/^32\.?\s*RECEIVING\s*OFFICER/i);
+    const labelName = findCompound(/^34\.?\s*PRINT\s*NAME/i);
+
+    const anchors: PageAnchors = {
+      pageIndex: p,
+      pageWidth: pw,
+      pageHeight: ph,
+    };
+
+    if (labelSig) {
+      // Signature cell: starts at #30 label x, ends at #31 label x.
+      // Vertically: from the row baseline below the label down to where #34 starts.
+      const right = labelDate ? labelDate.x : pw * 0.36;
+      const top = labelSig.y - 2; // just below the label baseline
+      const bottom = labelName ? labelName.y + labelName.h + 2 : top - 30;
+      const x = labelSig.x;
+      const y = bottom;
+      const w = Math.max(40, right - x - 6);
+      const h = Math.max(14, top - bottom - 2);
+      anchors.signatureBox = { x, y, w, h };
+    }
+
+    if (labelDate) {
+      // Date cell: between #31 and #32 labels, baseline a bit below the label.
+      const right = labelRecv ? labelRecv.x : labelDate.x + 90;
+      const x = labelDate.x;
+      const w = Math.max(30, right - x - 6);
+      const baselineY = labelDate.y - labelDate.h - 4;
+      anchors.dateBox = { x, y: baselineY, w, h: labelDate.h + 2 };
+    }
+
+    if (labelName) {
+      // Print name cell sits below #34 label.
+      const right = labelDate
+        ? labelDate.x
+        : labelSig
+          ? labelSig.x + 200
+          : pw * 0.5;
+      const x = labelName.x;
+      const top = labelName.y - 2;
+      const bottom = Math.max(top - 24, 8);
+      anchors.nameBox = {
+        x,
+        y: bottom + 2,
+        w: Math.max(60, right - x - 6),
+        h: top - bottom,
+      };
+    }
+
+    results.push(anchors);
+  }
+
+  return results;
+}
+
+/**
+ * Stamp a signature image, date, and printed name onto every page of an OF-286
+ * PDF in the contractor signature region (Block 30 / 31 / 34).
+ *
+ * Uses pdfjs to find the actual label positions in the PDF text layer, so
+ * placement adapts to any agency variant of the form.
  *
  * Falls back to a single bottom-right stamp on the last page for non-OF-286
- * documents (e.g. plain image scans we converted to PDF).
+ * sources (e.g. plain image scans we converted to PDF, or PDFs without a text
+ * layer).
  */
 export async function stampSignatureOntoPdf(opts: {
   sourceUrl: string;
@@ -31,7 +164,7 @@ export async function stampSignatureOntoPdf(opts: {
     sourceBytes[0] === 0x25 &&
     sourceBytes[1] === 0x50 &&
     sourceBytes[2] === 0x44 &&
-    sourceBytes[3] === 0x46; // %PDF
+    sourceBytes[3] === 0x46;
 
   let pdfDoc: PDFDocument;
   let isImageFallback = false;
@@ -62,9 +195,8 @@ export async function stampSignatureOntoPdf(opts: {
   const pages = pdfDoc.getPages();
 
   if (isImageFallback) {
-    // Single-page image scan: stamp once, bottom-right.
     const page = pages[0];
-    const { width: pw, height: ph } = page.getSize();
+    const { width: pw } = page.getSize();
     const sigW = Math.min(220, pw * 0.32);
     const sigH = sigW * (sigImage.height / sigImage.width);
     page.drawImage(sigImage, {
@@ -78,55 +210,90 @@ export async function stampSignatureOntoPdf(opts: {
       y: 38,
       size: 8,
       font: helv,
-      color: rgb(0, 0, 0),
     });
     const out = await pdfDoc.save();
     return new Blob([out.slice().buffer as ArrayBuffer], { type: "application/pdf" });
   }
 
-  // Real OF-286 PDF: stamp signature + date + name on each page in Block 30/31/34.
-  for (const page of pages) {
-    const { width: pw, height: ph } = page.getSize();
+  // Find anchors via pdfjs. If extraction fails (image-only PDF), fall back
+  // to the bottom-right stamp on each page.
+  let anchorsList: PageAnchors[] = [];
+  try {
+    anchorsList = await findOf286Anchors(sourceBytes);
+  } catch (err) {
+    console.warn("[pdf-sign] Anchor extraction failed:", err);
+  }
 
-    // Coordinates were measured against an actual OF-286 export
-    // (page 620 x 792 pt). Y values are PDF-space (origin = bottom-left).
-
-    // Block 30 — Contractor Signature cell (under "30. CONTRACTOR SIGNATURE"
-    // label at normY ~0.10, above Block 34 label at normY ~0.066).
-    const sigBoxX = pw * 0.045;
-    const sigBoxY = ph * 0.068;
-    const sigBoxW = pw * 0.30;
-    const sigBoxH = ph * 0.028;
-
+  const fitImage = (box: BoxRect) => {
     const aspect = sigImage.width / sigImage.height;
-    let drawW = sigBoxW;
-    let drawH = drawW / aspect;
-    if (drawH > sigBoxH) {
-      drawH = sigBoxH;
-      drawW = drawH * aspect;
+    let w = box.w;
+    let h = w / aspect;
+    if (h > box.h) {
+      h = box.h;
+      w = h * aspect;
     }
-    const drawX = sigBoxX;
-    const drawY = sigBoxY + (sigBoxH - drawH) / 2;
-    page.drawImage(sigImage, { x: drawX, y: drawY, width: drawW, height: drawH });
+    return {
+      x: box.x + (box.w - w) / 2,
+      y: box.y + (box.h - h) / 2,
+      w,
+      h,
+    };
+  };
 
-    // Block 31 — Date (cell to the right of signature).
-    page.drawText(dateStr, {
-      x: pw * 0.36,
-      y: ph * 0.078,
-      size: 10,
-      font: helv,
-      color: rgb(0, 0, 0),
-    });
+  for (let i = 0; i < pages.length; i++) {
+    const page = pages[i];
+    const { width: pw, height: ph } = page.getSize();
+    const anchors = anchorsList[i];
 
-    // Block 34 — Print Name and Title. Cell interior is roughly normY
-    // 0.027–0.066. Baseline at ~0.038 sits cleanly inside.
-    page.drawText(signerName, {
-      x: pw * 0.05,
-      y: ph * 0.038,
-      size: 9,
-      font: helv,
-      color: rgb(0, 0, 0),
-    });
+    if (anchors?.signatureBox) {
+      const fit = fitImage(anchors.signatureBox);
+      page.drawImage(sigImage, { x: fit.x, y: fit.y, width: fit.w, height: fit.h });
+    } else {
+      // Fallback: bottom-right corner of the page
+      const sigW = Math.min(180, pw * 0.28);
+      const sigH = sigW * (sigImage.height / sigImage.width);
+      page.drawImage(sigImage, {
+        x: pw - sigW - 30,
+        y: 60,
+        width: sigW,
+        height: sigH,
+      });
+    }
+
+    if (anchors?.dateBox) {
+      page.drawText(dateStr, {
+        x: anchors.dateBox.x + 2,
+        y: anchors.dateBox.y + 2,
+        size: 10,
+        font: helv,
+        color: rgb(0, 0, 0),
+      });
+    } else {
+      page.drawText(dateStr, {
+        x: pw * 0.45,
+        y: 70,
+        size: 10,
+        font: helv,
+      });
+    }
+
+    if (anchors?.nameBox) {
+      // Draw with baseline near the bottom of the cell so it sits inside.
+      page.drawText(signerName, {
+        x: anchors.nameBox.x + 2,
+        y: anchors.nameBox.y + Math.max(2, anchors.nameBox.h * 0.25),
+        size: 9,
+        font: helv,
+        color: rgb(0, 0, 0),
+      });
+    } else {
+      page.drawText(signerName, {
+        x: 40,
+        y: 40,
+        size: 9,
+        font: helv,
+      });
+    }
   }
 
   const out = await pdfDoc.save();
