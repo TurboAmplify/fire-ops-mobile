@@ -161,14 +161,14 @@ export function ShiftTicketQuickAccess({ open, onOpenChange }: Props) {
         <SheetHeader>
           <SheetTitle className="text-base">
             {step === "home" && "Shift Tickets"}
-            {step === "pick-incident" && (mode === "new" ? "Select Incident" : "Browse — Select Incident")}
-            {step === "pick-truck" && (mode === "new" ? "Select Truck" : "Browse — Select Truck")}
+            {step === "pick-incident" && (mode === "new" ? "Select Incident" : mode === "import" ? "Import — Select Incident" : "Browse — Select Incident")}
+            {step === "pick-truck" && (mode === "new" ? "Select Truck" : mode === "import" ? "Import — Select Truck" : "Browse — Select Truck")}
             {step === "browse-tickets" && (selectedTruck?.name ?? "Tickets")}
           </SheetTitle>
         </SheetHeader>
 
         {step === "home" && (
-          <div className="mt-4 space-y-5 pb-4">
+          <div className="mt-4 space-y-3 pb-4">
             {/* Primary action — unchanged */}
             <button
               onClick={handleStartNew}
@@ -177,6 +177,16 @@ export function ShiftTicketQuickAccess({ open, onOpenChange }: Props) {
             >
               <Plus className="h-5 w-5" />
               Start New Shift Ticket
+            </button>
+
+            {/* Import paper ticket */}
+            <button
+              onClick={handleStartImport}
+              disabled={activeIncidents.length === 0}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-primary/40 bg-primary/10 py-4 text-sm font-bold text-primary active:scale-[0.99] transition-transform touch-target disabled:opacity-40"
+            >
+              <Camera className="h-5 w-5" />
+              Import Paper Ticket
             </button>
 
             {/* Secondary: browse existing tickets by truck */}
