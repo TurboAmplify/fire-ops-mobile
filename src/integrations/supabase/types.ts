@@ -1531,6 +1531,7 @@ export type Database = {
           license_id_number: string | null
           miles: number | null
           organization_id: string | null
+          paper_ticket_photo_url: string | null
           personnel_entries: Json
           remarks: string | null
           resource_order_id: string | null
@@ -1564,6 +1565,7 @@ export type Database = {
           license_id_number?: string | null
           miles?: number | null
           organization_id?: string | null
+          paper_ticket_photo_url?: string | null
           personnel_entries?: Json
           remarks?: string | null
           resource_order_id?: string | null
@@ -1597,6 +1599,7 @@ export type Database = {
           license_id_number?: string | null
           miles?: number | null
           organization_id?: string | null
+          paper_ticket_photo_url?: string | null
           personnel_entries?: Json
           remarks?: string | null
           resource_order_id?: string | null

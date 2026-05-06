@@ -1,0 +1,1 @@
+ALTER TABLE public.shift_tickets ADD COLUMN IF NOT EXISTS paper_ticket_photo_url text;
