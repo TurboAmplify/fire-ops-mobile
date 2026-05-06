@@ -83,6 +83,7 @@ async function findOf286Anchors(pdfBytes: Uint8Array): Promise<PageAnchors[]> {
     const labelDate = findCompound(/^31\.?\s*DATE/i);
     const labelRecv = findCompound(/^32\.?\s*RECEIVING\s*OFFICER/i);
     const labelName = findCompound(/^34\.?\s*PRINT\s*NAME/i);
+    const labelRecvName = findCompound(/^35\.?\s*PRINT\s*NAME/i);
 
     const anchors: PageAnchors = {
       pageIndex: p,
@@ -90,43 +91,63 @@ async function findOf286Anchors(pdfBytes: Uint8Array): Promise<PageAnchors[]> {
       pageHeight: ph,
     };
 
+    // pdfjs `y` is the text BASELINE in PDF user-space (origin = bottom-left).
+    // The text bbox extends roughly from `y` (baseline) up to `y + h` (cap top)
+    // and a small descender below `y`.
+
+    // Find the item directly below #34 (the footer) so we can clamp the name
+    // cell. Page items with the smallest y > 0 are the footer line.
+    let footerTop = 0;
+    if (labelName) {
+      for (const it of items) {
+        if (it.y < labelName.y - 5 && it.y > footerTop) {
+          // Top of footer text = baseline + cap height
+          footerTop = it.y + it.h;
+        }
+      }
+    }
+
     if (labelSig) {
-      // Signature cell: starts at #30 label x, ends at #31 label x.
-      // Vertically: from the row baseline below the label down to where #34 starts.
-      const right = labelDate ? labelDate.x : pw * 0.36;
-      const top = labelSig.y - 2; // just below the label baseline
-      const bottom = labelName ? labelName.y + labelName.h + 2 : top - 30;
+      // Signature cell: from #30 label baseline DOWN to the top of #34's
+      // label cell (or a sensible fallback if #34 is missing).
+      const right = labelDate ? labelDate.x - 4 : labelSig.x + 200;
+      const top = labelSig.y - 2; // just under the "30. CONTRACTOR SIGNATURE" label
+      const cellBottom = labelName
+        ? labelName.y + labelName.h + 1 // top of #34 label
+        : top - 18;
       const x = labelSig.x;
-      const y = bottom;
-      const w = Math.max(40, right - x - 6);
-      const h = Math.max(14, top - bottom - 2);
-      anchors.signatureBox = { x, y, w, h };
+      const w = Math.max(40, right - x);
+      const h = Math.max(10, top - cellBottom);
+      anchors.signatureBox = { x, y: cellBottom, w, h };
     }
 
     if (labelDate) {
-      // Date cell: between #31 and #32 labels, baseline a bit below the label.
-      const right = labelRecv ? labelRecv.x : labelDate.x + 90;
-      const x = labelDate.x;
-      const w = Math.max(30, right - x - 6);
-      const baselineY = labelDate.y - labelDate.h - 4;
-      anchors.dateBox = { x, y: baselineY, w, h: labelDate.h + 2 };
+      // Date sits just below the "31. DATE" label, inside the same cell as
+      // the signature row. Baseline ≈ label baseline minus one text line.
+      const right = labelRecv ? labelRecv.x - 4 : labelDate.x + 90;
+      const baselineY = labelDate.y - labelDate.h - 2;
+      anchors.dateBox = {
+        x: labelDate.x,
+        y: baselineY,
+        w: Math.max(30, right - labelDate.x),
+        h: labelDate.h,
+      };
     }
 
     if (labelName) {
-      // Print name cell sits below #34 label.
-      const right = labelDate
-        ? labelDate.x
-        : labelSig
-          ? labelSig.x + 200
-          : pw * 0.5;
-      const x = labelName.x;
+      // Print name cell: from just under the "34. PRINT NAME AND TITLE"
+      // label DOWN to either the page footer or the bottom of the page.
+      // Width: from #34 to start of #35 (or #31 column edge).
+      const right =
+        (labelRecvName?.x ?? labelDate?.x ?? labelName.x + 200) - 4;
       const top = labelName.y - 2;
-      const bottom = Math.max(top - 24, 8);
+      const floor = Math.max(footerTop + 4, 6);
+      const bottom = Math.max(top - 26, floor);
       anchors.nameBox = {
-        x,
-        y: bottom + 2,
-        w: Math.max(60, right - x - 6),
-        h: top - bottom,
+        x: labelName.x,
+        y: bottom,
+        w: Math.max(60, right - labelName.x),
+        h: Math.max(10, top - bottom),
       };
     }
 
