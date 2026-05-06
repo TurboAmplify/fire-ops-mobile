@@ -195,7 +195,7 @@ export function SignaturePicker({ open, onClose, onSave, title, defaultName = ""
     const canvas = canvasRefs.current[selectedFont];
     if (!canvas) return;
     canvas.toBlob((blob) => {
-      if (blob) onSave(blob, { method: "typed", font: selectedFont });
+      if (blob) onSave(blob, { method: "typed", font: selectedFont, name: name.trim() });
     }, "image/png");
   };
 
@@ -203,7 +203,7 @@ export function SignaturePicker({ open, onClose, onSave, title, defaultName = ""
     const canvas = drawCanvasRef.current;
     if (!canvas) return;
     canvas.toBlob((blob) => {
-      if (blob) onSave(blob, { method: "drawn" });
+      if (blob) onSave(blob, { method: "drawn", name: name.trim() || undefined });
     }, "image/png");
   };
 
