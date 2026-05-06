@@ -16,7 +16,7 @@ import {
 import { useOrganization } from "@/hooks/useOrganization";
 import { useAuth } from "@/hooks/useAuth";
 import { SignedLink } from "@/components/ui/SignedLink";
-import { SignaturePicker } from "@/components/shift-tickets/SignaturePicker";
+import { SignaturePicker, type SignatureMetadata } from "@/components/shift-tickets/SignaturePicker";
 import { stampSignatureOntoPdf, downloadBlob } from "@/lib/pdf-sign";
 import { getViewableUrl } from "@/lib/storage-url";
 import {
