@@ -68,6 +68,7 @@ export function ShiftTicketImportSheet({ open, onClose, organizationId, onApply 
       setStage("parsing");
       const result = await parseShiftTicketAI(fileUrl, file.name);
       setParsed(result);
+      setSourceFile(file);
       setStage("review");
     } catch (err) {
       console.error("Shift ticket import failed:", err);
@@ -78,7 +79,7 @@ export function ShiftTicketImportSheet({ open, onClose, organizationId, onApply 
 
   const handleApply = () => {
     if (!parsed) return;
-    onApply(parsed, mode);
+    onApply(parsed, mode, sourceFile);
     toast.success("Imported — review the form before saving.");
     reset();
     onClose();
