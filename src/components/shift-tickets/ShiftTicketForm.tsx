@@ -1401,8 +1401,8 @@ export function ShiftTicketForm({
         open={showImportSheet}
         onClose={() => setShowImportSheet(false)}
         organizationId={organizationId || ""}
-        onApply={(parsed, mode) => {
-          handleImportApply(parsed, mode);
+        onApply={(parsed, mode, sourceFile) => {
+          handleImportApply(parsed, mode, sourceFile);
           setShowImportSheet(false);
         }}
       />
