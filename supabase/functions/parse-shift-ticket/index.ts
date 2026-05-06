@@ -178,6 +178,24 @@ Return data via the provided tool. The document file name is: ${fileName ?? "(un
                   remarks: { type: "string" },
                   contractor_rep_name: { type: "string" },
                   supervisor_name: { type: "string" },
+                  contractor_signed_date: { type: "string", description: "YYYY-MM-DD if legible" },
+                  supervisor_signed_date: { type: "string", description: "YYYY-MM-DD if legible" },
+                  contractor_signature_box: {
+                    type: "object",
+                    description: "Normalized 0..1 bounding box around the contractor signature ink. Omit if no ink visible.",
+                    properties: {
+                      x: { type: "number" }, y: { type: "number" },
+                      w: { type: "number" }, h: { type: "number" },
+                    },
+                  },
+                  supervisor_signature_box: {
+                    type: "object",
+                    description: "Normalized 0..1 bounding box around the supervisor signature ink. Omit if no ink visible.",
+                    properties: {
+                      x: { type: "number" }, y: { type: "number" },
+                      w: { type: "number" }, h: { type: "number" },
+                    },
+                  },
                   equipment_entries: {
                     type: "array",
                     items: {
