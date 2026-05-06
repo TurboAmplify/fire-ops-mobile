@@ -765,6 +765,38 @@ export function ShiftTicketForm({
       if (mode === "replace" || isFormEmpty) setPersonnelEntries(importedPe);
     }
 
+    // Crop signatures from the source photo so the digital record shows the
+    // actual ink the engine boss / supervisor signed on the paper ticket.
+    // Stage as blobs in pendingSigs — the existing effect will upload them
+    // once the ticket has an id (or immediately if it already does).
+    if (sourceFile) {
+      try {
+        const stagedSigs: Record<string, Blob> = {};
+        if (parsed.contractor_signature_box) {
+          const blob = await cropSignatureFromImage(sourceFile, parsed.contractor_signature_box);
+          if (blob) {
+            stagedSigs.contractor = blob;
+            setContractorSigUrl(URL.createObjectURL(blob));
+          }
+        }
+        if (parsed.supervisor_signature_box) {
+          const blob = await cropSignatureFromImage(sourceFile, parsed.supervisor_signature_box);
+          if (blob) {
+            stagedSigs.supervisor = blob;
+            setSupervisorSigUrl(URL.createObjectURL(blob));
+          }
+        }
+        if (Object.keys(stagedSigs).length > 0) {
+          setPendingSigs((prev) => ({ ...prev, ...stagedSigs }));
+          toast.success("Signatures captured from photo — review before saving.");
+        } else if (parsed.contractor_signature_box || parsed.supervisor_signature_box) {
+          toast.warning("Could not crop signatures from the source. Re-sign in the form if needed.");
+        }
+      } catch (err) {
+        console.error("Signature crop failed:", err);
+      }
+    }
+
     markDirty();
   };
 
