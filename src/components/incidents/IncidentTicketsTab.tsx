@@ -151,15 +151,25 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
 
   return (
     <div className="space-y-5">
-      {/* Primary CTA */}
-      <button
-        onClick={handleNewClick}
-        disabled={noTrucks}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-sm font-bold text-primary-foreground shadow-md active:scale-[0.99] transition-transform touch-target disabled:opacity-40"
-      >
-        <Plus className="h-5 w-5" />
-        New Shift Ticket
-      </button>
+      {/* Primary CTA + Import */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <button
+          onClick={() => handleNewClick("new")}
+          disabled={noTrucks}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-sm font-bold text-primary-foreground shadow-md active:scale-[0.99] transition-transform touch-target disabled:opacity-40"
+        >
+          <Plus className="h-5 w-5" />
+          New Shift Ticket
+        </button>
+        <button
+          onClick={() => handleNewClick("import")}
+          disabled={noTrucks}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-primary/40 bg-primary/10 py-4 text-sm font-bold text-primary active:scale-[0.99] transition-transform touch-target disabled:opacity-40"
+        >
+          <Camera className="h-5 w-5" />
+          Import paper ticket
+        </button>
+      </div>
 
       {noTrucks && (
         <p className="text-xs text-muted-foreground text-center">
