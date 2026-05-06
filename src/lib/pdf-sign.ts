@@ -240,24 +240,18 @@ export async function stampSignatureOntoPdf(opts: {
     };
   };
 
+  let stampedAny = false;
   for (let i = 0; i < pages.length; i++) {
     const page = pages[i];
-    const { width: pw, height: ph } = page.getSize();
     const anchors = anchorsList[i];
+
+    // Skip pages that don't have an OF-286 signature row (e.g. addendum
+    // pages like the Deductions/Additions sheet).
+    if (!anchors?.signatureBox && !anchors?.nameBox) continue;
 
     if (anchors?.signatureBox) {
       const fit = fitImage(anchors.signatureBox);
       page.drawImage(sigImage, { x: fit.x, y: fit.y, width: fit.w, height: fit.h });
-    } else {
-      // Fallback: bottom-right corner of the page
-      const sigW = Math.min(180, pw * 0.28);
-      const sigH = sigW * (sigImage.height / sigImage.width);
-      page.drawImage(sigImage, {
-        x: pw - sigW - 30,
-        y: 60,
-        width: sigW,
-        height: sigH,
-      });
     }
 
     if (anchors?.dateBox) {
@@ -268,17 +262,9 @@ export async function stampSignatureOntoPdf(opts: {
         font: helv,
         color: rgb(0, 0, 0),
       });
-    } else {
-      page.drawText(dateStr, {
-        x: pw * 0.45,
-        y: 70,
-        size: 10,
-        font: helv,
-      });
     }
 
     if (anchors?.nameBox) {
-      // Draw with baseline near the bottom of the cell so it sits inside.
       page.drawText(signerName, {
         x: anchors.nameBox.x + 2,
         y: anchors.nameBox.y + Math.max(2, anchors.nameBox.h * 0.25),
@@ -286,14 +272,31 @@ export async function stampSignatureOntoPdf(opts: {
         font: helv,
         color: rgb(0, 0, 0),
       });
-    } else {
-      page.drawText(signerName, {
-        x: 40,
-        y: 40,
-        size: 9,
-        font: helv,
-      });
     }
+
+    stampedAny = true;
+  }
+
+  // If anchor extraction failed across the board (e.g. scanned image PDF
+  // with no text layer), fall back to stamping the last page bottom-right
+  // so the signature still ends up *somewhere* visible.
+  if (!stampedAny) {
+    const page = pages[pages.length - 1];
+    const { width: pw } = page.getSize();
+    const sigW = Math.min(180, pw * 0.28);
+    const sigH = sigW * (sigImage.height / sigImage.width);
+    page.drawImage(sigImage, {
+      x: pw - sigW - 30,
+      y: 60,
+      width: sigW,
+      height: sigH,
+    });
+    page.drawText(`${signerName}  •  ${dateStr}`, {
+      x: pw - sigW - 30,
+      y: 48,
+      size: 9,
+      font: helv,
+    });
   }
 
   const out = await pdfDoc.save();
