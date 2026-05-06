@@ -42,6 +42,10 @@ export interface ParsedShiftTicket {
   remarks?: string;
   contractor_rep_name?: string;
   supervisor_name?: string;
+  contractor_signed_date?: string;
+  supervisor_signed_date?: string;
+  contractor_signature_box?: { x: number; y: number; w: number; h: number };
+  supervisor_signature_box?: { x: number; y: number; w: number; h: number };
   equipment_entries?: Array<{
     date?: string;
     start?: string;
