@@ -15,6 +15,7 @@ const FONT_OPTIONS = [
 export interface SignatureMetadata {
   method: "typed" | "drawn";
   font?: string;
+  name?: string;
 }
 
 interface SignaturePickerProps {
@@ -194,7 +195,7 @@ export function SignaturePicker({ open, onClose, onSave, title, defaultName = ""
     const canvas = canvasRefs.current[selectedFont];
     if (!canvas) return;
     canvas.toBlob((blob) => {
-      if (blob) onSave(blob, { method: "typed", font: selectedFont });
+      if (blob) onSave(blob, { method: "typed", font: selectedFont, name: name.trim() });
     }, "image/png");
   };
 
@@ -202,7 +203,7 @@ export function SignaturePicker({ open, onClose, onSave, title, defaultName = ""
     const canvas = drawCanvasRef.current;
     if (!canvas) return;
     canvas.toBlob((blob) => {
-      if (blob) onSave(blob, { method: "drawn" });
+      if (blob) onSave(blob, { method: "drawn", name: name.trim() || undefined });
     }, "image/png");
   };
 
@@ -290,6 +291,16 @@ export function SignaturePicker({ open, onClose, onSave, title, defaultName = ""
         ) : (
           <>
             {/* Draw mode */}
+            <div>
+              <label className="text-[11px] font-medium text-muted-foreground">Printed name</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Full name"
+                className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-ring touch-target"
+              />
+            </div>
             <p className="text-xs text-muted-foreground text-center">Sign below</p>
             <canvas
               ref={drawCanvasRef}
