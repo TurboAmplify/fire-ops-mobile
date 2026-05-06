@@ -77,3 +77,46 @@ export async function parseShiftTicketAI(
   if (error) throw error;
   return (data?.parsed ?? {}) as ParsedShiftTicket;
 }
+
+/**
+ * Crop a normalized 0..1 bounding box out of an image File and return it as
+ * a PNG Blob with a transparent-ish white background. Adds a small padding
+ * margin so the signature isn't crammed against the edges.
+ *
+ * Returns null if the file isn't an image (e.g. PDF) or the box is invalid.
+ */
+export async function cropSignatureFromImage(
+  file: File,
+  box: { x: number; y: number; w: number; h: number },
+  padding = 0.01
+): Promise<Blob | null> {
+  if (!file.type.startsWith("image/")) return null;
+  const { x, y, w, h } = box;
+  if (![x, y, w, h].every((n) => typeof n === "number" && isFinite(n))) return null;
+  if (w <= 0 || h <= 0) return null;
+
+  const bitmap = await createImageBitmap(file).catch(() => null);
+  if (!bitmap) return null;
+
+  const px = Math.max(0, (x - padding)) * bitmap.width;
+  const py = Math.max(0, (y - padding)) * bitmap.height;
+  const pw = Math.min(1, w + padding * 2) * bitmap.width;
+  const ph = Math.min(1, h + padding * 2) * bitmap.height;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(pw));
+  canvas.height = Math.max(1, Math.round(ph));
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  // White background so the signature reads cleanly in the PDF.
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(
+    bitmap,
+    Math.round(px), Math.round(py), Math.round(pw), Math.round(ph),
+    0, 0, canvas.width, canvas.height
+  );
+  return await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob((b) => resolve(b), "image/png", 0.92)
+  );
+}
