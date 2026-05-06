@@ -34,7 +34,7 @@ export function AppShell({ children, title, headerRight, showBack, onBack }: App
         />
       )}
       <div className="relative z-10 flex min-h-screen flex-col">
-      {title && (
+      {title ? (
         <>
           <header className={`fixed top-0 left-0 right-0 z-50 safe-area-top ${
             isHome
@@ -60,8 +60,12 @@ export function AppShell({ children, title, headerRight, showBack, onBack }: App
               {headerRight && <div className="flex items-center gap-1.5 shrink-0">{headerRight}</div>}
             </div>
           </header>
-          <div className="h-14 shrink-0" />
+          {/* Spacer must include the iOS safe-area inset so content doesn't slide under the notch / Dynamic Island. */}
+          <div className="shrink-0 h-[calc(3.5rem+env(safe-area-inset-top,0px))]" />
         </>
+      ) : (
+        // Pages without a title still need top inset on iOS or they render under the camera bar.
+        <div className="shrink-0 h-[env(safe-area-inset-top,0px)]" />
       )}
       <OfflineBanner />
       <TrialStatusBanner />
