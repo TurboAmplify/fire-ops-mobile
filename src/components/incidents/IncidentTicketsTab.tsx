@@ -12,6 +12,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { QuickAttachPaperTicketSheet } from "@/components/shift-tickets/QuickAttachPaperTicketSheet";
 
 interface Props {
   incidentId: string;
