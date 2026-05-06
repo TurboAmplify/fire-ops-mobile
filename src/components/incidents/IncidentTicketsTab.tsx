@@ -209,7 +209,7 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
       <Sheet open={showTruckPicker} onOpenChange={setShowTruckPicker}>
         <SheetContent side="bottom" className="rounded-t-2xl">
           <SheetHeader>
-            <SheetTitle>Select a truck</SheetTitle>
+            <SheetTitle>{pickerMode === "import" ? "Import for which truck?" : "Select a truck"}</SheetTitle>
           </SheetHeader>
           <div className="mt-4 space-y-2 pb-4">
             {trucks?.map((it) => (
@@ -218,7 +218,12 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
                 onClick={() => {
                   setShowTruckPicker(false);
                   navigate(`/incidents/${incidentId}/trucks/${it.id}/shift-ticket/new`, {
-                    state: { incidentName, truckName: it.trucks.name, truckUnitType: it.trucks.unit_type },
+                    state: {
+                      incidentName,
+                      truckName: it.trucks.name,
+                      truckUnitType: it.trucks.unit_type,
+                      openImport: pickerMode === "import",
+                    },
                   });
                 }}
                 className="flex w-full items-center gap-3 rounded-xl bg-card border border-border/30 p-4 text-left active:scale-[0.99] transition-transform touch-target"
