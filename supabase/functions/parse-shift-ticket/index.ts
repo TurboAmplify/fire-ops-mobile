@@ -123,6 +123,11 @@ Other:
 - contractor_rep_name
 - supervisor_name
 
+Signature regions (CRITICAL — used to crop the actual ink off the photo so the digital record shows the real signatures):
+- contractor_signature_box: bounding box around the contractor / equipment owner signature in the "Equipment Owner / Operator" or "Contractor Representative" signature area. Use normalized coordinates 0..1 relative to the FULL image (x = left edge, y = top edge, w = width, h = height). Tighten the box around the visible ink — do NOT include the printed name line, label text, or large white margins. If no signature ink is visible, omit the field entirely.
+- supervisor_signature_box: same idea for the Government / Supervisor signature box.
+- contractor_signed_date / supervisor_signed_date: date next to each signature, normalized to YYYY-MM-DD if legible.
+
 Return data via the provided tool. The document file name is: ${fileName ?? "(unknown)"}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -173,6 +178,24 @@ Return data via the provided tool. The document file name is: ${fileName ?? "(un
                   remarks: { type: "string" },
                   contractor_rep_name: { type: "string" },
                   supervisor_name: { type: "string" },
+                  contractor_signed_date: { type: "string", description: "YYYY-MM-DD if legible" },
+                  supervisor_signed_date: { type: "string", description: "YYYY-MM-DD if legible" },
+                  contractor_signature_box: {
+                    type: "object",
+                    description: "Normalized 0..1 bounding box around the contractor signature ink. Omit if no ink visible.",
+                    properties: {
+                      x: { type: "number" }, y: { type: "number" },
+                      w: { type: "number" }, h: { type: "number" },
+                    },
+                  },
+                  supervisor_signature_box: {
+                    type: "object",
+                    description: "Normalized 0..1 bounding box around the supervisor signature ink. Omit if no ink visible.",
+                    properties: {
+                      x: { type: "number" }, y: { type: "number" },
+                      w: { type: "number" }, h: { type: "number" },
+                    },
+                  },
                   equipment_entries: {
                     type: "array",
                     items: {

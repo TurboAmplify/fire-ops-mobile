@@ -25,7 +25,7 @@ import { OF297FormPreview } from "./OF297FormPreview";
 import { UnsavedChangesDialog } from "./UnsavedChangesDialog";
 import { ShiftTicketImportSheet } from "./ShiftTicketImportSheet";
 import { PayAdjustmentsSection } from "./PayAdjustmentsSection";
-import type { ParsedShiftTicket } from "@/services/shift-ticket-import";
+import { type ParsedShiftTicket, cropSignatureFromImage } from "@/services/shift-ticket-import";
 import { SuccessOverlay } from "@/components/ui/SuccessOverlay";
 import { SignedImage } from "@/components/ui/SignedImage";
 import { uploadSignature, computeHours, buildRemarksString, insertSignatureAuditLog, enforceLunchDeduction } from "@/services/shift-tickets";
@@ -690,7 +690,7 @@ export function ShiftTicketForm({
   };
 
   // Apply parsed shift ticket from imported photo/scan into form state.
-  const handleImportApply = (parsed: ParsedShiftTicket, mode: "fill-empty" | "replace") => {
+  const handleImportApply = async (parsed: ParsedShiftTicket, mode: "fill-empty" | "replace", sourceFile: File | null) => {
     const fill = (current: string, next: string | undefined) => {
       const v = (next ?? "").trim();
       if (!v) return current;
@@ -763,6 +763,38 @@ export function ShiftTicketForm({
       const isFormEmpty = personnelEntries.length === 0 ||
         (personnelEntries.length === 1 && !personnelEntries[0].operator_name && !personnelEntries[0].op_start);
       if (mode === "replace" || isFormEmpty) setPersonnelEntries(importedPe);
+    }
+
+    // Crop signatures from the source photo so the digital record shows the
+    // actual ink the engine boss / supervisor signed on the paper ticket.
+    // Stage as blobs in pendingSigs — the existing effect will upload them
+    // once the ticket has an id (or immediately if it already does).
+    if (sourceFile) {
+      try {
+        const stagedSigs: Record<string, Blob> = {};
+        if (parsed.contractor_signature_box) {
+          const blob = await cropSignatureFromImage(sourceFile, parsed.contractor_signature_box);
+          if (blob) {
+            stagedSigs.contractor = blob;
+            setContractorSigUrl(URL.createObjectURL(blob));
+          }
+        }
+        if (parsed.supervisor_signature_box) {
+          const blob = await cropSignatureFromImage(sourceFile, parsed.supervisor_signature_box);
+          if (blob) {
+            stagedSigs.supervisor = blob;
+            setSupervisorSigUrl(URL.createObjectURL(blob));
+          }
+        }
+        if (Object.keys(stagedSigs).length > 0) {
+          setPendingSigs((prev) => ({ ...prev, ...stagedSigs }));
+          toast.success("Signatures captured from photo — review before saving.");
+        } else if (parsed.contractor_signature_box || parsed.supervisor_signature_box) {
+          toast.warning("Could not crop signatures from the source. Re-sign in the form if needed.");
+        }
+      } catch (err) {
+        console.error("Signature crop failed:", err);
+      }
     }
 
     markDirty();
@@ -1369,8 +1401,8 @@ export function ShiftTicketForm({
         open={showImportSheet}
         onClose={() => setShowImportSheet(false)}
         organizationId={organizationId || ""}
-        onApply={(parsed, mode) => {
-          handleImportApply(parsed, mode);
+        onApply={(parsed, mode, sourceFile) => {
+          handleImportApply(parsed, mode, sourceFile);
           setShowImportSheet(false);
         }}
       />

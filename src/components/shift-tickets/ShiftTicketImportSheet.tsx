@@ -9,8 +9,9 @@ interface Props {
   open: boolean;
   onClose: () => void;
   organizationId: string;
-  /** Called when the user taps "Apply" on the parse result. */
-  onApply: (parsed: ParsedShiftTicket, mode: "fill-empty" | "replace") => void;
+  /** Called when the user taps "Apply" on the parse result. The original
+   *  source file is passed through so the form can crop signature boxes. */
+  onApply: (parsed: ParsedShiftTicket, mode: "fill-empty" | "replace", sourceFile: File | null) => void;
 }
 
 const FIELD_LABELS: Array<{ key: keyof ParsedShiftTicket; label: string }> = [
@@ -32,11 +33,13 @@ export function ShiftTicketImportSheet({ open, onClose, organizationId, onApply 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [stage, setStage] = useState<"pick" | "uploading" | "parsing" | "review">("pick");
   const [parsed, setParsed] = useState<ParsedShiftTicket | null>(null);
+  const [sourceFile, setSourceFile] = useState<File | null>(null);
   const [mode, setMode] = useState<"fill-empty" | "replace">("fill-empty");
 
   const reset = () => {
     setStage("pick");
     setParsed(null);
+    setSourceFile(null);
     setMode("fill-empty");
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
@@ -65,6 +68,7 @@ export function ShiftTicketImportSheet({ open, onClose, organizationId, onApply 
       setStage("parsing");
       const result = await parseShiftTicketAI(fileUrl, file.name);
       setParsed(result);
+      setSourceFile(file);
       setStage("review");
     } catch (err) {
       console.error("Shift ticket import failed:", err);
@@ -75,7 +79,7 @@ export function ShiftTicketImportSheet({ open, onClose, organizationId, onApply 
 
   const handleApply = () => {
     if (!parsed) return;
-    onApply(parsed, mode);
+    onApply(parsed, mode, sourceFile);
     toast.success("Imported — review the form before saving.");
     reset();
     onClose();
