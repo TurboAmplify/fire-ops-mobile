@@ -228,6 +228,15 @@ export function ShiftTicketForm({
   const [showSupervisorSheet, setShowSupervisorSheet] = useState(false);
   // Import-from-photo sheet
   const [showImportSheet, setShowImportSheet] = useState(false);
+  const location = useLocation();
+  const importAutoOpenedRef = useRef(false);
+  useEffect(() => {
+    const state = location.state as { openImport?: boolean } | null;
+    if (state?.openImport && !importAutoOpenedRef.current) {
+      importAutoOpenedRef.current = true;
+      setShowImportSheet(true);
+    }
+  }, [location.state]);
   const { data: availableCrewMembers = [] } = useAvailableCrewMembers(organizationId || undefined);
 
   const selectedCrewNames = new Set(
