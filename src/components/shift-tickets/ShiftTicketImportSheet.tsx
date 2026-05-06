@@ -9,8 +9,9 @@ interface Props {
   open: boolean;
   onClose: () => void;
   organizationId: string;
-  /** Called when the user taps "Apply" on the parse result. */
-  onApply: (parsed: ParsedShiftTicket, mode: "fill-empty" | "replace") => void;
+  /** Called when the user taps "Apply" on the parse result. The original
+   *  source file is passed through so the form can crop signature boxes. */
+  onApply: (parsed: ParsedShiftTicket, mode: "fill-empty" | "replace", sourceFile: File | null) => void;
 }
 
 const FIELD_LABELS: Array<{ key: keyof ParsedShiftTicket; label: string }> = [
