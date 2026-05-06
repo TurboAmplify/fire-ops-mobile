@@ -12,6 +12,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { QuickAttachPaperTicketSheet } from "@/components/shift-tickets/QuickAttachPaperTicketSheet";
 
 interface Props {
   incidentId: string;
@@ -67,6 +68,7 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
   const { data: trucks, isLoading: loadingTrucks } = useIncidentTrucks(incidentId);
   const [showTruckPicker, setShowTruckPicker] = useState(false);
   const [pickerMode, setPickerMode] = useState<"new" | "import">("new");
+  const [showQuickAttach, setShowQuickAttach] = useState(false);
 
   // Fetch all tickets for this incident in one query
   const truckIds = useMemo(() => trucks?.map((t) => t.id) ?? [], [trucks]);
@@ -162,12 +164,12 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
           New Shift Ticket
         </button>
         <button
-          onClick={() => handleNewClick("import")}
+          onClick={() => setShowQuickAttach(true)}
           disabled={noTrucks}
           className="flex w-full items-center justify-center gap-2 rounded-2xl border border-primary/40 bg-primary/10 py-4 text-sm font-bold text-primary active:scale-[0.99] transition-transform touch-target disabled:opacity-40"
         >
           <Camera className="h-5 w-5" />
-          Import paper ticket
+          Attach paper ticket
         </button>
       </div>
 
@@ -241,6 +243,15 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* One-tap paper ticket attach */}
+      <QuickAttachPaperTicketSheet
+        open={showQuickAttach}
+        onClose={() => setShowQuickAttach(false)}
+        incidentId={incidentId}
+        incidentName={incidentName}
+        defaultIncidentTruckId={trucks?.length === 1 ? trucks[0].id : undefined}
+      />
     </div>
   );
 }
