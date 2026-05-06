@@ -164,7 +164,7 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
     setSignatureOpen(true);
   };
 
-  const handleSignatureSave = async (sigBlob: Blob) => {
+  const handleSignatureSave = async (sigBlob: Blob, metadata: SignatureMetadata) => {
     if (!signingDoc || !membership?.organizationId) {
       setSignatureOpen(false);
       return;
@@ -175,7 +175,8 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
       const sourceUrl = await getViewableUrl(signingDoc.file_url);
       if (!sourceUrl) throw new Error("Could not access source document");
 
-      const signerName = user?.email ?? "Contractor";
+      const signerName =
+        metadata.name?.trim() || user?.email || "Contractor";
       const signedAt = new Date();
       const signedPdf = await stampSignatureOntoPdf({
         sourceUrl,
