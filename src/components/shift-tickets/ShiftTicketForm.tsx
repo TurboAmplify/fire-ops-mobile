@@ -763,7 +763,7 @@ export function ShiftTicketForm({
         const activity = r.activity_type === "travel" ? ("travel" as const) : ("work" as const);
         return {
           date: r.date || getLocalDateString(),
-          operator_name: r.operator_name || "",
+          operator_name: snap(r.operator_name),
           op_start: r.op_start || "",
           op_stop: r.op_stop || "",
           sb_start: r.sb_start || "",
