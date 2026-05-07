@@ -692,6 +692,23 @@ export function ShiftTicketForm({
 
   // Apply parsed shift ticket from imported photo/scan into form state.
   const handleImportApply = async (parsed: ParsedShiftTicket, mode: "fill-empty" | "replace", sourceFile: File | null) => {
+    // Build a list of known crew names so OCR misreads ("Les Madstun") snap
+    // to a real crew member ("Les Madsen") instead of creating a phantom.
+    const knownNames = Array.from(
+      new Set(
+        [
+          ...(crewRoster ?? []).map((m) => m.crew_members?.name || ""),
+          ...availableCrewMembers.map((m) => m.name || ""),
+        ].filter((n) => n.trim().length > 0)
+      )
+    );
+    const snap = (raw: string | undefined): string => {
+      const v = (raw ?? "").trim();
+      if (!v || knownNames.length === 0) return v;
+      const m = fuzzyMatchName(v, knownNames, 0.72);
+      return m ? m.match : v;
+    };
+
     const fill = (current: string, next: string | undefined) => {
       const v = (next ?? "").trim();
       if (!v) return current;
@@ -708,8 +725,8 @@ export function ShiftTicketForm({
     setEquipmentType((c) => fill(c, parsed.equipment_type));
     setSerialVin((c) => fill(c, parsed.serial_vin_number));
     setLicenseId((c) => fill(c, parsed.license_id_number));
-    setContractorRepName((c) => fill(c, parsed.contractor_rep_name));
-    setSupervisorName((c) => fill(c, parsed.supervisor_name));
+    setContractorRepName((c) => fill(c, snap(parsed.contractor_rep_name)));
+    setSupervisorName((c) => fill(c, snap(parsed.supervisor_name)));
     setRemarks((c) => fill(c, parsed.remarks));
     if (typeof parsed.transport_retained === "boolean" && (mode === "replace" || !transportRetained)) {
       setTransportRetained(parsed.transport_retained);
