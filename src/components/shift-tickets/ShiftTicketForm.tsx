@@ -1106,6 +1106,21 @@ export function ShiftTicketForm({
           </div>
         </div>
 
+        {/* Thin-crew warning banner — non-blocking */}
+        {(() => {
+          const evalRes = evaluateCrewCount(personnelEntries, equipmentType);
+          if (!evalRes.isUnderMin) return null;
+          return (
+            <div className="flex items-start gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-amber-700 dark:text-amber-400">
+              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+              <p className="text-xs leading-snug">
+                <span className="font-semibold">{evalRes.rule.label} should have at least {evalRes.rule.min} crew.</span>{" "}
+                This ticket has {evalRes.count}. You'll be asked to confirm when signing.
+              </p>
+            </div>
+          );
+        })()}
+
         {/* ── Crew (Personnel Entries) ── */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">
