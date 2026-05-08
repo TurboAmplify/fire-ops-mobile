@@ -190,6 +190,7 @@ export async function fetchPayrollReport(
     shiftTickets: tickets,
     crewMembers: (crewRes.data ?? []) as { id: string; name: string; role: string }[],
     compensation: compMap,
+    roleDefaults: roleDefaultsMap,
     rangeStart: input.rangeStart,
     rangeEnd: input.rangeEnd,
     incidentFilter: input.incidentFilter,
