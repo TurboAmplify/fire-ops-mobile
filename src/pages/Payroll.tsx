@@ -581,6 +581,13 @@ export default function Payroll() {
 
                 {expandedId === line.crewMemberId && (
                   <div className="border-t border-border/60 p-4 space-y-3">
+                    <SourceRowsDebug
+                      tickets={normalizedTickets}
+                      crewName={line.name}
+                      rangeStart={rangeStart}
+                      rangeEnd={rangeEnd}
+                      incidentFilter={incidentFilter}
+                    />
                     {line.byIncident.length > 0 && (
                       <div className="space-y-1">
                         <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">By Fire</p>
