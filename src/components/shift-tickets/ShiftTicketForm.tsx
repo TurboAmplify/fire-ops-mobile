@@ -27,6 +27,7 @@ import { ShiftTicketImportSheet } from "./ShiftTicketImportSheet";
 import { PayAdjustmentsSection } from "./PayAdjustmentsSection";
 import { type ParsedShiftTicket, cropSignatureFromImage } from "@/services/shift-ticket-import";
 import { fuzzyMatchName } from "@/lib/fuzzy-name";
+import { evaluateCrewCount } from "@/lib/crew-minimums";
 import { SuccessOverlay } from "@/components/ui/SuccessOverlay";
 import { SignedImage } from "@/components/ui/SignedImage";
 import { uploadSignature, computeHours, buildRemarksString, insertSignatureAuditLog, enforceLunchDeduction } from "@/services/shift-tickets";
