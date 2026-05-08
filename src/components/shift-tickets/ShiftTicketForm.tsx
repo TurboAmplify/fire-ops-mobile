@@ -1277,7 +1277,11 @@ export function ShiftTicketForm({
                 <button onClick={() => { setContractorSigUrl(null); markDirty(); }} className="text-xs text-destructive touch-target">Clear</button>
               </div>
             ) : (
-              <button onClick={() => setSigModal("contractor")} disabled={uploadingSig}
+              <button onClick={() => {
+                  const evalRes = evaluateCrewCount(personnelEntries, equipmentType);
+                  if (evalRes.isUnderMin) setThinCrewConfirmOpen(true);
+                  else setSigModal("contractor");
+                }} disabled={uploadingSig}
                 className="w-full rounded-xl border-2 border-dashed border-border py-6 text-sm text-muted-foreground touch-target disabled:opacity-40">
                 Tap to sign
               </button>
