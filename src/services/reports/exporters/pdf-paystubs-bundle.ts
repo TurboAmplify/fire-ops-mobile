@@ -93,6 +93,54 @@ function renderPaystub(doc: any, line: CrewPayrollLine, organizationName: string
     }
   }
 
+  // Shift dates worked (mainly for daily pay, but useful audit trail anytime
+  // we have them). Wrap if the list is long.
+  if (line.shiftDates && line.shiftDates.length > 0) {
+    y += 4;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(100);
+    doc.text(`SHIFTS WORKED (${line.shiftDates.length})`, margin + 4, y);
+    doc.setTextColor(0);
+    y += 11;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    const dateStr = line.shiftDates
+      .map((d) => {
+        const dt = new Date(d + "T00:00:00");
+        return isNaN(dt.getTime()) ? d : dt.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      })
+      .join(", ");
+    const wrapped = doc.splitTextToSize(dateStr, pageW - margin * 2 - 8) as string[];
+    wrapped.forEach((ln) => {
+      doc.text(ln, margin + 4, y);
+      y += 10;
+    });
+    doc.setFontSize(9);
+  }
+
+  // Hours / pay by incident (when this paystub spans more than one fire)
+  if (line.byIncident.length > 1) {
+    y += 4;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(100);
+    doc.text("BY INCIDENT", margin + 4, y);
+    doc.setTextColor(0);
+    y += 11;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    line.byIncident.forEach((inc) => {
+      const detail = isDaily && line.dailyRate
+        ? `${Math.round(inc.grossPay / line.dailyRate)} shifts`
+        : `${inc.totalHours.toFixed(2)} hrs`;
+      doc.text(inc.incidentName, margin + 4, y);
+      doc.text(detail, pageW - margin - 100, y, { align: "right" });
+      doc.text(`$${fmt(inc.grossPay)}`, pageW - margin - 4, y, { align: "right" });
+      y += 12;
+    });
+  }
+
   // Adjustments
   if (line.adjustments.length > 0) {
     line.adjustments.forEach((adj) => {
