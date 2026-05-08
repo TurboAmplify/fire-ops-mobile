@@ -218,6 +218,7 @@ export function ShiftTicketForm({
 
   // Signature modal
   const [sigModal, setSigModal] = useState<"contractor" | "supervisor" | null>(null);
+  const [thinCrewConfirmOpen, setThinCrewConfirmOpen] = useState(false);
   const [uploadingSig, setUploadingSig] = useState(false);
   const [pendingSigs, setPendingSigs] = useState<Record<string, Blob>>({});
 
