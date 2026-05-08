@@ -114,8 +114,15 @@
     -webkit-tap-highlight-color: transparent;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    /* Native-feel: prevent rubber-band overscroll on the document */
-    overscroll-behavior-y: none;
+  }
+
+  /* Native-feel: prevent rubber-band overscroll only on touch devices.
+     On desktop (fine pointer), leaving this off ensures the mouse wheel
+     scrolls the page normally without scroll-chaining quirks. */
+  @media (pointer: coarse) {
+    body {
+      overscroll-behavior-y: none;
+    }
   }
 
   /* Native-feel: non-content UI shouldn't be selectable or show iOS callout */
