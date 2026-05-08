@@ -27,6 +27,7 @@ import { ShiftTicketImportSheet } from "./ShiftTicketImportSheet";
 import { PayAdjustmentsSection } from "./PayAdjustmentsSection";
 import { type ParsedShiftTicket, cropSignatureFromImage } from "@/services/shift-ticket-import";
 import { fuzzyMatchName } from "@/lib/fuzzy-name";
+import { evaluateCrewCount } from "@/lib/crew-minimums";
 import { SuccessOverlay } from "@/components/ui/SuccessOverlay";
 import { SignedImage } from "@/components/ui/SignedImage";
 import { uploadSignature, computeHours, buildRemarksString, insertSignatureAuditLog, enforceLunchDeduction } from "@/services/shift-tickets";
@@ -217,6 +218,7 @@ export function ShiftTicketForm({
 
   // Signature modal
   const [sigModal, setSigModal] = useState<"contractor" | "supervisor" | null>(null);
+  const [thinCrewConfirmOpen, setThinCrewConfirmOpen] = useState(false);
   const [uploadingSig, setUploadingSig] = useState(false);
   const [pendingSigs, setPendingSigs] = useState<Record<string, Blob>>({});
 
@@ -1104,6 +1106,21 @@ export function ShiftTicketForm({
           </div>
         </div>
 
+        {/* Thin-crew warning banner — non-blocking */}
+        {(() => {
+          const evalRes = evaluateCrewCount(personnelEntries, equipmentType);
+          if (!evalRes.isUnderMin) return null;
+          return (
+            <div className="flex items-start gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-amber-700 dark:text-amber-400">
+              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+              <p className="text-xs leading-snug">
+                <span className="font-semibold">{evalRes.rule.label} should have at least {evalRes.rule.min} crew.</span>{" "}
+                This ticket has {evalRes.count}. You'll be asked to confirm when signing.
+              </p>
+            </div>
+          );
+        })()}
+
         {/* ── Crew (Personnel Entries) ── */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">
@@ -1260,7 +1277,11 @@ export function ShiftTicketForm({
                 <button onClick={() => { setContractorSigUrl(null); markDirty(); }} className="text-xs text-destructive touch-target">Clear</button>
               </div>
             ) : (
-              <button onClick={() => setSigModal("contractor")} disabled={uploadingSig}
+              <button onClick={() => {
+                  const evalRes = evaluateCrewCount(personnelEntries, equipmentType);
+                  if (evalRes.isUnderMin) setThinCrewConfirmOpen(true);
+                  else setSigModal("contractor");
+                }} disabled={uploadingSig}
                 className="w-full rounded-xl border-2 border-dashed border-border py-6 text-sm text-muted-foreground touch-target disabled:opacity-40">
                 Tap to sign
               </button>
@@ -1346,6 +1367,30 @@ export function ShiftTicketForm({
           </>
         )}
       </div>
+
+      {/* Thin-crew confirm dialog (gates contractor signature) */}
+      <Dialog open={thinCrewConfirmOpen} onOpenChange={setThinCrewConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Short crew on this ticket
+            </DialogTitle>
+            <DialogDescription>
+              {(() => {
+                const ev = evaluateCrewCount(personnelEntries, equipmentType);
+                return `${ev.rule.label} should have at least ${ev.rule.min} crew. This ticket has ${ev.count}. Confirm and sign anyway?`;
+              })()}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setThinCrewConfirmOpen(false)}>Cancel</Button>
+            <Button onClick={() => { setThinCrewConfirmOpen(false); setSigModal("contractor"); }}>
+              I confirm short crew
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Signature modal */}
       <SignaturePicker

@@ -581,6 +581,13 @@ export default function Payroll() {
 
                 {expandedId === line.crewMemberId && (
                   <div className="border-t border-border/60 p-4 space-y-3">
+                    <SourceRowsDebug
+                      tickets={normalizedTickets}
+                      crewName={line.name}
+                      rangeStart={rangeStart}
+                      rangeEnd={rangeEnd}
+                      incidentFilter={incidentFilter}
+                    />
                     {line.byIncident.length > 0 && (
                       <div className="space-y-1">
                         <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">By Fire</p>
@@ -893,3 +900,89 @@ function EmptyState({ message }: { message: string }) {
     </div>
   );
 }
+
+/**
+ * Admin debug expander: shows the raw personnel-entry rows the payroll
+ * aggregator counted for this crew member in the selected range/incident.
+ * Useful for "why is the total wrong?" diagnostics — matches the same
+ * filters used inside aggregateCrewPayroll exactly.
+ */
+function SourceRowsDebug({
+  tickets,
+  crewName,
+  rangeStart,
+  rangeEnd,
+  incidentFilter,
+}: {
+  tickets: ShiftTicketLite[];
+  crewName: string;
+  rangeStart: Date | null;
+  rangeEnd: Date | null;
+  incidentFilter: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const target = crewName.trim().toLowerCase();
+
+  const rows = useMemo(() => {
+    const out: Array<{ ticketId: string; date: string; incidentName: string; hours: number; opStart: string; opStop: string }> = [];
+    tickets.forEach((st) => {
+      if (incidentFilter !== "all" && st.incident_id !== incidentFilter) return;
+      const entries = Array.isArray(st.personnel_entries) ? (st.personnel_entries as any[]) : [];
+      entries.forEach((pe) => {
+        if (!pe?.operator_name || !pe?.date) return;
+        if (String(pe.operator_name).trim().toLowerCase() !== target) return;
+        // Match aggregator's withinRange semantics
+        let dt: Date;
+        try { dt = parseISO(pe.date); } catch { return; }
+        if (isNaN(dt.getTime())) return;
+        if (rangeStart && dt < rangeStart) return;
+        if (rangeEnd && dt > rangeEnd) return;
+        const hours = Number(pe.total) || 0;
+        if (hours <= 0) return;
+        out.push({
+          ticketId: st.id,
+          date: pe.date,
+          incidentName: st.incident_name ?? "Unassigned",
+          hours,
+          opStart: pe.op_start ?? "",
+          opStop: pe.op_stop ?? "",
+        });
+      });
+    });
+    out.sort((a, b) => a.date.localeCompare(b.date));
+    return out;
+  }, [tickets, target, rangeStart, rangeEnd, incidentFilter]);
+
+  const total = rows.reduce((s, r) => s + r.hours, 0);
+
+  return (
+    <div className="rounded-lg border border-dashed border-border/60 bg-background/60 p-2.5">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between text-[11px] font-bold uppercase tracking-wide text-muted-foreground touch-target"
+      >
+        <span>Show source rows ({rows.length})</span>
+        <span className="font-mono text-[11px]">{total.toFixed(1)}h {open ? "▾" : "▸"}</span>
+      </button>
+      {open && (
+        <div className="mt-2 space-y-1">
+          {rows.length === 0 && (
+            <p className="text-[11px] italic text-muted-foreground">
+              No personnel rows found for "{crewName}" in this range/incident filter. If hours are missing here but exist on tickets, the operator name on those rows likely doesn't match this crew member's profile name.
+            </p>
+          )}
+          {rows.map((r, i) => (
+            <div key={i} className="flex justify-between items-center gap-2 text-[11px] font-mono">
+              <span className="shrink-0">{r.date}</span>
+              <span className="truncate flex-1 text-muted-foreground">{r.incidentName}</span>
+              <span className="shrink-0">{r.opStart}–{r.opStop}</span>
+              <span className="shrink-0 font-bold w-12 text-right">{r.hours.toFixed(1)}h</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
