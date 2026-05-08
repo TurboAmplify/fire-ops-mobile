@@ -58,7 +58,7 @@ export async function fetchPayrollReport(
       .eq("organization_id", input.organizationId),
     supabase
       .from("crew_compensation")
-      .select("crew_member_id, hourly_rate, hw_rate, pay_method, daily_rate")
+      .select("crew_member_id, hourly_rate, hw_rate, pay_method, daily_rate, use_org_default_rate")
       .eq("organization_id", input.organizationId),
     supabase
       .from("crew_compensation")
