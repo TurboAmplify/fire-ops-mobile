@@ -64,15 +64,22 @@ export function resolveEffectiveCompensation(
   const def = roleKey && roleDefaults ? roleDefaults.get(roleKey) : undefined;
   const useDefault = comp?.use_org_default_rate ?? true;
 
+  // When useDefault is ON, the role default wins over per-employee values
+  // (rates AND pay method). When OFF, the per-employee value wins, with
+  // the role default only used as a fallback for missing fields.
   const pickNumber = (override: number | null | undefined, fallback: number | null | undefined): number => {
-    if (!useDefault && override != null) return Number(override) || 0;
+    if (useDefault) {
+      if (fallback != null) return Number(fallback) || 0;
+      if (override != null) return Number(override) || 0;
+      return 0;
+    }
     if (override != null) return Number(override) || 0;
     if (fallback != null) return Number(fallback) || 0;
     return 0;
   };
 
   const pickMethod = (): "hourly" | "daily" => {
-    if (!useDefault && comp?.pay_method) return comp.pay_method === "daily" ? "daily" : "hourly";
+    if (useDefault && def?.pay_method) return def.pay_method;
     if (comp?.pay_method) return comp.pay_method === "daily" ? "daily" : "hourly";
     if (def?.pay_method) return def.pay_method;
     return "hourly";
