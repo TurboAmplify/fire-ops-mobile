@@ -10,6 +10,7 @@ import {
   type ShiftTicketLite,
   type WithholdingProfile,
   type OrgPayrollDefaults,
+  type RoleDefaultRateLite,
   DEFAULT_ORG_PAYROLL,
 } from "@/lib/payroll";
 
