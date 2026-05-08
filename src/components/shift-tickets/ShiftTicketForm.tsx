@@ -1368,6 +1368,30 @@ export function ShiftTicketForm({
         )}
       </div>
 
+      {/* Thin-crew confirm dialog (gates contractor signature) */}
+      <Dialog open={thinCrewConfirmOpen} onOpenChange={setThinCrewConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Short crew on this ticket
+            </DialogTitle>
+            <DialogDescription>
+              {(() => {
+                const ev = evaluateCrewCount(personnelEntries, equipmentType);
+                return `${ev.rule.label} should have at least ${ev.rule.min} crew. This ticket has ${ev.count}. Confirm and sign anyway?`;
+              })()}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setThinCrewConfirmOpen(false)}>Cancel</Button>
+            <Button onClick={() => { setThinCrewConfirmOpen(false); setSigModal("contractor"); }}>
+              I confirm short crew
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Signature modal */}
       <SignaturePicker
         open={sigModal !== null}
