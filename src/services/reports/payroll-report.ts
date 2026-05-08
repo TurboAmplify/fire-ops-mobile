@@ -10,6 +10,7 @@ import {
   type ShiftTicketLite,
   type WithholdingProfile,
   type OrgPayrollDefaults,
+  type RoleDefaultRateLite,
   DEFAULT_ORG_PAYROLL,
 } from "@/lib/payroll";
 
@@ -57,7 +58,7 @@ export async function fetchPayrollReport(
       .eq("organization_id", input.organizationId),
     supabase
       .from("crew_compensation")
-      .select("crew_member_id, hourly_rate, hw_rate, pay_method, daily_rate")
+      .select("crew_member_id, hourly_rate, hw_rate, pay_method, daily_rate, use_org_default_rate")
       .eq("organization_id", input.organizationId),
     supabase
       .from("crew_compensation")
@@ -124,13 +125,33 @@ export async function fetchPayrollReport(
     incident_name: st.incident_trucks?.incidents?.name ?? "Unassigned",
   }));
 
-  const compMap = new Map<string, { hourly_rate: number | null; hw_rate: number | null; pay_method?: "hourly" | "daily" | null; daily_rate?: number | null }>();
+  const compMap = new Map<string, { hourly_rate: number | null; hw_rate: number | null; pay_method?: "hourly" | "daily" | null; daily_rate?: number | null; use_org_default_rate?: boolean | null }>();
   (compRes.data ?? []).forEach((c: any) => compMap.set(c.crew_member_id, {
     hourly_rate: c.hourly_rate,
     hw_rate: c.hw_rate,
     pay_method: c.pay_method,
     daily_rate: c.daily_rate,
+    use_org_default_rate: c.use_org_default_rate,
   }));
+
+  // Org-level per-role default rates (Engine Boss = $1000/day, etc.). Without
+  // these, anyone whose comp row is set to "use org default" resolves to $0.
+  const roleDefaultsRes = await supabase
+    .from("org_role_default_rates" as any)
+    .select("role, pay_method, hourly_rate, hw_rate, daily_rate")
+    .eq("organization_id", input.organizationId);
+  const roleDefaultsMap = new Map<string, RoleDefaultRateLite>();
+  ((roleDefaultsRes.data as any[]) ?? []).forEach((r: any) => {
+    const role = (r.role ?? "").trim();
+    if (!role) return;
+    roleDefaultsMap.set(role, {
+      role,
+      pay_method: r.pay_method === "daily" ? "daily" : "hourly",
+      hourly_rate: r.hourly_rate,
+      hw_rate: r.hw_rate,
+      daily_rate: r.daily_rate,
+    });
+  });
 
   const profileMap = new Map<string, WithholdingProfile>();
   (withholdingRes.data ?? []).forEach((r: any) => {
@@ -169,6 +190,7 @@ export async function fetchPayrollReport(
     shiftTickets: tickets,
     crewMembers: (crewRes.data ?? []) as { id: string; name: string; role: string }[],
     compensation: compMap,
+    roleDefaults: roleDefaultsMap,
     rangeStart: input.rangeStart,
     rangeEnd: input.rangeEnd,
     incidentFilter: input.incidentFilter,
