@@ -1,68 +1,52 @@
-# Payroll fix-up + thin-crew warning
+# Daily-Rate Paystub Breakdown (Engine Bosses)
 
-## Part 1 — Why the payroll numbers look wrong
+## Goal
+For crew paid on a flat daily rate ($1000/day for Engine Bosses), the paystub should display an hourly breakdown — Regular pay, H&W (on first 40 hrs/week), and Overtime (1.5×, >40 hrs/week Mon–Sun) — that always sums **exactly** to `shifts × daily_rate`. Gross pay, net pay, deductions, and totals do not change.
 
-I pulled the database for **2026 State Severity / DL62, week of Mon Apr 20 – Sun Apr 26 2026** (the Mon–Sun bucket containing 4/23):
+## Approach
+**Back-solve the hourly base rate per week** so the breakdown always reconciles to the daily total.
 
-| Date | Gabriel Beck | Sheldon Sundstrom | Les Madsen |
-|---|---|---|---|
-| 4/21 | 12 | 12 | 12 |
-| 4/22 | 11.5 | 11.5 | 11.5 |
-| 4/23 | 11.5 | 11.5 | 11.5 |
-| 4/24 | 11.5 | 11.5 | 11.5 |
-| 4/25 | 12 | 12 | 12 |
-| 4/26 | 12 | 12 | 12 |
+For each Mon–Sun week worked:
+- `shifts` = unique shift dates that week
+- `reg_hrs` = min(totalHours, 40)
+- `ot_hrs`  = max(totalHours − 40, 0)
+- `hw_rate` = $4.93 (org default H&W)
+- Target weekly gross = `shifts × 1000`
 
-**The shift-ticket source data is correct** — every ticket lists all three names with full hours. There are zero negative payroll adjustments for any of them.
+Solve for `base`:
+```
+shifts × 1000 = reg_hrs × (base + hw_rate) + ot_hrs × base × 1.5
+base = (shifts × 1000 − reg_hrs × hw_rate) / (reg_hrs + 1.5 × ot_hrs)
+```
 
-So the "3.5 hours" the page shows for Gabriel/Sheldon is a **display/aggregation issue**, not missing data. Two real problems exist and one needs investigation:
+Then derived values:
+- `reg_pay = reg_hrs × base`
+- `hw_pay  = reg_hrs × hw_rate`
+- `ot_pay  = ot_hrs × base × 1.5`
+- Sum = `shifts × 1000` exactly.
 
-### 1a. Les Madsen's compensation is misconfigured (root cause of his $0)
-- `crew_compensation` row: `pay_method = 'hourly'`, `hourly_rate = NULL`, `daily_rate = NULL`.
-- You said he is paid **by the day** — so his row needs `pay_method='daily'` and a `daily_rate` set.
-- **Fix**: open his crew comp settings in the Payroll → Settings sheet and switch to Daily + enter his daily rate. (No code change needed; this is a data fix you do in the UI. I'll confirm the form exposes "daily" cleanly when I implement.)
+Aggregate across weeks for the paystub period: sum reg_hrs, ot_hrs, reg_pay, hw_pay, ot_pay. Gross stays `total_shifts × daily_rate`.
 
-### 1b. Gabriel/Sheldon "3.5 hours" — needs a live look
-The aggregator code (`src/lib/payroll.ts` → `aggregateCrewPayroll`) matches names case-insensitively, sums `pe.total`, and filters by `withinRange(pe.date, rangeStart, rangeEnd)`. Given the data above it should return ~70.5 hours each for that week, not 3.5.
+## Edge cases
+- **No hours logged but shifts exist** (zero-hour daily ticket): fall back to current single "Daily Flat Rate" line — back-solve undefined.
+- **Derived base ≤ 0** (would only happen if H&W alone exceeds daily): fall back to flat daily line, log a warning.
+- **Hourly crew, mixed periods, adjustments, reimbursements**: untouched. Only `payMethod === "daily"` lines change presentation.
 
-I want to add a small **debug expander** under each crew row on the Payroll page (admin-only, behind a "Show source rows" toggle) that lists every personnel entry the aggregator counted for the selected range — date, ticket id, incident, hours. This makes any future "why is this number wrong?" question answerable in 2 seconds, and will immediately tell us why Gabriel reads 3.5 on your screen. Once we see what the page actually picks up, the fix (if any) is trivial.
+## Files to change
+- `src/lib/payroll.ts` — in the `isDaily` branch (~line 614), instead of zeroing `regularPay/hwPay/overtimePay`, run the weekly back-solve and populate them. Gross still = `shifts × dailyRate`. Also populate `byIncident` reg/hw/ot proportionally (by shifts within incident × that week's derived rates), keeping each incident's gross at `incident_shifts × dailyRate`.
+- `src/components/payroll/Paystub.tsx` — for daily method, render the hourly earnings table (Reg / H&W / OT rows) instead of the current single Daily row. Add a small footnote: "Daily flat rate of $X/shift. Hourly breakdown shown for reference; total guaranteed at daily rate."
+- `src/components/payroll/generatePaystubPdf.ts` — mirror the same breakdown for the PDF.
+- `src/services/reports/exporters/pdf-paystubs-bundle.ts` — same breakdown in the bundled PDF.
 
-## Part 2 — Thin-crew warning on shift tickets
+## What does NOT change
+- `daily_rate` value ($1000), org default rates, withholding %s, deduction math.
+- Hourly crew paystubs.
+- Gross/net totals for daily crew (still `shifts × 1000`, minus deductions, plus reimbursements).
+- Org settings UI, role default rates UI.
 
-Add a non-blocking-but-confirmed warning when a ticket's crew count is below the unit-type minimum.
-
-### Rules
-| Unit type contains | Minimum | Suggested max |
-|---|---|---|
-| "engine" or "Type 3/4/5/6" | **3** | 4 |
-| "hand wash" / "wash trailer" | 1 | — |
-| "water tender" / "tender" | 1 | — |
-| anything else | 1 | — |
-
-Distinct crew = unique `operator_name` values across `personnel_entries` for that ticket.
-
-### Where it shows
-1. **`ShiftTicketForm.tsx`** — yellow banner above the Personnel section whenever distinct crew < minimum, with copy like *"Engines should have at least 3 crew. This ticket has 2."*
-2. **`SignaturePicker.tsx` (contractor signature step)** — if under minimum, show a confirm dialog: *"This ticket is below the recommended crew count for this unit type. Confirm and sign anyway?"* with **Cancel** / **I confirm short crew** buttons. Only after confirm does the signature flow proceed.
-3. No hard block. Supervisor signature is unchanged.
-
-### Implementation
-- New helper `src/lib/crew-minimums.ts` exporting `getCrewMinimum(unitType: string|null): { min: number; suggestedMax: number|null; label: string }` and `evaluateCrewCount(entries, unitType)`.
-- Use it in `ShiftTicketForm` (banner) and `SignaturePicker` (confirm dialog).
-- Pure function, easy to unit-test later if desired.
-
-## Part 3 — Files I'll touch
-- `src/lib/crew-minimums.ts` (new)
-- `src/components/shift-tickets/ShiftTicketForm.tsx` (add banner)
-- `src/components/shift-tickets/SignaturePicker.tsx` (confirm dialog when contractor signing under min)
-- `src/pages/Payroll.tsx` (add per-crew "Show source rows" debug expander, admin-only)
-
-## What I will **not** touch
-- Aggregation math in `src/lib/payroll.ts` — until the debug view confirms what's actually being read, I won't guess at a fix.
-- Les Madsen's crew_compensation row — that's a data edit you'll do in the UI after I confirm the daily-pay form works for him.
-
-## What to test after
-1. Open Payroll → State Severity → expand Gabriel Beck → tap **Show source rows**. Tell me what dates/hours appear. We then know exactly what to fix (or confirm nothing's wrong).
-2. Open a DL62 shift ticket and remove a crew member → see yellow banner.
-3. Tap contractor sign on a 2-person engine ticket → confirm dialog appears.
-4. Set Les Madsen's comp to Daily + a rate → his weekly total appears as `days × daily_rate`.
+## Testing
+1. Les (Engine Boss, $1000/day, daily method) on the State Severity incident with ~7 shifts: paystub should show Reg/H&W/OT lines summing to `7 × $1000 = $7,000`, OT correctly bucketed by Mon–Sun weeks.
+2. Hourly crew member on same incident: paystub unchanged.
+3. Daily crew with zero hours logged (just shift dates): falls back to flat daily line, gross still correct.
+4. Multi-incident daily crew: per-incident breakdown lines still sum to total gross.
+5. Reports → Payroll → bundled PDF export shows the breakdown across all daily-rate paystubs.

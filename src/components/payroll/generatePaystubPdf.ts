@@ -63,7 +63,7 @@ export async function generatePaystubPdf({ line, organizationName, periodLabel }
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
   doc.text("Earnings", col1, y);
-  doc.text(isDaily ? "Shifts" : "Hours", col2, y, { align: "right" });
+  doc.text("Hours", col2, y, { align: "right" });
   doc.text("Rate", col3, y, { align: "right" });
   doc.text("Amount", col4, y, { align: "right" });
   y += 6;
@@ -79,13 +79,24 @@ export async function generatePaystubPdf({ line, organizationName, periodLabel }
     y += 14;
   };
   if (isDaily) {
-    const shifts = line.shiftCount ?? 0;
+    const base = line.dailyDerivedBase;
     earningRow(
-      "Daily Flat Rate",
-      String(shifts),
-      `$${fmt(line.dailyRate!)}/shift`,
-      `$${fmt(shifts * (line.dailyRate ?? 0))}`,
+      "Regular",
+      line.regularHours.toFixed(2),
+      base ? `$${fmt(base)}/hr` : "—",
+      `$${fmt(line.regularPay)}`,
     );
+    if (line.hwPay > 0) {
+      earningRow("Health & Welfare", line.regularHours.toFixed(2), `$${fmt(line.hwRate)}/hr`, `$${fmt(line.hwPay)}`);
+    }
+    if (line.overtimeHours > 0) {
+      earningRow(
+        "Overtime (1.5x)",
+        line.overtimeHours.toFixed(2),
+        base ? `$${fmt(base * 1.5)}/hr` : "—",
+        `$${fmt(line.overtimePay)}`,
+      );
+    }
   } else {
     earningRow("Regular", line.regularHours.toFixed(2), `$${fmt(line.hourlyRate)}/hr`, `$${fmt(line.regularPay)}`);
     if (line.hwPay > 0) {
@@ -104,9 +115,28 @@ export async function generatePaystubPdf({ line, organizationName, periodLabel }
   doc.line(margin, y, pageW - margin, y);
   y += 12;
   doc.setFont("helvetica", "bold");
-  doc.text("Gross Pay", col1, y);
+  doc.text(
+    isDaily ? `Gross Pay (${line.shiftCount ?? 0} shifts × $${fmt(line.dailyRate!)})` : "Gross Pay",
+    col1,
+    y,
+  );
   doc.text(`$${fmt(line.grossPay)}`, col4, y, { align: "right" });
-  y += 22;
+  y += 14;
+  if (isDaily) {
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(8);
+    doc.setTextColor(120);
+    doc.text(
+      `Flat daily rate of $${fmt(line.dailyRate!)}/shift. Hourly breakdown shown for reference; gross is guaranteed at the daily rate.`,
+      col1,
+      y,
+    );
+    doc.setTextColor(0);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    y += 12;
+  }
+  y += 8;
 
   // By incident
   if (line.byIncident.length > 1) {
