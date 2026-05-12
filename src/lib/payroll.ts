@@ -697,6 +697,7 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
       line.dailyRate = dailyRate;
       line.shiftCount = shiftCount;
       line.shiftDates = sortedShiftDates;
+      if (dailyDerivedBase !== undefined) line.dailyDerivedBase = dailyDerivedBase;
     }
 
     if (withholdings) {
