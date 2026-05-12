@@ -115,9 +115,28 @@ export async function generatePaystubPdf({ line, organizationName, periodLabel }
   doc.line(margin, y, pageW - margin, y);
   y += 12;
   doc.setFont("helvetica", "bold");
-  doc.text("Gross Pay", col1, y);
+  doc.text(
+    isDaily ? `Gross Pay (${line.shiftCount ?? 0} shifts × $${fmt(line.dailyRate!)})` : "Gross Pay",
+    col1,
+    y,
+  );
   doc.text(`$${fmt(line.grossPay)}`, col4, y, { align: "right" });
-  y += 22;
+  y += 14;
+  if (isDaily) {
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(8);
+    doc.setTextColor(120);
+    doc.text(
+      `Flat daily rate of $${fmt(line.dailyRate!)}/shift. Hourly breakdown shown for reference; gross is guaranteed at the daily rate.`,
+      col1,
+      y,
+    );
+    doc.setTextColor(0);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    y += 12;
+  }
+  y += 8;
 
   // By incident
   if (line.byIncident.length > 1) {
