@@ -64,11 +64,42 @@ function renderPaystub(doc: any, line: CrewPayrollLine, organizationName: string
   const isDaily = line.payMethod === "daily";
 
   if (isDaily && line.dailyRate) {
-    doc.text("Daily Rate", margin + 4, y);
-    doc.text(String(line.shiftCount ?? 0), pageW - margin - 200, y, { align: "right" });
-    doc.text(`$${fmt(line.dailyRate)}`, pageW - margin - 100, y, { align: "right" });
-    doc.text(`$${fmt((line.shiftCount ?? 0) * line.dailyRate)}`, pageW - margin - 4, y, { align: "right" });
-    y += 14;
+    const base = line.dailyDerivedBase;
+    doc.text("Regular", margin + 4, y);
+    doc.text(line.regularHours.toFixed(2), pageW - margin - 200, y, { align: "right" });
+    doc.text(base ? `$${fmt(base)}` : "—", pageW - margin - 100, y, { align: "right" });
+    doc.text(`$${fmt(line.regularPay)}`, pageW - margin - 4, y, { align: "right" });
+    y += 13;
+
+    if (line.hwPay > 0) {
+      doc.text("H&W", margin + 4, y);
+      doc.text(line.regularHours.toFixed(2), pageW - margin - 200, y, { align: "right" });
+      doc.text(`$${fmt(line.hwRate)}`, pageW - margin - 100, y, { align: "right" });
+      doc.text(`$${fmt(line.hwPay)}`, pageW - margin - 4, y, { align: "right" });
+      y += 13;
+    }
+
+    if (line.overtimeHours > 0) {
+      doc.text("Overtime (1.5x)", margin + 4, y);
+      doc.text(line.overtimeHours.toFixed(2), pageW - margin - 200, y, { align: "right" });
+      doc.text(base ? `$${fmt(base * 1.5)}` : "—", pageW - margin - 100, y, { align: "right" });
+      doc.text(`$${fmt(line.overtimePay)}`, pageW - margin - 4, y, { align: "right" });
+      y += 13;
+    }
+
+    // Daily-rate footnote
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(8);
+    doc.setTextColor(120);
+    doc.text(
+      `Flat daily rate: ${line.shiftCount ?? 0} shifts × $${fmt(line.dailyRate)} = $${fmt((line.shiftCount ?? 0) * line.dailyRate)}. Hourly breakdown shown for reference.`,
+      margin + 4,
+      y,
+    );
+    doc.setTextColor(0);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    y += 12;
   } else {
     doc.text("Regular", margin + 4, y);
     doc.text(line.regularHours.toFixed(2), pageW - margin - 200, y, { align: "right" });
