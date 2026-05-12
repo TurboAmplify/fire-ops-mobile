@@ -615,15 +615,39 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
     byIncident.sort((a, b) => b.grossPay - a.grossPay);
 
     let grossPay: number;
+    let dailyDerivedBase: number | undefined;
     if (isDaily) {
-      // Flat daily — ignore hourly breakdown for pay calculation
+      // Flat daily — gross = shifts × dailyRate. Back-solve a weekly hourly base so the
+      // displayed Reg/H&W/OT lines on the paystub sum EXACTLY to shifts × dailyRate.
       grossPay = shiftCount * dailyRate;
       regularPay = 0;
       hwPay = 0;
       overtimePay = 0;
-      // Keep hours for display, but zero out OT (no OT on daily)
-      overtimeHours = 0;
-      regularHours = totalHours;
+      let derivedBaseNumer = 0;
+      let derivedBaseDenom = 0;
+      weeklyForDaily.forEach((wk) => {
+        const target = wk.shifts * dailyRate;
+        const denom = wk.regHrs + 1.5 * wk.otHrs;
+        if (denom <= 0) {
+          // No hours logged this week — show entire weekly daily total as regular pay (no hours).
+          regularPay += target;
+          return;
+        }
+        const base = (target - wk.regHrs * hwRate) / denom;
+        if (base <= 0) {
+          // Pathological — H&W alone exceeds daily. Fall back: put it all in regular pay.
+          regularPay += target;
+          return;
+        }
+        regularPay += wk.regHrs * base;
+        hwPay += wk.regHrs * hwRate;
+        overtimePay += wk.otHrs * base * 1.5;
+        derivedBaseNumer += base * (wk.regHrs + wk.otHrs);
+        derivedBaseDenom += wk.regHrs + wk.otHrs;
+      });
+      if (derivedBaseDenom > 0) {
+        dailyDerivedBase = derivedBaseNumer / derivedBaseDenom;
+      }
     } else {
       grossPay = regularPay + hwPay + overtimePay;
     }
