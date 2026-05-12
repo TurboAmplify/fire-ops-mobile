@@ -536,6 +536,8 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
       string,
       { incidentName: string; totalHours: number; regularHours: number; overtimeHours: number; dates: Set<string> }
     >();
+    // Per-week data needed for daily-rate back-solve (Reg/H&W/OT breakdown that sums to shifts × daily)
+    const weeklyForDaily: { shifts: number; regHrs: number; otHrs: number }[] = [];
 
     if (wkMap) {
       wkMap.forEach((bucket) => {
@@ -549,6 +551,8 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
         regularPay += wkReg * hourlyRate;
         hwPay += wkReg * hwRate;
         overtimePay += wkOT * hourlyRate * 1.5;
+
+        weeklyForDaily.push({ shifts: bucket.dates.size, regHrs: wkReg, otHrs: wkOT });
 
         bucket.dates.forEach((d) => allDates.add(d));
 
