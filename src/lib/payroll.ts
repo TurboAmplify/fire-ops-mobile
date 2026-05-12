@@ -318,6 +318,8 @@ export interface CrewPayrollLine {
   dailyRate?: number;
   shiftCount?: number;
   shiftDates?: string[];
+  // For daily-rate crew: average effective hourly base back-solved so Reg+H&W+OT = shifts × dailyRate
+  dailyDerivedBase?: number;
   // Adjustments (admin-added bonus pay, paid at base rate, no OT/H&W)
   adjustments: AdjustmentLine[];
   adjustmentTotal: number;
