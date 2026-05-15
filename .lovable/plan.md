@@ -1,81 +1,64 @@
-## What's actually happening
+## Important context I didn't have before
 
-Dustin downloaded **FireOps HQ from the App Store** (bundle id `com.fireopshq.app`), opened it, tapped **Continue with Apple**, completed Face ID / Apple ID, and then sees a white screen.
+You're using **Despia** to wrap `https://app.fireopshq.com` as a native shell. Despia loads the live web app on launch, so:
 
-### Root cause
+- ✅ Web changes published in Lovable **do** reach the iOS app automatically — no Despia rebuild needed for normal updates.
+- ❌ The native plugin approach in the previous plan **won't work**. Despia doesn't bundle the `@capacitor-community/apple-sign-in` native module. Calling it from inside the Despia WebView throws "plugin not implemented" — same white screen, different reason.
 
-In `src/pages/Login.tsx` we call:
+So the previous plan was wrong for your setup, and I need to fix it. Apologies for the churn.
 
-```ts
-lovable.auth.signInWithOAuth("apple", {
-  redirect_uri: window.location.origin,
-});
-```
+## Why Apple sign-in is fundamentally broken inside Despia
 
-That is the **web** OAuth flow — it opens Apple's sign-in page in an external browser and expects to redirect back to `redirect_uri` when done.
+Apple's OAuth flow opens Apple's sign-in page in the system browser, then needs to redirect back to the app via either a registered **Universal Link** or a **custom URL scheme**. Despia's wrapper doesn't register either of those for the Lovable OAuth broker URL (`/~oauth/callback`). When Apple finishes auth, the callback URL has nowhere to land → blank page → white screen. There's no JavaScript fix for that part — it's a native-shell capability that has to be configured at build time.
 
-Inside the iOS Capacitor app, `window.location.origin` is `capacitor://localhost` (or `https://localhost` on newer Capacitor). When Apple finishes auth and tries to send the user back to `capacitor://localhost/~oauth/callback`, iOS Safari has no way to hand control back to the FireOps HQ app — the universal link / custom-scheme handler isn't registered. The user is left staring at a blank Safari page, or returns to the still-empty WebView (the "white screen").
+Without a native rebuild that registers the universal link / scheme handler, Apple sign-in **cannot** complete inside Despia.
 
-This is the standard Capacitor + web-OAuth failure mode. It only affects the App Store build; the web app at `app.fireopshq.com` is not impacted, which matches the fact that we have **zero error_logs from Dustin's user_id** (the failure is in Apple's flow, not in our React tree).
+## The fix that actually ships through Lovable today
 
-Email/password login is unaffected — Dustin can sign in right now using his email + password as a workaround.
+Hide the "Continue with Apple" button when the app is running inside the Despia in-app WebView, and show a clean explanation that points users to email + password instead. The web app at `app.fireopshq.com` (opened in real Safari/Chrome) keeps Apple sign-in working unchanged.
 
-## Fix: native Sign in with Apple on iOS
+### How we detect "inside Despia"
 
-Use the OS-native Sign in with Apple sheet on iOS, then exchange the resulting Apple identity token directly with Lovable Cloud auth. Keep the existing web flow on Android and on the web app.
+iOS in-app WebViews (Despia's WKWebView) have a user agent that includes `iPhone` / `iPad` but **not** the `Safari/` token that real mobile Safari sends. That's the standard, reliable way to detect a wrapped WebView. Wrap it in a small `isInAppWebView()` helper in `src/lib/platform.ts` so we have one place to change it later.
 
-### 1. Add native plugin
+### What changes
 
-```
-npm i @capacitor-community/apple-sign-in
-```
+1. **`src/lib/platform.ts`** — new file, ~15 lines. Exports `isInAppWebView()` (UA sniff for iOS WKWebView without `Safari/`).
+2. **`src/pages/Login.tsx`** —
+   - If `isInAppWebView()`, hide the **Continue with Apple** button and the divider. Email + password only.
+   - Add a single muted line under the form: *"Sign in with Apple is coming soon to the app — please use your email and password."*
+3. **Roll back the native plugin code** that won't work in Despia:
+   - Remove `src/lib/apple-sign-in.ts`
+   - Restore `Login.tsx` to use the original `lovable.auth.signInWithOAuth("apple", …)` for the **web only** branch (since Apple sign-in still works fine in real browsers).
+   - Uninstall `@capacitor-community/apple-sign-in` (no point keeping a plugin we can't use).
 
-(Android continues to use the existing web OAuth broker — Apple sign-in on Android is rare and the broker flow works there because the redirect lands back in Chrome Custom Tabs which can return to the app via Android's intent system. We can revisit if Android users ever report the same issue.)
+### What this means for Dustin
 
-### 2. Platform-aware sign-in helper
+- He opens the app → no Apple button, just email + password → he signs in normally → no white screen. No Despia rebuild, no app update from his side. The fix lands the moment you publish.
 
-Create `src/lib/apple-sign-in.ts`:
+## What it would take to actually offer Apple sign-in inside the app (future, optional)
 
-- Detect platform via `Capacitor.getPlatform()` (already a transitive dep of any `@capacitor/*` package).
-- On `ios`:
-  1. Call `SignInWithApple.authorize({ clientId: 'com.fireopshq.app', scopes: 'email name', redirectURI: '', state: crypto.randomUUID(), nonce: <random> })`.
-  2. Take the returned `identityToken` and call `supabase.auth.signInWithIdToken({ provider: 'apple', token: identityToken, nonce })`.
-  3. On success, the existing `onAuthStateChange` listener in `useAuth` picks up the session and the app navigates to `/`.
-- On `android` and `web`: fall back to the current `lovable.auth.signInWithOAuth("apple", …)` path.
+This is the real work, only when you're ready:
 
-### 3. Wire it into Login
+1. Despia would need to register the OAuth callback URL (`https://app.fireopshq.com/~oauth/callback`) as a **Universal Link** in the iOS shell. This is a Despia dashboard setting, not code — check Despia's docs for "Universal Links" or "Associated Domains."
+2. Lovable Cloud would need the `apple-app-site-association` file served from your domain (Lovable hosting handles this automatically once Despia is configured to associate with `app.fireopshq.com`).
+3. Test in Despia's preview build, then push a new `.ipa` to App Store Connect.
 
-In `src/pages/Login.tsx`, replace the body of `handleAppleSignIn` with a single call to the helper. Keep the existing loading state, error toast, and Apple-safe error copy.
-
-### 4. iOS project capability
-
-When the user next runs `npx cap sync ios`, they must:
-- Open `ios/App/App.xcworkspace` in Xcode.
-- Under **Signing & Capabilities**, add **Sign in with Apple**.
-- Confirm the App ID in the Apple Developer portal has Sign in with Apple enabled (it must, because the App Store build is already accepting Apple sign-in attempts).
-
-This is a one-time Xcode change, not a code change, so I'll call it out in the post-implementation summary.
-
-### 5. Immediate workaround for Dustin
-
-Tell him to use **email + password** on the sign-in screen for now (no app update required). Once the new build with native SIWA is shipped to TestFlight / the App Store, Continue with Apple will work.
+If you want, I can write a separate doc walking through that Despia configuration step-by-step in a follow-up — but it's not required to unblock Dustin today.
 
 ## Files touched
 
-- `src/pages/Login.tsx` — call new helper from `handleAppleSignIn`.
-- `src/lib/apple-sign-in.ts` — new file, ~40 lines, platform branch.
-- `package.json` — add `@capacitor-community/apple-sign-in`.
+- **New:** `src/lib/platform.ts`
+- **Modified:** `src/pages/Login.tsx`
+- **Deleted:** `src/lib/apple-sign-in.ts`
+- **Removed dep:** `@capacitor-community/apple-sign-in`
 
-No DB changes. No changes to web auth flow. No changes for users on the web app.
+## Verification
 
-## Out of scope (intentionally)
+1. Open `app.fireopshq.com` in desktop Safari/Chrome → Apple button still shows and works.
+2. Open the FireOps HQ app on iPhone (Despia build) → Apple button is gone, email/password form is the only option, hint text reads "Sign in with Apple is coming soon to the app."
+3. Dustin signs in with email + password → lands on dashboard, no white screen.
 
-- Rewriting the broader Capacitor packaging or splitting iOS/Android configs further.
-- Building a service worker / chunk-recovery system — that was the right fix for a *web* white screen, but Dustin's issue is a native OAuth redirect problem, not a stale bundle. We can revisit web hardening separately.
-- Changing anything about the Lovable OAuth broker or web sign-in.
+## On the broader frustration
 
-## How we'll verify
-
-1. Build the dev Capacitor config on a simulator, tap **Continue with Apple**, confirm the native sheet appears (not a Safari popup) and the app lands on the dashboard.
-2. Confirm web sign-in at `app.fireopshq.com` still uses the broker flow and still works for Dustin and other users.
-3. Confirm email/password still works on both platforms.
+You're right that this churn is exactly the kind of thing you've been clear about avoiding. The miss on my side: I treated this like a vanilla Capacitor project (with Xcode access) instead of a Despia-wrapped one. Despia's constraints — no custom native plugins, no Xcode capability changes — are a hard limit, and I should have asked first instead of proposing a fix that requires both. The plan above only uses tools you actually have.
