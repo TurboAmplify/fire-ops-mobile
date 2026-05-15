@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
+import { signInWithApple } from "@/lib/apple-sign-in";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
@@ -39,18 +39,17 @@ export default function Login() {
   const handleAppleSignIn = async () => {
     setAppleLoading(true);
     try {
-      const result = await lovable.auth.signInWithOAuth("apple", {
-        redirect_uri: window.location.origin,
-      });
-      if (result.error) {
-        throw result.error instanceof Error ? result.error : new Error(String(result.error));
-      }
+      await signInWithApple();
+      // On success, useAuth's onAuthStateChange will set the session and
+      // the `if (user) <Navigate to="/" />` branch above takes the user in.
     } catch (err: any) {
+      // User-cancelled native sheets throw too — keep the copy generic and quiet.
       toast({
         title: "Sign in failed",
         description: GENERIC_AUTH_ERROR,
         variant: "destructive",
       });
+    } finally {
       setAppleLoading(false);
     }
   };
