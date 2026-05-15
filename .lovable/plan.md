@@ -1,52 +1,81 @@
-# Daily-Rate Paystub Breakdown (Engine Bosses)
+## What's actually happening
 
-## Goal
-For crew paid on a flat daily rate ($1000/day for Engine Bosses), the paystub should display an hourly breakdown — Regular pay, H&W (on first 40 hrs/week), and Overtime (1.5×, >40 hrs/week Mon–Sun) — that always sums **exactly** to `shifts × daily_rate`. Gross pay, net pay, deductions, and totals do not change.
+Dustin downloaded **FireOps HQ from the App Store** (bundle id `com.fireopshq.app`), opened it, tapped **Continue with Apple**, completed Face ID / Apple ID, and then sees a white screen.
 
-## Approach
-**Back-solve the hourly base rate per week** so the breakdown always reconciles to the daily total.
+### Root cause
 
-For each Mon–Sun week worked:
-- `shifts` = unique shift dates that week
-- `reg_hrs` = min(totalHours, 40)
-- `ot_hrs`  = max(totalHours − 40, 0)
-- `hw_rate` = $4.93 (org default H&W)
-- Target weekly gross = `shifts × 1000`
+In `src/pages/Login.tsx` we call:
 
-Solve for `base`:
-```
-shifts × 1000 = reg_hrs × (base + hw_rate) + ot_hrs × base × 1.5
-base = (shifts × 1000 − reg_hrs × hw_rate) / (reg_hrs + 1.5 × ot_hrs)
+```ts
+lovable.auth.signInWithOAuth("apple", {
+  redirect_uri: window.location.origin,
+});
 ```
 
-Then derived values:
-- `reg_pay = reg_hrs × base`
-- `hw_pay  = reg_hrs × hw_rate`
-- `ot_pay  = ot_hrs × base × 1.5`
-- Sum = `shifts × 1000` exactly.
+That is the **web** OAuth flow — it opens Apple's sign-in page in an external browser and expects to redirect back to `redirect_uri` when done.
 
-Aggregate across weeks for the paystub period: sum reg_hrs, ot_hrs, reg_pay, hw_pay, ot_pay. Gross stays `total_shifts × daily_rate`.
+Inside the iOS Capacitor app, `window.location.origin` is `capacitor://localhost` (or `https://localhost` on newer Capacitor). When Apple finishes auth and tries to send the user back to `capacitor://localhost/~oauth/callback`, iOS Safari has no way to hand control back to the FireOps HQ app — the universal link / custom-scheme handler isn't registered. The user is left staring at a blank Safari page, or returns to the still-empty WebView (the "white screen").
 
-## Edge cases
-- **No hours logged but shifts exist** (zero-hour daily ticket): fall back to current single "Daily Flat Rate" line — back-solve undefined.
-- **Derived base ≤ 0** (would only happen if H&W alone exceeds daily): fall back to flat daily line, log a warning.
-- **Hourly crew, mixed periods, adjustments, reimbursements**: untouched. Only `payMethod === "daily"` lines change presentation.
+This is the standard Capacitor + web-OAuth failure mode. It only affects the App Store build; the web app at `app.fireopshq.com` is not impacted, which matches the fact that we have **zero error_logs from Dustin's user_id** (the failure is in Apple's flow, not in our React tree).
 
-## Files to change
-- `src/lib/payroll.ts` — in the `isDaily` branch (~line 614), instead of zeroing `regularPay/hwPay/overtimePay`, run the weekly back-solve and populate them. Gross still = `shifts × dailyRate`. Also populate `byIncident` reg/hw/ot proportionally (by shifts within incident × that week's derived rates), keeping each incident's gross at `incident_shifts × dailyRate`.
-- `src/components/payroll/Paystub.tsx` — for daily method, render the hourly earnings table (Reg / H&W / OT rows) instead of the current single Daily row. Add a small footnote: "Daily flat rate of $X/shift. Hourly breakdown shown for reference; total guaranteed at daily rate."
-- `src/components/payroll/generatePaystubPdf.ts` — mirror the same breakdown for the PDF.
-- `src/services/reports/exporters/pdf-paystubs-bundle.ts` — same breakdown in the bundled PDF.
+Email/password login is unaffected — Dustin can sign in right now using his email + password as a workaround.
 
-## What does NOT change
-- `daily_rate` value ($1000), org default rates, withholding %s, deduction math.
-- Hourly crew paystubs.
-- Gross/net totals for daily crew (still `shifts × 1000`, minus deductions, plus reimbursements).
-- Org settings UI, role default rates UI.
+## Fix: native Sign in with Apple on iOS
 
-## Testing
-1. Les (Engine Boss, $1000/day, daily method) on the State Severity incident with ~7 shifts: paystub should show Reg/H&W/OT lines summing to `7 × $1000 = $7,000`, OT correctly bucketed by Mon–Sun weeks.
-2. Hourly crew member on same incident: paystub unchanged.
-3. Daily crew with zero hours logged (just shift dates): falls back to flat daily line, gross still correct.
-4. Multi-incident daily crew: per-incident breakdown lines still sum to total gross.
-5. Reports → Payroll → bundled PDF export shows the breakdown across all daily-rate paystubs.
+Use the OS-native Sign in with Apple sheet on iOS, then exchange the resulting Apple identity token directly with Lovable Cloud auth. Keep the existing web flow on Android and on the web app.
+
+### 1. Add native plugin
+
+```
+npm i @capacitor-community/apple-sign-in
+```
+
+(Android continues to use the existing web OAuth broker — Apple sign-in on Android is rare and the broker flow works there because the redirect lands back in Chrome Custom Tabs which can return to the app via Android's intent system. We can revisit if Android users ever report the same issue.)
+
+### 2. Platform-aware sign-in helper
+
+Create `src/lib/apple-sign-in.ts`:
+
+- Detect platform via `Capacitor.getPlatform()` (already a transitive dep of any `@capacitor/*` package).
+- On `ios`:
+  1. Call `SignInWithApple.authorize({ clientId: 'com.fireopshq.app', scopes: 'email name', redirectURI: '', state: crypto.randomUUID(), nonce: <random> })`.
+  2. Take the returned `identityToken` and call `supabase.auth.signInWithIdToken({ provider: 'apple', token: identityToken, nonce })`.
+  3. On success, the existing `onAuthStateChange` listener in `useAuth` picks up the session and the app navigates to `/`.
+- On `android` and `web`: fall back to the current `lovable.auth.signInWithOAuth("apple", …)` path.
+
+### 3. Wire it into Login
+
+In `src/pages/Login.tsx`, replace the body of `handleAppleSignIn` with a single call to the helper. Keep the existing loading state, error toast, and Apple-safe error copy.
+
+### 4. iOS project capability
+
+When the user next runs `npx cap sync ios`, they must:
+- Open `ios/App/App.xcworkspace` in Xcode.
+- Under **Signing & Capabilities**, add **Sign in with Apple**.
+- Confirm the App ID in the Apple Developer portal has Sign in with Apple enabled (it must, because the App Store build is already accepting Apple sign-in attempts).
+
+This is a one-time Xcode change, not a code change, so I'll call it out in the post-implementation summary.
+
+### 5. Immediate workaround for Dustin
+
+Tell him to use **email + password** on the sign-in screen for now (no app update required). Once the new build with native SIWA is shipped to TestFlight / the App Store, Continue with Apple will work.
+
+## Files touched
+
+- `src/pages/Login.tsx` — call new helper from `handleAppleSignIn`.
+- `src/lib/apple-sign-in.ts` — new file, ~40 lines, platform branch.
+- `package.json` — add `@capacitor-community/apple-sign-in`.
+
+No DB changes. No changes to web auth flow. No changes for users on the web app.
+
+## Out of scope (intentionally)
+
+- Rewriting the broader Capacitor packaging or splitting iOS/Android configs further.
+- Building a service worker / chunk-recovery system — that was the right fix for a *web* white screen, but Dustin's issue is a native OAuth redirect problem, not a stale bundle. We can revisit web hardening separately.
+- Changing anything about the Lovable OAuth broker or web sign-in.
+
+## How we'll verify
+
+1. Build the dev Capacitor config on a simulator, tap **Continue with Apple**, confirm the native sheet appears (not a Safari popup) and the app lands on the dashboard.
+2. Confirm web sign-in at `app.fireopshq.com` still uses the broker flow and still works for Dustin and other users.
+3. Confirm email/password still works on both platforms.
