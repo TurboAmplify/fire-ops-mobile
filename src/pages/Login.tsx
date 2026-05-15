@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
-import { signInWithApple } from "@/lib/apple-sign-in";
+import { lovable } from "@/integrations/lovable/index";
+import { isInAppWebView } from "@/lib/platform";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
@@ -36,14 +37,22 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
 
+  // Despia's iOS WebView wrapper has no Universal Link for the OAuth callback,
+  // so Apple sign-in cannot return to the app and leaves users on a white
+  // screen. Only show the Apple button in real browsers.
+  const showAppleSignIn = !isInAppWebView();
+
   const handleAppleSignIn = async () => {
     setAppleLoading(true);
     try {
-      await signInWithApple();
-      // On success, useAuth's onAuthStateChange will set the session and
-      // the `if (user) <Navigate to="/" />` branch above takes the user in.
+      const result = await lovable.auth.signInWithOAuth("apple", {
+        redirect_uri: window.location.origin,
+      });
+      if (result.error) {
+        throw new Error(GENERIC_AUTH_ERROR);
+      }
+      // result.redirected: browser is navigating to Apple, nothing else to do.
     } catch (err: any) {
-      // User-cancelled native sheets throw too — keep the copy generic and quiet.
       toast({
         title: "Sign in failed",
         description: GENERIC_AUTH_ERROR,
@@ -175,7 +184,7 @@ export default function Login() {
             </p>
           </div>
 
-          {mode !== "forgot" && (
+          {mode !== "forgot" && showAppleSignIn && (
             <>
               <Button
                 type="button"
@@ -199,6 +208,12 @@ export default function Login() {
                 <div className="h-px flex-1 bg-border" />
               </div>
             </>
+          )}
+
+          {mode !== "forgot" && !showAppleSignIn && (
+            <p className="text-xs text-center text-muted-foreground -mt-2">
+              Sign in with Apple is coming soon to the app — please use your email and password.
+            </p>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
