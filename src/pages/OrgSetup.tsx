@@ -85,11 +85,12 @@ export default function OrgSetup() {
     if (!pendingInvite || !user) return;
     setSubmitting(true);
     try {
-      await supabase.from("organization_members").insert({
+      const { error: memberError } = await supabase.from("organization_members").insert({
         organization_id: pendingInvite.organization_id,
         user_id: user.id,
         role: pendingInvite.role,
       });
+      if (memberError) throw memberError;
       await supabase.from("organization_invites").update({ status: "accepted" }).eq("id", pendingInvite.id);
 
       const inviteName = pendingInvite.invitee_name?.trim();
