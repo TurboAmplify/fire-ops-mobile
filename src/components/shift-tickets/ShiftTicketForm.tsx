@@ -642,7 +642,9 @@ export function ShiftTicketForm({
 
       for (const [sigType, blob] of Object.entries(pendingSigs)) {
         try {
-          const url = await uploadSignature(blob, ticket.id!, sigType as "contractor" | "supervisor");
+          const url = isOnline()
+            ? await uploadSignature(blob, ticket.id!, sigType as "contractor" | "supervisor")
+            : await saveLocalSignature(blob);
           if (sigType === "contractor") {
             setContractorSigUrl(url);
             sigUpdates.contractor_rep_signature_url = url;
