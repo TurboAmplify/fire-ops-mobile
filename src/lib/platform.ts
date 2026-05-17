@@ -20,7 +20,8 @@
 export function isInAppWebView(): boolean {
   if (typeof navigator === "undefined") return false;
   const ua = navigator.userAgent || "";
-  const isIOS = /iPhone|iPad|iPod/i.test(ua);
-  if (!isIOS) return false;
-  return !/Safari\//.test(ua);
+  // Hide OAuth on ALL iOS devices until Despia is configured for Universal
+  // Links. Despia's WebView often spoofs `Safari/` in its UA, so a
+  // token-based check is unreliable. iOS users sign in with email + password.
+  return /iPhone|iPad|iPod/i.test(ua);
 }
