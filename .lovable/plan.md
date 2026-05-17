@@ -1,64 +1,63 @@
-## Important context I didn't have before
+## Goal
 
-You're using **Despia** to wrap `https://app.fireopshq.com` as a native shell. Despia loads the live web app on launch, so:
+Let a crew member fill out a shift ticket and capture the incident supervisor's signature **even with no service**, save it on the phone, and have it automatically push to the server the moment the phone is back online. Works inside the Despia-wrapped iOS/Android build with no changes to the wrapper.
 
-- ✅ Web changes published in Lovable **do** reach the iOS app automatically — no Despia rebuild needed for normal updates.
-- ❌ The native plugin approach in the previous plan **won't work**. Despia doesn't bundle the `@capacitor-community/apple-sign-in` native module. Calling it from inside the Despia WebView throws "plugin not implemented" — same white screen, different reason.
+## Feasibility
 
-So the previous plan was wrong for your setup, and I need to fix it. Apologies for the churn.
+Very doable. The app already has most of the plumbing — it just hasn't been wired through for shift tickets:
 
-## Why Apple sign-in is fundamentally broken inside Despia
+- React Query cache is already persisted to IndexedDB (works in Despia/WKWebView).
+- An offline mutation queue (`src/lib/offline-queue.ts`) already exists with replay-on-reconnect, 72-hour TTL, retry/backoff, and a "synced X changes" toast.
+- The offline banner + online/offline detection already work.
 
-Apple's OAuth flow opens Apple's sign-in page in the system browser, then needs to redirect back to the app via either a registered **Universal Link** or a **custom URL scheme**. Despia's wrapper doesn't register either of those for the Lovable OAuth broker URL (`/~oauth/callback`). When Apple finishes auth, the callback URL has nowhere to land → blank page → white screen. There's no JavaScript fix for that part — it's a native-shell capability that has to be configured at build time.
+What's blocking shift tickets specifically:
+1. `useCreateShiftTicket` / `useUpdateShiftTicket` call `assertOnlineForWrite()`, so they hard-block when offline (intentional Phase-0 guard).
+2. Signatures are uploaded to Supabase Storage and the **URL** is stored on the ticket. Storage uploads can't queue the same way row writes can, so signatures need to be cached locally as base64 and uploaded during sync.
 
-Without a native rebuild that registers the universal link / scheme handler, Apple sign-in **cannot** complete inside Despia.
+No Despia/native changes required. IndexedDB + the existing queue are enough.
 
-## The fix that actually ships through Lovable today
+## Plan
 
-Hide the "Continue with Apple" button when the app is running inside the Despia in-app WebView, and show a clean explanation that points users to email + password instead. The web app at `app.fireopshq.com` (opened in real Safari/Chrome) keeps Apple sign-in working unchanged.
+### 1. Local signature cache
+- Add `src/lib/offline-signatures.ts` using `idb-keyval`: `saveLocalSignature(blob) → "local-sig://<uuid>"` and `getLocalSignature(localId) → Blob`.
+- `SignatureCanvas` / `SignaturePicker` callers: when offline, store the blob locally and write the `local-sig://...` placeholder onto the ticket's `contractor_rep_signature_url` / `supervisor_signature_url` instead of uploading.
+- `ReceiptViewer`-style preview components that render signatures: if URL starts with `local-sig://`, resolve to a blob URL from IndexedDB so the user sees their signature immediately.
 
-### How we detect "inside Despia"
+### 2. Enable offline writes for shift tickets only
+- In `useCreateShiftTicket` / `useUpdateShiftTicket`: replace `assertOnlineForWrite()` with an "offline-aware" branch:
+  - If online → behave exactly as today (no behavior change).
+  - If offline → optimistically write the ticket into the React Query cache with a temp UUID and `enqueue()` an insert/update into the offline queue.
+- Keep `assertOnlineForWrite()` everywhere else (incidents, crew, expenses, etc.) — scope is **shift tickets only** so we don't accidentally break other flows.
 
-iOS in-app WebViews (Despia's WKWebView) have a user agent that includes `iPhone` / `iPad` but **not** the `Safari/` token that real mobile Safari sends. That's the standard, reliable way to detect a wrapped WebView. Wrap it in a small `isInAppWebView()` helper in `src/lib/platform.ts` so we have one place to change it later.
+### 3. Sync engine for shift tickets
+- Extend `replayQueue()` (or wrap it) with a shift-ticket-aware step that runs **before** the row replay:
+  1. For each queued shift-ticket payload, scan signature URL fields.
+  2. If a value is `local-sig://<id>`, pull the blob from IndexedDB, upload it to the `signatures` bucket, then swap the URL on the payload before the row insert/update runs.
+  3. If upload fails → leave the mutation in the queue, increment attempts, surface the same "sync issues" toast we already have.
+- On success: invalidate `shift-tickets`, `shift-tickets-recent`, `incident-daily-crew` query keys so the screen refreshes.
 
-### What changes
+### 4. UI feedback (small, non-disruptive)
+- On the ticket form, when saved offline, show "Saved on device — will sync when back online" instead of the current blocking toast.
+- The existing amber offline banner and "Synced N changes" toast cover the rest.
 
-1. **`src/lib/platform.ts`** — new file, ~15 lines. Exports `isInAppWebView()` (UA sniff for iOS WKWebView without `Safari/`).
-2. **`src/pages/Login.tsx`** —
-   - If `isInAppWebView()`, hide the **Continue with Apple** button and the divider. Email + password only.
-   - Add a single muted line under the form: *"Sign in with Apple is coming soon to the app — please use your email and password."*
-3. **Roll back the native plugin code** that won't work in Despia:
-   - Remove `src/lib/apple-sign-in.ts`
-   - Restore `Login.tsx` to use the original `lovable.auth.signInWithOAuth("apple", …)` for the **web only** branch (since Apple sign-in still works fine in real browsers).
-   - Uninstall `@capacitor-community/apple-sign-in` (no point keeping a plugin we can't use).
+### 5. Guardrails
+- 72-hour TTL stays (already in queue) — prevents stale tickets from syncing weeks later.
+- Max 5 retry attempts (already in queue) — failed tickets surface in Settings → Sync issues for manual review.
+- Temp UUIDs generated client-side so the optimistic row and the eventual server row share an id (no duplicate-ticket risk on replay).
 
-### What this means for Dustin
+## What this does NOT change
 
-- He opens the app → no Apple button, just email + password → he signs in normally → no white screen. No Despia rebuild, no app update from his side. The fix lands the moment you publish.
+- No edits to Capacitor/Despia config, no native plugins added, no app-store resubmission required beyond the normal app update.
+- No change to online behavior — existing online users see zero difference.
+- No change to other modules (incidents, crew, expenses) — they keep the strict offline block until we explicitly extend this pattern later.
 
-## What it would take to actually offer Apple sign-in inside the app (future, optional)
+## Effort
 
-This is the real work, only when you're ready:
+Small/medium. One focused session: ~3–5 files touched (signature cache, two hooks, queue extension, signature preview helper) plus a smoke-test pass with airplane mode on a physical device.
 
-1. Despia would need to register the OAuth callback URL (`https://app.fireopshq.com/~oauth/callback`) as a **Universal Link** in the iOS shell. This is a Despia dashboard setting, not code — check Despia's docs for "Universal Links" or "Associated Domains."
-2. Lovable Cloud would need the `apple-app-site-association` file served from your domain (Lovable hosting handles this automatically once Despia is configured to associate with `app.fireopshq.com`).
-3. Test in Despia's preview build, then push a new `.ipa` to App Store Connect.
+## Test plan
 
-If you want, I can write a separate doc walking through that Despia configuration step-by-step in a follow-up — but it's not required to unblock Dustin today.
-
-## Files touched
-
-- **New:** `src/lib/platform.ts`
-- **Modified:** `src/pages/Login.tsx`
-- **Deleted:** `src/lib/apple-sign-in.ts`
-- **Removed dep:** `@capacitor-community/apple-sign-in`
-
-## Verification
-
-1. Open `app.fireopshq.com` in desktop Safari/Chrome → Apple button still shows and works.
-2. Open the FireOps HQ app on iPhone (Despia build) → Apple button is gone, email/password form is the only option, hint text reads "Sign in with Apple is coming soon to the app."
-3. Dustin signs in with email + password → lands on dashboard, no white screen.
-
-## On the broader frustration
-
-You're right that this churn is exactly the kind of thing you've been clear about avoiding. The miss on my side: I treated this like a vanilla Capacitor project (with Xcode access) instead of a Despia-wrapped one. Despia's constraints — no custom native plugins, no Xcode capability changes — are a hard limit, and I should have asked first instead of proposing a fix that requires both. The plan above only uses tools you actually have.
+1. Online: create + sign + save a ticket → unchanged behavior, PDF renders.
+2. Airplane mode: create + sign + save → toast "Saved on device", ticket visible in list with a "pending" indicator.
+3. Turn wifi back on → "Synced 1 change" toast, ticket now has a real signature URL, PDF export works.
+4. Airplane mode + force-quit + relaunch → ticket still there, syncs on next online event.
