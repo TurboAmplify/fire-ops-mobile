@@ -31,7 +31,8 @@ import { evaluateCrewCount } from "@/lib/crew-minimums";
 import { SuccessOverlay } from "@/components/ui/SuccessOverlay";
 import { SignedImage } from "@/components/ui/SignedImage";
 import { uploadSignature, computeHours, buildRemarksString, insertSignatureAuditLog, enforceLunchDeduction } from "@/services/shift-tickets";
-import { handleMutationError } from "@/lib/offline-guard";
+import { handleMutationError, isOnline } from "@/lib/offline-guard";
+import { saveLocalSignature } from "@/lib/offline-signatures";
 import {
   diffTicket,
   hasAnySignature,
@@ -586,7 +587,11 @@ export function ShiftTicketForm({
 
     setUploadingSig(true);
     try {
-      const url = await uploadSignature(blob, ticket.id, sigType);
+      // Offline: stash the blob locally and write a placeholder URL. The
+      // offline-queue sync step uploads it and swaps the URL on reconnect.
+      const url = isOnline()
+        ? await uploadSignature(blob, ticket.id, sigType)
+        : await saveLocalSignature(blob);
       const sigUpdate: Partial<ShiftTicket> = sigType === "contractor"
         ? {
             contractor_rep_signature_url: url,
@@ -600,19 +605,21 @@ export function ShiftTicketForm({
       if (sigType === "contractor") setContractorSigUrl(url);
       else setSupervisorSigUrl(url);
 
-      await insertSignatureAuditLog({
-        shift_ticket_id: ticket.id,
-        organization_id: organizationId || null,
-        signer_type: sigType,
-        signer_name: sigType === "contractor" ? contractorRepName : supervisorName,
-        signature_url: url,
-        method: metadata.method,
-        font_used: metadata.font || null,
-      });
+      if (isOnline()) {
+        await insertSignatureAuditLog({
+          shift_ticket_id: ticket.id,
+          organization_id: organizationId || null,
+          signer_type: sigType,
+          signer_name: sigType === "contractor" ? contractorRepName : supervisorName,
+          signature_url: url,
+          method: metadata.method,
+          font_used: metadata.font || null,
+        });
+      }
 
       await Promise.resolve(onSave({ ...buildSavePayload(), ...sigUpdate }));
       setIsDirty(false);
-      showSuccess("Signature saved");
+      showSuccess(isOnline() ? "Signature saved" : "Signature saved on device");
     } catch (err) {
       // M2-H3: Show failure as an error toast, not the green success overlay.
       // Offline writes get a friendly toast via handleMutationError; otherwise
