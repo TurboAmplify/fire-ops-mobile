@@ -108,6 +108,10 @@ export async function discardAllFailed(): Promise<number> {
 
 async function replayMutation(m: QueuedMutation): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
+    // Upload any locally-cached signatures first so the row write contains
+    // real storage URLs. Mutates payload in place.
+    await uploadPendingSignatures(m.table, m.rowId, m.payload);
+
     if (m.operation === "insert") {
       const { error } = await supabase.from(m.table as any).insert(m.payload as any);
       if (error) throw error;
