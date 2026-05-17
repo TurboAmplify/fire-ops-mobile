@@ -1,6 +1,48 @@
 import { get, set } from "idb-keyval";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import {
+  isLocalSignatureUrl,
+  getLocalSignatureBlob,
+  deleteLocalSignature,
+} from "@/lib/offline-signatures";
+
+const SIGNATURE_FIELDS = ["contractor_rep_signature_url", "supervisor_signature_url"] as const;
+
+/**
+ * For queued shift_tickets writes: upload any local-sig:// blobs to the
+ * signatures bucket and replace the URLs on the payload. Mutates payload
+ * in place. Throws if any upload fails (caller will retry the mutation).
+ */
+async function uploadPendingSignatures(
+  table: string,
+  rowId: string | undefined,
+  payload: Record<string, unknown>,
+): Promise<void> {
+  if (table !== "shift_tickets") return;
+  const ticketId = (payload.id as string) || rowId;
+  if (!ticketId) return;
+
+  for (const field of SIGNATURE_FIELDS) {
+    const val = payload[field];
+    if (typeof val !== "string" || !isLocalSignatureUrl(val)) continue;
+    const blob = await getLocalSignatureBlob(val);
+    if (!blob) {
+      // Blob missing locally — drop the placeholder rather than failing forever
+      payload[field] = null;
+      continue;
+    }
+    const type = field === "contractor_rep_signature_url" ? "contractor" : "supervisor";
+    const path = `${ticketId}/${type}-${Date.now()}.png`;
+    const { error } = await supabase.storage
+      .from("signatures")
+      .upload(path, blob, { contentType: "image/png" });
+    if (error) throw error;
+    const { data } = supabase.storage.from("signatures").getPublicUrl(path);
+    payload[field] = data.publicUrl;
+    await deleteLocalSignature(val);
+  }
+}
 
 const QUEUE_KEY = "fireops-offline-queue";
 const MAX_AGE_MS = 72 * 60 * 60 * 1000; // 72 hours
@@ -66,6 +108,10 @@ export async function discardAllFailed(): Promise<number> {
 
 async function replayMutation(m: QueuedMutation): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
+    // Upload any locally-cached signatures first so the row write contains
+    // real storage URLs. Mutates payload in place.
+    await uploadPendingSignatures(m.table, m.rowId, m.payload);
+
     if (m.operation === "insert") {
       const { error } = await supabase.from(m.table as any).insert(m.payload as any);
       if (error) throw error;

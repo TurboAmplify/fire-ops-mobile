@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { isLocalSignatureUrl, getLocalSignatureObjectUrl } from "@/lib/offline-signatures";
 
 /**
  * Storage URL helper for private buckets.
@@ -81,6 +82,11 @@ export async function getViewableUrl(
   url: string | null | undefined,
 ): Promise<string | null> {
   if (!url) return null;
+
+  // Offline-captured signatures stored in IndexedDB
+  if (isLocalSignatureUrl(url)) {
+    return await getLocalSignatureObjectUrl(url);
+  }
 
   const parsed = parseStorageUrl(url);
   if (!parsed) return url; // pass through blob:, external, etc.
