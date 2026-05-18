@@ -697,21 +697,39 @@ export default function ShiftTicketLog() {
                 : ""}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2 pt-1">
-            <label className="text-sm font-medium">
-              Type <span className="font-mono font-bold">delete</span> to confirm:
-            </label>
-            <Input
-              value={deleteConfirmText}
-              onChange={(e) => setDeleteConfirmText(e.target.value)}
-              placeholder="delete"
-              autoFocus
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="off"
-              spellCheck={false}
-              disabled={deleteLoading}
-            />
+          <div className="space-y-3 pt-1">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Reason for deletion <span className="text-destructive">*</span>
+              </label>
+              <Input
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                placeholder="e.g. duplicate ticket, test entry, wrong incident"
+                autoFocus
+                disabled={deleteLoading}
+              />
+            </div>
+            {deleteTarget?.ticket.supervisor_signature_url && (
+              <p className="rounded border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive">
+                ⚠ This ticket has a supervisor signature. Deleting will remove it from accounting — please make sure that's intended.
+              </p>
+            )}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Type <span className="font-mono font-bold">delete</span> to confirm:
+              </label>
+              <Input
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="delete"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                disabled={deleteLoading}
+              />
+            </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-2">
             <Button variant="outline" onClick={closeDeleteDialog} disabled={deleteLoading}>
