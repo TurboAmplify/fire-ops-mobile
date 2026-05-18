@@ -248,6 +248,7 @@ export default function ShiftTicketLog() {
     if (deleteLoading) return;
     setDeleteTarget(null);
     setDeleteConfirmText("");
+    setDeleteReason("");
   };
 
   const handleConfirmDelete = async () => {
@@ -257,16 +258,24 @@ export default function ShiftTicketLog() {
       return;
     }
     if (deleteConfirmText.trim().toLowerCase() !== "delete") return;
+    const reason = deleteReason.trim();
+    if (!reason) {
+      toast.error("Please enter a reason for deleting this ticket");
+      return;
+    }
     setDeleteLoading(true);
     try {
-      await deleteShiftTicket(deleteTarget.ticket.id);
+      await deleteShiftTicket(deleteTarget.ticket.id, reason);
       await qc.invalidateQueries({ queryKey: ["shift-tickets-recent"] });
       await qc.invalidateQueries({
         queryKey: ["shift-tickets", deleteTarget.ticket.incident_truck_id],
       });
+      await qc.invalidateQueries({ queryKey: ["incident-tickets"] });
+      await qc.invalidateQueries({ queryKey: ["all-shift-tickets-payroll"] });
       toast.success("Shift ticket deleted");
       setDeleteTarget(null);
       setDeleteConfirmText("");
+      setDeleteReason("");
     } catch (err) {
       console.error("Delete failed:", err);
       handleMutationError(err, "Failed to delete shift ticket");
