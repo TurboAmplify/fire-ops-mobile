@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Loader2, FileText, ChevronRight, Truck as TruckIcon, Camera } from "lucide-react";
+import { Plus, Loader2, FileText, ChevronRight, Truck as TruckIcon, Camera, MoreVertical, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { useIncidentTrucks } from "@/hooks/useIncidentTrucks";
-import { useShiftTickets } from "@/hooks/useShiftTickets";
+import { useShiftTickets, useDeleteShiftTicket } from "@/hooks/useShiftTickets";
 import { getLocalDateString } from "@/lib/local-date";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -12,6 +13,22 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { QuickAttachPaperTicketSheet } from "@/components/shift-tickets/QuickAttachPaperTicketSheet";
 
 interface Props {
