@@ -739,7 +739,9 @@ export default function ShiftTicketLog() {
               variant="destructive"
               onClick={handleConfirmDelete}
               disabled={
-                deleteLoading || deleteConfirmText.trim().toLowerCase() !== "delete"
+                deleteLoading ||
+                deleteConfirmText.trim().toLowerCase() !== "delete" ||
+                !deleteReason.trim()
               }
             >
               {deleteLoading ? (
