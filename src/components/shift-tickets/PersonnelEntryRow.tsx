@@ -414,10 +414,16 @@ export function PersonnelEntryRow({ entry, index, onChange, onRemove, collapsed,
       <LunchDialog
         open={lunchDialog}
         value={pendingLunchTime}
+        hasExistingLunch={!!entry.lunch_time}
         onChange={setPendingLunchTime}
         onConfirm={handleLunchDialogConfirm}
+        onRemove={() => {
+          applyLunchTime(null);
+          setLunchDialog(false);
+        }}
         onCancel={() => setLunchDialog(false)}
       />
+
     </div>
   );
 }
