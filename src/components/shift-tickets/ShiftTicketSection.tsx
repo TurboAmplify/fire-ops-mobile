@@ -272,7 +272,7 @@ export function ShiftTicketSection({
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    onClick={() => setDeleteTarget({ id: t.id, label })}
+                    onClick={() => setDeleteTarget({ id: t.id, label, supervisorSigned: !!t.supervisor_signature_url })}
                     className="text-destructive focus:text-destructive"
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
