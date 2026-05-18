@@ -36,11 +36,11 @@ export function OF297FormPreview({
   const personnel = (ticket.personnel_entries || []) as PersonnelEntry[];
 
   return (
-    <div className="fixed inset-0 z-50 bg-white overflow-y-auto" style={{ paddingTop: "var(--app-safe-top)" }}>
+    <div className="fixed inset-0 z-50 bg-white overflow-y-auto pt-[var(--app-safe-top)] pb-[var(--app-safe-bottom)]">
       {/* Close button */}
-      <div className="sticky top-0 z-10 flex items-center justify-between bg-white border-b border-black px-3 py-2">
+      <div className="sticky top-[var(--app-safe-top)] z-10 flex min-h-14 items-center justify-between bg-white border-b border-black px-4 py-2">
         <span className="text-xs font-bold text-black">OF-297 Review</span>
-        <button onClick={onClose} className="p-2 touch-target">
+        <button onClick={onClose} className="flex h-11 w-11 items-center justify-center rounded-full text-black active:bg-gray-100" aria-label="Close OF-297 review">
           <X className="h-5 w-5 text-black" />
         </button>
       </div>

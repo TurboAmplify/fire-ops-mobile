@@ -212,20 +212,17 @@ export function SignaturePicker({ open, onClose, onSave, title, defaultName = ""
   const canConfirm = mode === "type" ? !!selectedFont : hasStroke;
 
   return (
-    <div
-      className="fixed inset-0 z-[60] flex flex-col bg-background"
-      style={{ paddingTop: "var(--app-safe-top)", paddingBottom: "var(--app-safe-bottom)" }}
-    >
+    <div className="fixed inset-0 z-[60] flex flex-col bg-background pt-[var(--app-safe-top)] pb-[var(--app-safe-bottom)]">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-        <button onClick={onClose} className="touch-target flex items-center gap-1 text-sm text-muted-foreground">
+      <div className="flex min-h-14 items-center justify-between border-b border-border px-4 py-2">
+        <button onClick={onClose} className="flex min-h-11 items-center gap-1 rounded-lg pr-2 text-sm text-muted-foreground active:bg-accent/30">
           <X className="h-5 w-5" /> Cancel
         </button>
         <span className="text-sm font-bold">{title}</span>
         <button
           onClick={mode === "type" ? handleConfirmTyped : handleConfirmDrawn}
           disabled={!canConfirm}
-          className="touch-target flex items-center gap-1 text-sm font-bold text-primary disabled:opacity-40"
+          className="flex min-h-11 items-center gap-1 rounded-lg pl-2 text-sm font-bold text-primary disabled:opacity-40 active:bg-accent/30"
         >
           <Check className="h-5 w-5" /> Save
         </button>

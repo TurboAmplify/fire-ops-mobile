@@ -581,6 +581,7 @@ export function ShiftTicketForm({
       else setSupervisorSigUrl(localUrl);
       setPendingSigs((prev) => ({ ...prev, [sigType]: blob }));
       markDirty();
+      if (sigType === "supervisor") setShowSupervisorSheet(false);
       showSuccess("Signature captured");
       return;
     }
@@ -600,6 +601,7 @@ export function ShiftTicketForm({
         : {
             supervisor_signature_url: url,
             supervisor_signed_at: new Date().toISOString(),
+            status: "final",
           };
 
       if (sigType === "contractor") setContractorSigUrl(url);
@@ -654,6 +656,7 @@ export function ShiftTicketForm({
             setSupervisorSigUrl(url);
             sigUpdates.supervisor_signature_url = url;
             sigUpdates.supervisor_signed_at = new Date().toISOString();
+            sigUpdates.status = "final";
           }
         } catch {
           // Silently fail individual sig uploads
@@ -1354,7 +1357,7 @@ export function ShiftTicketForm({
       )}
 
       {/* ── Bottom Action Bar (above BottomNav) ── */}
-      <div className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom))] left-0 right-0 border-t border-border bg-background/95 backdrop-blur-md p-3 flex gap-2 z-40">
+      <div className="fixed bottom-[calc(3.5rem+var(--app-safe-bottom))] left-0 right-0 border-t border-border bg-background/95 backdrop-blur-md p-3 flex gap-2 z-40">
         <button onClick={() => handleSave(false)} disabled={saving || editingLocked}
           className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground touch-target disabled:opacity-40 active:scale-[0.98]">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : editingLocked ? <Lock className="h-4 w-4" /> : <Save className="h-4 w-4" />}

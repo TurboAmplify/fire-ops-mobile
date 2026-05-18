@@ -42,7 +42,7 @@ export function OfflineBanner() {
       className="bg-amber-600 text-white text-center text-sm py-1.5 px-4 flex items-center justify-center gap-2"
     >
       <WifiOff className="h-3.5 w-3.5" aria-hidden="true" />
-      <span>Offline — viewing saved data. Changes can't be made until reconnected.</span>
+      <span>Offline — saved data is available. Shift tickets save on this device and sync when reconnected.</span>
     </div>
   );
 }
