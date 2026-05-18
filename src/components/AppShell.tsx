@@ -57,7 +57,7 @@ export function AppShell({ children, title, headerRight, showBack, onBack }: App
                 )}
                 <h1 className="text-[17px] font-bold tracking-tight truncate">{title}</h1>
               </div>
-              {headerRight && <div className="flex items-center gap-1.5 shrink-0">{headerRight}</div>}
+              {headerRight && <div className="flex shrink-0 items-center gap-1.5 [&_a]:min-h-11 [&_button]:min-h-11">{headerRight}</div>}
             </div>
           </header>
           {/* Spacer must include the iOS safe-area inset so content doesn't slide under the notch / Dynamic Island. */}
