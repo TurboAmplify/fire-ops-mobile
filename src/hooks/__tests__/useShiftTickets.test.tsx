@@ -70,8 +70,8 @@ describe("useShiftTickets", () => {
 
     const del = renderHook(() => useDeleteShiftTicket("it-1"), { wrapper: Wrapper });
     await act(async () => {
-      await del.result.current.mutateAsync("t1");
+      await del.result.current.mutateAsync({ id: "t1", reason: "test" });
     });
-    expect(svc.deleteShiftTicket).toHaveBeenCalledWith("t1");
+    expect(svc.deleteShiftTicket).toHaveBeenCalledWith("t1", "test");
   });
 });
