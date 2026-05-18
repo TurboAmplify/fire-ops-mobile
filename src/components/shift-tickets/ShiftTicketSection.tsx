@@ -113,13 +113,24 @@ export function ShiftTicketSection({
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
+    const reason = deleteReason.trim();
+    if (!reason) {
+      toast.error("Please enter a reason for deleting this ticket");
+      return;
+    }
+    if (deleteTarget.supervisorSigned && deleteConfirm.trim().toLowerCase() !== "delete") {
+      toast.error('Type "delete" to confirm');
+      return;
+    }
     try {
-      await deleteMutation.mutateAsync(deleteTarget.id);
+      await deleteMutation.mutateAsync({ id: deleteTarget.id, reason });
       toast.success("Shift ticket deleted");
     } catch {
       toast.error("Failed to delete shift ticket");
     } finally {
       setDeleteTarget(null);
+      setDeleteReason("");
+      setDeleteConfirm("");
     }
   };
 
