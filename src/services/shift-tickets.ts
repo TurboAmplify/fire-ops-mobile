@@ -88,6 +88,7 @@ export async function fetchShiftTickets(incidentTruckId: string): Promise<ShiftT
     .from("shift_tickets")
     .select("*")
     .eq("incident_truck_id", incidentTruckId)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data ?? []) as unknown as ShiftTicket[];
@@ -171,6 +172,7 @@ export async function fetchShiftTicket(id: string): Promise<ShiftTicket | null> 
     .from("shift_tickets")
     .select("*")
     .eq("id", id)
+    .is("deleted_at", null)
     .maybeSingle();
   if (error) throw error;
   return data as unknown as ShiftTicket | null;
@@ -196,11 +198,24 @@ export async function updateShiftTicket(id: string, updates: Partial<ShiftTicket
   if (error) throw error;
 }
 
-export async function deleteShiftTicket(id: string): Promise<void> {
+/**
+ * Soft-delete a shift ticket. The row stays in the database for audit/history
+ * but is filtered out of all user-facing views and accounting/payroll rollups.
+ * A reason is required so we can explain later why the ticket was removed.
+ */
+export async function deleteShiftTicket(id: string, reason: string): Promise<void> {
   assertOnlineForWrite();
+  const trimmed = (reason ?? "").trim();
+  if (!trimmed) throw new Error("A reason is required to delete a shift ticket.");
+  const { data: userData } = await supabase.auth.getUser();
   const { error } = await supabase
     .from("shift_tickets")
-    .delete()
+    .update({
+      deleted_at: new Date().toISOString(),
+      deleted_by_user_id: userData?.user?.id ?? null,
+      deleted_reason: trimmed,
+      updated_at: new Date().toISOString(),
+    } as any)
     .eq("id", id);
   if (error) throw error;
 }

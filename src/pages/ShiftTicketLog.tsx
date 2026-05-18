@@ -137,6 +137,7 @@ export default function ShiftTicketLog() {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [deleteTarget, setDeleteTarget] = useState<SelectedTicket | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteReason, setDeleteReason] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   // "Pay crew without a ticket" flow — admin-only shortcut to AdjustmentSheet
@@ -247,6 +248,7 @@ export default function ShiftTicketLog() {
     if (deleteLoading) return;
     setDeleteTarget(null);
     setDeleteConfirmText("");
+    setDeleteReason("");
   };
 
   const handleConfirmDelete = async () => {
@@ -256,16 +258,24 @@ export default function ShiftTicketLog() {
       return;
     }
     if (deleteConfirmText.trim().toLowerCase() !== "delete") return;
+    const reason = deleteReason.trim();
+    if (!reason) {
+      toast.error("Please enter a reason for deleting this ticket");
+      return;
+    }
     setDeleteLoading(true);
     try {
-      await deleteShiftTicket(deleteTarget.ticket.id);
+      await deleteShiftTicket(deleteTarget.ticket.id, reason);
       await qc.invalidateQueries({ queryKey: ["shift-tickets-recent"] });
       await qc.invalidateQueries({
         queryKey: ["shift-tickets", deleteTarget.ticket.incident_truck_id],
       });
+      await qc.invalidateQueries({ queryKey: ["incident-tickets"] });
+      await qc.invalidateQueries({ queryKey: ["all-shift-tickets-payroll"] });
       toast.success("Shift ticket deleted");
       setDeleteTarget(null);
       setDeleteConfirmText("");
+      setDeleteReason("");
     } catch (err) {
       console.error("Delete failed:", err);
       handleMutationError(err, "Failed to delete shift ticket");
@@ -683,25 +693,43 @@ export default function ShiftTicketLog() {
             </DialogTitle>
             <DialogDescription>
               {deleteTarget
-                ? `This will permanently delete the shift ticket for ${deleteTarget.truckName} on ${deleteTarget.dateLabel}. This action cannot be undone.`
+                ? `This will remove the shift ticket for ${deleteTarget.truckName} on ${deleteTarget.dateLabel} from all views and accounting. A copy is kept in the backend for audit purposes.`
                 : ""}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2 pt-1">
-            <label className="text-sm font-medium">
-              Type <span className="font-mono font-bold">delete</span> to confirm:
-            </label>
-            <Input
-              value={deleteConfirmText}
-              onChange={(e) => setDeleteConfirmText(e.target.value)}
-              placeholder="delete"
-              autoFocus
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="off"
-              spellCheck={false}
-              disabled={deleteLoading}
-            />
+          <div className="space-y-3 pt-1">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Reason for deletion <span className="text-destructive">*</span>
+              </label>
+              <Input
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                placeholder="e.g. duplicate ticket, test entry, wrong incident"
+                autoFocus
+                disabled={deleteLoading}
+              />
+            </div>
+            {deleteTarget?.ticket.supervisor_signature_url && (
+              <p className="rounded border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive">
+                ⚠ This ticket has a supervisor signature. Deleting will remove it from accounting — please make sure that's intended.
+              </p>
+            )}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Type <span className="font-mono font-bold">delete</span> to confirm:
+              </label>
+              <Input
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="delete"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                disabled={deleteLoading}
+              />
+            </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-2">
             <Button variant="outline" onClick={closeDeleteDialog} disabled={deleteLoading}>
@@ -711,7 +739,9 @@ export default function ShiftTicketLog() {
               variant="destructive"
               onClick={handleConfirmDelete}
               disabled={
-                deleteLoading || deleteConfirmText.trim().toLowerCase() !== "delete"
+                deleteLoading ||
+                deleteConfirmText.trim().toLowerCase() !== "delete" ||
+                !deleteReason.trim()
               }
             >
               {deleteLoading ? (

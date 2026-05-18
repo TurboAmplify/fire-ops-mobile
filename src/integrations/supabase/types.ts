@@ -1518,6 +1518,9 @@ export type Database = {
           contractor_rep_signature_url: string | null
           contractor_rep_signed_at: string | null
           created_at: string
+          deleted_at: string | null
+          deleted_by_user_id: string | null
+          deleted_reason: string | null
           equipment_entries: Json
           equipment_make_model: string | null
           equipment_type: string | null
@@ -1552,6 +1555,9 @@ export type Database = {
           contractor_rep_signature_url?: string | null
           contractor_rep_signed_at?: string | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by_user_id?: string | null
+          deleted_reason?: string | null
           equipment_entries?: Json
           equipment_make_model?: string | null
           equipment_type?: string | null
@@ -1586,6 +1592,9 @@ export type Database = {
           contractor_rep_signature_url?: string | null
           contractor_rep_signed_at?: string | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by_user_id?: string | null
+          deleted_reason?: string | null
           equipment_entries?: Json
           equipment_make_model?: string | null
           equipment_type?: string | null

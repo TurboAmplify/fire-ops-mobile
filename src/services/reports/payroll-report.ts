@@ -51,7 +51,8 @@ export async function fetchPayrollReport(
     supabase
       .from("shift_tickets")
       .select("id, personnel_entries, incident_trucks!inner(incidents:incidents!incident_trucks_incident_id_fkey(id, name))")
-      .eq("organization_id", input.organizationId),
+      .eq("organization_id", input.organizationId)
+      .is("deleted_at", null),
     supabase
       .from("crew_members")
       .select("id, name, role")

@@ -41,7 +41,8 @@ function useAllShiftTickets() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("shift_tickets")
-        .select("id, personnel_entries, incident_trucks!inner(incidents:incidents!incident_trucks_incident_id_fkey(id, name))");
+        .select("id, personnel_entries, incident_trucks!inner(incidents:incidents!incident_trucks_incident_id_fkey(id, name))")
+        .is("deleted_at", null);
       if (error) throw error;
       return data as unknown as ShiftTicketRow[];
     },

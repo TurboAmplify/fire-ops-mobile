@@ -138,14 +138,16 @@ export function useUpdateShiftTicket(ticketId: string, incidentTruckId: string) 
 export function useDeleteShiftTicket(incidentTruckId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => {
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => {
       assertOnlineForWrite();
-      return deleteShiftTicket(id);
+      return deleteShiftTicket(id, reason);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["shift-tickets", incidentTruckId] });
       qc.invalidateQueries({ queryKey: ["incident-daily-crew"] });
       qc.invalidateQueries({ queryKey: ["shift-tickets-recent"] });
+      qc.invalidateQueries({ queryKey: ["incident-tickets"] });
+      qc.invalidateQueries({ queryKey: ["all-shift-tickets-payroll"] });
     },
   });
 }
@@ -171,6 +173,7 @@ export function useRecentShiftTickets(limit = 25) {
       const { data, error } = await (await import("@/integrations/supabase/client")).supabase
         .from("shift_tickets")
         .select("*, incident_trucks(incident_id, trucks(name, unit_type))")
+        .is("deleted_at", null)
         .order("updated_at", { ascending: false })
         .limit(Math.max(limit * 3, 50));
       if (error) throw error;

@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Loader2, FileText, ChevronRight, Truck as TruckIcon, Camera } from "lucide-react";
+import { Plus, Loader2, FileText, ChevronRight, Truck as TruckIcon, Camera, MoreVertical, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { useIncidentTrucks } from "@/hooks/useIncidentTrucks";
-import { useShiftTickets } from "@/hooks/useShiftTickets";
+import { useShiftTickets, useDeleteShiftTicket } from "@/hooks/useShiftTickets";
 import { getLocalDateString } from "@/lib/local-date";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -12,6 +13,22 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { QuickAttachPaperTicketSheet } from "@/components/shift-tickets/QuickAttachPaperTicketSheet";
 
 interface Props {
@@ -69,6 +86,11 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
   const [showTruckPicker, setShowTruckPicker] = useState(false);
   const [pickerMode, setPickerMode] = useState<"new" | "import">("new");
   const [showQuickAttach, setShowQuickAttach] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; incidentTruckId: string; label: string; supervisorSigned: boolean } | null>(null);
+  const [deleteReason, setDeleteReason] = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  // Use any truck id for invalidation key; actual write goes through service
+  const deleteMutation = useDeleteShiftTicket(deleteTarget?.incidentTruckId ?? "");
 
   // Fetch all tickets for this incident in one query
   const truckIds = useMemo(() => trucks?.map((t) => t.id) ?? [], [trucks]);
@@ -80,6 +102,7 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
         .from("shift_tickets")
         .select("id, incident_truck_id, status, contractor_rep_signature_url, supervisor_signature_url, equipment_entries, personnel_entries, updated_at")
         .in("incident_truck_id", truckIds)
+        .is("deleted_at", null)
         .order("updated_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as TicketRow[];
@@ -129,23 +152,75 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
     const truckLabel = truck?.unit_type || truck?.name || "Truck";
     const dateStr = getShiftDate(t);
     const status = statusFor(t);
+    const label = `${truckLabel} - ${fmtDate(dateStr)}`;
     return (
-      <button
+      <div
         key={t.id}
-        onClick={() => openTicket(t)}
-        className="relative flex w-full items-center gap-3 rounded-xl bg-card border border-border/30 p-3 text-left card-shadow active:scale-[0.99] transition-transform touch-target"
+        className="relative flex w-full items-center gap-3 rounded-xl bg-card border border-border/30 p-3 card-shadow"
       >
-        <FileText className="h-4 w-4 text-primary shrink-0" />
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold truncate pr-16">{truckLabel}</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">{fmtDate(dateStr)}</p>
-        </div>
-        <span className={`absolute right-3 top-3 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold ${status.cls}`}>
+        <button
+          onClick={() => openTicket(t)}
+          className="flex flex-1 items-center gap-3 text-left active:scale-[0.99] transition-transform touch-target min-w-0"
+        >
+          <FileText className="h-4 w-4 text-primary shrink-0" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold truncate pr-20">{truckLabel}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">{fmtDate(dateStr)}</p>
+          </div>
+        </button>
+        <span className={`absolute right-10 top-3 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold ${status.cls}`}>
           {status.label}
         </span>
-        <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
-      </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className="rounded-lg p-2 text-muted-foreground active:bg-accent touch-target"
+              aria-label="Ticket actions"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreVertical className="h-4 w-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuItem
+              onClick={() => setDeleteTarget({
+                id: t.id,
+                incidentTruckId: t.incident_truck_id,
+                label,
+                supervisorSigned: !!t.supervisor_signature_url,
+              })}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     );
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    const reason = deleteReason.trim();
+    if (!reason) {
+      toast.error("Please enter a reason for deleting this ticket");
+      return;
+    }
+    if (deleteTarget.supervisorSigned && deleteConfirm.trim().toLowerCase() !== "delete") {
+      toast.error('Type "delete" to confirm');
+      return;
+    }
+    try {
+      await deleteMutation.mutateAsync({ id: deleteTarget.id, reason });
+      toast.success("Shift ticket deleted");
+    } catch {
+      toast.error("Failed to delete shift ticket");
+    } finally {
+      setDeleteTarget(null);
+      setDeleteReason("");
+      setDeleteConfirm("");
+    }
   };
 
   const isLoading = loadingTrucks || loadingTickets;
@@ -252,6 +327,72 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
         incidentName={incidentName}
         defaultIncidentTruckId={trucks?.length === 1 ? trucks[0].id : undefined}
       />
+
+      {/* Delete confirmation */}
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTarget(null);
+            setDeleteReason("");
+            setDeleteConfirm("");
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Shift Ticket?</AlertDialogTitle>
+            <AlertDialogDescription>
+              "{deleteTarget?.label}" will be removed from all views and accounting. A copy stays in the backend for audit.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold">
+                Reason for deletion <span className="text-destructive">*</span>
+              </label>
+              <input
+                type="text"
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                placeholder="e.g. duplicate ticket, test entry, wrong incident"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                autoFocus
+              />
+            </div>
+            {deleteTarget?.supervisorSigned && (
+              <>
+                <p className="rounded border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive">
+                  ⚠ Supervisor has signed this ticket. Type <span className="font-mono font-bold">delete</span> below to confirm.
+                </p>
+                <input
+                  type="text"
+                  value={deleteConfirm}
+                  onChange={(e) => setDeleteConfirm(e.target.value)}
+                  placeholder="delete"
+                  autoComplete="off"
+                  autoCapitalize="off"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+              </>
+            )}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={
+                deleteMutation.isPending ||
+                !deleteReason.trim() ||
+                (deleteTarget?.supervisorSigned && deleteConfirm.trim().toLowerCase() !== "delete")
+              }
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

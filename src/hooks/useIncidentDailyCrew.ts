@@ -74,7 +74,8 @@ export function useIncidentDailyCrew(incidentId: string) {
         supabase
           .from("shift_tickets")
           .select("id, incident_truck_id, personnel_entries, supervisor_signature_url, contractor_rep_signature_url")
-          .in("incident_truck_id", itIds),
+          .in("incident_truck_id", itIds)
+          .is("deleted_at", null),
         // Crew lookup so we can map names to roles/ids when possible
         supabase
           .from("crew_members")
