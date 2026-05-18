@@ -18,6 +18,7 @@ const passwordSchema = z
   .string()
   .min(8, "Password must be at least 8 characters")
   .max(72, "Password too long");
+const loginPasswordSchema = z.string().min(1, "Enter your password").max(72, "Password too long");
 
 // Generic error copy — never references billing, marketing, or external sites.
 // Apple-safe: app shows no path to create a paid account.
@@ -87,7 +88,7 @@ export default function Login() {
       const cleanEmail = emailResult.data;
 
       if (mode !== "forgot") {
-        const passwordResult = passwordSchema.safeParse(password);
+        const passwordResult = (mode === "join" ? passwordSchema : loginPasswordSchema).safeParse(password);
         if (!passwordResult.success) {
           throw new Error(passwordResult.error.issues[0]?.message ?? "Invalid password");
         }
