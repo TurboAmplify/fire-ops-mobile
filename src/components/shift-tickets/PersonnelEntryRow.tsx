@@ -431,12 +431,14 @@ export function PersonnelEntryRow({ entry, index, onChange, onRemove, collapsed,
 interface LunchDialogProps {
   open: boolean;
   value: string;
+  hasExistingLunch?: boolean;
   onChange: (v: string) => void;
   onConfirm: () => void;
+  onRemove?: () => void;
   onCancel: () => void;
 }
 
-function LunchDialog({ open, value, onChange, onConfirm, onCancel }: LunchDialogProps) {
+function LunchDialog({ open, value, hasExistingLunch, onChange, onConfirm, onRemove, onCancel }: LunchDialogProps) {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onCancel()}>
       <DialogContent className="max-w-sm">
@@ -455,7 +457,16 @@ function LunchDialog({ open, value, onChange, onConfirm, onCancel }: LunchDialog
             className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-base outline-none focus:ring-1 focus:ring-ring mt-1"
           />
         </div>
-        <DialogFooter className="flex flex-row gap-2 sm:justify-end">
+        <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          {hasExistingLunch && onRemove && (
+            <Button
+              variant="destructive"
+              onClick={onRemove}
+              className="w-full sm:w-auto sm:mr-auto"
+            >
+              Remove lunch
+            </Button>
+          )}
           <Button variant="outline" onClick={onCancel} className="flex-1 sm:flex-none">
             Cancel
           </Button>
@@ -463,6 +474,7 @@ function LunchDialog({ open, value, onChange, onConfirm, onCancel }: LunchDialog
             Apply
           </Button>
         </DialogFooter>
+
       </DialogContent>
     </Dialog>
   );
