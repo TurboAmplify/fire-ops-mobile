@@ -255,31 +255,39 @@ export function PersonnelEntryRow({ entry, index, onChange, onRemove, collapsed,
         </div>
 
         {/* Lunch break controls — auto-splits the shift into pre-lunch and post-lunch segments */}
-        <div className="flex items-center gap-2 rounded-lg bg-muted/40 px-2 py-2">
-          <button
-            type="button"
-            onClick={handleLunchToggle}
-            className={`rounded-full px-3 py-1.5 text-xs font-medium touch-target ${
-              entry.lunch_time
-                ? "bg-primary text-primary-foreground"
-                : "bg-secondary text-secondary-foreground"
-            }`}
-          >
-            {entry.lunch_time ? "Lunch on" : "Add lunch break"}
-          </button>
-          {entry.lunch_time && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg bg-muted/40 px-2 py-2">
+          {entry.lunch_time ? (
+            <>
+              <button
+                type="button"
+                onClick={handleLunchTimeEdit}
+                className="rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground touch-target"
+              >
+                Lunch at {entry.lunch_time} (30 min)
+              </button>
+              <button
+                type="button"
+                onClick={handleLunchToggle}
+                className="rounded-full bg-destructive/15 px-3 py-1.5 text-xs font-semibold text-destructive touch-target"
+                aria-label="Remove lunch break"
+              >
+                ✕ Remove lunch
+              </button>
+            </>
+          ) : (
             <button
               type="button"
-              onClick={handleLunchTimeEdit}
-              className="text-xs font-semibold text-primary underline touch-target"
+              onClick={handleLunchToggle}
+              className="rounded-full bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground touch-target"
             >
-              At {entry.lunch_time} (30 min)
+              Add lunch break
             </button>
           )}
           <span className="ml-auto text-[10px] text-muted-foreground">
             Splits shift around lunch
           </span>
         </div>
+
 
         <div className="grid grid-cols-2 gap-2">
           <div>
@@ -406,10 +414,16 @@ export function PersonnelEntryRow({ entry, index, onChange, onRemove, collapsed,
       <LunchDialog
         open={lunchDialog}
         value={pendingLunchTime}
+        hasExistingLunch={!!entry.lunch_time}
         onChange={setPendingLunchTime}
         onConfirm={handleLunchDialogConfirm}
+        onRemove={() => {
+          applyLunchTime(null);
+          setLunchDialog(false);
+        }}
         onCancel={() => setLunchDialog(false)}
       />
+
     </div>
   );
 }
@@ -417,12 +431,14 @@ export function PersonnelEntryRow({ entry, index, onChange, onRemove, collapsed,
 interface LunchDialogProps {
   open: boolean;
   value: string;
+  hasExistingLunch?: boolean;
   onChange: (v: string) => void;
   onConfirm: () => void;
+  onRemove?: () => void;
   onCancel: () => void;
 }
 
-function LunchDialog({ open, value, onChange, onConfirm, onCancel }: LunchDialogProps) {
+function LunchDialog({ open, value, hasExistingLunch, onChange, onConfirm, onRemove, onCancel }: LunchDialogProps) {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onCancel()}>
       <DialogContent className="max-w-sm">
@@ -441,7 +457,16 @@ function LunchDialog({ open, value, onChange, onConfirm, onCancel }: LunchDialog
             className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-base outline-none focus:ring-1 focus:ring-ring mt-1"
           />
         </div>
-        <DialogFooter className="flex flex-row gap-2 sm:justify-end">
+        <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          {hasExistingLunch && onRemove && (
+            <Button
+              variant="destructive"
+              onClick={onRemove}
+              className="w-full sm:w-auto sm:mr-auto"
+            >
+              Remove lunch
+            </Button>
+          )}
           <Button variant="outline" onClick={onCancel} className="flex-1 sm:flex-none">
             Cancel
           </Button>
@@ -449,6 +474,7 @@ function LunchDialog({ open, value, onChange, onConfirm, onCancel }: LunchDialog
             Apply
           </Button>
         </DialogFooter>
+
       </DialogContent>
     </Dialog>
   );
