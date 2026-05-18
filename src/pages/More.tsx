@@ -165,6 +165,12 @@ export default function More() {
             </button>
           </div>
         </section>
+
+        {/* Build stamp — lets you verify on-device whether the latest published
+            build is actually loaded (vs. a cached older one). */}
+        <p className="text-center text-[11px] text-muted-foreground/70 pt-2">
+          Build v2026.05.18
+        </p>
       </div>
     </AppShell>
   );

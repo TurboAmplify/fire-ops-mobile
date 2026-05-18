@@ -7,7 +7,8 @@
 @layer base {
   :root {
     --app-status-bar-fallback: 0px;
-    --app-safe-top: max(env(safe-area-inset-top, 0px), var(--app-status-bar-fallback));
+    --app-min-safe-top: 0px;
+    --app-safe-top: max(env(safe-area-inset-top, 0px), var(--app-status-bar-fallback), var(--app-min-safe-top));
     --app-safe-bottom: env(safe-area-inset-bottom, 0px);
 
     /* Light theme */
@@ -116,6 +117,22 @@ html.ios-safe-area-fallback {
    the webview below the status bar, so we don't need a top fallback. */
 html.capacitor-native {
   --app-status-bar-fallback: 0px;
+  --app-min-safe-top: 0px;
+}
+
+/* Phone-sized viewports: ALWAYS reserve room for the status bar, regardless
+   of whether the device, WebView wrapper, or browser correctly reports
+   env(safe-area-inset-top). This guarantees the fixed app header never sits
+   under the clock / notch / Dynamic Island on iPhone, Despia wrappers, or
+   any future mobile shell. Disabled when running natively because Capacitor
+   already keeps the WebView below the status bar. */
+@media (max-width: 480px) {
+  :root {
+    --app-min-safe-top: 44px;
+  }
+}
+html.capacitor-native {
+  --app-min-safe-top: 0px !important;
 }
 
 @layer base {
