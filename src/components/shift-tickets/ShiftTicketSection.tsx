@@ -74,7 +74,9 @@ export function ShiftTicketSection({
   const { data: tickets, isLoading } = useShiftTickets(incidentTruckId);
   const deleteMutation = useDeleteShiftTicket(incidentTruckId);
   const duplicateMutation = useDuplicateShiftTicket(incidentTruckId);
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string; supervisorSigned: boolean } | null>(null);
+  const [deleteReason, setDeleteReason] = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState("");
   const [batchDownloading, setBatchDownloading] = useState(false);
 
   const navState = { truckName, truckMake, truckModel, truckVin, truckPlate, truckUnitType, incidentName };
