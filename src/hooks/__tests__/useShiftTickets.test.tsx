@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { createWrapper } from "@/test/utils";
 
-vi.mock("@/lib/offline-guard", () => ({ assertOnlineForWrite: vi.fn() }));
+vi.mock("@/lib/offline-guard", () => ({ assertOnlineForWrite: vi.fn(), isOnline: vi.fn(() => true) }));
 vi.mock("@/services/shift-tickets", () => ({
   fetchShiftTickets: vi.fn(),
   fetchShiftTicket: vi.fn(),

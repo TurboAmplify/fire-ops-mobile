@@ -61,11 +61,11 @@ export function AppShell({ children, title, headerRight, showBack, onBack }: App
             </div>
           </header>
           {/* Spacer must include the iOS safe-area inset so content doesn't slide under the notch / Dynamic Island. */}
-          <div className="shrink-0 h-[calc(3.5rem+env(safe-area-inset-top,0px))]" />
+          <div className="shrink-0 h-[calc(3.5rem+var(--app-safe-top))]" />
         </>
       ) : (
         // Pages without a title still need top inset on iOS or they render under the camera bar.
-        <div className="shrink-0 h-[env(safe-area-inset-top,0px)]" />
+        <div className="shrink-0 h-[var(--app-safe-top)]" />
       )}
       <OfflineBanner />
       <TrialStatusBanner />

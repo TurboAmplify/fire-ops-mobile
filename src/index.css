@@ -6,6 +6,9 @@
 
 @layer base {
   :root {
+    --app-safe-top: env(safe-area-inset-top, 0px);
+    --app-safe-bottom: env(safe-area-inset-bottom, 0px);
+
     /* Light theme */
     --background: 0 0% 98%;
     --foreground: 220 15% 15%;
@@ -99,6 +102,17 @@
   }
 }
 
+/* iOS webview wrappers can report a zero safe-area inset while still drawing
+   under the status bar. Keep fixed app controls below the clock/notch. */
+@supports (-webkit-touch-callout: none) {
+  @media (pointer: coarse) {
+    :root {
+      --app-safe-top: max(env(safe-area-inset-top, 0px), 44px);
+      --app-safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+  }
+}
+
 @layer base {
   * {
     @apply border-border;
@@ -154,11 +168,11 @@
   }
 
   .safe-area-top {
-    padding-top: env(safe-area-inset-top, 0px);
+    padding-top: var(--app-safe-top);
   }
 
   .safe-area-bottom {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-bottom: var(--app-safe-bottom);
   }
 
   .no-scrollbar {

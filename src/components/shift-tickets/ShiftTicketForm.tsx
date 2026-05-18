@@ -619,6 +619,7 @@ export function ShiftTicketForm({
 
       await Promise.resolve(onSave({ ...buildSavePayload(), ...sigUpdate }));
       setIsDirty(false);
+      if (sigType === "supervisor") setShowSupervisorSheet(false);
       showSuccess(isOnline() ? "Signature saved" : "Signature saved on device");
     } catch (err) {
       // M2-H3: Show failure as an error toast, not the green success overlay.

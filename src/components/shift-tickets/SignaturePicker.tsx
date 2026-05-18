@@ -214,7 +214,7 @@ export function SignaturePicker({ open, onClose, onSave, title, defaultName = ""
   return (
     <div
       className="fixed inset-0 z-[60] flex flex-col bg-background"
-      style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}
+      style={{ paddingTop: "var(--app-safe-top)", paddingBottom: "var(--app-safe-bottom)" }}
     >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
