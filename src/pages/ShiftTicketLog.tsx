@@ -693,7 +693,7 @@ export default function ShiftTicketLog() {
             </DialogTitle>
             <DialogDescription>
               {deleteTarget
-                ? `This will permanently delete the shift ticket for ${deleteTarget.truckName} on ${deleteTarget.dateLabel}. This action cannot be undone.`
+                ? `This will remove the shift ticket for ${deleteTarget.truckName} on ${deleteTarget.dateLabel} from all views and accounting. A copy is kept in the backend for audit purposes.`
                 : ""}
             </DialogDescription>
           </DialogHeader>
