@@ -198,7 +198,8 @@ export async function fetchPLReport(input: PLInput, rangeLabel: string): Promise
   const { data: ticketRows, error: ticketsErr } = await supabase
     .from("shift_tickets")
     .select("id, created_at, personnel_entries, incident_truck_id, incident_trucks:incident_trucks!shift_tickets_incident_truck_id_fkey(incident_id, truck_id, trucks:trucks!incident_trucks_truck_id_fkey(day_rate))")
-    .eq("organization_id", input.organizationId);
+    .eq("organization_id", input.organizationId)
+    .is("deleted_at", null);
   if (ticketsErr) throw ticketsErr;
 
   // Group: incident_id -> truck_id -> Set<dateString>
