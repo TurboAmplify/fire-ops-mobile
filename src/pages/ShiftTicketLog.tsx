@@ -137,6 +137,7 @@ export default function ShiftTicketLog() {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [deleteTarget, setDeleteTarget] = useState<SelectedTicket | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteReason, setDeleteReason] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   // "Pay crew without a ticket" flow — admin-only shortcut to AdjustmentSheet
