@@ -88,6 +88,7 @@ export async function fetchShiftTickets(incidentTruckId: string): Promise<ShiftT
     .from("shift_tickets")
     .select("*")
     .eq("incident_truck_id", incidentTruckId)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data ?? []) as unknown as ShiftTicket[];
