@@ -106,8 +106,10 @@
 /* iOS WebView wrappers can report a zero safe-area inset while still drawing
    under the status bar. main.ts adds this class on iPhone/iPad so fixed app
    controls stay below the clock, notch, and Dynamic Island. */
+/* 59px covers iPhones with Dynamic Island (14 Pro and later). Safer to be
+   slightly tall than to clip the Back / Save / Close buttons. */
 html.ios-safe-area-fallback {
-  --app-status-bar-fallback: 52px;
+  --app-status-bar-fallback: 59px;
 }
 
 @layer base {
