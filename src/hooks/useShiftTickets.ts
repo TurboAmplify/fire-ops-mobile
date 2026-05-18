@@ -138,14 +138,16 @@ export function useUpdateShiftTicket(ticketId: string, incidentTruckId: string) 
 export function useDeleteShiftTicket(incidentTruckId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => {
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => {
       assertOnlineForWrite();
-      return deleteShiftTicket(id);
+      return deleteShiftTicket(id, reason);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["shift-tickets", incidentTruckId] });
       qc.invalidateQueries({ queryKey: ["incident-daily-crew"] });
       qc.invalidateQueries({ queryKey: ["shift-tickets-recent"] });
+      qc.invalidateQueries({ queryKey: ["incident-tickets"] });
+      qc.invalidateQueries({ queryKey: ["all-shift-tickets-payroll"] });
     },
   });
 }
