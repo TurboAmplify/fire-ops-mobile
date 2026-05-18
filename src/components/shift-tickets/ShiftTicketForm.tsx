@@ -656,6 +656,7 @@ export function ShiftTicketForm({
             setSupervisorSigUrl(url);
             sigUpdates.supervisor_signature_url = url;
             sigUpdates.supervisor_signed_at = new Date().toISOString();
+            sigUpdates.status = "final";
           }
         } catch {
           // Silently fail individual sig uploads
