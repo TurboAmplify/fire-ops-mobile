@@ -286,18 +286,52 @@ export function ShiftTicketSection({
       })}
 
       {/* Delete confirmation dialog */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) { setDeleteTarget(null); setDeleteReason(""); setDeleteConfirm(""); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Shift Ticket?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete "{deleteTarget?.label}". This action cannot be undone.
+              "{deleteTarget?.label}" will be removed from all views and accounting. A copy stays in the backend for audit.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold">Reason for deletion <span className="text-destructive">*</span></label>
+              <input
+                type="text"
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                placeholder="e.g. duplicate ticket, test entry, wrong incident"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                autoFocus
+              />
+            </div>
+            {deleteTarget?.supervisorSigned && (
+              <>
+                <p className="rounded border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive">
+                  ⚠ Supervisor has signed this ticket. Type <span className="font-mono font-bold">delete</span> below to confirm.
+                </p>
+                <input
+                  type="text"
+                  value={deleteConfirm}
+                  onChange={(e) => setDeleteConfirm(e.target.value)}
+                  placeholder="delete"
+                  autoComplete="off"
+                  autoCapitalize="off"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+              </>
+            )}
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
+              disabled={
+                deleteMutation.isPending ||
+                !deleteReason.trim() ||
+                (deleteTarget?.supervisorSigned && deleteConfirm.trim().toLowerCase() !== "delete")
+              }
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {deleteMutation.isPending ? "Deleting..." : "Delete"}
