@@ -152,23 +152,75 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
     const truckLabel = truck?.unit_type || truck?.name || "Truck";
     const dateStr = getShiftDate(t);
     const status = statusFor(t);
+    const label = `${truckLabel} - ${fmtDate(dateStr)}`;
     return (
-      <button
+      <div
         key={t.id}
-        onClick={() => openTicket(t)}
-        className="relative flex w-full items-center gap-3 rounded-xl bg-card border border-border/30 p-3 text-left card-shadow active:scale-[0.99] transition-transform touch-target"
+        className="relative flex w-full items-center gap-3 rounded-xl bg-card border border-border/30 p-3 card-shadow"
       >
-        <FileText className="h-4 w-4 text-primary shrink-0" />
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold truncate pr-16">{truckLabel}</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">{fmtDate(dateStr)}</p>
-        </div>
-        <span className={`absolute right-3 top-3 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold ${status.cls}`}>
+        <button
+          onClick={() => openTicket(t)}
+          className="flex flex-1 items-center gap-3 text-left active:scale-[0.99] transition-transform touch-target min-w-0"
+        >
+          <FileText className="h-4 w-4 text-primary shrink-0" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold truncate pr-20">{truckLabel}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">{fmtDate(dateStr)}</p>
+          </div>
+        </button>
+        <span className={`absolute right-10 top-3 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold ${status.cls}`}>
           {status.label}
         </span>
-        <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
-      </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className="rounded-lg p-2 text-muted-foreground active:bg-accent touch-target"
+              aria-label="Ticket actions"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreVertical className="h-4 w-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuItem
+              onClick={() => setDeleteTarget({
+                id: t.id,
+                incidentTruckId: t.incident_truck_id,
+                label,
+                supervisorSigned: !!t.supervisor_signature_url,
+              })}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     );
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    const reason = deleteReason.trim();
+    if (!reason) {
+      toast.error("Please enter a reason for deleting this ticket");
+      return;
+    }
+    if (deleteTarget.supervisorSigned && deleteConfirm.trim().toLowerCase() !== "delete") {
+      toast.error('Type "delete" to confirm');
+      return;
+    }
+    try {
+      await deleteMutation.mutateAsync({ id: deleteTarget.id, reason });
+      toast.success("Shift ticket deleted");
+    } catch {
+      toast.error("Failed to delete shift ticket");
+    } finally {
+      setDeleteTarget(null);
+      setDeleteReason("");
+      setDeleteConfirm("");
+    }
   };
 
   const isLoading = loadingTrucks || loadingTickets;
