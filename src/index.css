@@ -107,7 +107,7 @@
 @supports (-webkit-touch-callout: none) {
   @media (pointer: coarse) {
     :root {
-      --app-safe-top: max(env(safe-area-inset-top, 0px), 28px);
+      --app-safe-top: max(env(safe-area-inset-top, 0px), 44px);
       --app-safe-bottom: env(safe-area-inset-bottom, 0px);
     }
   }
