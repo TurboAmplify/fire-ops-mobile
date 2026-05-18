@@ -7,7 +7,8 @@
 @layer base {
   :root {
     --app-status-bar-fallback: 0px;
-    --app-safe-top: max(env(safe-area-inset-top, 0px), var(--app-status-bar-fallback));
+    --app-min-safe-top: 0px;
+    --app-safe-top: max(env(safe-area-inset-top, 0px), var(--app-status-bar-fallback), var(--app-min-safe-top));
     --app-safe-bottom: env(safe-area-inset-bottom, 0px);
 
     /* Light theme */
