@@ -173,6 +173,7 @@ export function useRecentShiftTickets(limit = 25) {
       const { data, error } = await (await import("@/integrations/supabase/client")).supabase
         .from("shift_tickets")
         .select("*, incident_trucks(incident_id, trucks(name, unit_type))")
+        .is("deleted_at", null)
         .order("updated_at", { ascending: false })
         .limit(Math.max(limit * 3, 50));
       if (error) throw error;
