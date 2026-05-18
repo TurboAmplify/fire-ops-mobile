@@ -255,31 +255,39 @@ export function PersonnelEntryRow({ entry, index, onChange, onRemove, collapsed,
         </div>
 
         {/* Lunch break controls — auto-splits the shift into pre-lunch and post-lunch segments */}
-        <div className="flex items-center gap-2 rounded-lg bg-muted/40 px-2 py-2">
-          <button
-            type="button"
-            onClick={handleLunchToggle}
-            className={`rounded-full px-3 py-1.5 text-xs font-medium touch-target ${
-              entry.lunch_time
-                ? "bg-primary text-primary-foreground"
-                : "bg-secondary text-secondary-foreground"
-            }`}
-          >
-            {entry.lunch_time ? "Lunch on" : "Add lunch break"}
-          </button>
-          {entry.lunch_time && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg bg-muted/40 px-2 py-2">
+          {entry.lunch_time ? (
+            <>
+              <button
+                type="button"
+                onClick={handleLunchTimeEdit}
+                className="rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground touch-target"
+              >
+                Lunch at {entry.lunch_time} (30 min)
+              </button>
+              <button
+                type="button"
+                onClick={handleLunchToggle}
+                className="rounded-full bg-destructive/15 px-3 py-1.5 text-xs font-semibold text-destructive touch-target"
+                aria-label="Remove lunch break"
+              >
+                ✕ Remove lunch
+              </button>
+            </>
+          ) : (
             <button
               type="button"
-              onClick={handleLunchTimeEdit}
-              className="text-xs font-semibold text-primary underline touch-target"
+              onClick={handleLunchToggle}
+              className="rounded-full bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground touch-target"
             >
-              At {entry.lunch_time} (30 min)
+              Add lunch break
             </button>
           )}
           <span className="ml-auto text-[10px] text-muted-foreground">
             Splits shift around lunch
           </span>
         </div>
+
 
         <div className="grid grid-cols-2 gap-2">
           <div>
