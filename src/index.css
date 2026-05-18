@@ -112,6 +112,12 @@ html.ios-safe-area-fallback {
   --app-status-bar-fallback: 59px;
 }
 
+/* On native (Capacitor), StatusBar.setOverlaysWebView({overlay:false}) keeps
+   the webview below the status bar, so we don't need a top fallback. */
+html.capacitor-native {
+  --app-status-bar-fallback: 0px;
+}
+
 @layer base {
   * {
     @apply border-border;
