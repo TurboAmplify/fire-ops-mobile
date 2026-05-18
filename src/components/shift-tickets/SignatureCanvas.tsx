@@ -97,16 +97,13 @@ export function SignatureCanvas({ open, onClose, onSave, title }: SignatureCanva
   if (!open) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex flex-col bg-background"
-      style={{ paddingTop: "var(--app-safe-top)", paddingBottom: "var(--app-safe-bottom)" }}
-    >
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-        <button onClick={onClose} className="touch-target flex items-center gap-1 text-sm text-muted-foreground">
+    <div className="fixed inset-0 z-50 flex flex-col bg-background pt-[var(--app-safe-top)] pb-[var(--app-safe-bottom)]">
+      <div className="flex min-h-14 items-center justify-between border-b border-border px-4 py-2">
+        <button onClick={onClose} className="flex min-h-11 items-center gap-1 rounded-lg pr-2 text-sm text-muted-foreground active:bg-accent/30">
           <X className="h-5 w-5" /> Cancel
         </button>
         <span className="text-sm font-bold">{title}</span>
-        <button onClick={save} disabled={!hasStroke} className="touch-target flex items-center gap-1 text-sm font-bold text-primary disabled:opacity-40">
+        <button onClick={save} disabled={!hasStroke} className="flex min-h-11 items-center gap-1 rounded-lg pl-2 text-sm font-bold text-primary disabled:opacity-40 active:bg-accent/30">
           <Check className="h-5 w-5" /> Save
         </button>
       </div>

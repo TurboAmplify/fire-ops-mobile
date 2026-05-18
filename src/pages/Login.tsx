@@ -242,7 +242,7 @@ export default function Login() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  minLength={8}
+                  minLength={mode === "join" ? 8 : 1}
                   autoComplete={mode === "join" ? "new-password" : "current-password"}
                   className="h-12 rounded-xl bg-secondary border-border text-[15px] placeholder:text-muted-foreground/50"
                 />

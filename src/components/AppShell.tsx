@@ -36,12 +36,12 @@ export function AppShell({ children, title, headerRight, showBack, onBack }: App
       <div className="relative z-10 flex min-h-screen flex-col">
       {title ? (
         <>
-          <header className={`fixed top-0 left-0 right-0 z-50 safe-area-top ${
+          <header className={`fixed top-0 left-0 right-0 z-50 pt-[var(--app-safe-top)] ${
             isHome
               ? "bg-background/95 glass border-b border-border/40"
               : "glass border-b border-border/60 bg-card/80"
           }`}>
-            <div className="flex items-center justify-between px-4 h-14">
+            <div className="flex min-h-14 items-center justify-between px-4 py-1.5">
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 {isNested && (
                   <button
