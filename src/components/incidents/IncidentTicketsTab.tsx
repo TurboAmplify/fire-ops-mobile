@@ -86,6 +86,11 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
   const [showTruckPicker, setShowTruckPicker] = useState(false);
   const [pickerMode, setPickerMode] = useState<"new" | "import">("new");
   const [showQuickAttach, setShowQuickAttach] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; incidentTruckId: string; label: string; supervisorSigned: boolean } | null>(null);
+  const [deleteReason, setDeleteReason] = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  // Use any truck id for invalidation key; actual write goes through service
+  const deleteMutation = useDeleteShiftTicket(deleteTarget?.incidentTruckId ?? "");
 
   // Fetch all tickets for this incident in one query
   const truckIds = useMemo(() => trucks?.map((t) => t.id) ?? [], [trucks]);
@@ -97,6 +102,7 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
         .from("shift_tickets")
         .select("id, incident_truck_id, status, contractor_rep_signature_url, supervisor_signature_url, equipment_entries, personnel_entries, updated_at")
         .in("incident_truck_id", truckIds)
+        .is("deleted_at", null)
         .order("updated_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as TicketRow[];
