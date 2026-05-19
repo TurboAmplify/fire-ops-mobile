@@ -5,11 +5,10 @@ import { useOrganization } from "@/hooks/useOrganization";
 import { getStepsForRole, type TutorialStep } from "@/components/tutorial/tutorial-steps";
 import { toast } from "sonner";
 
-const LS_KEY = "fireops_tutorial_completed_at";
-// Per-tab guard so a preview-shell reload (or any other remount within the
-// same tab) cannot re-trigger the auto-open and make the bottom sheet
-// "jump" up again.
-const SS_AUTO_SHOWN_KEY = "fireops_tutorial_auto_shown";
+// Persistent guard so the welcome sheet auto-opens at most ONCE per device,
+// regardless of preview-iframe remounts, cache wipes, or sessionStorage
+// resets. Users can still replay manually from the help icon.
+const LS_AUTO_SHOWN_KEY = "fireops_tutorial_auto_shown_at";
 
 interface TutorialContextValue {
   isOpen: boolean;
@@ -46,8 +45,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
 
   const persistComplete = useCallback(async () => {
     try {
-      localStorage.setItem(LS_KEY, new Date().toISOString());
-      sessionStorage.setItem(SS_AUTO_SHOWN_KEY, "1");
+      localStorage.setItem(LS_AUTO_SHOWN_KEY, new Date().toISOString());
     } catch {
       // ignore storage errors
     }
@@ -128,11 +126,9 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     if (!user?.id) return;
     autoCheckedRef.current = true;
 
-    // Fast-paths: already completed (any tab, any time) OR already
-    // auto-shown in this tab/session.
+    // Fast-path: already auto-shown / completed on this device.
     try {
-      if (localStorage.getItem(LS_KEY)) return;
-      if (sessionStorage.getItem(SS_AUTO_SHOWN_KEY)) return;
+      if (localStorage.getItem(LS_AUTO_SHOWN_KEY)) return;
     } catch {
       // ignore
     }
@@ -153,29 +149,29 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
 
       if (data?.tutorial_completed_at) {
         try {
-          localStorage.setItem(LS_KEY, data.tutorial_completed_at);
+          localStorage.setItem(LS_AUTO_SHOWN_KEY, data.tutorial_completed_at);
         } catch {
           // ignore
         }
         return;
       }
 
-      // Mark as shown for this tab BEFORE the timer so a remount during
-      // the 700ms wait cannot schedule a second open.
+      // Persistently mark as auto-shown BEFORE opening so any remount
+      // during the brief delay can't re-trigger.
       try {
-        sessionStorage.setItem(SS_AUTO_SHOWN_KEY, "1");
+        localStorage.setItem(LS_AUTO_SHOWN_KEY, new Date().toISOString());
       } catch {
         // ignore
       }
 
-      // Not completed — auto-open after a brief delay so the page settles
+      // Not completed — auto-open after a brief delay so the page settles.
       if (autoOpenTimerRef.current) clearTimeout(autoOpenTimerRef.current);
       autoOpenTimerRef.current = setTimeout(() => {
         autoOpenTimerRef.current = null;
         setStepIndex(0);
         setIsMinimized(false);
         setIsOpen(true);
-      }, 700);
+      }, 400);
     } catch (err) {
       console.warn("Tutorial auto-start check failed:", err);
     }
@@ -192,8 +188,9 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     if (newId && prev && newId !== prev) {
       autoCheckedRef.current = false;
       setUserFirstName(null);
+      // Different user on this device → allow auto-open again.
       try {
-        sessionStorage.removeItem(SS_AUTO_SHOWN_KEY);
+        localStorage.removeItem(LS_AUTO_SHOWN_KEY);
       } catch {
         // ignore
       }

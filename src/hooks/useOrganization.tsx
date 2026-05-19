@@ -133,7 +133,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
     setLoading(true);
@@ -150,14 +150,13 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     return allMemberships[0];
   }, [allMemberships, activeOrgId]);
 
-  // If a stored/selected activeOrgId isn't in our loaded memberships (e.g. the
-  // user was just added to a new org elsewhere), refetch once to pick it up.
+  // If a stored/selected activeOrgId isn't in our loaded memberships, refetch.
   useEffect(() => {
-    if (!user || !activeOrgId) return;
+    if (!user?.id || !activeOrgId) return;
     if (allMemberships.length === 0) return;
     if (allMemberships.some((m) => m.organizationId === activeOrgId)) return;
     fetchMembership();
-  }, [user, activeOrgId, allMemberships, fetchMembership]);
+  }, [user?.id, activeOrgId, allMemberships, fetchMembership]);
 
   const setActiveOrgId = useCallback((orgId: string) => {
     const key = activeOrgKeyFor(user?.id);
