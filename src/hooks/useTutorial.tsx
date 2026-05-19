@@ -47,6 +47,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
   const persistComplete = useCallback(async () => {
     try {
       localStorage.setItem(LS_KEY, new Date().toISOString());
+      sessionStorage.setItem(SS_AUTO_SHOWN_KEY, "1");
     } catch {
       // ignore storage errors
     }
