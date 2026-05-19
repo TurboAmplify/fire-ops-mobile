@@ -5,7 +5,7 @@ export type Expense = Tables<"expenses">;
 export type ExpenseInsert = TablesInsert<"expenses">;
 export type ExpenseUpdate = TablesUpdate<"expenses">;
 
-export type ExpenseCategory = "fuel" | "ppe" | "food" | "lodging" | "equipment" | "other";
+export type ExpenseCategory = "fuel" | "ppe" | "food" | "lodging" | "equipment" | "supplies" | "other";
 export type FuelType = "truck" | "pump" | "saw" | "burn";
 export type ExpenseType = "company" | "reimbursement";
 export type ExpenseStatus = "draft" | "submitted" | "approved" | "rejected" | "reimbursed";
@@ -16,12 +16,13 @@ export const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   food: "Food",
   lodging: "Lodging",
   equipment: "Equipment",
+  supplies: "Supplies",
   other: "Other",
 };
 
 // Icon mapping moved to component layer — see CategoryIcon component
 // Kept for backward compat as empty; consumers should use CategoryIcon instead
-import { Fuel, ShieldCheck, UtensilsCrossed, Hotel, Wrench, Package, type LucideIcon } from "lucide-react";
+import { Fuel, ShieldCheck, UtensilsCrossed, Hotel, Wrench, Box, Package, type LucideIcon } from "lucide-react";
 
 export const CATEGORY_ICON_MAP: Record<ExpenseCategory, LucideIcon> = {
   fuel: Fuel,
@@ -29,6 +30,7 @@ export const CATEGORY_ICON_MAP: Record<ExpenseCategory, LucideIcon> = {
   food: UtensilsCrossed,
   lodging: Hotel,
   equipment: Wrench,
+  supplies: Box,
   other: Package,
 };
 

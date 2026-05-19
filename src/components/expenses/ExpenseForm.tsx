@@ -23,7 +23,7 @@ import {
   validateOrToast,
 } from "@/lib/validation";
 
-const categories: ExpenseCategory[] = ["fuel", "ppe", "food", "lodging", "equipment", "other"];
+const categories: ExpenseCategory[] = ["fuel", "ppe", "food", "lodging", "equipment", "supplies", "other"];
 const scopes: AttachmentScope[] = ["company", "incident", "truck"];
 
 /**
