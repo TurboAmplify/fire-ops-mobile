@@ -1,39 +1,15 @@
-import { useEffect, useState } from "react";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
-import { WifiOff, Wifi } from "lucide-react";
+import { WifiOff } from "lucide-react";
 
+/**
+ * Renders an amber banner only while the (debounced) network status is
+ * offline. The "Back online" celebration was removed because navigator.onLine
+ * flickers in iOS WebView / Despia wrappers and produced a visible flash on
+ * every reconnect, which made the app feel like it was jumping.
+ */
 export function OfflineBanner() {
   const { isOnline } = useNetworkStatus();
-  const [showReconnected, setShowReconnected] = useState(false);
-  const [wasOffline, setWasOffline] = useState(false);
-
-  useEffect(() => {
-    if (!isOnline) {
-      setWasOffline(true);
-    } else if (wasOffline) {
-      setShowReconnected(true);
-      const timer = setTimeout(() => {
-        setShowReconnected(false);
-        setWasOffline(false);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [isOnline, wasOffline]);
-
-  if (isOnline && !showReconnected) return null;
-
-  if (showReconnected) {
-    return (
-      <div
-        role="status"
-        aria-live="polite"
-        className="bg-green-600 text-white text-center text-sm py-1.5 px-4 flex items-center justify-center gap-2"
-      >
-        <Wifi className="h-3.5 w-3.5" aria-hidden="true" />
-        <span>Back online</span>
-      </div>
-    );
-  }
+  if (isOnline) return null;
 
   return (
     <div

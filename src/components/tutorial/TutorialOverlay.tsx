@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
+import { VisuallyHidden } from "@/components/ui/visually-hidden";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -77,6 +78,12 @@ export function TutorialOverlay() {
           className="p-0 rounded-t-3xl border-t max-h-[92vh] overflow-hidden flex flex-col w-full max-w-full"
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
+          <VisuallyHidden>
+            <SheetTitle>{displayTitle}</SheetTitle>
+            <SheetDescription>
+              {step.body ?? `Step ${stepIndex + 1} of ${totalSteps} of the FireOps HQ tour.`}
+            </SheetDescription>
+          </VisuallyHidden>
           {/* Top bar: progress count + skip */}
           <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0">
             <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
