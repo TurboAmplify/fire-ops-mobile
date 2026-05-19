@@ -116,14 +116,22 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     }
   }, [persistComplete]);
 
+  // Holds the pending auto-open timer so we can cancel it on unmount or
+  // user change. Without this, a remount mid-delay (e.g. preview-shell
+  // reload) re-armed the timer and re-opened the sheet — what users saw as
+  // the screen "jumping".
+  const autoOpenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const runAutoStartCheck = useCallback(async () => {
     if (autoCheckedRef.current) return;
     if (!user?.id) return;
     autoCheckedRef.current = true;
 
-    // Fast-path: localStorage
+    // Fast-paths: already completed (any tab, any time) OR already
+    // auto-shown in this tab/session.
     try {
       if (localStorage.getItem(LS_KEY)) return;
+      if (sessionStorage.getItem(SS_AUTO_SHOWN_KEY)) return;
     } catch {
       // ignore
     }
@@ -151,8 +159,18 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      // Mark as shown for this tab BEFORE the timer so a remount during
+      // the 700ms wait cannot schedule a second open.
+      try {
+        sessionStorage.setItem(SS_AUTO_SHOWN_KEY, "1");
+      } catch {
+        // ignore
+      }
+
       // Not completed — auto-open after a brief delay so the page settles
-      setTimeout(() => {
+      if (autoOpenTimerRef.current) clearTimeout(autoOpenTimerRef.current);
+      autoOpenTimerRef.current = setTimeout(() => {
+        autoOpenTimerRef.current = null;
         setStepIndex(0);
         setIsMinimized(false);
         setIsOpen(true);
@@ -162,10 +180,24 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     }
   }, [user?.id]);
 
-  // Reset auto-check when user changes
+  // Track the previous signed-in user id so we only reset the auto-check
+  // when the identity truly changes from one user to a different user.
+  // Transitions involving null (initial auth event, brief sign-out blips)
+  // must NOT re-arm auto-open — that's how the sheet kept re-appearing.
+  const prevSignedInUserIdRef = useRef<string | null>(null);
   useEffect(() => {
-    autoCheckedRef.current = false;
-    setUserFirstName(null);
+    const newId = user?.id ?? null;
+    const prev = prevSignedInUserIdRef.current;
+    if (newId && prev && newId !== prev) {
+      autoCheckedRef.current = false;
+      setUserFirstName(null);
+      try {
+        sessionStorage.removeItem(SS_AUTO_SHOWN_KEY);
+      } catch {
+        // ignore
+      }
+    }
+    if (newId) prevSignedInUserIdRef.current = newId;
   }, [user?.id]);
 
   // Auto-start runs from the provider so it fires once per session,
@@ -173,6 +205,12 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user?.id) return;
     void runAutoStartCheck();
+    return () => {
+      if (autoOpenTimerRef.current) {
+        clearTimeout(autoOpenTimerRef.current);
+        autoOpenTimerRef.current = null;
+      }
+    };
   }, [user?.id, runAutoStartCheck]);
 
   // Backward-compat no-op (Dashboard used to call this).
