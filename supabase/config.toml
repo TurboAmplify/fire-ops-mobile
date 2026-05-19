@@ -2,3 +2,6 @@ project_id = "ipfuaywcilpcmguhbjmj"
 
 [functions.marketing-webhook]
 verify_jwt = false
+
+[functions.admin-set-password]
+verify_jwt = false
