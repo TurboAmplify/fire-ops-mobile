@@ -1,36 +1,61 @@
-# Fix shift ticket header still hidden behind iPhone status bar
 
-## What's happening
+## What's broken
 
-In your screenshot the page title "Shift Ticket" and the back arrow are sitting right under the iPhone's 5G/battery icons. That means the top padding that should push the header down past the status bar is resolving to `0px` on your device.
+### 1. Les — reset password shows a spinning wheel forever
+The reset-password page only flips its `ready` flag in two cases:
+- A `PASSWORD_RECOVERY` event fires on `onAuthStateChange`, or
+- The URL hash contains `type=recovery`
 
-We already have two safety nets in the code:
-- A CSS variable `--app-safe-top` that uses iOS's built-in `env(safe-area-inset-top)`.
-- A fallback that sets it to `59px` when we detect an iPhone user agent.
+Supabase has moved password recovery to the **PKCE flow**. The email link now goes to `/verify?token=...`, which 303-redirects to `/reset-password?code=...` (a query param, **not** a hash, and **no** `type=recovery`). Our page never sees either signal, so `ready` stays `false` and we just show the spinner.
 
-One of two things is happening in the Despia-wrapped app on your phone:
-1. The Despia/WKWebView user-agent string doesn't include the word "iPhone", so the 59px fallback never turns on, and `env(safe-area-inset-top)` is reporting `0`.
-2. Your phone is still showing a cached older build that didn't have the fix.
+The auth logs confirm this: `GET /verify ... status 303` followed by a second click that returned `email link has expired` (because PKCE codes are single-use).
+
+### 2. Nevaeh — "offline" + looping while saving a shift ticket
+Every write hook calls `assertOnlineForWrite()`, which throws purely based on `navigator.onLine`. In the iOS WebView / Despia wrapper, `navigator.onLine` is unreliable and frequently reports `false` even on a working connection. When that happens:
+- The mutation throws `OfflineWriteBlockedError` immediately.
+- The `OfflineBanner` shows the amber "Offline" bar.
+- The user retries, gets the same error, and the page feels stuck.
+
+### 3. Preview "jumping"
+The Lovable preview wrapper is sending `RESET_BLANK_CHECK` messages and Vite logs `server connection lost. Polling for restart…` every ~1.6s. This is preview-shell behavior — it does **not** happen on the published app — but a hard reload of the preview should be done after the fixes land so we can confirm.
+
+---
 
 ## The fix
 
-Make the header bullet-proof so it never depends on detecting the device correctly.
+### A. Make `/reset-password` work with PKCE codes
+Update `src/pages/ResetPassword.tsx`:
+- On mount, look for a `code` query param. If present, call `supabase.auth.exchangeCodeForSession(code)`; on success, set `ready = true`, on failure show a clear "link expired — request a new one" message with a button back to the forgot-password screen.
+- Keep the existing `PASSWORD_RECOVERY` listener and `type=recovery` hash check as fallbacks for older links.
+- Strip the `code` from the URL after exchange so a refresh doesn't try to reuse it.
 
-1. **Always reserve room for the status bar on small screens.** Change `--app-safe-top` so its minimum is `max(env(safe-area-inset-top), 44px)` for any viewport ≤ 480px (phones). On desktop it stays `0`. This way, even if iOS, Despia, or a future wrapper reports the wrong inset, the header still clears the notch.
-2. **Broaden the user-agent fallback** to also match Despia's wrapper UA and any standalone PWA (`display-mode: standalone`). This is a belt to the suspenders above.
-3. **Add a tiny version stamp in the footer** (e.g. `v2026.05.18`) so you can instantly see on your phone whether the build you're looking at actually includes the fix, without guessing about cache.
+### B. Stop falsely blocking writes when `navigator.onLine` lies
+Update `src/lib/offline-guard.ts`:
+- `assertOnlineForWrite()` should no longer throw purely on `navigator.onLine === false`. Instead let the write attempt go to Supabase and only treat it as offline if the underlying fetch actually fails (we already do this in `handleMutationError` via `isLikelyNetworkError`).
+- Keep the `OfflineWriteBlockedError` class and `handleMutationError` so genuine network failures still produce a clean toast.
+
+This is a small, safe change: in practice it removes the false-positive block and lets the real network decide. No new dependencies, no schema changes.
+
+### C. Stop the `OfflineBanner` from flapping
+Update `src/components/OfflineBanner.tsx` / `src/hooks/useNetworkStatus.ts`:
+- Treat `navigator.onLine === false` as "possibly offline": only show the amber banner after the state has been false for ~2s continuously, and hide immediately on `online`. This kills the per-second flicker some users see in WebView and prevents the "Back online" green bar from popping repeatedly.
+
+### D. Preview reload loop
+After A–C ship, hard-refresh the preview tab once. If it keeps looping, that's the preview shell (not the app) and we'll need to publish + use `app.fireopshq.com` to verify Nevaeh's flow.
+
+---
 
 ## Files I'll touch
 
-- `src/index.css` — update the `--app-safe-top` calculation and add a media-query minimum.
-- `src/main.tsx` — broaden the UA / standalone detection that adds the fallback class.
-- `src/components/BottomNav.tsx` or `src/pages/More.tsx` — add a small build-version label (one line).
+- `src/pages/ResetPassword.tsx` — PKCE code exchange + expired-link UX
+- `src/lib/offline-guard.ts` — `assertOnlineForWrite()` becomes a no-op (real failures handled downstream)
+- `src/hooks/useNetworkStatus.ts` — debounce the offline state
+- `src/components/OfflineBanner.tsx` — only react to the debounced state
 
-## What to test after I push
+No database migrations, no schema changes, no new packages.
 
-1. Click **Publish** in Lovable.
-2. On your iPhone, fully close the Despia app (swipe up, swipe it away), then reopen it.
-3. Open any Shift Ticket. The title and back arrow should sit clearly **below** the 5G/battery icons, with the fire/safe-area gap visible above them.
-4. Check the version stamp at the bottom of the More tab — it should show today's date.
+## What to test after
 
-No business logic is touched; this is purely the header spacing.
+1. Send Les a fresh password-reset email → click → land on `/reset-password` → set new password → sign in. No spinner.
+2. Have Nevaeh open a shift ticket on a real device and save. It should save without the "offline" toast (assuming she actually has signal).
+3. Toggle airplane mode on/off — the amber banner should appear after a brief delay and clear immediately on reconnect, no rapid flicker.
