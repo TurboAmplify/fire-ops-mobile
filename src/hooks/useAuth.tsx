@@ -39,27 +39,29 @@ async function wipeUserScopedClientState() {
   } catch {
     /* ignore */
   }
-  try {
-    // Remove anything user-scoped from localStorage. Anything namespaced with
-    // "fireops_" that isn't a true global preference goes here.
-    const keysToWipe: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (!k) continue;
-      if (
-        k === "fireops_active_org_id" ||
-        k.startsWith("fireops_active_org_id:") ||
-        k === "fireops_tutorial_completed_at" ||
-        k.startsWith("fireops_impersonation") ||
-        k.startsWith("fireops_user_")
-      ) {
-        keysToWipe.push(k);
+    try {
+      // Remove anything user-scoped from localStorage. Anything namespaced with
+      // "fireops_" that isn't a true global preference goes here.
+      // NOTE: fireops_tutorial_completed_at is intentionally NOT wiped — it's
+      // a UI preference mirrored from profiles.tutorial_completed_at and
+      // wiping it caused the welcome sheet to reappear on every cold load.
+      const keysToWipe: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k) continue;
+        if (
+          k === "fireops_active_org_id" ||
+          k.startsWith("fireops_active_org_id:") ||
+          k.startsWith("fireops_impersonation") ||
+          k.startsWith("fireops_user_")
+        ) {
+          keysToWipe.push(k);
+        }
       }
+      keysToWipe.forEach((k) => localStorage.removeItem(k));
+    } catch {
+      /* ignore */
     }
-    keysToWipe.forEach((k) => localStorage.removeItem(k));
-  } catch {
-    /* ignore */
-  }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
