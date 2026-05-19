@@ -33,13 +33,17 @@ export function isOnline(): boolean {
 }
 
 /**
- * Throw an OfflineWriteBlockedError if the device is offline.
- * Call this at the top of every mutationFn that performs a remote write.
+ * Previously threw immediately when navigator.onLine === false. That signal
+ * is unreliable inside iOS WebView / Capacitor wrappers (often reports false
+ * on a working connection), which was causing real saves — like shift
+ * tickets — to fail with a fake "offline" error.
+ *
+ * We now let the write attempt go through. If the network really is down,
+ * the fetch will fail and `handleMutationError` / `isLikelyNetworkError`
+ * below will surface a clean offline toast.
  */
-export function assertOnlineForWrite(message?: string): void {
-  if (!isOnline()) {
-    throw new OfflineWriteBlockedError(message);
-  }
+export function assertOnlineForWrite(_message?: string): void {
+  // Intentional no-op. Kept as a function so existing callers don't break.
 }
 
 export function isOfflineWriteBlocked(err: unknown): err is OfflineWriteBlockedError {
