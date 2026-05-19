@@ -26,8 +26,10 @@ export default function ExpenseEdit() {
         toast.success("Expense updated");
       }
       navigate("/expenses");
-    } catch {
-      toast.error(isNew ? "Failed to add expense" : "Failed to update expense");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[ExpenseEdit] save failed", err);
+      toast.error(`${isNew ? "Failed to add expense" : "Failed to update expense"}: ${msg}`);
     }
   };
 
