@@ -8,11 +8,12 @@ export const queryClient = new QueryClient({
       networkMode: "offlineFirst",
       staleTime: 1000 * 60 * 5, // 5 minutes
       gcTime: 1000 * 60 * 60 * 24, // 24 hours
-      retry: (failureCount, error) => {
-        // Don't retry if offline
-        if (!navigator.onLine) return false;
-        return failureCount < 3;
-      },
+      // Don't short-circuit on navigator.onLine — it lies in iOS WebView /
+      // Despia wrappers (often reports false on a working connection). When
+      // we trusted it, queries would fail with no retry, leaving screens
+      // stuck in error/loading states. React Query's offlineFirst mode
+      // already pauses fetches when the network is truly down.
+      retry: (failureCount) => failureCount < 3,
     },
     mutations: {
       networkMode: "offlineFirst",

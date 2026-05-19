@@ -6,6 +6,10 @@ import { getStepsForRole, type TutorialStep } from "@/components/tutorial/tutori
 import { toast } from "sonner";
 
 const LS_KEY = "fireops_tutorial_completed_at";
+// Per-tab guard so a preview-shell reload (or any other remount within the
+// same tab) cannot re-trigger the auto-open and make the bottom sheet
+// "jump" up again.
+const SS_AUTO_SHOWN_KEY = "fireops_tutorial_auto_shown";
 
 interface TutorialContextValue {
   isOpen: boolean;
