@@ -10,7 +10,7 @@ import { useOrganization } from "@/hooks/useOrganization";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
-const categories: (ExpenseCategory | "all")[] = ["all", "fuel", "ppe", "food", "lodging", "equipment", "other"];
+const categories: (ExpenseCategory | "all")[] = ["all", "fuel", "ppe", "food", "lodging", "equipment", "supplies", "other"];
 const statusFilters: (ExpenseStatus | "all")[] = ["all", "draft", "submitted", "approved", "rejected", "reimbursed"];
 
 
