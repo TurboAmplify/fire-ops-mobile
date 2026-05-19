@@ -16,7 +16,8 @@ export function useNetworkStatus() {
   const refreshPending = useCallback(async () => {
     try {
       const count = await getQueueLength();
-      setPendingCount(count);
+      // Only re-render if the value actually changed.
+      setPendingCount((prev) => (prev === count ? prev : count));
     } catch {
       // IndexedDB may not be available
     }
@@ -47,8 +48,8 @@ export function useNetworkStatus() {
     window.addEventListener("online", goOnline);
     window.addEventListener("offline", goOffline);
 
-    refreshPending();
-    const interval = setInterval(refreshPending, 5000);
+    // 15 s safety-net poll; enqueue/replay also call notifyChanged().
+    const interval = setInterval(refreshPending, 15000);
 
     return () => {
       window.removeEventListener("online", goOnline);

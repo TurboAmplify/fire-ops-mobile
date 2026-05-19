@@ -72,9 +72,12 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
   );
 
   const stopViewAs = useCallback(async () => {
-    const prev = target;
+    let prev: ImpersonationTarget | null = null;
+    setTarget((p) => {
+      prev = p;
+      return null;
+    });
     sessionStorage.removeItem(STORAGE_KEY);
-    setTarget(null);
     qc.clear();
     if (prev) {
       await logPlatformAction("view_as_stop", {
@@ -83,7 +86,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
         payload: { organization_name: prev.organizationName },
       });
     }
-  }, [target, qc]);
+  }, [qc]);
 
   return (
     <ImpersonationContext.Provider

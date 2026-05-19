@@ -63,15 +63,28 @@ export async function logError(input: LogErrorInput): Promise<void> {
 }
 
 let installed = false;
+
+function shouldIgnore(message: string, stack?: string | null): boolean {
+  const m = (message || "").toLowerCase();
+  const s = (stack || "").toLowerCase();
+  // Preview-shell strips auth from non-HTML assets; the manifest 401 /
+  // "Failed to fetch" that follows is noise, not a real app error.
+  if (m.includes("manifest") || s.includes("/manifest.webmanifest")) return true;
+  if (m === "failed to fetch" && (s.includes("manifest") || s === "")) return true;
+  // Capacitor web shims throw UnimplementedError on the web preview.
+  if (m.includes("not implemented on web") || m.includes("unimplementederror")) return true;
+  return false;
+}
+
 export function installGlobalErrorHandlers() {
   if (installed || typeof window === "undefined") return;
   installed = true;
 
   window.addEventListener("error", (event) => {
-    void logError({
-      message: event.message || "window.onerror",
-      stack: event.error?.stack ?? null,
-    });
+    const message = event.message || "window.onerror";
+    const stack = event.error?.stack ?? null;
+    if (shouldIgnore(message, stack)) return;
+    void logError({ message, stack });
   });
 
   window.addEventListener("unhandledrejection", (event) => {
@@ -80,9 +93,8 @@ export function installGlobalErrorHandlers() {
       typeof reason === "string"
         ? reason
         : reason?.message ?? "Unhandled promise rejection";
-    void logError({
-      message,
-      stack: reason?.stack ?? null,
-    });
+    const stack = reason?.stack ?? null;
+    if (shouldIgnore(message, stack)) return;
+    void logError({ message, stack });
   });
 }
