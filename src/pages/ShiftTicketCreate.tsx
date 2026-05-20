@@ -50,6 +50,9 @@ export default function ShiftTicketCreate() {
   const [ticket, setTicket] = useState<Partial<ShiftTicket> | null>(null);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const askedForTicketRef = (globalThis as any).__askedSendShiftTicketIds__ ?? new Set<string>();
+  (globalThis as any).__askedSendShiftTicketIds__ = askedForTicketRef;
 
   // Build initial ticket from all relational data
   useEffect(() => {
