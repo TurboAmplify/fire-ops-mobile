@@ -194,6 +194,12 @@ export default function IncidentDetail() {
               </div>
             )}
 
+            <IncidentFinanceContactsCard
+              incidentId={incident.id}
+              organizationId={incident.organization_id}
+              incidentRegionId={(incident as { region_id?: string | null }).region_id ?? null}
+            />
+
             <IncidentResourceOrdersRollup incidentId={incident.id} />
 
             {/* OF-286 only matters at demob/close */}
