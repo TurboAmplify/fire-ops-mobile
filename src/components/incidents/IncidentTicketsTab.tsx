@@ -121,7 +121,10 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
   const today = getLocalDateString();
   const todays: TicketRow[] = [];
   const recent: TicketRow[] = [];
-  (allTickets ?? []).forEach((t) => {
+  const filtered = (allTickets ?? []).filter(
+    (t) => !truckFilter || t.incident_truck_id === truckFilter,
+  );
+  filtered.forEach((t) => {
     if (getShiftDate(t) === today) todays.push(t);
     else recent.push(t);
   });
