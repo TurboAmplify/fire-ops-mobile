@@ -222,6 +222,12 @@ function TruckCard({
                   No Crew
                 </span>
               )}
+              {noFinanceContact && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">
+                  <Mail className="h-2.5 w-2.5" />
+                  No Finance
+                </span>
+              )}
             </div>
             <p className="text-xs text-muted-foreground mt-0.5 truncate">{summary}</p>
           </div>
