@@ -147,6 +147,8 @@ export function IncidentTruckList({ incidentId, incidentName, organizationId }: 
           onCancelRemove={() => setConfirmRemoveId(null)}
           onRemove={() => handleRemove(it)}
           removing={removeMutation.isPending && confirmRemoveId === it.id}
+          promptRo={promptRoFor === it.id}
+          onDismissRoPrompt={() => setPromptRoFor(null)}
         />
       ))}
     </section>
