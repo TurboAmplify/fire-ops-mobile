@@ -460,6 +460,147 @@ export type Database = {
           },
         ]
       }
+      finance_officer_audit: {
+        Row: {
+          actor_org_id: string | null
+          actor_user_id: string | null
+          event_type: string
+          finance_officer_id: string
+          id: string
+          occurred_at: string
+          payload: Json
+        }
+        Insert: {
+          actor_org_id?: string | null
+          actor_user_id?: string | null
+          event_type: string
+          finance_officer_id: string
+          id?: string
+          occurred_at?: string
+          payload?: Json
+        }
+        Update: {
+          actor_org_id?: string | null
+          actor_user_id?: string | null
+          event_type?: string
+          finance_officer_id?: string
+          id?: string
+          occurred_at?: string
+          payload?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_officer_audit_finance_officer_id_fkey"
+            columns: ["finance_officer_id"]
+            isOneToOne: false
+            referencedRelation: "finance_officers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_officers: {
+        Row: {
+          agency: string | null
+          created_at: string
+          created_by_org_id: string | null
+          created_by_user_id: string | null
+          dispatch_office: string | null
+          email: string
+          id: string
+          is_active: boolean
+          last_used_at: string | null
+          name: string
+          notes: string | null
+          phone: string | null
+          region_id: string | null
+          updated_at: string
+          use_count: number
+          verified_at: string | null
+        }
+        Insert: {
+          agency?: string | null
+          created_at?: string
+          created_by_org_id?: string | null
+          created_by_user_id?: string | null
+          dispatch_office?: string | null
+          email: string
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          region_id?: string | null
+          updated_at?: string
+          use_count?: number
+          verified_at?: string | null
+        }
+        Update: {
+          agency?: string | null
+          created_at?: string
+          created_by_org_id?: string | null
+          created_by_user_id?: string | null
+          dispatch_office?: string | null
+          email?: string
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          region_id?: string | null
+          updated_at?: string
+          use_count?: number
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_officers_created_by_org_id_fkey"
+            columns: ["created_by_org_id"]
+            isOneToOne: false
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "finance_officers_created_by_org_id_fkey"
+            columns: ["created_by_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_officers_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
+            referencedRelation: "gacc_regions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gacc_regions: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          states: string[]
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          name: string
+          sort_order?: number
+          states?: string[]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          states?: string[]
+        }
+        Relationships: []
+      }
       incident_crews: {
         Row: {
           assigned_at: string
@@ -648,6 +789,86 @@ export type Database = {
           },
         ]
       }
+      incident_truck_finance_contacts: {
+        Row: {
+          created_at: string
+          email_override: string | null
+          finance_officer_id: string | null
+          id: string
+          incident_truck_id: string
+          is_active: boolean
+          name_override: string | null
+          notes: string | null
+          organization_id: string
+          phone_override: string | null
+          role: string
+          selected_at: string
+          selected_by_user_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email_override?: string | null
+          finance_officer_id?: string | null
+          id?: string
+          incident_truck_id: string
+          is_active?: boolean
+          name_override?: string | null
+          notes?: string | null
+          organization_id: string
+          phone_override?: string | null
+          role?: string
+          selected_at?: string
+          selected_by_user_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email_override?: string | null
+          finance_officer_id?: string | null
+          id?: string
+          incident_truck_id?: string
+          is_active?: boolean
+          name_override?: string | null
+          notes?: string | null
+          organization_id?: string
+          phone_override?: string | null
+          role?: string
+          selected_at?: string
+          selected_by_user_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incident_truck_finance_contacts_finance_officer_id_fkey"
+            columns: ["finance_officer_id"]
+            isOneToOne: false
+            referencedRelation: "finance_officers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incident_truck_finance_contacts_incident_truck_id_fkey"
+            columns: ["incident_truck_id"]
+            isOneToOne: false
+            referencedRelation: "incident_trucks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incident_truck_finance_contacts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "incident_truck_finance_contacts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       incident_trucks: {
         Row: {
           assigned_at: string
@@ -697,6 +918,8 @@ export type Database = {
           name: string
           notes: string | null
           organization_id: string | null
+          region_id: string | null
+          region_other: string | null
           start_date: string
           status: string
           type: string
@@ -710,6 +933,8 @@ export type Database = {
           name: string
           notes?: string | null
           organization_id?: string | null
+          region_id?: string | null
+          region_other?: string | null
           start_date: string
           status?: string
           type: string
@@ -723,6 +948,8 @@ export type Database = {
           name?: string
           notes?: string | null
           organization_id?: string | null
+          region_id?: string | null
+          region_other?: string | null
           start_date?: string
           status?: string
           type?: string
@@ -740,6 +967,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incidents_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
+            referencedRelation: "gacc_regions"
             referencedColumns: ["id"]
           },
         ]
@@ -1057,6 +1291,8 @@ export type Database = {
           billing_status: string
           created_at: string
           default_hw_rate: number | null
+          email_handle: string | null
+          email_handle_changed_at: string | null
           id: string
           inspection_alert_enabled: boolean
           legacy_grandfathered: boolean
@@ -1079,6 +1315,8 @@ export type Database = {
           billing_status?: string
           created_at?: string
           default_hw_rate?: number | null
+          email_handle?: string | null
+          email_handle_changed_at?: string | null
           id?: string
           inspection_alert_enabled?: boolean
           legacy_grandfathered?: boolean
@@ -1101,6 +1339,8 @@ export type Database = {
           billing_status?: string
           created_at?: string
           default_hw_rate?: number | null
+          email_handle?: string | null
+          email_handle_changed_at?: string | null
           id?: string
           inspection_alert_enabled?: boolean
           legacy_grandfathered?: boolean
@@ -2395,6 +2635,9 @@ export type Database = {
         }[]
       }
       org_effective_status: { Args: { _org_id: string }; Returns: string }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
+      suggest_org_email_handle: { Args: { _name: string }; Returns: string }
       user_can_access_truck: {
         Args: { _truck_id: string; _user_id: string }
         Returns: boolean
