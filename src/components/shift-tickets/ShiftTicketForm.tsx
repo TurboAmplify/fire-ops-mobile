@@ -1379,6 +1379,16 @@ export function ShiftTicketForm({
               {exportingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
               PDF
             </button>
+            {onSendToFinanceOfficer && (
+              <button
+                onClick={onSendToFinanceOfficer}
+                title="Send to Finance Officer"
+                className="flex items-center justify-center gap-2 rounded-xl bg-secondary px-4 py-3 text-sm font-bold text-secondary-foreground touch-target active:scale-[0.98]"
+              >
+                <Mail className="h-4 w-4" />
+                Send
+              </button>
+            )}
             {onDuplicate && (
               <button onClick={onDuplicate} disabled={duplicating}
                 className="flex items-center justify-center gap-2 rounded-xl bg-secondary px-4 py-3 text-sm font-bold text-secondary-foreground touch-target disabled:opacity-40 active:scale-[0.98]">
