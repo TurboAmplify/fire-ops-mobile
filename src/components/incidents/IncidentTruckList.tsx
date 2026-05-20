@@ -180,8 +180,14 @@ function TruckCard({
   // Always fetch crew so we can show summary + warning on collapsed card
   const { data: crew } = useIncidentTruckCrew(it.id);
   const { data: tickets } = useShiftTickets(it.id);
+  const { data: financeContacts } = useQuery({
+    queryKey: ["incident-truck-finance-contacts", it.id],
+    queryFn: () => listTruckFinanceContacts(it.id),
+    enabled: !!it.id,
+  });
   const activeCrew = crew?.filter((c) => c.is_active) ?? [];
   const noCrewAssigned = crew !== undefined && activeCrew.length === 0;
+  const noFinanceContact = financeContacts !== undefined && financeContacts.length === 0;
   const ticketCount = tickets?.length ?? 0;
   const [autoOpenCrew, setAutoOpenCrew] = useState(false);
   const [showMore, setShowMore] = useState(false);
