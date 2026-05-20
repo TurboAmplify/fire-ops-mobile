@@ -6,6 +6,7 @@ import { useImpersonation } from "@/hooks/useImpersonation";
 import { useOrgStatus } from "@/hooks/useOrgStatus";
 import { Navigate, useLocation } from "react-router-dom";
 import { Loader2 } from "lucide-react";
+import { guardLog } from "@/lib/guard-diag";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
@@ -15,10 +16,6 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAccessible, loading: statusLoading } = useOrgStatus();
   const location = useLocation();
 
-  // "Have we ever resolved?" — once true, we never flip back to the global
-  // spinner just because a background refetch briefly toggles loading=true.
-  // That toggling is what made the home page appear to "loop" — guards kept
-  // unmounting Dashboard and remounting it on every cache revalidation.
   const resolvedOnceRef = useRef(false);
   const fullyResolved =
     !authLoading && !orgLoading && !paLoading && !impersonationLoading && !statusLoading;
@@ -27,6 +24,14 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }, [fullyResolved]);
 
   if (!resolvedOnceRef.current && !fullyResolved) {
+    guardLog("protected", "loading", {
+      path: location.pathname,
+      authLoading,
+      orgLoading,
+      paLoading,
+      impersonationLoading,
+      statusLoading,
+    });
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -35,28 +40,31 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) {
+    guardLog("protected", "redirect-login", { path: location.pathname });
     return <Navigate to="/login" replace />;
   }
 
-  // Platform admins without org membership: send to /super-admin from "/", allow free nav elsewhere.
   if (isPlatformAdmin && !isImpersonating && !membership) {
     if (location.pathname === "/") {
+      guardLog("protected", "redirect-super-admin");
       return <Navigate to="/super-admin" replace />;
     }
+    guardLog("protected", "allow-platform-admin", { path: location.pathname });
     return <>{children}</>;
   }
 
   if (!membership) {
+    guardLog("protected", "redirect-org-setup", { path: location.pathname });
     return <Navigate to="/org-setup" replace />;
   }
 
-  // Subscription gate (silent — no billing copy, no external URLs).
-  // Platform admins bypass so they can always investigate.
   if (!isAccessible && !isPlatformAdmin) {
     if (location.pathname !== "/account-unavailable") {
+      guardLog("protected", "redirect-account-unavailable");
       return <Navigate to="/account-unavailable" replace />;
     }
   }
 
+  guardLog("protected", "allow", { path: location.pathname });
   return <>{children}</>;
 }

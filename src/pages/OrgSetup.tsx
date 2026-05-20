@@ -37,11 +37,21 @@ export default function OrgSetup() {
   const [checkingInvite, setCheckingInvite] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
+  // Only fetch invites if the user is signed in AND we've confirmed they
+  // have no membership. Otherwise this query was firing on every render
+  // even for users who already had orgs — contributing to the loading loop.
   useEffect(() => {
+    if (authLoading || orgLoading || paLoading || impersonationLoading) return;
     if (!user) {
       setCheckingInvite(false);
       return;
     }
+    if (membership) {
+      // We're about to redirect to "/" — don't bother fetching invites.
+      setCheckingInvite(false);
+      return;
+    }
+    let cancelled = false;
     (async () => {
       try {
         const { data: invite } = await supabase
@@ -50,6 +60,7 @@ export default function OrgSetup() {
           .eq("email", user.email ?? "")
           .eq("status", "pending")
           .maybeSingle();
+        if (cancelled) return;
         if (invite) {
           setPendingInvite({
             id: invite.id,
@@ -62,10 +73,13 @@ export default function OrgSetup() {
       } catch {
         /* ignore */
       } finally {
-        setCheckingInvite(false);
+        if (!cancelled) setCheckingInvite(false);
       }
     })();
-  }, [user?.id]);
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, membership, authLoading, orgLoading, paLoading, impersonationLoading]);
 
   if (authLoading || orgLoading || paLoading || impersonationLoading || checkingInvite) {
     return (
