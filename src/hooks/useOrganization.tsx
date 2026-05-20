@@ -135,8 +135,16 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     }
   }, [user?.id]);
 
+  // Fetch membership only when the signed-in user identity changes. Do NOT
+  // toggle loading=true here — that caused ProtectedRoute to blank to a
+  // spinner every time fetchMembership's identity changed (which happens on
+  // any user object reference change), producing the home-page flicker that
+  // looked like a reload loop.
   useEffect(() => {
-    setLoading(true);
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
     fetchMembership();
   }, [user?.id, fetchMembership]);
 
@@ -150,13 +158,21 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     return allMemberships[0];
   }, [allMemberships, activeOrgId]);
 
-  // If a stored/selected activeOrgId isn't in our loaded memberships, refetch.
+  // If a stored activeOrgId isn't in our loaded memberships, clear the stale
+  // selection. Do NOT call fetchMembership again — that created a refetch
+  // loop whenever activeOrgId pointed at an org the user no longer belongs to.
   useEffect(() => {
     if (!user?.id || !activeOrgId) return;
     if (allMemberships.length === 0) return;
     if (allMemberships.some((m) => m.organizationId === activeOrgId)) return;
-    fetchMembership();
-  }, [user?.id, activeOrgId, allMemberships, fetchMembership]);
+    try {
+      const key = activeOrgKeyFor(user.id);
+      if (key) localStorage.removeItem(key);
+    } catch {
+      /* ignore */
+    }
+    setActiveOrgIdState(null);
+  }, [user?.id, activeOrgId, allMemberships]);
 
   const setActiveOrgId = useCallback((orgId: string) => {
     const key = activeOrgKeyFor(user?.id);
