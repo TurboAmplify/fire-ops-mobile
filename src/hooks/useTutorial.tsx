@@ -29,7 +29,17 @@ interface TutorialContextValue {
   maybeAutoStart: () => void;
 }
 
-const TutorialContext = createContext<TutorialContextValue | null>(null);
+const TUTORIAL_CONTEXT_KEY = "__fireops_tutorial_context__" as const;
+type TutorialContextGlobal = typeof globalThis & {
+  __fireops_tutorial_context__?: ReturnType<typeof createContext<TutorialContextValue | null>>;
+};
+
+// Keep one context object across Vite hot updates. The preview loop was caused
+// by a split-brain HMR state: TutorialProvider came from one module instance,
+// while Dashboard/useTutorial came from a newer one, so React saw no provider.
+const TutorialContext =
+  ((globalThis as TutorialContextGlobal)[TUTORIAL_CONTEXT_KEY] ??=
+    createContext<TutorialContextValue | null>(null));
 
 export function TutorialProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
