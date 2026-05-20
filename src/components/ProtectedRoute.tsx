@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useOrganization } from "@/hooks/useOrganization";
 import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
@@ -14,7 +15,18 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAccessible, loading: statusLoading } = useOrgStatus();
   const location = useLocation();
 
-  if (authLoading || orgLoading || paLoading || statusLoading) {
+  // "Have we ever resolved?" — once true, we never flip back to the global
+  // spinner just because a background refetch briefly toggles loading=true.
+  // That toggling is what made the home page appear to "loop" — guards kept
+  // unmounting Dashboard and remounting it on every cache revalidation.
+  const resolvedOnceRef = useRef(false);
+  const fullyResolved =
+    !authLoading && !orgLoading && !paLoading && !statusLoading;
+  useEffect(() => {
+    if (fullyResolved) resolvedOnceRef.current = true;
+  }, [fullyResolved]);
+
+  if (!resolvedOnceRef.current && !fullyResolved) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
