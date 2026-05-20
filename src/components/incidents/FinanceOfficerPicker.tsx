@@ -93,12 +93,11 @@ export function FinanceOfficerPicker({
   const handlePick = async (o: FinanceOfficer) => {
     setSaving(true);
     try {
-      await addTruckFinanceContact({
-        incident_truck_id: incidentTruckId,
-        organization_id: organizationId,
-        finance_officer_id: o.id,
-        role: defaultRole,
-      });
+      await addContact({ finance_officer_id: o.id, role: defaultRole });
+      recordOfficerUse(o.id).catch(() => {});
+      toast.success(`${o.name} added as finance contact`);
+      onAdded?.();
+      onOpenChange(false);
       recordOfficerUse(o.id).catch(() => {});
       toast.success(`${o.name} added as finance contact`);
       onAdded?.();
