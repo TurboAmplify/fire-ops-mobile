@@ -89,6 +89,8 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; incidentTruckId: string; label: string; supervisorSigned: boolean } | null>(null);
   const [deleteReason, setDeleteReason] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState("");
+  // null = "All trucks"
+  const [truckFilter, setTruckFilter] = useState<string | null>(null);
   // Use any truck id for invalidation key; actual write goes through service
   const deleteMutation = useDeleteShiftTicket(deleteTarget?.incidentTruckId ?? "");
 
