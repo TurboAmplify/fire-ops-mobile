@@ -3,7 +3,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
-import { listIncidentFinanceContacts, type IncidentTruckFinanceContact } from "@/services/incident-truck-finance-contacts";
+import { listIncidentFinanceContacts, contactDisplayName, contactDisplayEmail, type IncidentTruckFinanceContact } from "@/services/incident-truck-finance-contacts";
 import { useCreateThread } from "@/hooks/useThreads";
 import { sendReply, type ThreadPurpose } from "@/services/threads";
 import { handleMutationError } from "@/lib/offline-guard";
