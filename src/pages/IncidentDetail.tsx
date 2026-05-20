@@ -10,6 +10,7 @@ import { IncidentResourceOrdersRollup } from "@/components/incidents/IncidentRes
 import { IncidentTicketsTab } from "@/components/incidents/IncidentTicketsTab";
 import { IncidentFinanceContactsCard } from "@/components/incidents/IncidentFinanceContactsCard";
 import { OF286UploadCard } from "@/components/incidents/OF286UploadCard";
+import { MessagesInbox } from "@/components/messages/MessagesInbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -25,7 +26,7 @@ export default function IncidentDetail() {
   const deleteMutation = useDeleteIncident();
   const [editingStatus, setEditingStatus] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [tab, setTab] = useState<"overview" | "trucks" | "tickets" | "crew">("tickets");
+  const [tab, setTab] = useState<"overview" | "trucks" | "tickets" | "crew" | "messages">("tickets");
 
   if (isLoading) {
     return (
@@ -159,10 +160,11 @@ export default function IncidentDetail() {
 
         {/* Tabs — Tickets is default */}
         <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="tickets">Tickets</TabsTrigger>
             <TabsTrigger value="trucks">Trucks</TabsTrigger>
             <TabsTrigger value="crew">Crew</TabsTrigger>
+            <TabsTrigger value="messages">Messages</TabsTrigger>
             <TabsTrigger value="overview">Overview</TabsTrigger>
           </TabsList>
 
@@ -184,6 +186,12 @@ export default function IncidentDetail() {
           <TabsContent value="crew" className="mt-0">
             <IncidentDailyCrewGrid incidentId={incident.id} />
           </TabsContent>
+
+          {/* MESSAGES */}
+          <TabsContent value="messages" className="mt-0">
+            <MessagesInbox incidentId={incident.id} showCompose />
+          </TabsContent>
+
 
           {/* OVERVIEW — notes, documents, danger zone */}
           <TabsContent value="overview" className="space-y-4 mt-0">
