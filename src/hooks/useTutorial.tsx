@@ -29,11 +29,40 @@ interface TutorialContextValue {
   maybeAutoStart: () => void;
 }
 
-const TutorialContext = createContext<TutorialContextValue | null>(null);
+const noop = () => {};
+const DEFAULT_TUTORIAL_CONTEXT: TutorialContextValue = {
+  isOpen: false,
+  isMinimized: false,
+  stepIndex: 0,
+  totalSteps: 0,
+  steps: [],
+  userFirstName: null,
+  start: noop,
+  close: noop,
+  next: noop,
+  back: noop,
+  goTo: noop,
+  minimize: noop,
+  resume: noop,
+  complete: noop,
+  maybeAutoStart: noop,
+};
+
+const TUTORIAL_CONTEXT_KEY = "__fireops_tutorial_context__" as const;
+type TutorialContextGlobal = typeof globalThis & {
+  __fireops_tutorial_context__?: ReturnType<typeof createContext<TutorialContextValue | null>>;
+};
+
+// Keep one context object across Vite hot updates. The preview loop was caused
+// by a split-brain HMR state: TutorialProvider came from one module instance,
+// while Dashboard/useTutorial came from a newer one, so React saw no provider.
+const TutorialContext =
+  ((globalThis as TutorialContextGlobal)[TUTORIAL_CONTEXT_KEY] ??=
+    createContext<TutorialContextValue | null>(null));
 
 export function TutorialProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const { membership } = useOrganization();
+  const { membership, loading: orgLoading } = useOrganization();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
@@ -124,6 +153,8 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
   const runAutoStartCheck = useCallback(async () => {
     if (autoCheckedRef.current) return;
     if (!user?.id) return;
+    if (orgLoading) return;
+    if (!membership?.organizationId) return;
     autoCheckedRef.current = true;
 
     // Fast-path: already auto-shown / completed on this device.
@@ -175,7 +206,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.warn("Tutorial auto-start check failed:", err);
     }
-  }, [user?.id]);
+  }, [user?.id, orgLoading, membership?.organizationId]);
 
   // Track the previous signed-in user id so we only reset the auto-check
   // when the identity truly changes from one user to a different user.
@@ -202,6 +233,8 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
   // regardless of which route the user lands on first.
   useEffect(() => {
     if (!user?.id) return;
+    if (orgLoading) return;
+    if (!membership?.organizationId) return;
     void runAutoStartCheck();
     return () => {
       if (autoOpenTimerRef.current) {
@@ -209,7 +242,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
         autoOpenTimerRef.current = null;
       }
     };
-  }, [user?.id, runAutoStartCheck]);
+  }, [user?.id, orgLoading, membership?.organizationId, runAutoStartCheck]);
 
   // Backward-compat no-op (Dashboard used to call this).
   const maybeAutoStart = useCallback(() => {
@@ -258,6 +291,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
 
 export function useTutorial() {
   const ctx = useContext(TutorialContext);
-  if (!ctx) throw new Error("useTutorial must be used within TutorialProvider");
-  return ctx;
+  // Fail soft during preview/HMR module swaps. A missing provider should never
+  // take down Dashboard and trigger the preview reload loop.
+  return ctx ?? DEFAULT_TUTORIAL_CONTEXT;
 }
