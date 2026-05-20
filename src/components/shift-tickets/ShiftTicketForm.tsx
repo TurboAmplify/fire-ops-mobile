@@ -165,6 +165,8 @@ export function ShiftTicketForm({
   incidentId,
   saving,
   onSave,
+  onAfterExplicitSave,
+  onSendToFinanceOfficer,
   onExportPdf,
   onDuplicate,
   duplicating,
