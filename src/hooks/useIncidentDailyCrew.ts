@@ -6,6 +6,7 @@ export type DailyCrewStatus = "draft" | "awaiting_supervisor" | "complete";
 export interface DailyCrewCell {
   hours: number;
   trucks: string[];
+  truckIds: string[];
   status: DailyCrewStatus;
   ticketIds: string[];
 }
@@ -13,10 +14,12 @@ export interface DailyCrewCell {
 export interface DailyCrewMatrix {
   dates: string[]; // sorted ascending YYYY-MM-DD
   crew: { id: string; name: string; role: string | null }[];
-  // crewKey (name lowercased) -> date -> cell
+  // crewKey -> date -> cell
   cells: Record<string, Record<string, DailyCrewCell>>;
   totalsByCrew: Record<string, number>;
   totalsByDate: Record<string, number>;
+  // Distinct incident_truck assignments across the matrix, for filter UI
+  truckOptions: { id: string; name: string }[];
 }
 
 interface PersonnelEntry {
