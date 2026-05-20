@@ -79,6 +79,97 @@ export type Database = {
           },
         ]
       }
+      app_notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          incident_document_id: string | null
+          incident_id: string | null
+          incident_truck_id: string | null
+          link_path: string | null
+          organization_id: string
+          read_at: string | null
+          thread_id: string | null
+          title: string
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          incident_document_id?: string | null
+          incident_id?: string | null
+          incident_truck_id?: string | null
+          link_path?: string | null
+          organization_id: string
+          read_at?: string | null
+          thread_id?: string | null
+          title: string
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          incident_document_id?: string | null
+          incident_id?: string | null
+          incident_truck_id?: string | null
+          link_path?: string | null
+          organization_id?: string
+          read_at?: string | null
+          thread_id?: string | null
+          title?: string
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_notifications_incident_document_id_fkey"
+            columns: ["incident_document_id"]
+            isOneToOne: false
+            referencedRelation: "incident_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "app_notifications_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "incidents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "app_notifications_incident_truck_id_fkey"
+            columns: ["incident_truck_id"]
+            isOneToOne: false
+            referencedRelation: "incident_trucks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "app_notifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "app_notifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "app_notifications_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "communication_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       call_responses: {
         Row: {
           cleared_at: string | null
@@ -114,6 +205,106 @@ export type Database = {
           organization_id?: string
         }
         Relationships: []
+      }
+      communication_threads: {
+        Row: {
+          contact_id: string | null
+          created_at: string
+          created_by_user_id: string | null
+          finance_officer_id: string | null
+          id: string
+          incident_id: string | null
+          incident_truck_id: string | null
+          last_message_at: string | null
+          last_message_direction: string | null
+          organization_id: string
+          purpose: string
+          status: string
+          subject: string
+          thread_token: string
+          unread_count: number
+          updated_at: string
+        }
+        Insert: {
+          contact_id?: string | null
+          created_at?: string
+          created_by_user_id?: string | null
+          finance_officer_id?: string | null
+          id?: string
+          incident_id?: string | null
+          incident_truck_id?: string | null
+          last_message_at?: string | null
+          last_message_direction?: string | null
+          organization_id: string
+          purpose: string
+          status?: string
+          subject: string
+          thread_token: string
+          unread_count?: number
+          updated_at?: string
+        }
+        Update: {
+          contact_id?: string | null
+          created_at?: string
+          created_by_user_id?: string | null
+          finance_officer_id?: string | null
+          id?: string
+          incident_id?: string | null
+          incident_truck_id?: string | null
+          last_message_at?: string | null
+          last_message_direction?: string | null
+          organization_id?: string
+          purpose?: string
+          status?: string
+          subject?: string
+          thread_token?: string
+          unread_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communication_threads_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "incident_truck_finance_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_threads_finance_officer_id_fkey"
+            columns: ["finance_officer_id"]
+            isOneToOne: false
+            referencedRelation: "finance_officers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_threads_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "incidents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_threads_incident_truck_id_fkey"
+            columns: ["incident_truck_id"]
+            isOneToOne: false
+            referencedRelation: "incident_trucks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_threads_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "communication_threads_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       crew_compensation: {
         Row: {
@@ -313,6 +504,145 @@ export type Database = {
           organization_id?: string
         }
         Relationships: []
+      }
+      demob_packet_pages: {
+        Row: {
+          caption: string | null
+          created_at: string
+          id: string
+          organization_id: string
+          packet_id: string
+          page_number: number
+          storage_path: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          organization_id: string
+          packet_id: string
+          page_number: number
+          storage_path: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          organization_id?: string
+          packet_id?: string
+          page_number?: number
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demob_packet_pages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "demob_packet_pages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demob_packet_pages_packet_id_fkey"
+            columns: ["packet_id"]
+            isOneToOne: false
+            referencedRelation: "demob_packets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      demob_packets: {
+        Row: {
+          acknowledged_at: string | null
+          combined_pdf_path: string | null
+          created_at: string
+          created_by_user_id: string | null
+          id: string
+          incident_id: string
+          incident_truck_id: string
+          method: string
+          notes: string | null
+          organization_id: string
+          status: string
+          submitted_at: string | null
+          thread_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          combined_pdf_path?: string | null
+          created_at?: string
+          created_by_user_id?: string | null
+          id?: string
+          incident_id: string
+          incident_truck_id: string
+          method?: string
+          notes?: string | null
+          organization_id: string
+          status?: string
+          submitted_at?: string | null
+          thread_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          combined_pdf_path?: string | null
+          created_at?: string
+          created_by_user_id?: string | null
+          id?: string
+          incident_id?: string
+          incident_truck_id?: string
+          method?: string
+          notes?: string | null
+          organization_id?: string
+          status?: string
+          submitted_at?: string | null
+          thread_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demob_packets_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "incidents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demob_packets_incident_truck_id_fkey"
+            columns: ["incident_truck_id"]
+            isOneToOne: false
+            referencedRelation: "incident_trucks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demob_packets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "demob_packets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demob_packets_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "communication_threads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       error_logs: {
         Row: {
@@ -678,12 +1008,15 @@ export type Database = {
       }
       incident_documents: {
         Row: {
+          ai_classification: Json | null
+          awaiting_action_by_user_id: string | null
           created_at: string
           document_type: string
           file_name: string
           file_url: string
           id: string
           incident_id: string
+          incident_truck_id: string | null
           of286_entered_at: string | null
           of286_invoice_total: number | null
           organization_id: string
@@ -692,16 +1025,21 @@ export type Database = {
           signed_at: string | null
           signed_by_name: string | null
           signed_by_user_id: string | null
+          source_message_id: string | null
           stage: string
+          thread_id: string | null
           uploaded_by_user_id: string | null
         }
         Insert: {
+          ai_classification?: Json | null
+          awaiting_action_by_user_id?: string | null
           created_at?: string
           document_type?: string
           file_name: string
           file_url: string
           id?: string
           incident_id: string
+          incident_truck_id?: string | null
           of286_entered_at?: string | null
           of286_invoice_total?: number | null
           organization_id: string
@@ -710,16 +1048,21 @@ export type Database = {
           signed_at?: string | null
           signed_by_name?: string | null
           signed_by_user_id?: string | null
+          source_message_id?: string | null
           stage?: string
+          thread_id?: string | null
           uploaded_by_user_id?: string | null
         }
         Update: {
+          ai_classification?: Json | null
+          awaiting_action_by_user_id?: string | null
           created_at?: string
           document_type?: string
           file_name?: string
           file_url?: string
           id?: string
           incident_id?: string
+          incident_truck_id?: string | null
           of286_entered_at?: string | null
           of286_invoice_total?: number | null
           organization_id?: string
@@ -728,15 +1071,38 @@ export type Database = {
           signed_at?: string | null
           signed_by_name?: string | null
           signed_by_user_id?: string | null
+          source_message_id?: string | null
           stage?: string
+          thread_id?: string | null
           uploaded_by_user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "incident_documents_incident_truck_id_fkey"
+            columns: ["incident_truck_id"]
+            isOneToOne: false
+            referencedRelation: "incident_trucks"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "incident_documents_parent_document_id_fkey"
             columns: ["parent_document_id"]
             isOneToOne: false
             referencedRelation: "incident_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incident_documents_source_message_id_fkey"
+            columns: ["source_message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incident_documents_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "communication_threads"
             referencedColumns: ["id"]
           },
         ]
@@ -1037,6 +1403,235 @@ export type Database = {
         }
         Relationships: []
       }
+      message_attachments: {
+        Row: {
+          auto_classified_as: string | null
+          auto_classified_stage: string | null
+          classification_confidence: number | null
+          classification_model: string | null
+          created_at: string
+          file_name: string
+          id: string
+          linked_incident_document_id: string | null
+          message_id: string
+          mime_type: string | null
+          organization_id: string
+          size_bytes: number | null
+          storage_path: string
+        }
+        Insert: {
+          auto_classified_as?: string | null
+          auto_classified_stage?: string | null
+          classification_confidence?: number | null
+          classification_model?: string | null
+          created_at?: string
+          file_name: string
+          id?: string
+          linked_incident_document_id?: string | null
+          message_id: string
+          mime_type?: string | null
+          organization_id: string
+          size_bytes?: number | null
+          storage_path: string
+        }
+        Update: {
+          auto_classified_as?: string | null
+          auto_classified_stage?: string | null
+          classification_confidence?: number | null
+          classification_model?: string | null
+          created_at?: string
+          file_name?: string
+          id?: string
+          linked_incident_document_id?: string | null
+          message_id?: string
+          mime_type?: string | null
+          organization_id?: string
+          size_bytes?: number | null
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_attachments_linked_incident_document_id_fkey"
+            columns: ["linked_incident_document_id"]
+            isOneToOne: false
+            referencedRelation: "incident_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_attachments_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_attachments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "message_attachments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_drafts: {
+        Row: {
+          body_text: string
+          id: string
+          organization_id: string
+          thread_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body_text?: string
+          id?: string
+          organization_id: string
+          thread_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body_text?: string
+          id?: string
+          organization_id?: string
+          thread_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_drafts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "message_drafts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_drafts_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "communication_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          body_html_sanitized: string | null
+          body_text: string | null
+          cc_emails: string[]
+          created_at: string
+          direction: string
+          from_email: string
+          from_name: string | null
+          id: string
+          in_reply_to: string | null
+          is_system: boolean
+          message_references: string[]
+          organization_id: string
+          read_at: string | null
+          read_by_user_id: string | null
+          received_at: string | null
+          resend_message_id: string | null
+          send_error: string | null
+          send_status: string
+          sent_at: string | null
+          sent_by_user_id: string | null
+          subject: string
+          system_event: string | null
+          thread_id: string
+          to_emails: string[]
+        }
+        Insert: {
+          body_html_sanitized?: string | null
+          body_text?: string | null
+          cc_emails?: string[]
+          created_at?: string
+          direction: string
+          from_email: string
+          from_name?: string | null
+          id?: string
+          in_reply_to?: string | null
+          is_system?: boolean
+          message_references?: string[]
+          organization_id: string
+          read_at?: string | null
+          read_by_user_id?: string | null
+          received_at?: string | null
+          resend_message_id?: string | null
+          send_error?: string | null
+          send_status?: string
+          sent_at?: string | null
+          sent_by_user_id?: string | null
+          subject: string
+          system_event?: string | null
+          thread_id: string
+          to_emails?: string[]
+        }
+        Update: {
+          body_html_sanitized?: string | null
+          body_text?: string | null
+          cc_emails?: string[]
+          created_at?: string
+          direction?: string
+          from_email?: string
+          from_name?: string | null
+          id?: string
+          in_reply_to?: string | null
+          is_system?: boolean
+          message_references?: string[]
+          organization_id?: string
+          read_at?: string | null
+          read_by_user_id?: string | null
+          received_at?: string | null
+          resend_message_id?: string | null
+          send_error?: string | null
+          send_status?: string
+          sent_at?: string | null
+          sent_by_user_id?: string | null
+          subject?: string
+          system_event?: string | null
+          thread_id?: string
+          to_emails?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "messages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "communication_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       needs_list_items: {
         Row: {
           category: string
@@ -1152,6 +1747,54 @@ export type Database = {
           workers_comp_pct?: number
         }
         Relationships: []
+      }
+      org_reply_templates: {
+        Row: {
+          body_template: string
+          created_at: string
+          id: string
+          is_active: boolean
+          organization_id: string
+          purpose: string
+          subject_template: string | null
+          updated_at: string
+        }
+        Insert: {
+          body_template: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          organization_id: string
+          purpose: string
+          subject_template?: string | null
+          updated_at?: string
+        }
+        Update: {
+          body_template?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          organization_id?: string
+          purpose?: string
+          subject_template?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_reply_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "org_reply_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       org_role_default_rates: {
         Row: {
