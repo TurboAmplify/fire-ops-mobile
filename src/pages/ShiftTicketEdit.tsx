@@ -273,23 +273,44 @@ export default function ShiftTicketEdit() {
     );
   }
 
+  const handleAfterExplicitSave = (_payload: Partial<ShiftTicket>) => {
+    const id = ticket?.id;
+    if (!id || !incidentId) return;
+    if (askedTicketsRef.current.has(id)) return;
+    askedTicketsRef.current.add(id);
+    setSendDialogOpen(true);
+  };
+
   return (
-    <ShiftTicketForm
-      ticket={mergedTicket}
-      incidentTruckId={incidentTruckId || ""}
-      organizationId={membership?.organizationId || ""}
-      incidentId={incidentId}
-      saving={updateMutation.isPending}
-      onSave={handleSave}
-      onExportPdf={handleExportPdf}
-      onDuplicate={handleDuplicate}
-      duplicating={duplicateMutation.isPending}
-      onBack={() => navigate(`/incidents/${incidentId}`)}
-      exportingPdf={exportingPdf}
-      crewRoster={activeCrew}
-      isAdmin={isAdmin}
-      onRefreshFromSources={handleRefreshFromSources}
-      sourceHints={sourceHints}
-    />
+    <>
+      <ShiftTicketForm
+        ticket={mergedTicket}
+        incidentTruckId={incidentTruckId || ""}
+        organizationId={membership?.organizationId || ""}
+        incidentId={incidentId}
+        saving={updateMutation.isPending}
+        onSave={handleSave}
+        onAfterExplicitSave={handleAfterExplicitSave}
+        onSendToFinanceOfficer={() => setSendDialogOpen(true)}
+        onExportPdf={handleExportPdf}
+        onDuplicate={handleDuplicate}
+        duplicating={duplicateMutation.isPending}
+        onBack={() => navigate(`/incidents/${incidentId}`)}
+        exportingPdf={exportingPdf}
+        crewRoster={activeCrew}
+        isAdmin={isAdmin}
+        onRefreshFromSources={handleRefreshFromSources}
+        sourceHints={sourceHints}
+      />
+      {ticket?.id && incidentId && membership?.organizationId && (
+        <SendShiftTicketDialog
+          open={sendDialogOpen}
+          onOpenChange={setSendDialogOpen}
+          ticket={ticket as ShiftTicket}
+          incidentId={incidentId}
+          organizationId={membership.organizationId}
+        />
+      )}
+    </>
   );
 }
