@@ -76,6 +76,9 @@ export default function OrgSettings() {
   const [inviteRole, setInviteRole] = useState("crew");
   const [editingName, setEditingName] = useState(false);
   const [orgName, setOrgName] = useState("");
+  const [editingHandle, setEditingHandle] = useState(false);
+  const [handleDraft, setHandleDraft] = useState("");
+  const [handleError, setHandleError] = useState<string | null>(null);
 
   const orgId = membership?.organizationId;
 
