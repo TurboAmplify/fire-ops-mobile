@@ -102,6 +102,10 @@ interface ShiftTicketFormProps {
   incidentId?: string;
   saving: boolean;
   onSave: (data: Partial<ShiftTicket>) => void | Promise<void>;
+  /** Called after a successful explicit (user-initiated) save, not on autosave. */
+  onAfterExplicitSave?: (payload: Partial<ShiftTicket>) => void;
+  /** Called when the user taps the "Send to Finance Officer" button. */
+  onSendToFinanceOfficer?: () => void;
   onExportPdf: (sigOverrides: { contractor_rep_signature_url: string | null; supervisor_signature_url: string | null }) => void;
   onDuplicate?: () => void;
   duplicating?: boolean;
