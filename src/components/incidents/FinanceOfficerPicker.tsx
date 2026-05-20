@@ -121,12 +121,7 @@ export function FinanceOfficerPicker({
         region_id: form.region_id || null,
         org_id: organizationId,
       });
-      await addTruckFinanceContact({
-        incident_truck_id: incidentTruckId,
-        organization_id: organizationId,
-        finance_officer_id: officer.id,
-        role: defaultRole,
-      });
+      await addContact({ finance_officer_id: officer.id, role: defaultRole });
       toast.success(`${officer.name} added to directory and contact list`);
       onAdded?.();
       onOpenChange(false);
