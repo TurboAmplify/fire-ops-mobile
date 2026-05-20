@@ -169,6 +169,8 @@ function TruckCard({
   onCancelRemove,
   onRemove,
   removing,
+  promptRo,
+  onDismissRoPrompt,
 }: {
   it: IncidentTruckWithTruck;
   isExpanded: boolean;
@@ -183,6 +185,8 @@ function TruckCard({
   onCancelRemove: () => void;
   onRemove: () => void;
   removing: boolean;
+  promptRo?: boolean;
+  onDismissRoPrompt?: () => void;
 }) {
   // Always fetch crew so we can show summary + warning on collapsed card
   const { data: crew } = useIncidentTruckCrew(it.id);
@@ -197,7 +201,7 @@ function TruckCard({
   const noFinanceContact = financeContacts !== undefined && financeContacts.length === 0;
   const ticketCount = tickets?.length ?? 0;
   const [autoOpenCrew, setAutoOpenCrew] = useState(false);
-  const [showMore, setShowMore] = useState(false);
+  const [showMore, setShowMore] = useState(!!promptRo);
   const photoUrl = (it.trucks as any).photo_url;
 
   const handleAddCrewClick = () => {
