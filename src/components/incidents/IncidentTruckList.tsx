@@ -323,19 +323,8 @@ function TruckCard({
             />
           </div>
 
-          {/* PRIMARY: Finance contacts (for shift ticket emails + demob) */}
-          {organizationId && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-1.5">
-                <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Finance Contacts</p>
-              </div>
-              <FinanceContactsSection
-                incidentTruckId={it.id}
-                organizationId={organizationId}
-              />
-            </div>
-          )}
+          {/* Finance contacts now live on the incident Overview tab — not per-truck. */}
+
 
           {/* SECONDARY: single "More info" reveal — Truck Details + Resource Orders + Truck Agreements together */}
           <div className="pt-1 border-t border-border/60">
