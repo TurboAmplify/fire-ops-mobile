@@ -68,7 +68,7 @@ export function FinanceContactsSection({ incidentTruckId, incidentId, organizati
     }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [incidentTruckId]);
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [incidentTruckId, incidentId]);
 
   const handleRemove = async (id: string) => {
     try {
