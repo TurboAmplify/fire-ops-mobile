@@ -8,6 +8,7 @@ import { IncidentTruckList } from "@/components/incidents/IncidentTruckList";
 import { IncidentDailyCrewGrid } from "@/components/incidents/IncidentDailyCrewGrid";
 import { IncidentResourceOrdersRollup } from "@/components/incidents/IncidentResourceOrdersRollup";
 import { IncidentTicketsTab } from "@/components/incidents/IncidentTicketsTab";
+import { IncidentFinanceContactsCard } from "@/components/incidents/IncidentFinanceContactsCard";
 import { OF286UploadCard } from "@/components/incidents/OF286UploadCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
