@@ -237,18 +237,27 @@ export default function ShiftTicketEdit() {
     });
   }, [ticket, ticketId, backfill, applyBackfill, updateMutation]);
 
-  // Hint flags for the form
+  // Hint flags for the form. If the ticket already has its key header data
+  // filled (agreement #, resource order #, incident #, or equipment make/model),
+  // suppress the "missing/unparsed RO" nag — the data is already there
+  // (common when the RO lives on a prior assignment of the same truck).
+  const ticketHasHeaderData = !!(
+    ticket?.agreement_number ||
+    ticket?.resource_order_number ||
+    ticket?.incident_number ||
+    ticket?.equipment_make_model
+  );
   const sourceHints = useMemo(
     () => ({
       truckMissingVin: !truck?.vin,
       truckMissingPlate: !truck?.plate,
-      roUnparsed: !latestParsedRO,
+      roUnparsed: !latestParsedRO && !ticketHasHeaderData,
       hasResourceOrder: (resourceOrders?.length ?? 0) > 0,
       autoParsingRo,
       truckEditPath: truck?.id ? `/fleet/${truck.id}/edit` : undefined,
       incidentPath: incidentId ? `/incidents/${incidentId}` : undefined,
     }),
-    [truck, latestParsedRO, resourceOrders, autoParsingRo, incidentId]
+    [truck, latestParsedRO, resourceOrders, autoParsingRo, incidentId, ticket, ticketHasHeaderData]
   );
 
   if (isLoading) {
