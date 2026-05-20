@@ -235,17 +235,20 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   const effectiveLoading = loading || (isImpersonating && !!target && !impersonatedMembership);
   const isAdmin = membership?.role === "admin";
 
+  const value = useMemo(
+    () => ({
+      membership,
+      loading: effectiveLoading,
+      isAdmin,
+      memberships: allMemberships,
+      setActiveOrgId,
+      refetch: fetchMembership,
+    }),
+    [membership, effectiveLoading, isAdmin, allMemberships, setActiveOrgId, fetchMembership],
+  );
+
   return (
-    <OrganizationContext.Provider
-      value={{
-        membership,
-        loading: effectiveLoading,
-        isAdmin,
-        memberships: allMemberships,
-        setActiveOrgId,
-        refetch: fetchMembership,
-      }}
-    >
+    <OrganizationContext.Provider value={value}>
       {children}
     </OrganizationContext.Provider>
   );

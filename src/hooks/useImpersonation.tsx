@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
@@ -117,16 +117,19 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
     }
   }, [qc]);
 
+  const value = React.useMemo(
+    () => ({
+      isImpersonating: !!target && isPlatformAdmin,
+      target: isPlatformAdmin ? target : null,
+      loading: platformAdminLoading && !!target,
+      startViewAs,
+      stopViewAs,
+    }),
+    [target, isPlatformAdmin, platformAdminLoading, startViewAs, stopViewAs],
+  );
+
   return (
-    <ImpersonationContext.Provider
-      value={{
-        isImpersonating: !!target && isPlatformAdmin,
-        target: isPlatformAdmin ? target : null,
-        loading: platformAdminLoading && !!target,
-        startViewAs,
-        stopViewAs,
-      }}
-    >
+    <ImpersonationContext.Provider value={value}>
       {children}
     </ImpersonationContext.Provider>
   );
