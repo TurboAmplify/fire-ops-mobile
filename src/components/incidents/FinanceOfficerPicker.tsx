@@ -16,12 +16,15 @@ import {
   type FinanceOfficer,
   type GaccRegion,
 } from "@/services/finance-officers";
-import { addTruckFinanceContact } from "@/services/incident-truck-finance-contacts";
+import { addTruckFinanceContact, addIncidentFinanceContact } from "@/services/incident-truck-finance-contacts";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  incidentTruckId: string;
+  /** Attach contact to a single truck. Mutually exclusive with incidentId. */
+  incidentTruckId?: string;
+  /** Attach contact to the incident as a whole. Mutually exclusive with incidentTruckId. */
+  incidentId?: string;
   organizationId: string;
   defaultRegionId?: string | null;
   defaultRole?: "shift_tickets" | "demob" | "both";
@@ -32,11 +35,21 @@ export function FinanceOfficerPicker({
   open,
   onOpenChange,
   incidentTruckId,
+  incidentId,
   organizationId,
   defaultRegionId,
   defaultRole = "both",
   onAdded,
 }: Props) {
+  const addContact = (extra: Parameters<typeof addTruckFinanceContact>[0] extends infer _ ? Omit<Parameters<typeof addIncidentFinanceContact>[0], "incident_id" | "organization_id"> : never) => {
+    if (incidentId) {
+      return addIncidentFinanceContact({ incident_id: incidentId, organization_id: organizationId, ...extra });
+    }
+    if (incidentTruckId) {
+      return addTruckFinanceContact({ incident_truck_id: incidentTruckId, organization_id: organizationId, ...extra });
+    }
+    throw new Error("FinanceOfficerPicker requires incidentId or incidentTruckId");
+  };
   const [tab, setTab] = useState<"directory" | "new" | "oneoff">("directory");
   const [regions, setRegions] = useState<GaccRegion[]>([]);
   const [regionId, setRegionId] = useState<string | "all" | null>(defaultRegionId || null);
@@ -80,12 +93,11 @@ export function FinanceOfficerPicker({
   const handlePick = async (o: FinanceOfficer) => {
     setSaving(true);
     try {
-      await addTruckFinanceContact({
-        incident_truck_id: incidentTruckId,
-        organization_id: organizationId,
-        finance_officer_id: o.id,
-        role: defaultRole,
-      });
+      await addContact({ finance_officer_id: o.id, role: defaultRole });
+      recordOfficerUse(o.id).catch(() => {});
+      toast.success(`${o.name} added as finance contact`);
+      onAdded?.();
+      onOpenChange(false);
       recordOfficerUse(o.id).catch(() => {});
       toast.success(`${o.name} added as finance contact`);
       onAdded?.();
@@ -109,12 +121,7 @@ export function FinanceOfficerPicker({
         region_id: form.region_id || null,
         org_id: organizationId,
       });
-      await addTruckFinanceContact({
-        incident_truck_id: incidentTruckId,
-        organization_id: organizationId,
-        finance_officer_id: officer.id,
-        role: defaultRole,
-      });
+      await addContact({ finance_officer_id: officer.id, role: defaultRole });
       toast.success(`${officer.name} added to directory and contact list`);
       onAdded?.();
       onOpenChange(false);
@@ -132,9 +139,7 @@ export function FinanceOfficerPicker({
     }
     setSaving(true);
     try {
-      await addTruckFinanceContact({
-        incident_truck_id: incidentTruckId,
-        organization_id: organizationId,
+      await addContact({
         name_override: oneOff.name || undefined,
         email_override: oneOff.email,
         phone_override: oneOff.phone || undefined,

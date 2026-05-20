@@ -8,6 +8,7 @@ import { IncidentTruckList } from "@/components/incidents/IncidentTruckList";
 import { IncidentDailyCrewGrid } from "@/components/incidents/IncidentDailyCrewGrid";
 import { IncidentResourceOrdersRollup } from "@/components/incidents/IncidentResourceOrdersRollup";
 import { IncidentTicketsTab } from "@/components/incidents/IncidentTicketsTab";
+import { IncidentFinanceContactsCard } from "@/components/incidents/IncidentFinanceContactsCard";
 import { OF286UploadCard } from "@/components/incidents/OF286UploadCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
@@ -192,6 +193,12 @@ export default function IncidentDetail() {
                 <p className="text-sm leading-relaxed">{incident.notes}</p>
               </div>
             )}
+
+            <IncidentFinanceContactsCard
+              incidentId={incident.id}
+              organizationId={incident.organization_id}
+              incidentRegionId={(incident as { region_id?: string | null }).region_id ?? null}
+            />
 
             <IncidentResourceOrdersRollup incidentId={incident.id} />
 
