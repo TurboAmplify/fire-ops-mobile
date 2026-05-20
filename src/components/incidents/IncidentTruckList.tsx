@@ -5,7 +5,7 @@ import { TRUCK_STATUS_LABELS } from "@/services/incident-trucks";
 import type { IncidentTruckStatus, IncidentTruckWithTruck } from "@/services/incident-trucks";
 import { Truck as TruckIcon, Plus, Loader2, ChevronDown, ChevronRight, AlertTriangle, X, Info, Users, FileText } from "lucide-react";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+
 import { toast } from "sonner";
 import { TruckCrewSection } from "./TruckCrewSection";
 import { ResourceOrderSection } from "./ResourceOrderSection";
