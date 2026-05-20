@@ -90,7 +90,17 @@ const App = () => (
               <TutorialOverlay />
               <TutorialMiniBar />
               <RouteBoundary>
-                <Suspense fallback={<StuckLoading label="Loading page…" />}>
+                <Suspense
+                  fallback={
+                    <StuckLoading
+                      label="Loading page…"
+                      onRetry={() => {
+                        void queryClient.invalidateQueries();
+                        window.dispatchEvent(new Event("chunk-retry"));
+                      }}
+                    />
+                  }
+                >
                   <Routes>
                     <Route path="/login" element={<Login />} />
                     <Route path="/reset-password" element={<ResetPassword />} />
