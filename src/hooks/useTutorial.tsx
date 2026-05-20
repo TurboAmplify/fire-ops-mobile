@@ -62,7 +62,7 @@ const TutorialContext =
 
 export function TutorialProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const { membership } = useOrganization();
+  const { membership, loading: orgLoading } = useOrganization();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
@@ -153,6 +153,8 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
   const runAutoStartCheck = useCallback(async () => {
     if (autoCheckedRef.current) return;
     if (!user?.id) return;
+    if (orgLoading) return;
+    if (!membership?.organizationId) return;
     autoCheckedRef.current = true;
 
     // Fast-path: already auto-shown / completed on this device.
@@ -204,7 +206,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.warn("Tutorial auto-start check failed:", err);
     }
-  }, [user?.id]);
+  }, [user?.id, orgLoading, membership?.organizationId]);
 
   // Track the previous signed-in user id so we only reset the auto-check
   // when the identity truly changes from one user to a different user.
@@ -231,6 +233,8 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
   // regardless of which route the user lands on first.
   useEffect(() => {
     if (!user?.id) return;
+    if (orgLoading) return;
+    if (!membership?.organizationId) return;
     void runAutoStartCheck();
     return () => {
       if (autoOpenTimerRef.current) {
@@ -238,7 +242,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
         autoOpenTimerRef.current = null;
       }
     };
-  }, [user?.id, runAutoStartCheck]);
+  }, [user?.id, orgLoading, membership?.organizationId, runAutoStartCheck]);
 
   // Backward-compat no-op (Dashboard used to call this).
   const maybeAutoStart = useCallback(() => {
