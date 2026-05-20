@@ -202,19 +202,41 @@ export default function ShiftTicketCreate() {
     }
   };
 
+  const handleAfterExplicitSave = (payload: Partial<ShiftTicket>) => {
+    const id = ticket?.id;
+    if (!id || !incidentId) return;
+    if (askedTicketsRef.current.has(id)) return;
+    askedTicketsRef.current.add(id);
+    // Open the send dialog after every explicit save (once per ticket id this session).
+    setSendDialogOpen(true);
+  };
+
   return (
-    <ShiftTicketForm
-      ticket={ticket}
-      incidentTruckId={incidentTruckId || ""}
-      organizationId={orgId}
-      incidentId={incidentId}
-      saving={createMutation.isPending || updateMutation.isPending}
-      onSave={handleSave}
-      onExportPdf={handleExportPdf}
-      onBack={() => navigate(`/incidents/${incidentId}`)}
-      exportingPdf={exportingPdf}
-      warnings={warnings}
-      crewRoster={activeCrew}
-    />
+    <>
+      <ShiftTicketForm
+        ticket={ticket}
+        incidentTruckId={incidentTruckId || ""}
+        organizationId={orgId}
+        incidentId={incidentId}
+        saving={createMutation.isPending || updateMutation.isPending}
+        onSave={handleSave}
+        onAfterExplicitSave={handleAfterExplicitSave}
+        onSendToFinanceOfficer={() => setSendDialogOpen(true)}
+        onExportPdf={handleExportPdf}
+        onBack={() => navigate(`/incidents/${incidentId}`)}
+        exportingPdf={exportingPdf}
+        warnings={warnings}
+        crewRoster={activeCrew}
+      />
+      {ticket?.id && incidentId && orgId && (
+        <SendShiftTicketDialog
+          open={sendDialogOpen}
+          onOpenChange={setSendDialogOpen}
+          ticket={ticket as ShiftTicket}
+          incidentId={incidentId}
+          organizationId={orgId}
+        />
+      )}
+    </>
   );
 }
