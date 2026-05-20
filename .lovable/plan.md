@@ -1,15 +1,35 @@
-## Swap Resend connection on FireOps HQ
+## What’s actually happening
 
-Switch the project from **Brandon's Resend (2)** to **Brandon's Resend (1)** so emails use the correct API key.
+The backend and app are healthy, but the email send is failing because the currently linked Resend account is **Brandon’s Resend (1)** and that account does **not** have `mail.fireopshq.com` verified. Resend rejects the send with 403, then the app reports it as a backend 502.
 
-### Steps
-1. Disconnect `Brandon's Resend (2)` (std_01knzg0enzesgvj0q1sz12d89k) from this project.
-2. Connect `Brandon's Resend (1)` (std_01knzezwzhem7vhztsjv0kqc31) — picker pops up, you click it.
-3. Redeploy edge functions that send mail so they pick up the new `RESEND_API_KEY`:
-   - `send-thread-reply`
-   - `incoming-email`
-4. Retry the "Send" button on the shift ticket to verify. If it still fails, check `send-thread-reply` logs for the Resend error message.
+This is not a frontend loop or loading bug. It is a sender-domain/account mismatch.
 
-### Notes
-- No code changes — purely a connector swap + redeploy.
-- If Resend (1) turns out to also be wrong, we can swap back just as easily.
+## Fix plan
+
+1. **Switch the project back to the Resend connection that owns the verified domain**
+   - Disconnect `Brandon’s Resend (1)` from this project.
+   - Link `Brandon’s Resend (2)` again.
+   - Redeploy the email-sending functions so they pick up the restored connection secret.
+
+2. **Confirm the deployed email functions are using the restored connection**
+   - Redeploy:
+     - `send-thread-reply`
+     - `incoming-email`
+   - Check the function response/logs after the next send attempt.
+
+3. **Make the UI stop feeling like it is looping**
+   - Update the shift-ticket send dialog so the send button cannot be repeatedly retried while the previous attempt is still resolving.
+   - Surface the precise email-domain failure message in a user-friendly way instead of only showing the generic “Could not send shift ticket.”
+   - If sending fails after the message record is created, keep the user in control and do not navigate away.
+
+4. **Optional fallback if neither Resend account has the verified domain**
+   - Temporarily send from Resend’s testing sender only for diagnostic/test delivery, or
+   - Verify `mail.fireopshq.com` on the Resend account you want to keep.
+
+## Technical notes
+
+- Current linked connector: `Brandon’s Resend (1)`.
+- Available previous connector: `Brandon’s Resend (2)`.
+- The failing code path is `send-thread-reply`, via the shared Resend helper.
+- No database migration is required.
+- The real permanent fix is for the API key and verified sender domain to belong to the same Resend account.
