@@ -3,7 +3,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
-import { listIncidentFinanceContacts, type IncidentTruckFinanceContact } from "@/services/incident-truck-finance-contacts";
+import { listIncidentFinanceContacts, contactDisplayName, contactDisplayEmail, type IncidentTruckFinanceContact } from "@/services/incident-truck-finance-contacts";
 import { useCreateThread } from "@/hooks/useThreads";
 import { sendReply, type ThreadPurpose } from "@/services/threads";
 import { handleMutationError } from "@/lib/offline-guard";
@@ -92,11 +92,14 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
                 onChange={(e) => setContactId(e.target.value)}
                 className="w-full mt-1 rounded-md border border-border bg-background px-3 py-2 text-sm"
               >
-                {contacts.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name_override || "Contact"} {c.email_override ? `· ${c.email_override}` : ""}
-                  </option>
-                ))}
+                {contacts.map((c) => {
+                  const email = contactDisplayEmail(c);
+                  return (
+                    <option key={c.id} value={c.id}>
+                      {contactDisplayName(c)}{email ? ` · ${email}` : ""}
+                    </option>
+                  );
+                })}
               </select>
             )}
           </div>

@@ -13,6 +13,29 @@ export interface IncidentTruckFinanceContact {
   is_active: boolean;
   notes: string | null;
   selected_at: string;
+  /** Joined name from finance_officers when no override is set. */
+  finance_officer_name?: string | null;
+  /** Joined email from finance_officers when no override is set. */
+  finance_officer_email?: string | null;
+}
+
+/** Display-friendly name: override first, fall back to directory entry. */
+export function contactDisplayName(c: IncidentTruckFinanceContact): string {
+  return c.name_override?.trim() || c.finance_officer_name?.trim() || "Contact";
+}
+
+/** Display-friendly email: override first, fall back to directory entry. */
+export function contactDisplayEmail(c: IncidentTruckFinanceContact): string | null {
+  return (c.email_override?.trim() || c.finance_officer_email?.trim() || null);
+}
+
+function mapRow(row: any): IncidentTruckFinanceContact {
+  const fo = (row.finance_officers ?? null) as { name?: string; email?: string } | null;
+  return {
+    ...row,
+    finance_officer_name: fo?.name ?? null,
+    finance_officer_email: fo?.email ?? null,
+  } as IncidentTruckFinanceContact;
 }
 
 export async function listTruckFinanceContacts(
@@ -20,12 +43,12 @@ export async function listTruckFinanceContacts(
 ): Promise<IncidentTruckFinanceContact[]> {
   const { data, error } = await supabase
     .from("incident_truck_finance_contacts")
-    .select("*")
+    .select("*, finance_officers(name, email)")
     .eq("incident_truck_id", incidentTruckId)
     .eq("is_active", true)
     .order("selected_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []) as IncidentTruckFinanceContact[];
+  return (data ?? []).map(mapRow);
 }
 
 export async function listIncidentFinanceContacts(
@@ -33,13 +56,13 @@ export async function listIncidentFinanceContacts(
 ): Promise<IncidentTruckFinanceContact[]> {
   const { data, error } = await supabase
     .from("incident_truck_finance_contacts")
-    .select("*")
+    .select("*, finance_officers(name, email)")
     .eq("incident_id", incidentId)
     .is("incident_truck_id", null)
     .eq("is_active", true)
     .order("selected_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []) as IncidentTruckFinanceContact[];
+  return (data ?? []).map(mapRow);
 }
 
 export async function addTruckFinanceContact(input: {
