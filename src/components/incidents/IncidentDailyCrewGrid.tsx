@@ -178,13 +178,26 @@ export function IncidentDailyCrewGrid({ incidentId }: Props) {
 
           {/* Crew list for selected day */}
           <div className="space-y-2">
-            {data.crew
-              .map((c) => {
-                const cell = data.cells[c.id]?.[data.dates[effectiveIdx]];
-                return { c, cell };
-              })
-              .filter(({ cell }) => cell && cell.hours > 0)
-              .map(({ c, cell }) => (
+            {(() => {
+              const rows = data.crew
+                .map((c) => {
+                  const cell = data.cells[c.id]?.[data.dates[effectiveIdx]];
+                  return { c, cell };
+                })
+                .filter(({ cell }) => cell && cell.hours > 0)
+                .filter(({ cell }) => !truckFilter || cell!.truckIds.includes(truckFilter));
+
+              if (rows.length === 0) {
+                return (
+                  <p className="py-4 text-center text-sm text-muted-foreground">
+                    {truckFilter
+                      ? "No crew hours for this truck on this day."
+                      : "No crew hours logged for this day."}
+                  </p>
+                );
+              }
+
+              return rows.map(({ c, cell }) => (
                 <div
                   key={c.id}
                   className="flex items-center justify-between rounded-lg bg-secondary/40 px-3 py-2.5"
@@ -204,15 +217,8 @@ export function IncidentDailyCrewGrid({ incidentId }: Props) {
                     <p className="text-[10px] uppercase text-muted-foreground">hrs</p>
                   </div>
                 </div>
-              ))}
-
-            {data.crew.every(
-              (c) => !data.cells[c.id]?.[data.dates[effectiveIdx]]
-            ) && (
-              <p className="py-4 text-center text-sm text-muted-foreground">
-                No crew hours logged for this day.
-              </p>
-            )}
+              ));
+            })()}
           </div>
 
           {/* Incident totals footer */}
