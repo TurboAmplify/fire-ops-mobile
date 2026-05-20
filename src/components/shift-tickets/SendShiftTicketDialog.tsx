@@ -14,6 +14,8 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import {
   listIncidentFinanceContacts,
+  contactDisplayName,
+  contactDisplayEmail,
   type IncidentTruckFinanceContact,
 } from "@/services/incident-truck-finance-contacts";
 import { useCreateThread } from "@/hooks/useThreads";
