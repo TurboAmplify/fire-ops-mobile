@@ -13,8 +13,14 @@ export function ImpersonationBanner() {
 
   const handleExit = async () => {
     await stopViewAs();
-    // Clear all cached org-scoped data so we don't briefly show stale rows
-    queryClient.clear();
+    // Clear org-scoped data only. Keep platform-admin cached so exiting view-as
+    // cannot briefly fail the super-admin gate and bounce routes.
+    queryClient.removeQueries({
+      predicate: (query) => {
+        const first = query.queryKey[0];
+        return first !== "platform-admin" && first !== "super-admin" && first !== "platform-settings" && first !== "platform_settings";
+      },
+    });
     navigate("/super-admin", { replace: true });
   };
 
