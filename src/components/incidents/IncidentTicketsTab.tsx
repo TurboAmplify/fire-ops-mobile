@@ -253,6 +253,35 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
         </button>
       </div>
 
+      {/* Truck filter chips — only when 2+ trucks */}
+      {trucks && trucks.length > 1 && (
+        <div className="no-scrollbar flex gap-2 overflow-x-auto -mx-1 px-1">
+          <button
+            onClick={() => setTruckFilter(null)}
+            className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors touch-target ${
+              truckFilter === null
+                ? "bg-primary text-primary-foreground"
+                : "bg-secondary text-secondary-foreground"
+            }`}
+          >
+            All
+          </button>
+          {trucks.map((it) => (
+            <button
+              key={it.id}
+              onClick={() => setTruckFilter(it.id)}
+              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors touch-target ${
+                truckFilter === it.id
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-secondary-foreground"
+              }`}
+            >
+              {it.trucks.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       {noTrucks && (
         <p className="text-xs text-muted-foreground text-center">
           Assign a truck to this incident first.
