@@ -139,9 +139,7 @@ export function FinanceOfficerPicker({
     }
     setSaving(true);
     try {
-      await addTruckFinanceContact({
-        incident_truck_id: incidentTruckId,
-        organization_id: organizationId,
+      await addContact({
         name_override: oneOff.name || undefined,
         email_override: oneOff.email,
         phone_override: oneOff.phone || undefined,
