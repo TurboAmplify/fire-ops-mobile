@@ -538,7 +538,10 @@ export function ShiftTicketForm({
         setUnlockReason("");
       }
 
-      if (!silent) showSuccess(payload.status === "final" ? "Saved & locked" : "Saved");
+      if (!silent) {
+        showSuccess(payload.status === "final" ? "Saved & locked" : "Saved");
+        onAfterExplicitSave?.(payload);
+      }
     } catch {
       // Error handled by parent
     }
