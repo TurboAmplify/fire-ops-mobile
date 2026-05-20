@@ -34,6 +34,8 @@ export default function ShiftTicketEdit() {
   const parseRoMutation = useUpdateResourceOrderParsed(incidentTruckId || "");
   const [exportingPdf, setExportingPdf] = useState(false);
   const [autoParsingRo, setAutoParsingRo] = useState(false);
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const askedTicketsRef = useRef<Set<string>>(new Set());
   const autoParseAttempted = useRef<Set<string>>(new Set());
   const duplicateMutation = useDuplicateShiftTicket(incidentTruckId || "");
 
