@@ -46,6 +46,7 @@ function StatusPill({ status }: { status: DailyCrewStatus }) {
 export function IncidentDailyCrewGrid({ incidentId }: Props) {
   const { data, isLoading, error } = useIncidentDailyCrew(incidentId);
   const [selectedDateIdx, setSelectedDateIdx] = useState<number | null>(null);
+  const [truckFilter, setTruckFilter] = useState<string | null>(null);
 
   // Default to most recent date when data loads
   const effectiveIdx = useMemo(() => {
