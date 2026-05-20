@@ -24,7 +24,7 @@ export default function OrgSetup() {
   const { user, loading: authLoading, signOut } = useAuth();
   const { membership, loading: orgLoading, refetch } = useOrganization();
   const { isPlatformAdmin, loading: paLoading } = usePlatformAdmin();
-  const { isImpersonating } = useImpersonation();
+  const { isImpersonating, loading: impersonationLoading } = useImpersonation();
   const { toast } = useToast();
 
   const [pendingInvite, setPendingInvite] = useState<{
@@ -67,7 +67,7 @@ export default function OrgSetup() {
     })();
   }, [user?.id]);
 
-  if (authLoading || orgLoading || paLoading || checkingInvite) {
+  if (authLoading || orgLoading || paLoading || impersonationLoading || checkingInvite) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
