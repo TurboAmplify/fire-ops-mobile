@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { getLocalDateString } from "@/lib/local-date";
 import { ShiftTicketForm } from "@/components/shift-tickets/ShiftTicketForm";
+import { SendShiftTicketDialog } from "@/components/shift-tickets/SendShiftTicketDialog";
 import { useCreateShiftTicket, useUpdateShiftTicket } from "@/hooks/useShiftTickets";
 import { useResourceOrders } from "@/hooks/useResourceOrders";
 import { useOrganization } from "@/hooks/useOrganization";
