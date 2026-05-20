@@ -64,6 +64,35 @@ export function IncidentDailyCrewGrid({ incidentId }: Props) {
         </h3>
       </div>
 
+      {/* Truck filter chips — only when 2+ trucks appear in the matrix */}
+      {data && data.truckOptions.length > 1 && (
+        <div className="no-scrollbar flex gap-2 overflow-x-auto -mx-1 px-1">
+          <button
+            onClick={() => setTruckFilter(null)}
+            className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold transition-colors touch-target ${
+              truckFilter === null
+                ? "bg-primary text-primary-foreground"
+                : "bg-secondary text-secondary-foreground"
+            }`}
+          >
+            All
+          </button>
+          {data.truckOptions.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTruckFilter(t.id)}
+              className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold transition-colors touch-target ${
+                truckFilter === t.id
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-secondary-foreground"
+              }`}
+            >
+              {t.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       {isLoading && (
         <div className="flex justify-center py-6">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
