@@ -232,13 +232,14 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     [isImpersonating, impersonatedMembership, realMembership],
   );
 
+  const effectiveLoading = loading || (isImpersonating && !!target && !impersonatedMembership);
   const isAdmin = membership?.role === "admin";
 
   return (
     <OrganizationContext.Provider
       value={{
         membership,
-        loading,
+        loading: effectiveLoading,
         isAdmin,
         memberships: allMemberships,
         setActiveOrgId,

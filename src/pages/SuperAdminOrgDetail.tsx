@@ -157,8 +157,14 @@ export default function SuperAdminOrgDetail() {
     if (!orgId) return;
     try {
       await startViewAs(orgId, data?.name);
-      // Drop any cached data from prior context so org-scoped queries refetch
-      queryClient.clear();
+      // Drop org-scoped data from prior context so the impersonated org refetches,
+      // but keep platform-admin/super-admin queries intact to avoid redirect loops.
+      queryClient.removeQueries({
+        predicate: (query) => {
+          const first = query.queryKey[0];
+          return first !== "platform-admin" && first !== "super-admin" && first !== "platform-settings" && first !== "platform_settings";
+        },
+      });
       toast.success(`Viewing as ${data?.name ?? "organization"} (read-only)`);
       navigate("/");
     } catch (err) {

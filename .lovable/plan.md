@@ -166,3 +166,44 @@ Seeded per purpose; each org's admin can edit in Settings:
 ---
 
 Ready to build on approval. After you approve, I'll start with Resend connector + migration 1–4 (foundation) so you can see the finance directory + region matching working before we wire up the email pipeline.
+
+---
+
+# Deferred Fix Plan — Incident-Level Resource Orders + Finance Contacts
+
+This is the plan to return to after the super-admin looping issue is fixed.
+
+## Problem
+
+1. Creating an incident by uploading a Resource Order currently uploads and parses the file, then deletes the file and never creates a `resource_orders` record. That is why Ash Pole can show "no resource order uploaded" even though the incident was created from that exact Resource Order.
+2. Finance Officer contacts were added under the truck card, but the workflow is incident-level. Users need that information in the incident overview and ticket workflow, not buried inside each truck.
+
+## Fix Plan
+
+1. **Persist Resource Orders from incident creation**
+   - Stop deleting the uploaded Resource Order after incident creation.
+   - Insert a `resource_orders` row tied to the new `incident_id`.
+   - Allow `resource_orders.incident_truck_id` to be nullable so an RO can belong to the incident before any truck-specific attachment exists.
+
+2. **Use incident-level RO fallback in shift tickets**
+   - Shift tickets should look for the best Resource Order in this order:
+     1. ticket/truck-specific parsed RO
+     2. incident-level parsed RO
+     3. existing ticket header data
+   - Only show "no Resource Order" if all three are missing.
+
+3. **Move Finance Officer contacts to the incident workflow**
+   - Add/associate Finance Officers at the incident level.
+   - Remove the Finance Officer UI from inside the truck card.
+   - Show/manage Finance Officer contacts in the Incident Overview.
+   - Show a compact Finance Officer strip on ticket screens where users send/receive workflow communication.
+
+4. **Keep backwards compatibility**
+   - Preserve existing truck-level records and migrate/backfill them to incident-level associations.
+   - Keep truck-specific Resource Orders possible, but make incident-level the normal/default path.
+
+## Out of Scope for This Fix
+
+- No new messaging inbox UI.
+- No demob packet builder changes.
+- No auth/RLS redesign unless required by the migration.

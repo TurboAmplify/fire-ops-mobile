@@ -11,7 +11,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const { membership, loading: orgLoading } = useOrganization();
   const { isPlatformAdmin, loading: paLoading } = usePlatformAdmin();
-  const { isImpersonating } = useImpersonation();
+  const { isImpersonating, loading: impersonationLoading } = useImpersonation();
   const { isAccessible, loading: statusLoading } = useOrgStatus();
   const location = useLocation();
 
@@ -21,7 +21,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   // unmounting Dashboard and remounting it on every cache revalidation.
   const resolvedOnceRef = useRef(false);
   const fullyResolved =
-    !authLoading && !orgLoading && !paLoading && !statusLoading;
+    !authLoading && !orgLoading && !paLoading && !impersonationLoading && !statusLoading;
   useEffect(() => {
     if (fullyResolved) resolvedOnceRef.current = true;
   }, [fullyResolved]);
