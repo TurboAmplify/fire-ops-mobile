@@ -43,12 +43,12 @@ export async function listTruckFinanceContacts(
 ): Promise<IncidentTruckFinanceContact[]> {
   const { data, error } = await supabase
     .from("incident_truck_finance_contacts")
-    .select("*")
+    .select("*, finance_officers(name, email)")
     .eq("incident_truck_id", incidentTruckId)
     .eq("is_active", true)
     .order("selected_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []) as IncidentTruckFinanceContact[];
+  return (data ?? []).map(mapRow);
 }
 
 export async function listIncidentFinanceContacts(
@@ -56,13 +56,13 @@ export async function listIncidentFinanceContacts(
 ): Promise<IncidentTruckFinanceContact[]> {
   const { data, error } = await supabase
     .from("incident_truck_finance_contacts")
-    .select("*")
+    .select("*, finance_officers(name, email)")
     .eq("incident_id", incidentId)
     .is("incident_truck_id", null)
     .eq("is_active", true)
     .order("selected_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []) as IncidentTruckFinanceContact[];
+  return (data ?? []).map(mapRow);
 }
 
 export async function addTruckFinanceContact(input: {
