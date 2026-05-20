@@ -181,14 +181,23 @@ export function useIncidentDailyCrew(incidentId: string) {
           const matched = crewByLowerName[name.toLowerCase()];
           const crewKey = matched ? matched.id : `name:${name.toLowerCase()}`;
           const crewInfo = matched ?? { id: crewKey, name, role: null };
-          addEntry(crewKey, crewInfo, date, hours, truckName, ticketStatus, t.id);
+          addEntry(crewKey, crewInfo, date, hours, truckName, t.incident_truck_id, ticketStatus, t.id);
         });
       });
 
       const dates = Array.from(dateSet).sort();
       const crew = Object.values(crewMap).sort((a, b) => a.name.localeCompare(b.name));
 
-      return { dates, crew, cells, totalsByCrew, totalsByDate };
+      // Build truck options from incident_trucks that actually appear in cells.
+      const usedTruckIds = new Set<string>();
+      Object.values(cells).forEach((dateMap) => {
+        Object.values(dateMap).forEach((cell) => cell.truckIds.forEach((id) => usedTruckIds.add(id)));
+      });
+      const truckOptions = (itRows ?? [])
+        .filter((r: any) => usedTruckIds.has(r.id))
+        .map((r: any) => ({ id: r.id, name: r.trucks?.name ?? "Truck" }));
+
+      return { dates, crew, cells, totalsByCrew, totalsByDate, truckOptions };
     },
   });
 }
