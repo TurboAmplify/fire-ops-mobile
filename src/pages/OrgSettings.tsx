@@ -89,7 +89,7 @@ export default function OrgSettings() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("organizations")
-        .select("id, inspection_alert_enabled, walkaround_enabled")
+        .select("id, inspection_alert_enabled, walkaround_enabled, email_handle")
         .eq("id", orgId!)
         .maybeSingle();
       if (error) throw error;
