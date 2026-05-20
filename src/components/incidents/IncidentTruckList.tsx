@@ -5,10 +5,12 @@ import { TRUCK_STATUS_LABELS } from "@/services/incident-trucks";
 import type { IncidentTruckStatus, IncidentTruckWithTruck } from "@/services/incident-trucks";
 import { Truck as TruckIcon, Plus, Loader2, ChevronDown, ChevronRight, AlertTriangle, X, Info, Users, FileText, Mail } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { TruckCrewSection } from "./TruckCrewSection";
 import { ResourceOrderSection } from "./ResourceOrderSection";
 import { FinanceContactsSection } from "./FinanceContactsSection";
+import { listTruckFinanceContacts } from "@/services/incident-truck-finance-contacts";
 
 import { ShiftTicketSection } from "@/components/shift-tickets/ShiftTicketSection";
 import { SignedImage } from "@/components/ui/SignedImage";
@@ -178,8 +180,14 @@ function TruckCard({
   // Always fetch crew so we can show summary + warning on collapsed card
   const { data: crew } = useIncidentTruckCrew(it.id);
   const { data: tickets } = useShiftTickets(it.id);
+  const { data: financeContacts } = useQuery({
+    queryKey: ["incident-truck-finance-contacts", it.id],
+    queryFn: () => listTruckFinanceContacts(it.id),
+    enabled: !!it.id,
+  });
   const activeCrew = crew?.filter((c) => c.is_active) ?? [];
   const noCrewAssigned = crew !== undefined && activeCrew.length === 0;
+  const noFinanceContact = financeContacts !== undefined && financeContacts.length === 0;
   const ticketCount = tickets?.length ?? 0;
   const [autoOpenCrew, setAutoOpenCrew] = useState(false);
   const [showMore, setShowMore] = useState(false);
@@ -212,6 +220,12 @@ function TruckCard({
                 <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">
                   <AlertTriangle className="h-2.5 w-2.5" />
                   No Crew
+                </span>
+              )}
+              {noFinanceContact && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">
+                  <Mail className="h-2.5 w-2.5" />
+                  No Finance
                 </span>
               )}
             </div>
