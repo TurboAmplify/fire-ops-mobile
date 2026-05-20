@@ -1161,7 +1161,8 @@ export type Database = {
           email_override: string | null
           finance_officer_id: string | null
           id: string
-          incident_truck_id: string
+          incident_id: string | null
+          incident_truck_id: string | null
           is_active: boolean
           name_override: string | null
           notes: string | null
@@ -1177,7 +1178,8 @@ export type Database = {
           email_override?: string | null
           finance_officer_id?: string | null
           id?: string
-          incident_truck_id: string
+          incident_id?: string | null
+          incident_truck_id?: string | null
           is_active?: boolean
           name_override?: string | null
           notes?: string | null
@@ -1193,7 +1195,8 @@ export type Database = {
           email_override?: string | null
           finance_officer_id?: string | null
           id?: string
-          incident_truck_id?: string
+          incident_id?: string | null
+          incident_truck_id?: string | null
           is_active?: boolean
           name_override?: string | null
           notes?: string | null
