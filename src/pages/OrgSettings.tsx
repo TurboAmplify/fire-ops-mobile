@@ -38,6 +38,8 @@ import {
   Check,
   X,
   ClipboardCheck,
+  AtSign,
+  Copy,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { InspectionTemplateEditor } from "@/components/fleet/InspectionTemplateEditor";
