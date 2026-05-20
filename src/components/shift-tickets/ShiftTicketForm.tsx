@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
-import { Plus, Loader2, FileText, Save, Download, AlertTriangle, Copy, Lock, Unlock, RefreshCw, Info, Camera, DollarSign } from "lucide-react";
+import { Plus, Loader2, FileText, Save, Download, AlertTriangle, Copy, Lock, Unlock, RefreshCw, Info, Camera, DollarSign, Mail } from "lucide-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import {
   Dialog,
@@ -102,6 +102,10 @@ interface ShiftTicketFormProps {
   incidentId?: string;
   saving: boolean;
   onSave: (data: Partial<ShiftTicket>) => void | Promise<void>;
+  /** Called after a successful explicit (user-initiated) save, not on autosave. */
+  onAfterExplicitSave?: (payload: Partial<ShiftTicket>) => void;
+  /** Called when the user taps the "Send to Finance Officer" button. */
+  onSendToFinanceOfficer?: () => void;
   onExportPdf: (sigOverrides: { contractor_rep_signature_url: string | null; supervisor_signature_url: string | null }) => void;
   onDuplicate?: () => void;
   duplicating?: boolean;
@@ -161,6 +165,8 @@ export function ShiftTicketForm({
   incidentId,
   saving,
   onSave,
+  onAfterExplicitSave,
+  onSendToFinanceOfficer,
   onExportPdf,
   onDuplicate,
   duplicating,
@@ -532,7 +538,10 @@ export function ShiftTicketForm({
         setUnlockReason("");
       }
 
-      if (!silent) showSuccess(payload.status === "final" ? "Saved & locked" : "Saved");
+      if (!silent) {
+        showSuccess(payload.status === "final" ? "Saved & locked" : "Saved");
+        onAfterExplicitSave?.(payload);
+      }
     } catch {
       // Error handled by parent
     }
@@ -1370,6 +1379,16 @@ export function ShiftTicketForm({
               {exportingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
               PDF
             </button>
+            {onSendToFinanceOfficer && (
+              <button
+                onClick={onSendToFinanceOfficer}
+                title="Send to Finance Officer"
+                className="flex items-center justify-center gap-2 rounded-xl bg-secondary px-4 py-3 text-sm font-bold text-secondary-foreground touch-target active:scale-[0.98]"
+              >
+                <Mail className="h-4 w-4" />
+                Send
+              </button>
+            )}
             {onDuplicate && (
               <button onClick={onDuplicate} disabled={duplicating}
                 className="flex items-center justify-center gap-2 rounded-xl bg-secondary px-4 py-3 text-sm font-bold text-secondary-foreground touch-target disabled:opacity-40 active:scale-[0.98]">

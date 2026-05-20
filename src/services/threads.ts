@@ -220,9 +220,17 @@ export async function saveDraft(threadId: string, userId: string, organizationId
   );
 }
 
-export async function sendReply(threadId: string, bodyText: string): Promise<{ message_id: string }> {
+export async function sendReply(
+  threadId: string,
+  bodyText: string,
+  attachmentPaths?: string[],
+): Promise<{ message_id: string }> {
   const { data, error } = await supabase.functions.invoke("send-thread-reply", {
-    body: { thread_id: threadId, body_text: bodyText },
+    body: {
+      thread_id: threadId,
+      body_text: bodyText,
+      attachment_paths: attachmentPaths && attachmentPaths.length ? attachmentPaths : undefined,
+    },
   });
   if (error) throw error;
   if (data?.error) throw new Error(data.error);

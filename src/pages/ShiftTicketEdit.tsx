@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
 import { ShiftTicketForm } from "@/components/shift-tickets/ShiftTicketForm";
+import { SendShiftTicketDialog } from "@/components/shift-tickets/SendShiftTicketDialog";
 import { useShiftTicket, useUpdateShiftTicket, useDuplicateShiftTicket } from "@/hooks/useShiftTickets";
 import { generateOF297Pdf } from "@/components/shift-tickets/generateOF297Pdf";
 import { useOrganization } from "@/hooks/useOrganization";
@@ -33,6 +34,8 @@ export default function ShiftTicketEdit() {
   const parseRoMutation = useUpdateResourceOrderParsed(incidentTruckId || "");
   const [exportingPdf, setExportingPdf] = useState(false);
   const [autoParsingRo, setAutoParsingRo] = useState(false);
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const askedTicketsRef = useRef<Set<string>>(new Set());
   const autoParseAttempted = useRef<Set<string>>(new Set());
   const duplicateMutation = useDuplicateShiftTicket(incidentTruckId || "");
 
@@ -270,23 +273,44 @@ export default function ShiftTicketEdit() {
     );
   }
 
+  const handleAfterExplicitSave = (_payload: Partial<ShiftTicket>) => {
+    const id = ticket?.id;
+    if (!id || !incidentId) return;
+    if (askedTicketsRef.current.has(id)) return;
+    askedTicketsRef.current.add(id);
+    setSendDialogOpen(true);
+  };
+
   return (
-    <ShiftTicketForm
-      ticket={mergedTicket}
-      incidentTruckId={incidentTruckId || ""}
-      organizationId={membership?.organizationId || ""}
-      incidentId={incidentId}
-      saving={updateMutation.isPending}
-      onSave={handleSave}
-      onExportPdf={handleExportPdf}
-      onDuplicate={handleDuplicate}
-      duplicating={duplicateMutation.isPending}
-      onBack={() => navigate(`/incidents/${incidentId}`)}
-      exportingPdf={exportingPdf}
-      crewRoster={activeCrew}
-      isAdmin={isAdmin}
-      onRefreshFromSources={handleRefreshFromSources}
-      sourceHints={sourceHints}
-    />
+    <>
+      <ShiftTicketForm
+        ticket={mergedTicket}
+        incidentTruckId={incidentTruckId || ""}
+        organizationId={membership?.organizationId || ""}
+        incidentId={incidentId}
+        saving={updateMutation.isPending}
+        onSave={handleSave}
+        onAfterExplicitSave={handleAfterExplicitSave}
+        onSendToFinanceOfficer={() => setSendDialogOpen(true)}
+        onExportPdf={handleExportPdf}
+        onDuplicate={handleDuplicate}
+        duplicating={duplicateMutation.isPending}
+        onBack={() => navigate(`/incidents/${incidentId}`)}
+        exportingPdf={exportingPdf}
+        crewRoster={activeCrew}
+        isAdmin={isAdmin}
+        onRefreshFromSources={handleRefreshFromSources}
+        sourceHints={sourceHints}
+      />
+      {ticket?.id && incidentId && membership?.organizationId && (
+        <SendShiftTicketDialog
+          open={sendDialogOpen}
+          onOpenChange={setSendDialogOpen}
+          ticket={ticket as ShiftTicket}
+          incidentId={incidentId}
+          organizationId={membership.organizationId}
+        />
+      )}
+    </>
   );
 }

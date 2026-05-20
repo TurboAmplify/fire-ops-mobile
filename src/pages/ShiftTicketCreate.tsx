@@ -1,9 +1,10 @@
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { getLocalDateString } from "@/lib/local-date";
 import { ShiftTicketForm } from "@/components/shift-tickets/ShiftTicketForm";
+import { SendShiftTicketDialog } from "@/components/shift-tickets/SendShiftTicketDialog";
 import { useCreateShiftTicket, useUpdateShiftTicket } from "@/hooks/useShiftTickets";
 import { useResourceOrders } from "@/hooks/useResourceOrders";
 import { useOrganization } from "@/hooks/useOrganization";
@@ -49,6 +50,8 @@ export default function ShiftTicketCreate() {
   const [ticket, setTicket] = useState<Partial<ShiftTicket> | null>(null);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const askedTicketsRef = useRef<Set<string>>(new Set());
 
   // Build initial ticket from all relational data
   useEffect(() => {
@@ -199,19 +202,41 @@ export default function ShiftTicketCreate() {
     }
   };
 
+  const handleAfterExplicitSave = (payload: Partial<ShiftTicket>) => {
+    const id = ticket?.id;
+    if (!id || !incidentId) return;
+    if (askedTicketsRef.current.has(id)) return;
+    askedTicketsRef.current.add(id);
+    // Open the send dialog after every explicit save (once per ticket id this session).
+    setSendDialogOpen(true);
+  };
+
   return (
-    <ShiftTicketForm
-      ticket={ticket}
-      incidentTruckId={incidentTruckId || ""}
-      organizationId={orgId}
-      incidentId={incidentId}
-      saving={createMutation.isPending || updateMutation.isPending}
-      onSave={handleSave}
-      onExportPdf={handleExportPdf}
-      onBack={() => navigate(`/incidents/${incidentId}`)}
-      exportingPdf={exportingPdf}
-      warnings={warnings}
-      crewRoster={activeCrew}
-    />
+    <>
+      <ShiftTicketForm
+        ticket={ticket}
+        incidentTruckId={incidentTruckId || ""}
+        organizationId={orgId}
+        incidentId={incidentId}
+        saving={createMutation.isPending || updateMutation.isPending}
+        onSave={handleSave}
+        onAfterExplicitSave={handleAfterExplicitSave}
+        onSendToFinanceOfficer={() => setSendDialogOpen(true)}
+        onExportPdf={handleExportPdf}
+        onBack={() => navigate(`/incidents/${incidentId}`)}
+        exportingPdf={exportingPdf}
+        warnings={warnings}
+        crewRoster={activeCrew}
+      />
+      {ticket?.id && incidentId && orgId && (
+        <SendShiftTicketDialog
+          open={sendDialogOpen}
+          onOpenChange={setSendDialogOpen}
+          ticket={ticket as ShiftTicket}
+          incidentId={incidentId}
+          organizationId={orgId}
+        />
+      )}
+    </>
   );
 }
