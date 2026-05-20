@@ -33,15 +33,20 @@ export function IncidentTruckList({ incidentId, incidentName, organizationId }: 
   const [showAssign, setShowAssign] = useState(false);
   const [expandedTruck, setExpandedTruck] = useState<string | null>(null);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
+  // Track incident_truck.id of a truck just added, so we can prompt for its RO.
+  const [promptRoFor, setPromptRoFor] = useState<string | null>(null);
 
   const assignedTruckIds = new Set(incidentTrucks?.map((it) => it.truck_id));
   const unassigned = allTrucks?.filter((t) => !assignedTruckIds.has(t.id)) ?? [];
 
   const handleAssign = async (truckId: string) => {
     try {
-      await assignMutation.mutateAsync(truckId);
+      const it = await assignMutation.mutateAsync(truckId);
       toast.success("Truck assigned");
       setShowAssign(false);
+      // Expand the newly added truck and surface the RO prompt
+      setExpandedTruck(it.id);
+      setPromptRoFor(it.id);
     } catch (err: any) {
       toast.error(err?.message || "Failed to assign truck");
     }
