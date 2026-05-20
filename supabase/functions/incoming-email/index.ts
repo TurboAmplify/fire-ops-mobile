@@ -182,14 +182,18 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Update thread + increment unread
-    await supabase.rpc as unknown; // placeholder
+    // Update thread + bump unread
+    const { data: cur } = await supabase
+      .from("communication_threads")
+      .select("unread_count")
+      .eq("id", thread.id)
+      .maybeSingle();
     await supabase
       .from("communication_threads")
       .update({
         last_message_at: new Date().toISOString(),
         last_message_direction: "in",
-        unread_count: 999, // signal unread; UI shows badge regardless of exact count
+        unread_count: (cur?.unread_count ?? 0) + 1,
       })
       .eq("id", thread.id);
 
