@@ -74,6 +74,8 @@ const SuperAdminUsers = lazy(() => import("./pages/SuperAdminUsers"));
 const SuperAdminActivity = lazy(() => import("./pages/SuperAdminActivity"));
 const SuperAdminAudit = lazy(() => import("./pages/SuperAdminAudit"));
 const SuperAdminErrors = lazy(() => import("./pages/SuperAdminErrors"));
+const MessagesInbox = lazy(() => import("./pages/MessagesInbox"));
+const ThreadView = lazy(() => import("./pages/ThreadView"));
 
 const App = () => (
   <ErrorBoundary scope="root">
@@ -136,6 +138,8 @@ const App = () => (
                     <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
                     <Route path="/payroll" element={<ProtectedRoute><AdminGate><ModuleGate module="payroll"><Payroll /></ModuleGate></AdminGate></ProtectedRoute>} />
                     <Route path="/more" element={<ProtectedRoute><More /></ProtectedRoute>} />
+                    <Route path="/messages" element={<ProtectedRoute><MessagesInbox /></ProtectedRoute>} />
+                    <Route path="/messages/:threadId" element={<ProtectedRoute><ThreadView /></ProtectedRoute>} />
                     <Route path="/needs" element={<ProtectedRoute><NeedsList /></ProtectedRoute>} />
                     <Route path="/training" element={<ProtectedRoute><ModuleGate module="training"><Training /></ModuleGate></ProtectedRoute>} />
                     <Route path="/admin/logs" element={<ProtectedRoute><AdminGate><AdminLogs /></AdminGate></ProtectedRoute>} />

@@ -1,74 +1,113 @@
-# Plan #1 — Move Finance Officer to Incident Level
+# Plan #2 — Messaging Inbox + Thread View
 
 ## Goal
-Pull finance contacts off the per-truck card and surface them once per incident on the **Overview** tab. Support multiple contacts per incident (no per-truck split).
+Surface the existing messaging backend (`communication_threads`, `messages`, `message_attachments`, `message_drafts`, `send-thread-reply`, `incoming-email`) as a real, mobile-first UI. This is the foundation for Plans #3 (demob send/ack) and #4 (OF-286 review), both of which send to finance and receive replies through these same threads.
 
 ## Scope guardrails (golden rules)
-- No rewrites of working OF-286, shift ticket, RO, or demob flows.
-- Mobile-first (375px). ≤3 taps to add/edit a contact.
-- Loading / empty / error states on the new section.
-- Reuse existing `FinanceOfficerPicker` and `FinanceContactsSection` components — only swap the parent key from `incident_truck_id` to `incident_id`.
-- Existing per-truck rows stay in the DB (not deleted) so historical data and any in-flight threads keep resolving; they just stop appearing in the UI.
+- No backend rewrites. Use existing tables + edge functions as-is.
+- Mobile-first (375px). ≤3 taps from inbox → open thread → reply.
+- Loading / empty / error on every new view.
+- Offline-tolerant reads (use existing query cache); writes blocked by existing `offline-guard`.
+- No new bottom tab. Inbox surfaces in two places:
+  1. **Incident Detail → new "Messages" tab** (per-incident thread list)
+  2. **Global inbox entry** added to the **More** screen (cross-incident, sorted by `last_message_at`)
+- Reuse shadcn primitives (Card, Tabs, Button, Textarea, Sheet, Badge). No new design system pieces.
 
 ## What changes for the user
-- **Overview tab** gets a new "Finance Contacts" card under Notes / above Resource Orders.
-  - Shows assigned finance officer(s) with name, email, phone, role chip (shifts / demob / both).
-  - "Add finance contact" button → opens existing `FinanceOfficerPicker`.
-  - Remove (X) per contact.
-- **Trucks tab**: the per-truck "Finance Contacts" section is removed from each truck card. (Truck card stays — just shorter.)
-- Shift ticket + demob send-to flows read from the **incident-level** contacts instead of the truck-level ones.
+
+### A. Global Inbox (`/messages`)
+- Linked from `More` page row "Messages" with unread badge.
+- List of threads org-wide, newest activity first.
+- Each row: subject, counterparty name/email, snippet of last message, unread dot, relative time, purpose chip (shift / demob / of286 / general), incident name if linked.
+- Tap → thread view.
+
+### B. Per-incident Messages tab
+- New tab on `IncidentDetail` between Tickets and Documents.
+- Same list component as global inbox, filtered to `incident_id`.
+- Empty state: "No messages yet" + "Start a thread" button (opens compose sheet).
+
+### C. Thread view (`/messages/:threadId`)
+- Header: subject, counterparty, purpose chip, "View incident →" link if linked.
+- Scrollable message list (oldest → newest), bubbles styled by `direction` (in = neutral left, out = primary right).
+- Each message: from name/email, sent/received time, body (sanitized HTML if present else text), attachment chips.
+- Tap attachment → opens via signed URL (reuse `useSignedUrl`).
+- Sticky bottom **Reply composer**: Textarea + attach button (later) + Send.
+- On mount: mark thread read (`unread_count = 0`, last_read_at on user).
+- Send → calls `send-thread-reply` edge function. Optimistic message append; failure shows toast + keeps draft.
+- Auto-save draft to `message_drafts` (debounced 1s) so reply survives navigation.
+
+### D. Compose new thread (sheet from incident Messages tab)
+- Pick contact from `IncidentFinanceContactsCard` list (or "Add contact" → opens existing picker).
+- Pick purpose (general / shift_ticket / demob / of286).
+- Subject + body.
+- On send: create `communication_threads` row (generate `thread_token`), then call `send-thread-reply` with the new id.
 
 ## Technical details
 
-### Database
-Add nullable `incident_id` to `incident_truck_finance_contacts` and make `incident_truck_id` nullable. New rows created from the Overview write `incident_id` + null `incident_truck_id`. Old per-truck rows are left in place but hidden from the new UI.
+### New routes
+- `/messages` → `MessagesInbox.tsx`
+- `/messages/:threadId` → `ThreadView.tsx`
 
-```
-ALTER TABLE incident_truck_finance_contacts
-  ALTER COLUMN incident_truck_id DROP NOT NULL,
-  ADD COLUMN incident_id uuid;
+### New service: `src/services/threads.ts`
+- `listThreads({ incidentId? })` — joins `incident.name`, last message snippet.
+- `getThread(threadId)` — thread + ordered messages + attachments.
+- `markThreadRead(threadId)` — update `unread_count = 0`.
+- `createThread({ incidentId?, incidentTruckId?, contactId?, financeOfficerId?, purpose, subject })` — generates `thread_token` (uuid-derived, short), inserts row, returns id.
+- `saveDraft(threadId, body)` / `getDraft(threadId)` — upsert/select `message_drafts`.
 
-CREATE INDEX itfc_incident_id_idx ON incident_truck_finance_contacts(incident_id);
-```
-RLS already gates by `organization_id` — no policy change needed.
+### New hooks: `src/hooks/useThreads.ts`
+- `useThreadList({ incidentId? })` — react-query.
+- `useThread(threadId)` — react-query + realtime subscription on `messages` filtered by `thread_id` to live-append inbound.
+- `useSendReply()` — mutation calling `supabase.functions.invoke('send-thread-reply', ...)`.
+- `useUnreadCount()` — sum of `unread_count` for badge in More.
 
-Rename is avoided (keeps types & existing code compiling). A follow-up migration can rename the table later if desired.
+### New components
+- `src/components/messages/ThreadListItem.tsx`
+- `src/components/messages/MessageBubble.tsx`
+- `src/components/messages/ReplyComposer.tsx`
+- `src/components/messages/AttachmentChip.tsx`
+- `src/components/messages/NewThreadSheet.tsx`
 
-### Service layer
-`src/services/incident-truck-finance-contacts.ts`:
-- Add `listIncidentFinanceContacts(incidentId)` — filters `incident_id = ? AND incident_truck_id IS NULL AND is_active`.
-- Add `addIncidentFinanceContact({ incident_id, organization_id, ... })`.
-- Keep existing per-truck functions intact (still used by demob/shift-ticket lookups for historical rows; new send flows will prefer incident-level).
+### Edits
+- `src/App.tsx` — register two new routes inside `ProtectedRoute`.
+- `src/pages/More.tsx` — add "Messages" row with unread badge.
+- `src/pages/IncidentDetail.tsx` — add `<TabsTrigger value="messages">` + content rendering `<MessagesInbox incidentId={...} variant="embedded" />`.
+- `supabase/migrations/*` — add `thread_last_read` per-user table OR add `last_read_at` to `communication_threads` (single-reader simplification — pick the simpler path: clear `unread_count` on read, since orgs are small). No schema change required if we just zero `unread_count`. **Decision: no migration this plan.**
 
-### Components
-- **New**: `src/components/incidents/IncidentFinanceContactsCard.tsx` — thin wrapper around the existing `FinanceContactsSection` pattern, parameterized by `incidentId` instead of `incidentTruckId`.
-- **Edit**: `FinanceOfficerPicker.tsx` — accept either `incidentTruckId` or `incidentId` (one of two). Picks correct insert path.
-- **Edit**: `IncidentDetail.tsx` → render `<IncidentFinanceContactsCard>` in the Overview `TabsContent` (above `IncidentResourceOrdersRollup`).
-- **Edit**: `IncidentTruckList.tsx` (and any truck-card child rendering `FinanceContactsSection`) — remove that section from the per-truck card.
+### Realtime
+- Enable realtime publication for `messages` and `communication_threads` (1-line migration):
+  ```sql
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.communication_threads;
+  ```
 
-### Downstream reads (shift tickets, demob)
-- Where current code resolves a "send-to" address by `incident_truck_id`, fall back to incident-level contacts when none exist on the truck. Keeps existing tickets working, new ones use incident contacts.
-- No UI change to shift ticket / demob send dialogs in this step — just the resolver.
+### Offline behavior
+- Reads cached by react-query (already 7-day cache config).
+- `Send` and `Save draft` gated by existing `offline-guard` — when offline, draft still saves locally to react-query cache; send shows "You're offline" toast.
 
 ## Files touched (estimate)
-1. `supabase/migrations/*` (1 migration — add `incident_id`, nullable `incident_truck_id`, index)
-2. `src/services/incident-truck-finance-contacts.ts` — add 2 functions
-3. `src/components/incidents/FinanceOfficerPicker.tsx` — accept incident-level mode
-4. `src/components/incidents/IncidentFinanceContactsCard.tsx` — new
-5. `src/pages/IncidentDetail.tsx` — render new card on Overview
-6. `src/components/incidents/IncidentTruckList.tsx` — remove `FinanceContactsSection` from truck card
-7. Shift-ticket + demob send resolver (1–2 spots) — fall back to incident-level
+1. `supabase/migrations/*` (realtime publication only)
+2. `src/services/threads.ts` (new)
+3. `src/hooks/useThreads.ts` (new)
+4. `src/components/messages/*.tsx` (5 new small components)
+5. `src/pages/MessagesInbox.tsx` (new)
+6. `src/pages/ThreadView.tsx` (new)
+7. `src/App.tsx` (2 routes)
+8. `src/pages/More.tsx` (Messages row + badge)
+9. `src/pages/IncidentDetail.tsx` (Messages tab)
 
 ## What to test after build
-1. Open an incident → Overview → "Finance Contacts" card appears (empty state).
-2. Add a contact via picker → appears in list; reload → persists.
-3. Add a second contact with a different role → both render.
-4. Remove a contact → disappears immediately.
-5. Trucks tab → per-truck finance section is gone; rest of truck card unchanged.
-6. Existing incidents with old per-truck contacts: those contacts no longer render on the truck card, but historical shift tickets/demob threads still resolve.
-7. Create a new shift ticket → "Send to" resolves to incident-level contact.
+1. More → Messages → empty state renders, no crash.
+2. Trigger inbound email (or seed a thread row + message via SQL) → appears in inbox with unread dot.
+3. Tap thread → messages render in order; unread dot clears.
+4. Type reply → draft persists across navigation.
+5. Send reply → message appears optimistically; `send-thread-reply` invoked; on success status flips to sent.
+6. Open incident → Messages tab → same thread visible filtered by incident.
+7. Compose new thread from incident → picks contact from new incident-level finance card → sends → thread appears in both inbox and incident tab.
+8. Offline: send is blocked with toast; reading still works from cache.
 
 ## Out of scope (next plans)
-- Messaging inbox/thread UI (Plan #2)
-- Demob packet UI (Plan #3)
+- Demob packet builder & combined PDF (Plan #3)
 - OF-286 review dashboard (Plan #4)
+- Per-user `last_read_at` (current zero-on-open model is fine for small orgs)
+- Attachment upload from composer (defer to Plan #3 where demob needs it)
