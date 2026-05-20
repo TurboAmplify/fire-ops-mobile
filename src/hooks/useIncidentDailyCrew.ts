@@ -65,7 +65,7 @@ export function useIncidentDailyCrew(incidentId: string) {
       });
 
       if (itIds.length === 0) {
-        return { dates: [], crew: [], cells: {}, totalsByCrew: {}, totalsByDate: {} };
+        return { dates: [], crew: [], cells: {}, totalsByCrew: {}, totalsByDate: {}, truckOptions: [] };
       }
 
       // 2. Pull legacy shifts AND shift_tickets in parallel
@@ -109,6 +109,7 @@ export function useIncidentDailyCrew(incidentId: string) {
         date: string,
         hours: number,
         truckName: string,
+        truckId: string,
         status: DailyCrewStatus,
         ticketId: string | null,
       ) => {
@@ -117,13 +118,16 @@ export function useIncidentDailyCrew(incidentId: string) {
         crewMap[crewKey] = crewInfo;
         if (!cells[crewKey]) cells[crewKey] = {};
         if (!cells[crewKey][date]) {
-          cells[crewKey][date] = { hours: 0, trucks: [], status, ticketIds: [] };
+          cells[crewKey][date] = { hours: 0, trucks: [], truckIds: [], status, ticketIds: [] };
         } else {
           cells[crewKey][date].status = worstStatus(cells[crewKey][date].status, status);
         }
         cells[crewKey][date].hours += hours;
         if (!cells[crewKey][date].trucks.includes(truckName)) {
           cells[crewKey][date].trucks.push(truckName);
+        }
+        if (truckId && !cells[crewKey][date].truckIds.includes(truckId)) {
+          cells[crewKey][date].truckIds.push(truckId);
         }
         if (ticketId && !cells[crewKey][date].ticketIds.includes(ticketId)) {
           cells[crewKey][date].ticketIds.push(ticketId);
