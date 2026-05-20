@@ -161,6 +161,7 @@ export function useIncidentDailyCrew(incidentId: string) {
             meta.date,
             Number(row.hours) || 0,
             truckName,
+            meta.it,
             "complete",
             null,
           );
