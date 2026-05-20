@@ -3,11 +3,12 @@ import { useIncidentTruckCrew } from "@/hooks/useIncidentTruckCrew";
 import { useShiftTickets } from "@/hooks/useShiftTickets";
 import { TRUCK_STATUS_LABELS } from "@/services/incident-trucks";
 import type { IncidentTruckStatus, IncidentTruckWithTruck } from "@/services/incident-trucks";
-import { Truck as TruckIcon, Plus, Loader2, ChevronDown, ChevronRight, AlertTriangle, X, Info, Users, FileText } from "lucide-react";
+import { Truck as TruckIcon, Plus, Loader2, ChevronDown, ChevronRight, AlertTriangle, X, Info, Users, FileText, Mail } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { TruckCrewSection } from "./TruckCrewSection";
 import { ResourceOrderSection } from "./ResourceOrderSection";
+import { FinanceContactsSection } from "./FinanceContactsSection";
 
 import { ShiftTicketSection } from "@/components/shift-tickets/ShiftTicketSection";
 import { SignedImage } from "@/components/ui/SignedImage";
@@ -292,6 +293,20 @@ function TruckCard({
               incidentName={incidentName}
             />
           </div>
+
+          {/* PRIMARY: Finance contacts (for shift ticket emails + demob) */}
+          {organizationId && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-1.5">
+                <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Finance Contacts</p>
+              </div>
+              <FinanceContactsSection
+                incidentTruckId={it.id}
+                organizationId={organizationId}
+              />
+            </div>
+          )}
 
           {/* SECONDARY: single "More info" reveal — Truck Details + Resource Orders + Truck Agreements together */}
           <div className="pt-1 border-t border-border/60">
