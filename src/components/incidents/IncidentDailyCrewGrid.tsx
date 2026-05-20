@@ -46,6 +46,7 @@ function StatusPill({ status }: { status: DailyCrewStatus }) {
 export function IncidentDailyCrewGrid({ incidentId }: Props) {
   const { data, isLoading, error } = useIncidentDailyCrew(incidentId);
   const [selectedDateIdx, setSelectedDateIdx] = useState<number | null>(null);
+  const [truckFilter, setTruckFilter] = useState<string | null>(null);
 
   // Default to most recent date when data loads
   const effectiveIdx = useMemo(() => {
@@ -62,6 +63,35 @@ export function IncidentDailyCrewGrid({ incidentId }: Props) {
           Daily Crew
         </h3>
       </div>
+
+      {/* Truck filter chips — only when 2+ trucks appear in the matrix */}
+      {data && data.truckOptions.length > 1 && (
+        <div className="no-scrollbar flex gap-2 overflow-x-auto -mx-1 px-1">
+          <button
+            onClick={() => setTruckFilter(null)}
+            className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold transition-colors touch-target ${
+              truckFilter === null
+                ? "bg-primary text-primary-foreground"
+                : "bg-secondary text-secondary-foreground"
+            }`}
+          >
+            All
+          </button>
+          {data.truckOptions.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTruckFilter(t.id)}
+              className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold transition-colors touch-target ${
+                truckFilter === t.id
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-secondary-foreground"
+              }`}
+            >
+              {t.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {isLoading && (
         <div className="flex justify-center py-6">
@@ -148,13 +178,26 @@ export function IncidentDailyCrewGrid({ incidentId }: Props) {
 
           {/* Crew list for selected day */}
           <div className="space-y-2">
-            {data.crew
-              .map((c) => {
-                const cell = data.cells[c.id]?.[data.dates[effectiveIdx]];
-                return { c, cell };
-              })
-              .filter(({ cell }) => cell && cell.hours > 0)
-              .map(({ c, cell }) => (
+            {(() => {
+              const rows = data.crew
+                .map((c) => {
+                  const cell = data.cells[c.id]?.[data.dates[effectiveIdx]];
+                  return { c, cell };
+                })
+                .filter(({ cell }) => cell && cell.hours > 0)
+                .filter(({ cell }) => !truckFilter || cell!.truckIds.includes(truckFilter));
+
+              if (rows.length === 0) {
+                return (
+                  <p className="py-4 text-center text-sm text-muted-foreground">
+                    {truckFilter
+                      ? "No crew hours for this truck on this day."
+                      : "No crew hours logged for this day."}
+                  </p>
+                );
+              }
+
+              return rows.map(({ c, cell }) => (
                 <div
                   key={c.id}
                   className="flex items-center justify-between rounded-lg bg-secondary/40 px-3 py-2.5"
@@ -174,15 +217,8 @@ export function IncidentDailyCrewGrid({ incidentId }: Props) {
                     <p className="text-[10px] uppercase text-muted-foreground">hrs</p>
                   </div>
                 </div>
-              ))}
-
-            {data.crew.every(
-              (c) => !data.cells[c.id]?.[data.dates[effectiveIdx]]
-            ) && (
-              <p className="py-4 text-center text-sm text-muted-foreground">
-                No crew hours logged for this day.
-              </p>
-            )}
+              ));
+            })()}
           </div>
 
           {/* Incident totals footer */}

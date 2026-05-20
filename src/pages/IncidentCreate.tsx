@@ -1,13 +1,21 @@
 import { AppShell } from "@/components/AppShell";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { getLocalDateString } from "@/lib/local-date";
 import { useCreateIncident } from "@/hooks/useIncidents";
 import { TYPE_LABELS } from "@/services/incidents";
 import type { IncidentType } from "@/services/incidents";
-import { uploadResourceOrderFile, parseResourceOrderAI } from "@/services/resource-orders";
+import {
+  uploadResourceOrderFile,
+  parseResourceOrderAI,
+  createResourceOrder,
+  updateResourceOrderParsed,
+} from "@/services/resource-orders";
 import { useOrganization } from "@/hooks/useOrganization";
-import { Loader2, Upload, FileText, PenLine } from "lucide-react";
+import { useAvailableTrucks } from "@/hooks/useIncidentTrucks";
+import { assignTruckToIncident } from "@/services/incident-trucks";
+import { fuzzyMatchName } from "@/lib/fuzzy-name";
+import { Loader2, Upload, FileText, PenLine, Truck as TruckIcon, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 type Step = "choose" | "parsing" | "form";
@@ -16,6 +24,7 @@ export default function IncidentCreate() {
   const navigate = useNavigate();
   const createMutation = useCreateIncident();
   const { membership } = useOrganization();
+  const { data: orgTrucks } = useAvailableTrucks(membership?.organizationId ?? undefined);
 
   const [step, setStep] = useState<Step>("choose");
   const [name, setName] = useState("");
@@ -25,8 +34,16 @@ export default function IncidentCreate() {
   const [parsedExtras, setParsedExtras] = useState<Record<string, any>>({});
   const [uploadedFileUrl, setUploadedFileUrl] = useState<string | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  // "" = skip / attach later. null = not yet chosen.
+  const [selectedTruckId, setSelectedTruckId] = useState<string | null>(null);
+  const [suggestedTruckId, setSuggestedTruckId] = useState<string | null>(null);
 
-  const canSubmit = name.trim() && location.trim() && !createMutation.isPending;
+  const canSubmit =
+    name.trim() &&
+    location.trim() &&
+    !createMutation.isPending &&
+    // If an RO was uploaded, force an explicit truck choice (or Skip).
+    (uploadedFileUrl ? selectedTruckId !== null : true);
 
   const inferType = (parsed: Record<string, any>): IncidentType => {
     const text = `${parsed.incident_name || ""} ${parsed.resource_type || ""} ${parsed.special_instructions || ""}`.toLowerCase();
@@ -34,6 +51,36 @@ export default function IncidentCreate() {
     if (text.includes("structure")) return "structure";
     if (text.includes("wildfire") || text.includes("fire")) return "wildfire";
     return "wildfire";
+  };
+
+  /** Best-effort fuzzy match between parsed RO resource name/type and org trucks. */
+  const suggestTruck = (parsed: Record<string, any>): string | null => {
+    if (!orgTrucks || orgTrucks.length === 0) return null;
+    const candidates: string[] = [];
+    if (parsed.resource_name) candidates.push(String(parsed.resource_name));
+    if (parsed.resource_order_number) candidates.push(String(parsed.resource_order_number));
+
+    // Try matching by truck name first (e.g. "DL62").
+    const truckNames = orgTrucks.map((t) => t.name);
+    for (const c of candidates) {
+      const m = fuzzyMatchName(c, truckNames, 0.7);
+      if (m) {
+        const hit = orgTrucks.find((t) => t.name === m.match);
+        if (hit) return hit.id;
+      }
+    }
+
+    // Fallback: if only one truck of the parsed resource_type, pick it.
+    if (parsed.resource_type) {
+      const wantedType = String(parsed.resource_type).toLowerCase();
+      const sameType = orgTrucks.filter((t) =>
+        (t.unit_type ?? "").toLowerCase().includes(wantedType) ||
+        wantedType.includes((t.unit_type ?? "").toLowerCase()),
+      );
+      if (sameType.length === 1) return sameType[0].id;
+    }
+
+    return null;
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -54,10 +101,15 @@ export default function IncidentCreate() {
       if (parsed.reporting_location) setLocation(parsed.reporting_location);
       setType(inferType(parsed));
 
-      toast.success("Resource order parsed - review and confirm");
+      // Suggest a truck to attach this RO to
+      const suggestion = suggestTruck(parsed);
+      setSuggestedTruckId(suggestion);
+      setSelectedTruckId(suggestion);
+
+      toast.success("Resource order parsed — review and confirm");
       setStep("form");
     } catch {
-      toast.error("Failed to parse resource order - fill in manually");
+      toast.error("Failed to parse resource order — fill in manually");
       setStep("form");
     } finally {
       setUploading(false);
@@ -76,18 +128,32 @@ export default function IncidentCreate() {
         start_date: parsedExtras.reporting_date || getLocalDateString(),
       });
 
-      // Clean up the orphaned RO file from storage — it was only used for parsing.
-      // The user can re-upload and attach it to a specific truck on the incident detail page.
-      if (uploadedFileUrl) {
+      // If an RO was uploaded and a truck chosen, persist the RO against that truck.
+      if (uploadedFileUrl && uploadedFileName && selectedTruckId) {
+        try {
+          const it = await assignTruckToIncident(incident.id, selectedTruckId);
+          const ro = await createResourceOrder({
+            incident_truck_id: it.id,
+            organization_id: membership?.organizationId ?? null,
+            file_url: uploadedFileUrl,
+            file_name: uploadedFileName,
+          });
+          if (Object.keys(parsedExtras).length > 0) {
+            await updateResourceOrderParsed(ro.id, parsedExtras);
+          }
+        } catch {
+          toast.error("Incident created, but failed to attach Resource Order — re-upload on the truck.");
+        }
+      } else if (uploadedFileUrl) {
+        // User explicitly skipped — clean up the orphaned file.
         try {
           const { supabase } = await import("@/integrations/supabase/client");
-          // Extract path after the bucket name in the public URL
           const match = uploadedFileUrl.match(/\/resource-orders\/(.+)$/);
           if (match?.[1]) {
             await supabase.storage.from("resource-orders").remove([match[1]]);
           }
         } catch {
-          // Non-fatal — file cleanup is best-effort
+          // best-effort
         }
       }
 
@@ -98,7 +164,6 @@ export default function IncidentCreate() {
     }
   };
 
-  // Best-effort cleanup of orphaned uploaded RO file when user cancels mid-flow
   const cleanupOrphanedUpload = async () => {
     if (!uploadedFileUrl) return;
     try {
@@ -120,6 +185,11 @@ export default function IncidentCreate() {
     await cleanupOrphanedUpload();
     navigate(-1);
   };
+
+  const suggestedTruck = useMemo(
+    () => orgTrucks?.find((t) => t.id === suggestedTruckId) ?? null,
+    [orgTrucks, suggestedTruckId],
+  );
 
   return (
     <AppShell
@@ -229,6 +299,48 @@ export default function IncidentCreate() {
               className="w-full rounded-xl border bg-card px-4 py-3 text-base outline-none focus:ring-2 focus:ring-ring touch-target"
             />
           </div>
+
+          {/* Truck attach picker — only when an RO was uploaded */}
+          {uploadedFileUrl && (
+            <div className="space-y-2 rounded-xl border border-primary/20 bg-primary/5 p-3">
+              <div className="flex items-center gap-1.5">
+                <TruckIcon className="h-3.5 w-3.5 text-primary" />
+                <p className="text-xs font-bold uppercase tracking-wider text-primary">
+                  Attach Resource Order to truck
+                </p>
+              </div>
+              {suggestedTruck && (
+                <p className="flex items-center gap-1 text-[11px] text-primary/80">
+                  <Sparkles className="h-3 w-3" />
+                  Suggested: <span className="font-semibold">{suggestedTruck.name}</span>
+                  {parsedExtras.resource_name && ` (RO says "${parsedExtras.resource_name}")`}
+                </p>
+              )}
+              {!suggestedTruck && parsedExtras.resource_name && (
+                <p className="text-[11px] text-muted-foreground">
+                  RO resource: <span className="font-medium">{parsedExtras.resource_name}</span>
+                </p>
+              )}
+              <select
+                value={selectedTruckId ?? ""}
+                onChange={(e) => setSelectedTruckId(e.target.value)}
+                className="w-full rounded-lg border bg-card px-3 py-2.5 text-sm touch-target"
+              >
+                <option value="">Skip — attach later</option>
+                {orgTrucks?.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                    {t.unit_type ? ` · ${t.unit_type}` : ""}
+                  </option>
+                ))}
+              </select>
+              {selectedTruckId === "" && (
+                <p className="text-[11px] text-muted-foreground">
+                  You can attach the RO to a truck from the incident's Trucks tab after creation.
+                </p>
+              )}
+            </div>
+          )}
 
           {parsedExtras.incident_number && (
             <div className="rounded-lg bg-secondary/50 px-3 py-2">

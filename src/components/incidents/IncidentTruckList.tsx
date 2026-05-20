@@ -33,15 +33,20 @@ export function IncidentTruckList({ incidentId, incidentName, organizationId }: 
   const [showAssign, setShowAssign] = useState(false);
   const [expandedTruck, setExpandedTruck] = useState<string | null>(null);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
+  // Track incident_truck.id of a truck just added, so we can prompt for its RO.
+  const [promptRoFor, setPromptRoFor] = useState<string | null>(null);
 
   const assignedTruckIds = new Set(incidentTrucks?.map((it) => it.truck_id));
   const unassigned = allTrucks?.filter((t) => !assignedTruckIds.has(t.id)) ?? [];
 
   const handleAssign = async (truckId: string) => {
     try {
-      await assignMutation.mutateAsync(truckId);
+      const it = await assignMutation.mutateAsync(truckId);
       toast.success("Truck assigned");
       setShowAssign(false);
+      // Expand the newly added truck and surface the RO prompt
+      setExpandedTruck(it.id);
+      setPromptRoFor(it.id);
     } catch (err: any) {
       toast.error(err?.message || "Failed to assign truck");
     }
@@ -142,6 +147,8 @@ export function IncidentTruckList({ incidentId, incidentName, organizationId }: 
           onCancelRemove={() => setConfirmRemoveId(null)}
           onRemove={() => handleRemove(it)}
           removing={removeMutation.isPending && confirmRemoveId === it.id}
+          promptRo={promptRoFor === it.id}
+          onDismissRoPrompt={() => setPromptRoFor(null)}
         />
       ))}
     </section>
@@ -162,6 +169,8 @@ function TruckCard({
   onCancelRemove,
   onRemove,
   removing,
+  promptRo,
+  onDismissRoPrompt,
 }: {
   it: IncidentTruckWithTruck;
   isExpanded: boolean;
@@ -176,6 +185,8 @@ function TruckCard({
   onCancelRemove: () => void;
   onRemove: () => void;
   removing: boolean;
+  promptRo?: boolean;
+  onDismissRoPrompt?: () => void;
 }) {
   // Always fetch crew so we can show summary + warning on collapsed card
   const { data: crew } = useIncidentTruckCrew(it.id);
@@ -190,7 +201,7 @@ function TruckCard({
   const noFinanceContact = financeContacts !== undefined && financeContacts.length === 0;
   const ticketCount = tickets?.length ?? 0;
   const [autoOpenCrew, setAutoOpenCrew] = useState(false);
-  const [showMore, setShowMore] = useState(false);
+  const [showMore, setShowMore] = useState(!!promptRo);
   const photoUrl = (it.trucks as any).photo_url;
 
   const handleAddCrewClick = () => {
@@ -237,6 +248,24 @@ function TruckCard({
 
       {isExpanded && (
         <div className="border-t px-4 pb-4 pt-3 space-y-4 animate-fade-in">
+          {/* RO prompt banner — appears when this truck was just added */}
+          {promptRo && (
+            <div className="flex items-start gap-3 rounded-xl bg-primary/5 border border-primary/20 p-3">
+              <FileText className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-primary">Upload Resource Order for this truck?</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Use the "Resource Orders" section below (in More info) to attach the RO. Each truck has its own RO.
+                </p>
+              </div>
+              <button
+                onClick={onDismissRoPrompt}
+                className="shrink-0 rounded-lg bg-secondary px-2.5 py-1.5 text-xs font-semibold text-muted-foreground active:bg-secondary/70 touch-target"
+              >
+                Skip
+              </button>
+            </div>
+          )}
           {/* Status segmented control */}
           <div className="inline-flex rounded-full bg-secondary p-0.5 max-w-full overflow-x-auto no-scrollbar">
             {truckStatuses.map((s) => {

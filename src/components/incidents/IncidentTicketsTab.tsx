@@ -89,6 +89,8 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; incidentTruckId: string; label: string; supervisorSigned: boolean } | null>(null);
   const [deleteReason, setDeleteReason] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState("");
+  // null = "All trucks"
+  const [truckFilter, setTruckFilter] = useState<string | null>(null);
   // Use any truck id for invalidation key; actual write goes through service
   const deleteMutation = useDeleteShiftTicket(deleteTarget?.incidentTruckId ?? "");
 
@@ -119,7 +121,10 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
   const today = getLocalDateString();
   const todays: TicketRow[] = [];
   const recent: TicketRow[] = [];
-  (allTickets ?? []).forEach((t) => {
+  const filtered = (allTickets ?? []).filter(
+    (t) => !truckFilter || t.incident_truck_id === truckFilter,
+  );
+  filtered.forEach((t) => {
     if (getShiftDate(t) === today) todays.push(t);
     else recent.push(t);
   });
@@ -248,6 +253,35 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
         </button>
       </div>
 
+      {/* Truck filter chips — only when 2+ trucks */}
+      {trucks && trucks.length > 1 && (
+        <div className="no-scrollbar flex gap-2 overflow-x-auto -mx-1 px-1">
+          <button
+            onClick={() => setTruckFilter(null)}
+            className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors touch-target ${
+              truckFilter === null
+                ? "bg-primary text-primary-foreground"
+                : "bg-secondary text-secondary-foreground"
+            }`}
+          >
+            All
+          </button>
+          {trucks.map((it) => (
+            <button
+              key={it.id}
+              onClick={() => setTruckFilter(it.id)}
+              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors touch-target ${
+                truckFilter === it.id
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-secondary-foreground"
+              }`}
+            >
+              {it.trucks.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       {noTrucks && (
         <p className="text-xs text-muted-foreground text-center">
           Assign a truck to this incident first.
@@ -276,9 +310,11 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
         </section>
       )}
 
-      {!isLoading && allTickets && allTickets.length === 0 && !noTrucks && (
+      {!isLoading && filtered.length === 0 && !noTrucks && (
         <p className="text-sm text-muted-foreground text-center py-6">
-          No shift tickets yet. Tap "New Shift Ticket" to create one.
+          {truckFilter
+            ? "No shift tickets for this truck."
+            : `No shift tickets yet. Tap "New Shift Ticket" to create one.`}
         </p>
       )}
 

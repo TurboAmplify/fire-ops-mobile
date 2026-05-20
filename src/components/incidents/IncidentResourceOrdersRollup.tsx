@@ -97,29 +97,59 @@ export function IncidentResourceOrdersRollup({ incidentId }: Props) {
         <p className="text-sm text-muted-foreground py-2">No Resource Orders yet.</p>
       )}
 
-      <div className="space-y-2">
-        {orders?.map((ro) => {
-          const truckLabel = ro.truck_unit_type || ro.truck_name;
-          return (
-            <SignedLink
-              key={ro.id}
-              href={ro.file_url}
-              className="flex items-center gap-3 rounded-lg bg-secondary p-3 touch-target"
-            >
-              <FileText className="h-4 w-4 text-primary shrink-0" />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium truncate">{ro.file_name}</p>
-                <p className="text-[11px] text-muted-foreground truncate">
-                  {truckLabel}
-                  {ro.resource_order_number && ` · RO# ${ro.resource_order_number}`}
-                  {ro.agreement_number && ` · Agreement ${ro.agreement_number}`}
-                </p>
+      {(() => {
+        if (!orders || orders.length === 0) return null;
+        // Group by truck. If only one truck has ROs, render flat.
+        const byTruck = new Map<string, RolledRO[]>();
+        orders.forEach((ro) => {
+          const key = ro.truck_name;
+          if (!byTruck.has(key)) byTruck.set(key, []);
+          byTruck.get(key)!.push(ro);
+        });
+        const truckCount = byTruck.size;
+
+        const renderRow = (ro: RolledRO) => (
+          <SignedLink
+            key={ro.id}
+            href={ro.file_url}
+            className="flex items-center gap-3 rounded-lg bg-secondary p-3 touch-target"
+          >
+            <FileText className="h-4 w-4 text-primary shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium truncate">{ro.file_name}</p>
+              <p className="text-[11px] text-muted-foreground truncate">
+                {truckCount === 1 && (ro.truck_unit_type || ro.truck_name)}
+                {truckCount > 1 && ro.truck_unit_type && `${ro.truck_unit_type}`}
+                {ro.resource_order_number && ` · RO# ${ro.resource_order_number}`}
+                {ro.agreement_number && ` · Agreement ${ro.agreement_number}`}
+              </p>
+            </div>
+            {ro.parsed_at && <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" />}
+          </SignedLink>
+        );
+
+        if (truckCount === 1) {
+          return <div className="space-y-2">{orders.map(renderRow)}</div>;
+        }
+
+        return (
+          <div className="space-y-4">
+            {Array.from(byTruck.entries()).map(([truckName, ros]) => (
+              <div key={truckName} className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
+                    {truckName}
+                  </span>
+                  {ros[0].truck_unit_type && (
+                    <span className="text-[10px] text-muted-foreground">{ros[0].truck_unit_type}</span>
+                  )}
+                </div>
+                <div className="space-y-2">{ros.map(renderRow)}</div>
               </div>
-              {ro.parsed_at && <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" />}
-            </SignedLink>
-          );
-        })}
-      </div>
+            ))}
+          </div>
+        );
+      })()}
     </div>
   );
 }

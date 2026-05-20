@@ -6,6 +6,7 @@ export type DailyCrewStatus = "draft" | "awaiting_supervisor" | "complete";
 export interface DailyCrewCell {
   hours: number;
   trucks: string[];
+  truckIds: string[];
   status: DailyCrewStatus;
   ticketIds: string[];
 }
@@ -13,10 +14,12 @@ export interface DailyCrewCell {
 export interface DailyCrewMatrix {
   dates: string[]; // sorted ascending YYYY-MM-DD
   crew: { id: string; name: string; role: string | null }[];
-  // crewKey (name lowercased) -> date -> cell
+  // crewKey -> date -> cell
   cells: Record<string, Record<string, DailyCrewCell>>;
   totalsByCrew: Record<string, number>;
   totalsByDate: Record<string, number>;
+  // Distinct incident_truck assignments across the matrix, for filter UI
+  truckOptions: { id: string; name: string }[];
 }
 
 interface PersonnelEntry {
@@ -62,7 +65,7 @@ export function useIncidentDailyCrew(incidentId: string) {
       });
 
       if (itIds.length === 0) {
-        return { dates: [], crew: [], cells: {}, totalsByCrew: {}, totalsByDate: {} };
+        return { dates: [], crew: [], cells: {}, totalsByCrew: {}, totalsByDate: {}, truckOptions: [] };
       }
 
       // 2. Pull legacy shifts AND shift_tickets in parallel
@@ -106,6 +109,7 @@ export function useIncidentDailyCrew(incidentId: string) {
         date: string,
         hours: number,
         truckName: string,
+        truckId: string,
         status: DailyCrewStatus,
         ticketId: string | null,
       ) => {
@@ -114,13 +118,16 @@ export function useIncidentDailyCrew(incidentId: string) {
         crewMap[crewKey] = crewInfo;
         if (!cells[crewKey]) cells[crewKey] = {};
         if (!cells[crewKey][date]) {
-          cells[crewKey][date] = { hours: 0, trucks: [], status, ticketIds: [] };
+          cells[crewKey][date] = { hours: 0, trucks: [], truckIds: [], status, ticketIds: [] };
         } else {
           cells[crewKey][date].status = worstStatus(cells[crewKey][date].status, status);
         }
         cells[crewKey][date].hours += hours;
         if (!cells[crewKey][date].trucks.includes(truckName)) {
           cells[crewKey][date].trucks.push(truckName);
+        }
+        if (truckId && !cells[crewKey][date].truckIds.includes(truckId)) {
+          cells[crewKey][date].truckIds.push(truckId);
         }
         if (ticketId && !cells[crewKey][date].ticketIds.includes(ticketId)) {
           cells[crewKey][date].ticketIds.push(ticketId);
@@ -154,6 +161,7 @@ export function useIncidentDailyCrew(incidentId: string) {
             meta.date,
             Number(row.hours) || 0,
             truckName,
+            meta.it,
             "complete",
             null,
           );
@@ -173,14 +181,23 @@ export function useIncidentDailyCrew(incidentId: string) {
           const matched = crewByLowerName[name.toLowerCase()];
           const crewKey = matched ? matched.id : `name:${name.toLowerCase()}`;
           const crewInfo = matched ?? { id: crewKey, name, role: null };
-          addEntry(crewKey, crewInfo, date, hours, truckName, ticketStatus, t.id);
+          addEntry(crewKey, crewInfo, date, hours, truckName, t.incident_truck_id, ticketStatus, t.id);
         });
       });
 
       const dates = Array.from(dateSet).sort();
       const crew = Object.values(crewMap).sort((a, b) => a.name.localeCompare(b.name));
 
-      return { dates, crew, cells, totalsByCrew, totalsByDate };
+      // Build truck options from incident_trucks that actually appear in cells.
+      const usedTruckIds = new Set<string>();
+      Object.values(cells).forEach((dateMap) => {
+        Object.values(dateMap).forEach((cell) => cell.truckIds.forEach((id) => usedTruckIds.add(id)));
+      });
+      const truckOptions = (itRows ?? [])
+        .filter((r: any) => usedTruckIds.has(r.id))
+        .map((r: any) => ({ id: r.id, name: r.trucks?.name ?? "Truck" }));
+
+      return { dates, crew, cells, totalsByCrew, totalsByDate, truckOptions };
     },
   });
 }
