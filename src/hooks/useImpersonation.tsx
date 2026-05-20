@@ -14,6 +14,7 @@ interface ImpersonationTarget {
 interface ImpersonationContextType {
   isImpersonating: boolean;
   target: ImpersonationTarget | null;
+  loading: boolean;
   startViewAs: (orgId: string, orgName?: string) => Promise<void>;
   stopViewAs: () => Promise<void>;
 }
@@ -21,6 +22,7 @@ interface ImpersonationContextType {
 const ImpersonationContext = createContext<ImpersonationContextType>({
   isImpersonating: false,
   target: null,
+  loading: false,
   startViewAs: async () => {},
   stopViewAs: async () => {},
 });
@@ -74,7 +76,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
 
   const startViewAs = useCallback(
     async (orgId: string, orgName?: string) => {
-      if (!isPlatformAdmin) return;
+      if (!isPlatformAdmin) throw new Error("Super admin access is still loading. Try again in a moment.");
       let name = orgName ?? "";
       if (!name) {
         const { data } = await supabase
@@ -120,6 +122,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
       value={{
         isImpersonating: !!target && isPlatformAdmin,
         target: isPlatformAdmin ? target : null,
+        loading: platformAdminLoading && !!target,
         startViewAs,
         stopViewAs,
       }}
