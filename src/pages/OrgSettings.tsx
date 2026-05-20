@@ -356,6 +356,118 @@ export default function OrgSettings() {
           )}
         </div>
 
+        {/* Email handle */}
+        {(() => {
+          const handle = orgRow?.email_handle as string | undefined;
+          const domain = "mail.fireopshq.com";
+          const fullAddress = handle ? `${handle}@${domain}` : null;
+          const HANDLE_RE = /^[a-z0-9][a-z0-9-]{2,30}$/;
+          const saveHandle = async () => {
+            const v = handleDraft.trim().toLowerCase();
+            if (!HANDLE_RE.test(v)) {
+              setHandleError("3–31 chars, lowercase letters, numbers, hyphens. Must start with letter or number.");
+              return;
+            }
+            try {
+              const { error } = await supabase
+                .from("organizations")
+                .update({ email_handle: v } as any)
+                .eq("id", orgId!);
+              if (error) throw error;
+              setEditingHandle(false);
+              setHandleError(null);
+              queryClient.invalidateQueries({ queryKey: ["org-row", orgId] });
+              toast({ title: "Email handle updated" });
+            } catch (err: any) {
+              const msg = err?.message?.includes("organizations_email_handle")
+                ? "That handle is already taken."
+                : err?.message ?? "Failed to save";
+              setHandleError(msg);
+            }
+          };
+          return (
+            <section className="space-y-2">
+              <div className="flex items-center justify-between px-1">
+                <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <AtSign className="h-3.5 w-3.5" />
+                  Email Handle
+                </h2>
+              </div>
+              <div className="rounded-xl bg-card p-4 space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  Used as the sender address when your org emails finance officers and clients.
+                </p>
+                {editingHandle ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={handleDraft}
+                        onChange={(e) => {
+                          setHandleDraft(e.target.value.toLowerCase());
+                          setHandleError(null);
+                        }}
+                        placeholder="your-org"
+                        className="h-9 text-sm font-mono"
+                        autoFocus
+                        maxLength={31}
+                      />
+                      <span className="text-sm text-muted-foreground whitespace-nowrap">@{domain}</span>
+                    </div>
+                    {handleError && (
+                      <p className="text-xs text-destructive">{handleError}</p>
+                    )}
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={saveHandle}>Save</Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setEditingHandle(false);
+                          setHandleError(null);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 truncate rounded-md bg-secondary px-2 py-1.5 text-sm font-mono">
+                      {fullAddress ?? "Not configured"}
+                    </code>
+                    {fullAddress && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(fullAddress);
+                          toast({ title: "Copied", description: fullAddress });
+                        }}
+                        className="touch-target text-muted-foreground"
+                        aria-label="Copy email address"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </button>
+                    )}
+                    {isOwner && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setHandleDraft(handle ?? "");
+                          setEditingHandle(true);
+                        }}
+                        className="touch-target text-muted-foreground"
+                        aria-label="Edit email handle"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </section>
+          );
+        })()}
+
         {/* Members */}
         <section className="space-y-2">
           <div className="flex items-center justify-between px-1">
