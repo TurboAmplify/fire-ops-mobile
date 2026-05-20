@@ -29,6 +29,25 @@ interface TutorialContextValue {
   maybeAutoStart: () => void;
 }
 
+const noop = () => {};
+const DEFAULT_TUTORIAL_CONTEXT: TutorialContextValue = {
+  isOpen: false,
+  isMinimized: false,
+  stepIndex: 0,
+  totalSteps: 0,
+  steps: [],
+  userFirstName: null,
+  start: noop,
+  close: noop,
+  next: noop,
+  back: noop,
+  goTo: noop,
+  minimize: noop,
+  resume: noop,
+  complete: noop,
+  maybeAutoStart: noop,
+};
+
 const TUTORIAL_CONTEXT_KEY = "__fireops_tutorial_context__" as const;
 type TutorialContextGlobal = typeof globalThis & {
   __fireops_tutorial_context__?: ReturnType<typeof createContext<TutorialContextValue | null>>;
@@ -268,6 +287,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
 
 export function useTutorial() {
   const ctx = useContext(TutorialContext);
-  if (!ctx) throw new Error("useTutorial must be used within TutorialProvider");
-  return ctx;
+  // Fail soft during preview/HMR module swaps. A missing provider should never
+  // take down Dashboard and trigger the preview reload loop.
+  return ctx ?? DEFAULT_TUTORIAL_CONTEXT;
 }
