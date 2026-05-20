@@ -310,9 +310,11 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
         </section>
       )}
 
-      {!isLoading && allTickets && allTickets.length === 0 && !noTrucks && (
+      {!isLoading && filtered.length === 0 && !noTrucks && (
         <p className="text-sm text-muted-foreground text-center py-6">
-          No shift tickets yet. Tap "New Shift Ticket" to create one.
+          {truckFilter
+            ? "No shift tickets for this truck."
+            : `No shift tickets yet. Tap "New Shift Ticket" to create one.`}
         </p>
       )}
 
