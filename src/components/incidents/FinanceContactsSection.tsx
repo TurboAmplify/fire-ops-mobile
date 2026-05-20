@@ -131,6 +131,7 @@ export function FinanceContactsSection({ incidentTruckId, incidentId, organizati
         open={pickerOpen}
         onOpenChange={setPickerOpen}
         incidentTruckId={incidentTruckId}
+        incidentId={incidentId}
         organizationId={organizationId}
         defaultRegionId={incidentRegionId}
         onAdded={load}
