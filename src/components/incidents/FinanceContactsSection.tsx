@@ -5,6 +5,7 @@ import { Loader2, Plus, X, Mail, Phone } from "lucide-react";
 import { toast } from "sonner";
 import {
   listTruckFinanceContacts,
+  listIncidentFinanceContacts,
   removeTruckFinanceContact,
   type IncidentTruckFinanceContact,
 } from "@/services/incident-truck-finance-contacts";
@@ -12,7 +13,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { FinanceOfficerPicker } from "./FinanceOfficerPicker";
 
 interface Props {
-  incidentTruckId: string;
+  /** Attach contacts to a single truck. Mutually exclusive with incidentId. */
+  incidentTruckId?: string;
+  /** Attach contacts at the incident level. Mutually exclusive with incidentTruckId. */
+  incidentId?: string;
   organizationId: string;
   incidentRegionId?: string | null;
 }
@@ -23,7 +27,7 @@ interface ResolvedContact extends IncidentTruckFinanceContact {
   display_phone: string | null;
 }
 
-export function FinanceContactsSection({ incidentTruckId, organizationId, incidentRegionId }: Props) {
+export function FinanceContactsSection({ incidentTruckId, incidentId, organizationId, incidentRegionId }: Props) {
   const [contacts, setContacts] = useState<ResolvedContact[]>([]);
   const [loading, setLoading] = useState(true);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -31,7 +35,11 @@ export function FinanceContactsSection({ incidentTruckId, organizationId, incide
   const load = async () => {
     setLoading(true);
     try {
-      const raw = await listTruckFinanceContacts(incidentTruckId);
+      const raw = incidentId
+        ? await listIncidentFinanceContacts(incidentId)
+        : incidentTruckId
+          ? await listTruckFinanceContacts(incidentTruckId)
+          : [];
       const officerIds = raw.map((c) => c.finance_officer_id).filter(Boolean) as string[];
       const officersById: Record<string, { name: string; email: string; phone: string | null }> = {};
       if (officerIds.length) {
