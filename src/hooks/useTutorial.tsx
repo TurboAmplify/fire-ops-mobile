@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useOrganization } from "@/hooks/useOrganization";
@@ -63,11 +64,13 @@ const TutorialContext =
 export function TutorialProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const { membership, loading: orgLoading } = useOrganization();
+  const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [userFirstName, setUserFirstName] = useState<string | null>(null);
   const autoCheckedRef = useRef(false);
+  const isSuperAdminRoute = location.pathname.startsWith("/super-admin");
 
   const steps = useMemo(() => getStepsForRole(membership?.role), [membership?.role]);
   const totalSteps = steps.length;
@@ -152,6 +155,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
 
   const runAutoStartCheck = useCallback(async () => {
     if (autoCheckedRef.current) return;
+    if (isSuperAdminRoute) return;
     if (!user?.id) return;
     if (orgLoading) return;
     if (!membership?.organizationId) return;
@@ -206,7 +210,21 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.warn("Tutorial auto-start check failed:", err);
     }
-  }, [user?.id, orgLoading, membership?.organizationId]);
+  }, [user?.id, orgLoading, membership?.organizationId, isSuperAdminRoute]);
+
+  // Super-admin is an operations console, not a field-user first-run flow.
+  // Never let the app tour sit over it; that looked like a repeated loading
+  // loop because the route had actually loaded behind a blocking sheet.
+  useEffect(() => {
+    if (!isSuperAdminRoute) return;
+    if (autoOpenTimerRef.current) {
+      clearTimeout(autoOpenTimerRef.current);
+      autoOpenTimerRef.current = null;
+    }
+    setIsOpen(false);
+    setIsMinimized(false);
+    autoCheckedRef.current = true;
+  }, [isSuperAdminRoute]);
 
   // Track the previous signed-in user id so we only reset the auto-check
   // when the identity truly changes from one user to a different user.
@@ -232,6 +250,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
   // Auto-start runs from the provider so it fires once per session,
   // regardless of which route the user lands on first.
   useEffect(() => {
+    if (isSuperAdminRoute) return;
     if (!user?.id) return;
     if (orgLoading) return;
     if (!membership?.organizationId) return;
@@ -242,7 +261,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
         autoOpenTimerRef.current = null;
       }
     };
-  }, [user?.id, orgLoading, membership?.organizationId, runAutoStartCheck]);
+  }, [user?.id, orgLoading, membership?.organizationId, runAutoStartCheck, isSuperAdminRoute]);
 
   // Backward-compat no-op (Dashboard used to call this).
   const maybeAutoStart = useCallback(() => {
