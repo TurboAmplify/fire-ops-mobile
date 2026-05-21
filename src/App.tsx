@@ -145,13 +145,13 @@ const App = () => (
                     <Route path="/admin/logs" element={<ProtectedRoute><AdminGate><AdminLogs /></AdminGate></ProtectedRoute>} />
                     <Route path="/admin/reports" element={<ProtectedRoute><AdminGate><AdminReports /></AdminGate></ProtectedRoute>} />
                     <Route path="/admin/accounts-payable" element={<ProtectedRoute><AdminGate><AccountsPayable /></AdminGate></ProtectedRoute>} />
-                    <Route path="/super-admin" element={<ProtectedRoute><PlatformAdminGate><SuperAdmin /></PlatformAdminGate></ProtectedRoute>} />
-                    <Route path="/super-admin/organizations" element={<ProtectedRoute><PlatformAdminGate><SuperAdminOrgs /></PlatformAdminGate></ProtectedRoute>} />
-                    <Route path="/super-admin/organizations/:orgId" element={<ProtectedRoute><PlatformAdminGate><SuperAdminOrgDetail /></PlatformAdminGate></ProtectedRoute>} />
-                    <Route path="/super-admin/users" element={<ProtectedRoute><PlatformAdminGate><SuperAdminUsers /></PlatformAdminGate></ProtectedRoute>} />
-                    <Route path="/super-admin/activity" element={<ProtectedRoute><PlatformAdminGate><SuperAdminActivity /></PlatformAdminGate></ProtectedRoute>} />
-                    <Route path="/super-admin/audit" element={<ProtectedRoute><PlatformAdminGate><SuperAdminAudit /></PlatformAdminGate></ProtectedRoute>} />
-                    <Route path="/super-admin/errors" element={<ProtectedRoute><PlatformAdminGate><SuperAdminErrors /></PlatformAdminGate></ProtectedRoute>} />
+                    <Route path="/super-admin" element={<PlatformAdminGate><SuperAdmin /></PlatformAdminGate>} />
+                    <Route path="/super-admin/organizations" element={<PlatformAdminGate><SuperAdminOrgs /></PlatformAdminGate>} />
+                    <Route path="/super-admin/organizations/:orgId" element={<PlatformAdminGate><SuperAdminOrgDetail /></PlatformAdminGate>} />
+                    <Route path="/super-admin/users" element={<PlatformAdminGate><SuperAdminUsers /></PlatformAdminGate>} />
+                    <Route path="/super-admin/activity" element={<PlatformAdminGate><SuperAdminActivity /></PlatformAdminGate>} />
+                    <Route path="/super-admin/audit" element={<PlatformAdminGate><SuperAdminAudit /></PlatformAdminGate>} />
+                    <Route path="/super-admin/errors" element={<PlatformAdminGate><SuperAdminErrors /></PlatformAdminGate>} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </Suspense>

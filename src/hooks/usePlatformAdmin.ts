@@ -12,7 +12,8 @@ export function usePlatformAdmin() {
   const query = useQuery({
     queryKey: ["platform-admin", user?.id],
     enabled: !!user?.id,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
+    refetchOnMount: "always",
     queryFn: async () => {
       if (!user?.id) return false;
       // RLS only lets platform admins see the row, so a successful read = admin.
@@ -33,6 +34,6 @@ export function usePlatformAdmin() {
 
   return {
     isPlatformAdmin: query.data === true,
-    loading: authLoading || query.isLoading,
+    loading: authLoading || query.isLoading || (query.isFetching && query.data !== true),
   };
 }
