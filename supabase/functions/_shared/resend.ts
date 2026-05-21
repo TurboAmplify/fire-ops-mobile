@@ -58,7 +58,7 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
   return { id: data.id };
 }
 
-export const MAIL_DOMAIN = "mail.fireopshq.com";
+export const MAIL_DOMAIN = "fireopshq.com";
 
 export function buildFromAddress(orgHandle: string, orgName: string): string {
   return `${orgName} <${orgHandle}@${MAIL_DOMAIN}>`;

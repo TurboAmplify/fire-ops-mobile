@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
         thread_id: thread.id,
         organization_id: thread.organization_id,
         direction: "out",
-        from_email: `${org.email_handle}@mail.fireopshq.com`,
+        from_email: `${org.email_handle}@fireopshq.com`,
         from_name: org.name,
         to_emails: toEmails,
         subject,
