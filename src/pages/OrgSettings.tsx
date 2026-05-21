@@ -359,7 +359,7 @@ export default function OrgSettings() {
         {/* Email handle */}
         {(() => {
           const handle = orgRow?.email_handle as string | undefined;
-          const domain = "mail.fireopshq.com";
+          const domain = "fireopshq.com";
           const fullAddress = handle ? `${handle}@${domain}` : null;
           const HANDLE_RE = /^[a-z0-9][a-z0-9-]{2,30}$/;
           const saveHandle = async () => {
