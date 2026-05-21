@@ -1,5 +1,5 @@
 import { ReactNode, useRef, useEffect } from "react";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
@@ -39,8 +39,20 @@ export function PlatformAdminGate({ children }: { children: ReactNode }) {
   }
 
   if (!isPlatformAdmin) {
-    guardLog("super-admin", "redirect-home");
-    return <Navigate to="/" replace />;
+    guardLog("super-admin", "deny-no-redirect");
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="w-full max-w-sm space-y-3 rounded-lg border border-border bg-card p-5 text-center shadow-sm">
+          <h1 className="text-base font-semibold text-foreground">Super admin access required</h1>
+          <p className="text-sm text-muted-foreground">
+            This account is signed in, but it is not currently authorized for this area.
+          </p>
+          <Link className="inline-flex min-h-11 items-center justify-center text-sm font-semibold text-primary" to="/login">
+            Use a different account
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   guardLog("super-admin", "allow");
