@@ -1,35 +1,88 @@
-## What’s actually happening
+## Diagnosis
 
-The backend and app are healthy, but the email send is failing because the currently linked Resend account is **Brandon’s Resend (1)** and that account does **not** have `mail.fireopshq.com` verified. Resend rejects the send with 403, then the app reports it as a backend 502.
+I know what the loop is now. The runtime logs show this exact conflict:
 
-This is not a frontend loop or loading bug. It is a sender-domain/account mismatch.
+```text
+[guard:protected] redirect-org-setup { path: "/super-admin" }
+[guard:protected] allow-platform-admin { path: "/super-admin" }
+[guard:protected] allow { path: "/super-admin" }
+```
 
-## Fix plan
+That means `/super-admin` is still being evaluated by org-based protection before the platform-admin state is fully stable. A platform admin without a normal org membership can briefly get sent to `/org-setup`, then `/org-setup` sends them back to `/super-admin`, producing the visible loading loop.
 
-1. **Switch the project back to the Resend connection that owns the verified domain**
-   - Disconnect `Brandon’s Resend (1)` from this project.
-   - Link `Brandon’s Resend (2)` again.
-   - Redeploy the email-sending functions so they pick up the restored connection secret.
+The problem is structural: `/super-admin` should not be inside the same guard that enforces normal org membership.
 
-2. **Confirm the deployed email functions are using the restored connection**
-   - Redeploy:
-     - `send-thread-reply`
-     - `incoming-email`
-   - Check the function response/logs after the next send attempt.
+## Decisive fix plan
 
-3. **Make the UI stop feeling like it is looping**
-   - Update the shift-ticket send dialog so the send button cannot be repeatedly retried while the previous attempt is still resolving.
-   - Surface the precise email-domain failure message in a user-friendly way instead of only showing the generic “Could not send shift ticket.”
-   - If sending fails after the message record is created, keep the user in control and do not navigate away.
+1. **Create a dedicated super-admin route guard**
+   - Add a focused guard for `/super-admin/*` that checks only:
+     - auth is loaded
+     - user exists
+     - platform-admin check is loaded
+     - user is platform admin
+   - It will not call `useOrganization()`.
+   - It will not call `useOrgStatus()`.
+   - It will not redirect to `/org-setup`.
 
-4. **Optional fallback if neither Resend account has the verified domain**
-   - Temporarily send from Resend’s testing sender only for diagnostic/test delivery, or
-   - Verify `mail.fireopshq.com` on the Resend account you want to keep.
+2. **Remove org protection from all super-admin routes**
+   - In `App.tsx`, change every `/super-admin` route from this pattern:
 
-## Technical notes
+```text
+ProtectedRoute -> PlatformAdminGate -> SuperAdmin page
+```
 
-- Current linked connector: `Brandon’s Resend (1)`.
-- Available previous connector: `Brandon’s Resend (2)`.
-- The failing code path is `send-thread-reply`, via the shared Resend helper.
-- No database migration is required.
-- The real permanent fix is for the API key and verified sender domain to belong to the same Resend account.
+   - To this pattern:
+
+```text
+SuperAdminRoute -> SuperAdmin page
+```
+
+   This removes the conflicting guard stack entirely instead of trying another small conditional patch.
+
+3. **Keep normal app routes unchanged**
+   - `ProtectedRoute` will continue protecting the field app routes: incidents, fleet, crew, expenses, messages, payroll, etc.
+   - Normal users without org membership still go to `/org-setup`.
+   - Suspended/closed orgs still go to `/account-unavailable`.
+   - No email/Resend logic changes.
+   - No database migration.
+
+4. **Make `/org-setup` a one-way fallback only for normal users**
+   - Keep its existing behavior for invite-only onboarding.
+   - Platform admins should no longer reach it from `/super-admin`, because the new super-admin guard bypasses org membership entirely.
+
+5. **Validate with the actual signal**
+   - After implementation, verify the console no longer shows:
+
+```text
+redirect-org-setup { path: "/super-admin" }
+```
+
+   - Expected stable sequence:
+
+```text
+[guard:super-admin] loading
+[guard:super-admin] allow
+```
+
+6. **If it still loops after this**
+   - Stop patching route guards.
+   - Temporarily make `/super-admin` render a minimal authenticated diagnostic page so we can confirm whether the remaining loop is caused by the page body, query cache persistence, or preview/dev-server reloads.
+   - That gives us a hard isolation point instead of another guessing cycle.
+
+## Files to change
+
+- `src/App.tsx`
+- `src/components/PlatformAdminGate.tsx` or a new `src/components/SuperAdminRoute.tsx`
+
+## What this avoids
+
+- No backend changes
+- No auth schema changes
+- No Resend/email changes
+- No broad refactor
+- No touching field-user workflows
+
+<presentation-actions>
+<presentation-open-history>View History</presentation-open-history>
+<presentation-link url="https://docs.lovable.dev/tips-tricks/troubleshooting">Troubleshooting docs</presentation-link>
+</presentation-actions>

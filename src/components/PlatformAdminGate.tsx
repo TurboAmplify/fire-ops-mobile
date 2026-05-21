@@ -1,6 +1,7 @@
 import { ReactNode, useRef, useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
 import { guardLog } from "@/lib/guard-diag";
 
@@ -14,15 +15,17 @@ import { guardLog } from "@/lib/guard-diag";
  * tight loop.
  */
 export function PlatformAdminGate({ children }: { children: ReactNode }) {
+  const { user, loading: authLoading } = useAuth();
   const { isPlatformAdmin, loading } = usePlatformAdmin();
   const resolvedOnce = useRef(false);
+  const gateLoading = authLoading || loading;
 
   useEffect(() => {
-    if (!loading) resolvedOnce.current = true;
-  }, [loading]);
+    if (!gateLoading) resolvedOnce.current = true;
+  }, [gateLoading]);
 
-  if (loading && !resolvedOnce.current) {
-    guardLog("platform-admin", "loading");
+  if (gateLoading && !resolvedOnce.current) {
+    guardLog("super-admin", "loading", { authLoading, platformAdminLoading: loading });
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -30,11 +33,16 @@ export function PlatformAdminGate({ children }: { children: ReactNode }) {
     );
   }
 
+  if (!user) {
+    guardLog("super-admin", "redirect-login");
+    return <Navigate to="/login" replace />;
+  }
+
   if (!isPlatformAdmin) {
-    guardLog("platform-admin", "redirect-home");
+    guardLog("super-admin", "redirect-home");
     return <Navigate to="/" replace />;
   }
 
-  guardLog("platform-admin", "allow");
+  guardLog("super-admin", "allow");
   return <>{children}</>;
 }
