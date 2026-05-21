@@ -34,6 +34,8 @@ export function usePlatformAdmin() {
 
   return {
     isPlatformAdmin: query.data === true,
-    loading: authLoading || query.isLoading || (query.isFetching && query.data !== true),
+    loading:
+      authLoading ||
+      (!!user?.id && (!query.isFetchedAfterMount || query.isLoading || query.isFetching)),
   };
 }

@@ -1,16 +1,13 @@
 import { AppShell } from "@/components/AppShell";
-import { PlatformAdminGate } from "@/components/PlatformAdminGate";
 import { useQuery } from "@tanstack/react-query";
 import { listPlatformAudit, type PlatformAuditEntry } from "@/services/platform-audit";
 import { ScrollText } from "lucide-react";
 
 export default function SuperAdminAudit() {
   return (
-    <PlatformAdminGate>
-      <AppShell title="Audit Log" showBack>
-        <AuditList />
-      </AppShell>
-    </PlatformAdminGate>
+    <AppShell title="Audit Log" showBack>
+      <AuditList />
+    </AppShell>
   );
 }
 
