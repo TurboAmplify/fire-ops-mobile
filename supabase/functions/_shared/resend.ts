@@ -25,9 +25,9 @@ export interface SendEmailResult {
 
 export async function sendEmail(params: SendEmailParams): Promise<SendEmailResult> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+  const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY_1") ?? Deno.env.get("RESEND_API_KEY");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
-  if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY is not configured");
+  if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY_1 or RESEND_API_KEY is not configured");
 
   const body: Record<string, unknown> = {
     from: params.from,
