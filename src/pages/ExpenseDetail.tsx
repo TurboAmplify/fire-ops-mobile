@@ -22,7 +22,7 @@ export default function ExpenseDetail() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [reviewNotes, setReviewNotes] = useState("");
 
-  const isOwner = membership?.role === "owner";
+  const isOwner = membership?.role === "admin" || membership?.role === "owner";
   const isOwnExpense = user?.id === expense?.submitted_by_user_id;
   const status = expense?.status as ExpenseStatus;
   const canEdit = isOwnExpense && (status === "draft" || status === "rejected");
