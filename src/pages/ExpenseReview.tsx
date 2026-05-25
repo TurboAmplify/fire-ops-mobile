@@ -18,7 +18,7 @@ export default function ExpenseReview() {
   const { user } = useAuth();
   const { membership } = useOrganization();
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
-  const isOwner = membership?.role === "owner";
+  const isOwner = membership?.role === "admin" || membership?.role === "owner";
 
   // Guard: only owners can access the review queue
   if (!isOwner) {
