@@ -24,20 +24,21 @@ function getTicketDate(t: any): string {
   return shiftDate || t.updated_at?.split("T")[0] || "";
 }
 
-function fmtRelative(dateStr: string): string {
+function fmtTicketDate(dateStr: string): string {
   if (!dateStr) return "";
-  const today = getLocalDateString();
-  if (dateStr === today) return "Today";
-  const [ty, tm, td] = today.split("-").map(Number);
-  const [dy, dm, dd] = dateStr.split("-").map(Number);
-  if (!ty || !dy) return dateStr;
-  const diffDays = Math.round(
-    (Date.UTC(ty, tm - 1, td) - Date.UTC(dy, dm - 1, dd)) / 86_400_000
-  );
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays > 1 && diffDays < 7) return `${diffDays} days ago`;
-  const [, m, d] = dateStr.split("-");
-  return `${parseInt(m)}/${parseInt(d)}`;
+  const iso = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!iso) return dateStr;
+
+  const [, year, month, day] = iso;
+  const dt = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  if (Number.isNaN(dt.getTime())) return dateStr;
+
+  const dow = dt.toLocaleDateString(undefined, {
+    weekday: "short",
+    timeZone: "UTC",
+  });
+
+  return `${dow} ${month}/${day}/${year.slice(-2)}`;
 }
 
 function ticketStatusBadge(t: any): { label: string; cls: string } {
@@ -428,7 +429,7 @@ function BrowseTickets({
       >
         <FileText className="h-4 w-4 text-primary shrink-0" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold truncate pr-20">{fmtRelative(dateStr)}</p>
+          <p className="text-sm font-semibold truncate pr-20">{fmtTicketDate(dateStr)}</p>
           <p className="text-[11px] text-muted-foreground truncate mt-0.5">
             {t.incident_name || ""}
           </p>
