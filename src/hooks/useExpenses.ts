@@ -23,8 +23,8 @@ export function useExpenses() {
     queryFn: () => fetchExpenses(orgId),
     enabled: !!orgId,
     select: (data) => {
-      // Owner sees all org expenses; others see only their own
-      if (role === "owner") return data;
+      // Admins see all org expenses; others see only their own
+      if (role === "admin" || role === "owner") return data;
       if (!userId) return [];
       return data.filter((e) => e.submitted_by_user_id === userId);
     },
