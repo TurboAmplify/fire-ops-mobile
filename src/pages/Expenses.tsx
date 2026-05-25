@@ -22,7 +22,7 @@ export default function Expenses() {
   const [statusFilter, setStatusFilter] = useState<ExpenseStatus | "all">("all");
   // Incident filter: "all", "__unattached__", or an incident id
   const [incidentFilter, setIncidentFilter] = useState<string>("all");
-  const isOwner = membership?.role === "owner";
+  const isOwner = membership?.role === "admin" || membership?.role === "owner";
 
   // Build the list of incidents that have at least one expense (with running totals)
   const incidentBuckets = useMemo(() => {
