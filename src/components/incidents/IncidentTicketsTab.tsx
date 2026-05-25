@@ -250,31 +250,43 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
 
       {/* Truck filter chips — only when 2+ trucks */}
       {trucks && trucks.length > 1 && (
-        <div className="no-scrollbar flex gap-2 overflow-x-auto -mx-1 px-1">
-          <button
-            onClick={() => setTruckFilter(null)}
-            className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors touch-target ${
-              truckFilter === null
-                ? "bg-primary text-primary-foreground"
-                : "bg-secondary text-secondary-foreground"
-            }`}
-          >
-            All
-          </button>
-          {trucks.map((it) => (
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1">
+            Filter by truck
+          </p>
+          <div className="no-scrollbar flex gap-2 overflow-x-auto -mx-1 px-1">
             <button
-              key={it.id}
-              onClick={() => setTruckFilter(it.id)}
+              onClick={() => setTruckFilter(null)}
               className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors touch-target ${
-                truckFilter === it.id
+                truckFilter === null
                   ? "bg-primary text-primary-foreground"
                   : "bg-secondary text-secondary-foreground"
               }`}
             >
-              {it.trucks.name}
+              All
             </button>
-          ))}
+            {trucks.map((it) => (
+              <button
+                key={it.id}
+                onClick={() => setTruckFilter(it.id)}
+                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors touch-target ${
+                  truckFilter === it.id
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-secondary-foreground"
+                }`}
+              >
+                {it.trucks.name}
+              </button>
+            ))}
+          </div>
         </div>
+      )}
+
+      {/* Single-truck hint */}
+      {trucks && trucks.length === 1 && (
+        <p className="text-[11px] text-muted-foreground px-1">
+          Showing tickets for <span className="font-semibold text-foreground">{trucks[0].trucks.name}</span>
+        </p>
       )}
 
       {noTrucks && (
