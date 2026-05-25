@@ -6,6 +6,7 @@ import type { IncidentStatus } from "@/services/incidents";
 import { ArrowLeft, MapPin, Calendar, Flame, TrendingUp, Loader2, Pencil, Trash2, ChevronDown } from "lucide-react";
 import { IncidentTruckList } from "@/components/incidents/IncidentTruckList";
 import { IncidentDailyCrewGrid } from "@/components/incidents/IncidentDailyCrewGrid";
+import { IncidentCrewAssignmentsSection } from "@/components/incidents/IncidentCrewAssignmentsSection";
 import { IncidentResourceOrdersRollup } from "@/components/incidents/IncidentResourceOrdersRollup";
 import { IncidentTicketsTab } from "@/components/incidents/IncidentTicketsTab";
 import { IncidentFinanceContactsCard } from "@/components/incidents/IncidentFinanceContactsCard";
@@ -183,7 +184,11 @@ export default function IncidentDetail() {
           </TabsContent>
 
           {/* CREW */}
-          <TabsContent value="crew" className="mt-0">
+          <TabsContent value="crew" className="mt-0 space-y-4">
+            <IncidentCrewAssignmentsSection
+              incidentId={incident.id}
+              organizationId={incident.organization_id}
+            />
             <IncidentDailyCrewGrid incidentId={incident.id} />
           </TabsContent>
 

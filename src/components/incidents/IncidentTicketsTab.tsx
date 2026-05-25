@@ -62,18 +62,13 @@ function statusFor(t: TicketRow): { label: string; cls: string } {
 
 function fmtDate(dateStr: string): string {
   if (!dateStr) return "";
-  const today = getLocalDateString();
-  if (dateStr === today) return "Today";
-  const [ty, tm, td] = today.split("-").map(Number);
-  const [dy, dm, dd] = dateStr.split("-").map(Number);
-  if (!ty || !dy) return dateStr;
-  const diffDays = Math.round(
-    (Date.UTC(ty, tm - 1, td) - Date.UTC(dy, dm - 1, dd)) / 86_400_000
-  );
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays > 1 && diffDays < 7) return `${diffDays} days ago`;
-  const [, m, d] = dateStr.split("-");
-  return `${parseInt(m)}/${parseInt(d)}`;
+  const [y, m, d] = dateStr.split("-");
+  if (!y || !m || !d) return dateStr;
+  const dt = new Date(`${dateStr}T00:00:00`);
+  if (isNaN(dt.getTime())) return dateStr;
+  const dow = dt.toLocaleDateString(undefined, { weekday: "short" });
+  const yy = y.slice(-2);
+  return `${dow} ${m}/${d}/${yy}`;
 }
 
 /**
@@ -255,31 +250,43 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
 
       {/* Truck filter chips — only when 2+ trucks */}
       {trucks && trucks.length > 1 && (
-        <div className="no-scrollbar flex gap-2 overflow-x-auto -mx-1 px-1">
-          <button
-            onClick={() => setTruckFilter(null)}
-            className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors touch-target ${
-              truckFilter === null
-                ? "bg-primary text-primary-foreground"
-                : "bg-secondary text-secondary-foreground"
-            }`}
-          >
-            All
-          </button>
-          {trucks.map((it) => (
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1">
+            Filter by truck
+          </p>
+          <div className="no-scrollbar flex gap-2 overflow-x-auto -mx-1 px-1">
             <button
-              key={it.id}
-              onClick={() => setTruckFilter(it.id)}
+              onClick={() => setTruckFilter(null)}
               className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors touch-target ${
-                truckFilter === it.id
+                truckFilter === null
                   ? "bg-primary text-primary-foreground"
                   : "bg-secondary text-secondary-foreground"
               }`}
             >
-              {it.trucks.name}
+              All
             </button>
-          ))}
+            {trucks.map((it) => (
+              <button
+                key={it.id}
+                onClick={() => setTruckFilter(it.id)}
+                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors touch-target ${
+                  truckFilter === it.id
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-secondary-foreground"
+                }`}
+              >
+                {it.trucks.name}
+              </button>
+            ))}
+          </div>
         </div>
+      )}
+
+      {/* Single-truck hint */}
+      {trucks && trucks.length === 1 && (
+        <p className="text-[11px] text-muted-foreground px-1">
+          Showing tickets for <span className="font-semibold text-foreground">{trucks[0].trucks.name}</span>
+        </p>
       )}
 
       {noTrucks && (
