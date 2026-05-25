@@ -184,7 +184,11 @@ export default function IncidentDetail() {
           </TabsContent>
 
           {/* CREW */}
-          <TabsContent value="crew" className="mt-0">
+          <TabsContent value="crew" className="mt-0 space-y-4">
+            <IncidentCrewAssignmentsSection
+              incidentId={incident.id}
+              organizationId={incident.organization_id}
+            />
             <IncidentDailyCrewGrid incidentId={incident.id} />
           </TabsContent>
 
