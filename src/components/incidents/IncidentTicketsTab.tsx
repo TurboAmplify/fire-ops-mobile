@@ -64,9 +64,9 @@ function fmtDate(dateStr: string): string {
   if (!dateStr) return "";
   const [y, m, d] = dateStr.split("-");
   if (!y || !m || !d) return dateStr;
-  const dt = new Date(`${dateStr}T00:00:00`);
+  const dt = new Date(Date.UTC(Number(y), Number(m) - 1, Number(d)));
   if (isNaN(dt.getTime())) return dateStr;
-  const dow = dt.toLocaleDateString(undefined, { weekday: "short" });
+  const dow = dt.toLocaleDateString(undefined, { weekday: "short", timeZone: "UTC" });
   const yy = y.slice(-2);
   return `${dow} ${m}/${d}/${yy}`;
 }
@@ -313,7 +313,7 @@ export function IncidentTicketsTab({ incidentId, incidentName }: Props) {
       {!isLoading && recent.length > 0 && (
         <section className="space-y-2">
           <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1">Recent</p>
-          <div className="space-y-2">{recent.slice(0, 10).map(renderTicket)}</div>
+          <div className="space-y-2">{recent.map(renderTicket)}</div>
         </section>
       )}
 
