@@ -62,18 +62,13 @@ function statusFor(t: TicketRow): { label: string; cls: string } {
 
 function fmtDate(dateStr: string): string {
   if (!dateStr) return "";
-  const today = getLocalDateString();
-  if (dateStr === today) return "Today";
-  const [ty, tm, td] = today.split("-").map(Number);
-  const [dy, dm, dd] = dateStr.split("-").map(Number);
-  if (!ty || !dy) return dateStr;
-  const diffDays = Math.round(
-    (Date.UTC(ty, tm - 1, td) - Date.UTC(dy, dm - 1, dd)) / 86_400_000
-  );
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays > 1 && diffDays < 7) return `${diffDays} days ago`;
-  const [, m, d] = dateStr.split("-");
-  return `${parseInt(m)}/${parseInt(d)}`;
+  const [y, m, d] = dateStr.split("-");
+  if (!y || !m || !d) return dateStr;
+  const dt = new Date(`${dateStr}T00:00:00`);
+  if (isNaN(dt.getTime())) return dateStr;
+  const dow = dt.toLocaleDateString(undefined, { weekday: "short" });
+  const yy = y.slice(-2);
+  return `${dow} ${m}/${d}/${yy}`;
 }
 
 /**
