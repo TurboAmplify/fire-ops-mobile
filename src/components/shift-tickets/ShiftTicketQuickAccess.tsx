@@ -82,7 +82,14 @@ export function ShiftTicketQuickAccess({ open, onOpenChange }: Props) {
   );
   const activeIncidents = (incidents ?? []).filter((i) => i.status === "active");
   const today = getLocalDateString();
-  const todaysTickets = (latestPerTruck ?? []).filter((t) => getTicketDate(t) === today);
+  // Include tickets whose shift date is today OR that were saved/updated today.
+  // The second condition catches the common case of saving a ticket for a past
+  // shift date — without it, the freshly-saved ticket would vanish from view.
+  const todaysTickets = (latestPerTruck ?? []).filter((t) => {
+    if (getTicketDate(t) === today) return true;
+    const updatedDay = t.updated_at?.slice(0, 10);
+    return updatedDay === today;
+  });
 
   const resetAndClose = () => {
     onOpenChange(false);
