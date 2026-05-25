@@ -194,11 +194,17 @@ export function useRecentShiftTickets(limit = 25) {
 
 export function useLatestTicketPerTruck() {
   const { data, ...rest } = useRecentShiftTickets(50);
-  // After date-sorting, dedupe by incident_truck_id keeping the first (= most recent shift)
+  // Dedupe by incident_truck_id keeping the ticket most recently touched
+  // (updated_at). The parent list is sorted by shift date for the full log,
+  // but for "one card per truck" we want whatever the user just worked on —
+  // otherwise a freshly-saved ticket dated in the past gets hidden behind an
+  // older ticket with a later shift date.
   const latestPerTruck = data
-    ? data.filter(
-        (t, i, self) => i === self.findIndex((s) => s.incident_truck_id === t.incident_truck_id)
-      )
+    ? [...data]
+        .sort((a, b) => (b.updated_at ?? "").localeCompare(a.updated_at ?? ""))
+        .filter(
+          (t, i, self) => i === self.findIndex((s) => s.incident_truck_id === t.incident_truck_id)
+        )
     : undefined;
   return { data: latestPerTruck, ...rest };
 }
