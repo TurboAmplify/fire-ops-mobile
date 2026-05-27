@@ -76,6 +76,7 @@ const SuperAdminAudit = lazy(() => import("./pages/SuperAdminAudit"));
 const SuperAdminErrors = lazy(() => import("./pages/SuperAdminErrors"));
 const MessagesInbox = lazy(() => import("./pages/MessagesInbox"));
 const ThreadView = lazy(() => import("./pages/ThreadView"));
+const MyRedCard = lazy(() => import("./pages/MyRedCard"));
 
 const App = () => (
   <ErrorBoundary scope="root">
@@ -141,6 +142,7 @@ const App = () => (
                     <Route path="/messages" element={<ProtectedRoute><MessagesInbox /></ProtectedRoute>} />
                     <Route path="/messages/:threadId" element={<ProtectedRoute><ThreadView /></ProtectedRoute>} />
                     <Route path="/needs" element={<ProtectedRoute><NeedsList /></ProtectedRoute>} />
+                    <Route path="/my-red-card" element={<ProtectedRoute><MyRedCard /></ProtectedRoute>} />
                     <Route path="/training" element={<ProtectedRoute><ModuleGate module="training"><Training /></ModuleGate></ProtectedRoute>} />
                     <Route path="/admin/logs" element={<ProtectedRoute><AdminGate><AdminLogs /></AdminGate></ProtectedRoute>} />
                     <Route path="/admin/reports" element={<ProtectedRoute><AdminGate><AdminReports /></AdminGate></ProtectedRoute>} />
