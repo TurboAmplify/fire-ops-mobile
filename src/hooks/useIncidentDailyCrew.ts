@@ -113,7 +113,8 @@ export function useIncidentDailyCrew(incidentId: string) {
         status: DailyCrewStatus,
         ticketId: string | null,
       ) => {
-        if (!date || hours <= 0) return;
+        if (!date) return;
+        const safeHours = hours > 0 ? hours : 0;
         dateSet.add(date);
         crewMap[crewKey] = crewInfo;
         if (!cells[crewKey]) cells[crewKey] = {};
@@ -122,7 +123,7 @@ export function useIncidentDailyCrew(incidentId: string) {
         } else {
           cells[crewKey][date].status = worstStatus(cells[crewKey][date].status, status);
         }
-        cells[crewKey][date].hours += hours;
+        cells[crewKey][date].hours += safeHours;
         if (!cells[crewKey][date].trucks.includes(truckName)) {
           cells[crewKey][date].trucks.push(truckName);
         }
@@ -132,8 +133,8 @@ export function useIncidentDailyCrew(incidentId: string) {
         if (ticketId && !cells[crewKey][date].ticketIds.includes(ticketId)) {
           cells[crewKey][date].ticketIds.push(ticketId);
         }
-        totalsByCrew[crewKey] = (totalsByCrew[crewKey] ?? 0) + hours;
-        totalsByDate[date] = (totalsByDate[date] ?? 0) + hours;
+        totalsByCrew[crewKey] = (totalsByCrew[crewKey] ?? 0) + safeHours;
+        totalsByDate[date] = (totalsByDate[date] ?? 0) + safeHours;
       };
 
       // 3a. Legacy shift_crew rows — treat as "complete" (legacy hand-entered)
