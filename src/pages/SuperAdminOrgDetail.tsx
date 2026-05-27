@@ -23,6 +23,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useOrganization } from "@/hooks/useOrganization";
 import { toast } from "sonner";
 import { OrgPayrollToggle } from "@/components/super-admin/PayrollAccessToggle";
+import { OrgRedCardsToggle } from "@/components/super-admin/RedCardsAccessToggle";
 import { SuperAdminBillingCard } from "@/components/super-admin/SuperAdminBillingCard";
 import type { BillingStatus, OrgType } from "@/lib/billing/types";
 import { daysUntil } from "@/lib/billing/utils";
@@ -344,6 +345,11 @@ export default function SuperAdminOrgDetail() {
             <OrgPayrollToggle
               orgId={data.id}
               currentValue={(data.modules_enabled as any)?.payroll === true}
+            />
+
+            <OrgRedCardsToggle
+              orgId={data.id}
+              currentValue={(data.modules_enabled as any)?.redCards === true}
             />
 
             <Card>

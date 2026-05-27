@@ -4,6 +4,7 @@ import { Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { CrewPhotoUpload } from "@/components/crew/CrewPhotoUpload";
+import { CrewMemberRedCardSection } from "@/components/crew/CrewMemberRedCardSection";
 import { useOrganization } from "@/hooks/useOrganization";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -236,6 +237,14 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
                   memberId={memberId}
                   photoUrl={(existing as any).profile_photo_url ?? null}
                   name={existing.name}
+                />
+              )}
+
+              {/* Red Card section — flag-gated; renders nothing when disabled */}
+              {isEdit && memberId && existing && (
+                <CrewMemberRedCardSection
+                  crewMemberId={memberId}
+                  memberName={existing.name}
                 />
               )}
 
