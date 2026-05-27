@@ -4,6 +4,7 @@ import { Plus, Loader2, Phone, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { CrewMemberForm } from "@/components/crew/CrewMemberForm";
+import { CrewMemberDetail } from "@/components/crew/CrewMemberDetail";
 import { SignedImage } from "@/components/ui/SignedImage";
 import { formatPhone } from "@/lib/phone";
 import { isCrewMemberComplete } from "@/lib/profile-completion";
@@ -19,6 +20,7 @@ export default function Crew() {
   const { isOffline } = useOnlineStatus();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [viewingId, setViewingId] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "active" | "inactive">("all");
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -26,6 +28,7 @@ export default function Crew() {
   useEffect(() => {
     const editId = searchParams.get("edit");
     if (editId && members?.some((m) => m.id === editId)) {
+      setViewingId(editId);
       setEditingId(editId);
       setShowForm(true);
     }
@@ -37,12 +40,21 @@ export default function Crew() {
     return true;
   });
 
-  const handleEdit = (id: string) => {
-    setEditingId(id);
+  const handleView = (id: string) => {
+    setViewingId(id);
+  };
+
+  const handleEditFromDetail = () => {
+    if (!viewingId) return;
+    setEditingId(viewingId);
     setShowForm(true);
   };
 
-  const handleClose = () => {
+  const handleCloseDetail = () => {
+    setViewingId(null);
+  };
+
+  const handleCloseForm = () => {
     setShowForm(false);
     setEditingId(null);
     if (searchParams.get("edit")) {
