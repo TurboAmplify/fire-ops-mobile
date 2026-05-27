@@ -14,6 +14,8 @@ export interface ModuleFlags {
   training: boolean;
   callResponses: boolean;
   qualifications: boolean;
+  /** Per-org opt-in for Red Cards (Incident Qualification Cards). Toggled by Super Admin. */
+  redCards: boolean;
 }
 
 export interface ModeTerms {
