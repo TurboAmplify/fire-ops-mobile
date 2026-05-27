@@ -117,7 +117,7 @@ export default function Crew() {
               return (
                 <button
                   key={m.id}
-                  onClick={() => handleEdit(m.id)}
+                  onClick={() => handleView(m.id)}
                   className="block w-full text-left rounded-xl bg-card p-4 transition-transform active:scale-[0.98]"
                 >
                   <div className="flex items-center gap-3">
@@ -171,7 +171,14 @@ export default function Crew() {
         )}
       </div>
 
-      {showForm && <CrewMemberForm memberId={editingId} onClose={handleClose} />}
+      {viewingId && !showForm && (
+        <CrewMemberDetail
+          memberId={viewingId}
+          onClose={handleCloseDetail}
+          onEdit={handleEditFromDetail}
+        />
+      )}
+      {showForm && <CrewMemberForm memberId={editingId} onClose={handleCloseForm} />}
     </AppShell>
   );
 }
