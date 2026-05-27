@@ -1,73 +1,78 @@
-## 1. Ticket date labels — show weekday + numeric date
 
-**File:** `src/components/incidents/IncidentTicketsTab.tsx`
+# Red Card Feature
 
-Replace `fmtDate()` so every ticket shows `Mon 05/14/26` style instead of "Today / Yesterday / N days ago":
+Adds Incident Qualification Cards ("Red Cards") to crew profiles. Gated by a per-org feature flag toggled from Super Admin. Admins manage cards (form or AI photo parse); crew members can view their own.
 
-- Build the label from the shift date itself: `<short weekday> <MM/DD/YY>`
-- Use `toLocaleDateString(undefined, { weekday: "short" })` for the abbreviation
-- Drop the relative-date branches entirely (no more "Today", "Yesterday", "X days ago")
-- Keep the existing `TODAY` / `RECENT` section headers — those still group correctly using the raw date compare, no logic change needed there
+## 1. Data model (one migration)
 
-Result on the card: `Type 6` (title) + `Wed 05/14/26` (sub-line).
+New table `public.red_cards` (1:1 with `crew_members`):
+- `id`, `organization_id`, `crew_member_id` (unique), `created_at`, `updated_at`
+- Identity: `card_id`, `agency`, `primary_position`, `photo_url`
+- Fitness: `work_capacity_test` (Light/Moderate/Arduous), `fitness_test_date`, `rt130_refresher_status`
+- Dates: `issue_date`, `review_expiration_date`
+- Signer: `signer_name`, `signer_title`
+- Qualifications: `qualifications jsonb` — array of `{ qualification, code, status }` (matches IMG_2054)
+- Notes: `restrictions_notes`
+- Emergency: `emergency_contact_name`, `emergency_contact_relation`, `emergency_contact_phone`
+- Return-to: `return_address` (text)
+- `source_document_url` (parsed image)
 
-## 2. Truck/resource filter visibility
+RLS: scoped by `organization_id` via existing org helper. Admins read/write all in org; members read their own row only (match `crew_members.user_id` → `auth.uid()`). Grants for `authenticated` + `service_role`. Standard `updated_at` trigger.
 
-The filter chip strip already exists, but only renders when `trucks.length > 1`. The current Ash Pole incident only has one truck, which is why you don't see it. Two small improvements:
+Add org feature flag: extend `organizations` with `red_cards_enabled boolean default false` (or add to existing org_settings if that's the pattern — will confirm by reading on build).
 
-- When there are 2+ trucks, also show the same filter chip strip in the **TODAY** section header area so it's obvious (currently it sits above TODAY but can be missed) — add a subtle "Filter:" label so users know what the chips do.
-- When only one truck exists, show a tiny muted line: `Showing tickets for <truck name>` so users understand there's nothing to filter yet.
+New storage bucket `red-cards` (private), policies scoped by `organization_id/crew_member_id/...` similar to `crew-photos`.
 
-No data model changes.
+## 2. Backend — AI parsing
 
-## 3. Make the Crew tab edit-capable (without breaking shift-driven totals)
+New edge function `parse-red-card` (verify_jwt=false, follows pattern of `parse-receipt`):
+- Accepts `imageUrl` or `imageDataUrl`
+- Calls Lovable AI Gateway (`google/gemini-2.5-pro` for vision + structured output)
+- Returns parsed JSON matching red_cards columns + qualifications array
+- Client service `src/services/red-cards.ts` + `src/services/ai-parsing.ts` `parseRedCardAI()`
 
-**Current state**
-- The Crew tab (`IncidentDailyCrewGrid`) is **derived/read-only** — it aggregates hours from submitted shift tickets per day. It has no concept of "assigned crew."
-- Truck ↔ crew assignments already exist via `incident_truck_crew` table, surfaced today only inside each truck's detail page (`TruckCrewSection` + `useIncidentTruckCrew` / `useAssignCrew` / `useReleaseCrew`).
-- Users intuitively go to the Crew tab to manage crew, find nothing editable, and get stuck.
+## 3. Hooks & services
 
-**Proposed change — additive, no schema work**
+- `src/services/red-cards.ts` — CRUD + photo upload
+- `src/hooks/useRedCards.ts` — `useRedCard(crewMemberId)`, `useUpsertRedCard`, `useDeleteRedCard`
+- Feature-flag hook `useRedCardsEnabled()` reading org setting
 
-Add a new top section inside the Crew tab called **"Assigned Crew by Truck"** that sits *above* the existing Daily Crew (hours) grid. The existing grid stays exactly as-is so reporting/totals are untouched.
+## 4. UI
 
-```text
-┌─ Crew tab ─────────────────────────────┐
-│ ASSIGNED CREW                          │  ← NEW
-│  ▸ Truck A (3)            [+ Add]      │
-│      • Jane Doe — Boss      [Release]  │
-│      • John Roe — Operator  [Release]  │
-│  ▸ Truck B (2)            [+ Add]      │
-│      • ...                             │
-│                                        │
-│ DAILY CREW (hours from tickets)        │  ← existing, unchanged
-│  [date strip + per-day rows]           │
-└────────────────────────────────────────┘
-```
+**Crew detail (admin view)** — `src/components/crew/CrewMemberForm.tsx` (or its parent):
+- New `RedCardSection` rendered only when flag enabled
+- "View Red Card" / "Add Red Card" button → opens `RedCardSheet`
 
-**New component:** `src/components/incidents/IncidentCrewAssignmentsSection.tsx`
-- Lists every truck on the incident
-- For each truck, reuses the existing `useIncidentTruckCrew(incidentTruckId)` hook to read current assignments
-- "+ Add" opens the same bottom-sheet picker used in `TruckCrewSection` (fed by `useAvailableCrewMembers`) and calls `useAssignCrew`
-- "Release" calls `useReleaseCrew`
-- Collapsible per truck (expanded by default if ≤2 trucks)
+**`src/components/crew/RedCardCard.tsx`** — visual red card mirroring IMG_2055 (semantic tokens, mobile-first, responsive, no hardcoded colors — define `--red-card-*` tokens in `index.css`). Two stacked cards: ID card (front) + Qualifications card (back). Tap to flip or stacked scroll.
 
-**Mounting:** render it at the top of `IncidentDailyCrewGrid`'s parent in `IncidentDetail.tsx`, inside the existing `<TabsContent value="crew">`:
+**`src/components/crew/RedCardEditor.tsx`** (admin only):
+- Mode toggle: Form / Scan
+- Scan mode: Capacitor Camera or file input → calls `parse-red-card` → prefills form
+- Form fields for all columns, qualifications repeater
+- Photo upload for member portrait
 
-```tsx
-<TabsContent value="crew">
-  <IncidentCrewAssignmentsSection incidentId={incident.id} organizationId={incident.organization_id} />
-  <IncidentDailyCrewGrid incidentId={incident.id} />
-</TabsContent>
-```
+**Crew member self-view**: new route `/my-red-card` (linked from More page when flag on). Reads the row matching their `crew_members.user_id`. Read-only `RedCardCard`.
 
-**Why this is safe**
-- No new tables, no migrations, no RLS changes
-- No edits to `IncidentDailyCrewGrid`, shift-tickets, or any totals logic
-- Existing TruckCrewSection on truck detail pages keeps working — both entry points write through the same hooks/service
-- React Query keys (`incident-truck-crew`) are already shared, so assignments stay in sync between the two surfaces
+**Super Admin** — `src/pages/SuperAdminOrgDetail.tsx`: new toggle row "Red Cards" calling org update (mirrors existing `PayrollAccessToggle` pattern).
 
-## Out of scope (flag for later)
-- Bulk move crew member between trucks (currently you release + reassign)
-- Date-ranged assignments (today everything is "current")
-- Editing actual logged shift hours from the Crew tab — those still come from shift tickets to preserve the audit trail
+## 5. Field/mobile considerations
+
+- Touch targets ≥44px; bottom-sheet editor; safe-area aware
+- Camera permission requested at scan tap, not earlier
+- Loading/empty/error states on every fetch
+- Works offline-tolerant for read (cached via existing react-query setup); writes blocked offline via existing `assertOnlineForWrite`
+
+## 6. Tests
+
+- `useRedCards.test.tsx`: scoped fetch by crew_member_id, upsert injects org_id
+- Smoke route test for `/my-red-card`
+
+## Technical notes
+- New files only; existing crew flow untouched when flag is off
+- Reuses `SignedImage`, `getViewableUrl`, existing org membership/role helpers
+- AI parsing follows existing `parse-receipt` contract exactly for consistency
+
+## Out of scope (can add later)
+- QR "scan to verify" public verification endpoint
+- Expiration reminder notifications
+- Bulk import
