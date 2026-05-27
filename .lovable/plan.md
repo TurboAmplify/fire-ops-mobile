@@ -1,53 +1,47 @@
-## Problem
-
-Tapping a crew member on `/crew` jumps straight into the editable form. Inputs are live, so on a phone it's easy to bump a field and accidentally change a name, role, or phone number. With Red Cards now showing inside that same form, the risk of accidental edits is worse — the card is a viewing surface, not an editing surface.
-
 ## Goal
 
-Tapping a crew member should **view** them, not edit them. Editing stays available, but only when the user clearly asks for it.
+Make the Red Card feel like the headline of the crew member's profile, and let the user tap it to view full-screen, then return to the crew detail easily.
 
 ## Plan
 
-### 1. New read-only Crew Member Detail view
+### 1. Make the Red Card visually prominent in the Detail sheet
 
-- Tapping a crew card opens a **Detail sheet** (same bottom-sheet container we use today), not the editor.
-- The sheet shows, all read-only:
-  - Avatar + name + active/inactive badge
-  - Role, phone (tap-to-call), email (tap-to-email)
-  - Red Card section (existing `RedCardCard`, view-only)
-  - Any other existing profile fields, displayed as labeled rows — no inputs
-- Header actions on the sheet:
-  - **Close** (X)
-  - **Edit** button (pencil icon) — admins only, opens the existing `CrewMemberForm` modal on top
-- No input element is rendered in the detail view, so accidental taps can't mutate anything.
+- Move the Red Card section above the contact rows (right under name + role) so it's the first thing seen.
+- Wrap the existing `RedCardCard` in a tap target with:
+  - `active:scale-[0.98]` press feedback
+  - subtle ring/shadow to signal it's interactive
+  - small "Tap to expand" hint chip in the top-right corner
+- Tapping anywhere on the card opens the full-screen viewer.
 
-### 2. Edit flow stays intact, just gated behind the Edit button
+### 2. New full-screen Red Card viewer
 
-- `CrewMemberForm` is unchanged — same fields, same Red Card admin controls (Add / Edit / Scan).
-- Only entry points become: the Detail sheet's **Edit** button, the **Add** button in the Crew header, and the existing `?edit=<id>` deep link.
-- Non-admin members see no Edit button; they get a view-only detail.
+New component `src/components/crew/RedCardViewer.tsx`:
+- Fixed overlay at `z-[70]` (sits above the Detail sheet at `z-[60]`).
+- Safe-area-aware top bar with:
+  - **Back chevron + "Back"** on the left (closes viewer, returns to Detail)
+  - Member name centered (truncated)
+  - Close (X) on the right — both work, back is the primary
+- Scrollable body that renders the existing `RedCardCard` at full mobile width with comfortable padding so front + back of the card are both viewable.
+- Pinch/zoom is left to the OS (native image gestures on the card's photo); we don't intercept.
+- Hardware back button / Esc / swipe-down on overlay all close the viewer (not the underlying Detail sheet).
+- Locks body scroll while open; restores on close.
 
-### 3. Red Card behavior inside Detail vs Edit
+### 3. Wiring
 
-- Detail sheet: `RedCardCard` rendered read-only with a small "View full card" affordance if we want a zoom later. No Add/Edit/Scan controls visible to non-admins.
-- Edit form: keeps the current `CrewMemberRedCardSection` (Add / Edit / Scan Card) for admins.
-
-### 4. Small guardrails
-
-- Detail sheet supports the existing `?edit=<id>` deep link by opening Detail **and** immediately opening Edit on top, so existing links still land users in the editor.
-- Keep all touch targets ≥44px; safe-area aware; no hover-only affordances.
-- No DB or RLS changes — this is purely a UI restructure.
+- `CrewMemberDetail.tsx`: add `const [zoomed, setZoomed] = useState(false)`. Wrap the `RedCardCard` block in a `<button>` that calls `setZoomed(true)`. Render `<RedCardViewer ... />` when `zoomed` is true.
+- No changes to `Crew.tsx`, the editor, or the data layer.
+- The "Edit" button stays in the Detail sheet header — the full-screen viewer is view-only by design.
 
 ## Files
 
 **New**
-- `src/components/crew/CrewMemberDetail.tsx` — read-only sheet (uses `RedCardCard`, role/phone/email rows, Edit button for admins).
+- `src/components/crew/RedCardViewer.tsx`
 
 **Edited**
-- `src/pages/Crew.tsx` — tap opens Detail instead of Edit; Add button still opens the form directly.
-- (Optional) `src/components/crew/CrewMemberRedCardSection.tsx` — no change needed; admin controls already hide for non-admins.
+- `src/components/crew/CrewMemberDetail.tsx` — reorder so Red Card sits above contact rows, make it tappable, mount the viewer.
 
 ## Out of scope
 
-- No changes to crew data model, RLS, or the Red Card editor itself.
-- No new "view-only" mode inside `CrewMemberForm` — we keep that component focused on editing and add a separate detail component instead. Cleaner than a mode flag and matches existing patterns (e.g., truck detail vs. truck form).
+- No editing from the full-screen viewer (admins still edit via the Detail sheet's Edit button → existing form).
+- No download/share/print yet — easy to add later if asked.
+- No data model changes.

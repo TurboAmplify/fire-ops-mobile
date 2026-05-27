@@ -1,10 +1,11 @@
-import { useEffect } from "react";
-import { X, Pencil, Phone, User, Mail, StickyNote, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { X, Pencil, Phone, User, StickyNote, Loader2, Maximize2 } from "lucide-react";
 import { useCrewMember } from "@/hooks/useCrewMembers";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useRedCardByMember, useRedCardsEnabled } from "@/hooks/useRedCards";
 import { SignedImage } from "@/components/ui/SignedImage";
 import { RedCardCard } from "@/components/crew/RedCardCard";
+import { RedCardViewer } from "@/components/crew/RedCardViewer";
 import { formatPhone } from "@/lib/phone";
 
 interface Props {
@@ -27,6 +28,8 @@ export function CrewMemberDetail({ memberId, onClose, onEdit }: Props) {
   const { isAdmin } = useOrganization();
   const redCardsEnabled = useRedCardsEnabled();
   const { data: card } = useRedCardByMember(redCardsEnabled ? memberId : null);
+  const [zoomed, setZoomed] = useState(false);
+
 
   // Lock body scroll while sheet is open
   useEffect(() => {
@@ -120,6 +123,38 @@ export function CrewMemberDetail({ memberId, onClose, onEdit }: Props) {
                 </div>
               </div>
 
+              {/* Red Card (view-only, tap to expand) — featured at the top */}
+              {redCardsEnabled && card && (
+                <section className="space-y-2">
+                  <div className="flex items-center justify-between px-1">
+                    <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Red Card
+                    </h4>
+                    <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      <Maximize2 className="h-3 w-3" />
+                      Tap to expand
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setZoomed(true)}
+                    className="block w-full text-left rounded-2xl ring-1 ring-border shadow-md transition-transform active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-primary"
+                    aria-label="Expand Red Card"
+                  >
+                    <RedCardCard card={card} memberName={member.name} />
+                  </button>
+                </section>
+              )}
+
+              {redCardsEnabled && !card && isAdmin && (
+                <section className="rounded-2xl border border-dashed border-border bg-card p-4 text-center">
+                  <p className="text-sm font-medium">No Red Card on file.</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Tap Edit to add one for this member.
+                  </p>
+                </section>
+              )}
+
               {/* Contact rows */}
               <section className="space-y-1">
                 <Row icon={<User className="h-4 w-4" />} label="Role" value={member.role} />
@@ -155,29 +190,18 @@ export function CrewMemberDetail({ memberId, onClose, onEdit }: Props) {
                   <p className="text-sm whitespace-pre-wrap">{notes}</p>
                 </section>
               )}
-
-              {/* Red Card (view-only) */}
-              {redCardsEnabled && card && (
-                <section className="space-y-2">
-                  <h4 className="px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Red Card
-                  </h4>
-                  <RedCardCard card={card} memberName={member.name} />
-                </section>
-              )}
-
-              {redCardsEnabled && !card && isAdmin && (
-                <section className="rounded-2xl border border-dashed border-border bg-card p-4 text-center">
-                  <p className="text-sm font-medium">No Red Card on file.</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Tap Edit to add one for this member.
-                  </p>
-                </section>
-              )}
             </>
           )}
         </div>
       </div>
+
+      {zoomed && card && member && (
+        <RedCardViewer
+          card={card}
+          memberName={member.name}
+          onClose={() => setZoomed(false)}
+        />
+      )}
     </div>
   );
 }
