@@ -106,7 +106,7 @@ export async function getViewableUrl(
     return await getLocalSignatureObjectUrl(url);
   }
 
-  const parsed = parseStorageUrl(url);
+  const parsed = parseStorageUrl(url) ?? parseBareRedCardPath(url);
   if (!parsed) return url; // pass through blob:, external, etc.
 
   const cacheKey = `${parsed.bucket}/${parsed.path}`;
