@@ -194,6 +194,14 @@ export function CrewMemberDetail({ memberId, onClose, onEdit }: Props) {
           )}
         </div>
       </div>
+
+      {zoomed && card && member && (
+        <RedCardViewer
+          card={card}
+          memberName={member.name}
+          onClose={() => setZoomed(false)}
+        />
+      )}
     </div>
   );
 }
