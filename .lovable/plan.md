@@ -1,46 +1,53 @@
-# Finish Red Cards Wiring
+## Problem
 
-Foundation (DB, storage, edge function, hooks, components) is already in place. This plan completes the user-facing wiring without changing existing behavior.
+Tapping a crew member on `/crew` jumps straight into the editable form. Inputs are live, so on a phone it's easy to bump a field and accidentally change a name, role, or phone number. With Red Cards now showing inside that same form, the risk of accidental edits is worse — the card is a viewing surface, not an editing surface.
 
-## 1. Super Admin toggle
-- In `src/pages/SuperAdminOrgDetail.tsx`, add a "Red Cards" toggle in the module flags section that writes `redCards` into the org's `module_flags` (matching how other flags like `expenses` are persisted).
-- Gate all Red Card UI behind `useRedCardsEnabled()` reading that flag.
+## Goal
 
-## 2. Crew detail wiring (admin view)
-- In the crew member detail view (`src/components/crew/CrewMemberDetail.tsx` or equivalent — confirm during build), add a "Red Card" section visible only when the flag is on:
-  - If a `red_cards` row exists for that crew member: render `RedCardCard` (read-only) with an "Edit" button that opens `RedCardEditor` in a sheet/dialog.
-  - If none exists: show an empty state with "Add Red Card" → opens `RedCardEditor` (form + Scan modes).
-- Admin-only actions enforced via `membership.role` check (`admin` or `owner`), matching the pattern used in Expenses.
+Tapping a crew member should **view** them, not edit them. Editing stays available, but only when the user clearly asks for it.
 
-## 3. Crew member self-view
-- Add route `/my-red-card` in `src/App.tsx` → new page `src/pages/MyRedCard.tsx`.
-  - Resolves current user → their `crew_member` row (via profile linkage) → their `red_cards` row.
-  - Renders `RedCardCard` read-only. Empty state: "Your Red Card hasn't been added yet — contact your admin."
-- Add a nav entry only when flag enabled:
-  - Bottom tab or profile menu link "My Red Card" (placement: profile/settings menu to avoid breaking the 5-tab rule).
+## Plan
 
-## 4. Crew list affordance
-- In the crew list (`src/pages/Crew.tsx` or `CrewList` component), when flag is on, show a small Red Card indicator badge next to crew members that have a card on file. Tapping the crew member still navigates to detail where the card is viewable.
+### 1. New read-only Crew Member Detail view
 
-## 5. Guardrails
-- All new UI uses semantic tokens (no hardcoded colors).
-- Touch targets ≥44px, safe-area aware.
-- Camera permission requested only on tap of "Scan Card" inside `RedCardEditor` (already implemented).
-- Writes blocked when offline (use existing offline guard pattern).
-- Loading / empty / error states on every new view.
+- Tapping a crew card opens a **Detail sheet** (same bottom-sheet container we use today), not the editor.
+- The sheet shows, all read-only:
+  - Avatar + name + active/inactive badge
+  - Role, phone (tap-to-call), email (tap-to-email)
+  - Red Card section (existing `RedCardCard`, view-only)
+  - Any other existing profile fields, displayed as labeled rows — no inputs
+- Header actions on the sheet:
+  - **Close** (X)
+  - **Edit** button (pencil icon) — admins only, opens the existing `CrewMemberForm` modal on top
+- No input element is rendered in the detail view, so accidental taps can't mutate anything.
 
-## 6. Tests (light)
-- Smoke render test for `MyRedCard` (empty + populated).
-- Smoke render test for the crew detail Red Card section gated by the flag.
+### 2. Edit flow stays intact, just gated behind the Edit button
 
-## Files to add
-- `src/pages/MyRedCard.tsx`
+- `CrewMemberForm` is unchanged — same fields, same Red Card admin controls (Add / Edit / Scan).
+- Only entry points become: the Detail sheet's **Edit** button, the **Add** button in the Crew header, and the existing `?edit=<id>` deep link.
+- Non-admin members see no Edit button; they get a view-only detail.
 
-## Files to edit
-- `src/pages/SuperAdminOrgDetail.tsx` — add toggle
-- `src/pages/Crew.tsx` or detail component — add Red Card section + indicator
-- `src/App.tsx` — add `/my-red-card` route
-- Profile/menu component — add "My Red Card" link (flag-gated)
+### 3. Red Card behavior inside Detail vs Edit
+
+- Detail sheet: `RedCardCard` rendered read-only with a small "View full card" affordance if we want a zoom later. No Add/Edit/Scan controls visible to non-admins.
+- Edit form: keeps the current `CrewMemberRedCardSection` (Add / Edit / Scan Card) for admins.
+
+### 4. Small guardrails
+
+- Detail sheet supports the existing `?edit=<id>` deep link by opening Detail **and** immediately opening Edit on top, so existing links still land users in the editor.
+- Keep all touch targets ≥44px; safe-area aware; no hover-only affordances.
+- No DB or RLS changes — this is purely a UI restructure.
+
+## Files
+
+**New**
+- `src/components/crew/CrewMemberDetail.tsx` — read-only sheet (uses `RedCardCard`, role/phone/email rows, Edit button for admins).
+
+**Edited**
+- `src/pages/Crew.tsx` — tap opens Detail instead of Edit; Add button still opens the form directly.
+- (Optional) `src/components/crew/CrewMemberRedCardSection.tsx` — no change needed; admin controls already hide for non-admins.
 
 ## Out of scope
-- QR verification, expiration reminders, bulk import, push notifications — deferred.
+
+- No changes to crew data model, RLS, or the Red Card editor itself.
+- No new "view-only" mode inside `CrewMemberForm` — we keep that component focused on editing and add a separate detail component instead. Cleaner than a mode flag and matches existing patterns (e.g., truck detail vs. truck form).
