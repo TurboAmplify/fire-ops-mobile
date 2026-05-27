@@ -1,11 +1,12 @@
 import { AppShell } from "@/components/AppShell";
 import { useNavigate } from "react-router-dom";
-import { Settings, ChevronRight, Shield, BarChart3, ClipboardList, ShieldCheck, FileBarChart, CircleDollarSign, Mail } from "lucide-react";
+import { Settings, ChevronRight, Shield, BarChart3, ClipboardList, ShieldCheck, FileBarChart, CircleDollarSign, Mail, IdCard } from "lucide-react";
 import { useUnreadTotal } from "@/hooks/useThreads";
 import { ALL_NAV_OPTIONS, getSelectedTabKeys, filterNavByMode } from "@/components/settings/NavBarCustomizer";
 import { useOrganization } from "@/hooks/useOrganization";
 import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
 import { useAppMode } from "@/lib/app-mode";
+import { useRedCardsEnabled } from "@/hooks/useRedCards";
 import { useEffect, useState } from "react";
 
 export default function More() {
@@ -13,6 +14,7 @@ export default function More() {
   const { isAdmin } = useOrganization();
   const { isPlatformAdmin } = usePlatformAdmin();
   const { modules } = useAppMode();
+  const redCardsEnabled = useRedCardsEnabled();
   const { data: unread } = useUnreadTotal();
   const [bump, setBump] = useState(0);
 
@@ -182,6 +184,21 @@ export default function More() {
             Account
           </h2>
           <div className="rounded-2xl bg-card overflow-hidden divide-y divide-border/60 card-shadow">
+            {redCardsEnabled && (
+              <button
+                onClick={() => navigate("/my-red-card")}
+                className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors active:bg-secondary/50 touch-target"
+              >
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 shrink-0">
+                  <IdCard className="h-[18px] w-[18px] text-primary" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">My Red Card</p>
+                  <p className="text-[11px] text-muted-foreground">Your Incident Qualification Card</p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
+              </button>
+            )}
             <button
               onClick={() => navigate("/settings")}
               className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors active:bg-secondary/50 touch-target"
