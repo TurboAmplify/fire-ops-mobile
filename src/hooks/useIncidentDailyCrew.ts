@@ -22,6 +22,8 @@ export interface DailyCrewMatrix {
   truckOptions: { id: string; name: string }[];
 }
 
+const DAILY_CREW_QUERY_VERSION = 2;
+
 interface PersonnelEntry {
   date?: string;
   total?: number | string;
@@ -48,7 +50,8 @@ function deriveTicketStatus(t: any): DailyCrewStatus {
 
 export function useIncidentDailyCrew(incidentId: string) {
   return useQuery({
-    queryKey: ["incident-daily-crew", incidentId],
+    queryKey: ["incident-daily-crew", incidentId, DAILY_CREW_QUERY_VERSION],
+    staleTime: 0,
     enabled: !!incidentId,
     queryFn: async (): Promise<DailyCrewMatrix> => {
       // 1. Get incident_trucks for this incident
