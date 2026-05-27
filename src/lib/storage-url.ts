@@ -35,7 +35,25 @@ const KNOWN_BUCKETS = new Set([
   "signatures",
   "inspection-photos",
   "incident-documents",
+  "red-cards",
 ]);
+
+/**
+ * Red-card photo/source files are stored as bare object paths
+ * (e.g. "<org>/<crew_member>/photo.png") rather than full URLs.
+ * Detect that shape so getViewableUrl can sign them.
+ */
+function parseBareRedCardPath(
+  url: string,
+): { bucket: string; path: string } | null {
+  if (/^(https?:|blob:|data:)/i.test(url)) return null;
+  if (url.includes("?") || url.startsWith("/")) return null;
+  const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const parts = url.split("/");
+  if (parts.length < 3) return null;
+  if (!uuidRe.test(parts[0]) || !uuidRe.test(parts[1])) return null;
+  return { bucket: "red-cards", path: url };
+}
 
 /**
  * Parse a stored URL and pull out the bucket and object path.
