@@ -2239,6 +2239,106 @@ export type Database = {
         }
         Relationships: []
       }
+      red_cards: {
+        Row: {
+          agency: string | null
+          card_id: string | null
+          created_at: string
+          crew_member_id: string
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          emergency_contact_relation: string | null
+          fitness_test_date: string | null
+          id: string
+          issue_date: string | null
+          organization_id: string
+          photo_url: string | null
+          primary_position: string | null
+          qualifications: Json
+          restrictions_notes: string | null
+          return_address: string | null
+          review_expiration_date: string | null
+          rt130_refresher_status: string | null
+          signer_name: string | null
+          signer_title: string | null
+          source_document_url: string | null
+          updated_at: string
+          work_capacity_test: string | null
+        }
+        Insert: {
+          agency?: string | null
+          card_id?: string | null
+          created_at?: string
+          crew_member_id: string
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          emergency_contact_relation?: string | null
+          fitness_test_date?: string | null
+          id?: string
+          issue_date?: string | null
+          organization_id: string
+          photo_url?: string | null
+          primary_position?: string | null
+          qualifications?: Json
+          restrictions_notes?: string | null
+          return_address?: string | null
+          review_expiration_date?: string | null
+          rt130_refresher_status?: string | null
+          signer_name?: string | null
+          signer_title?: string | null
+          source_document_url?: string | null
+          updated_at?: string
+          work_capacity_test?: string | null
+        }
+        Update: {
+          agency?: string | null
+          card_id?: string | null
+          created_at?: string
+          crew_member_id?: string
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          emergency_contact_relation?: string | null
+          fitness_test_date?: string | null
+          id?: string
+          issue_date?: string | null
+          organization_id?: string
+          photo_url?: string | null
+          primary_position?: string | null
+          qualifications?: Json
+          restrictions_notes?: string | null
+          return_address?: string | null
+          review_expiration_date?: string | null
+          rt130_refresher_status?: string | null
+          signer_name?: string | null
+          signer_title?: string | null
+          source_document_url?: string | null
+          updated_at?: string
+          work_capacity_test?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "red_cards_crew_member_id_fkey"
+            columns: ["crew_member_id"]
+            isOneToOne: true
+            referencedRelation: "crew_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "red_cards_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "red_cards_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       resource_orders: {
         Row: {
           agreement_number: string | null

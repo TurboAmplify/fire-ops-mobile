@@ -14,6 +14,8 @@ export interface ModuleFlags {
   training: boolean;
   callResponses: boolean;
   qualifications: boolean;
+  /** Per-org opt-in for Red Cards (Incident Qualification Cards). Toggled by Super Admin. */
+  redCards: boolean;
 }
 
 export interface ModeTerms {
@@ -42,6 +44,7 @@ export const MODE_CONFIG: Record<OrgType, ModeConfig> = {
       training: false,
       callResponses: false,
       qualifications: false,
+      redCards: false,
     },
     terms: { crew: "Crew", fleet: "Fleet", shiftTicket: "Shift Ticket", member: "Crew Member", truck: "Truck" },
   },
@@ -55,6 +58,7 @@ export const MODE_CONFIG: Record<OrgType, ModeConfig> = {
       training: true,
       callResponses: true,
       qualifications: true,
+      redCards: false,
     },
     terms: { crew: "Members", fleet: "Apparatus", shiftTicket: "Run Report", member: "Member", truck: "Apparatus" },
   },
@@ -68,6 +72,7 @@ export const MODE_CONFIG: Record<OrgType, ModeConfig> = {
       training: true,
       callResponses: false,
       qualifications: true,
+      redCards: false,
     },
     terms: { crew: "Personnel", fleet: "Apparatus", shiftTicket: "CTR", member: "Person", truck: "Apparatus" },
   },
