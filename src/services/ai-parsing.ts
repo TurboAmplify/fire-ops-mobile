@@ -44,3 +44,33 @@ export async function parseBatchReceiptsAI(
   if (error) throw error;
   return Array.isArray(data?.receipts) ? data.receipts : [];
 }
+
+export interface ParsedRedCard {
+  card_id?: string;
+  agency?: string;
+  primary_position?: string;
+  work_capacity_test?: string;
+  fitness_test_date?: string;
+  rt130_refresher_status?: string;
+  issue_date?: string;
+  review_expiration_date?: string;
+  signer_name?: string;
+  signer_title?: string;
+  restrictions_notes?: string;
+  emergency_contact_name?: string;
+  emergency_contact_relation?: string;
+  emergency_contact_phone?: string;
+  return_address?: string;
+  qualifications?: { qualification: string; code: string; status: string }[];
+}
+
+export async function parseRedCardAI(
+  imageOrOpts: string | ParseOptions
+): Promise<ParsedRedCard> {
+  const opts: ParseOptions = typeof imageOrOpts === "string" ? { imageUrl: imageOrOpts } : imageOrOpts;
+  const body = await buildBody(opts);
+  const { data, error } = await supabase.functions.invoke("parse-red-card", { body });
+  if (error) throw error;
+  return data?.parsed || {};
+}
+
