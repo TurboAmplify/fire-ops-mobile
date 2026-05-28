@@ -70,6 +70,18 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (fo?.email) toEmails.push(fo.email);
     }
+    if (!toEmails.length) {
+      // Fallback: use most recent inbound message's from_email
+      const { data: lastIn } = await supabase
+        .from("messages")
+        .select("from_email")
+        .eq("thread_id", thread.id)
+        .eq("direction", "in")
+        .order("received_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (lastIn?.from_email) toEmails.push(lastIn.from_email);
+    }
     if (!toEmails.length) return json({ error: "No recipient on thread" }, 400);
 
     // Build attachments
