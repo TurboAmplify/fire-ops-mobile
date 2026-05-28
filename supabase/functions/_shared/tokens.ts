@@ -5,8 +5,9 @@ export function newThreadToken(): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-// Extract reply+<token>@... -> token
+// Extract reply+<token>@... -> token. Existing tokens are URL-safe
+// mixed-case strings, not just hex, so accept alphanumeric plus _/-.
 export function parseReplyToken(addr: string): string | null {
-  const m = addr.match(/reply\+([a-f0-9]{16,64})@/i);
-  return m ? m[1].toLowerCase() : null;
+  const m = addr.match(/reply\+([a-z0-9_-]{16,96})@/i);
+  return m ? m[1] : null;
 }
