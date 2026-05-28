@@ -76,38 +76,32 @@ Deno.serve(async (req) => {
       const handles = recipients
         .map((a) => extractEmail(a)?.toLowerCase() ?? "")
         .filter((e) => e.endsWith("@fireopshq.com") && !e.startsWith("reply+"))
-        .filter((e) => e.endsWith("@fireopshq.com") && !e.startsWith("reply+"))
         .map((e) => e.split("@")[0]);
 
       if (handles.length > 0) {
-        // Try exact match first.
+        // 1) Exact match
         let { data: org } = await supabase
           .from("organizations")
           .select("id, email_handle")
           .in("email_handle", handles)
           .maybeSingle();
 
-        // Fallback: tolerant prefix match — sometimes the stored handle and
-        // the address the reply was sent to differ by a few trailing chars
-        // (e.g. truncation differences). Match where either side is a prefix
-        // of the other, requiring at least 8 chars of overlap.
+        // 2) Tolerant prefix match — sometimes the stored handle and the
+        // address the reply was sent to differ by a few trailing chars
+        // (handle truncation differences). Accept when either is a prefix
+        // of the other and share at least 8 chars.
         if (!org) {
           for (const h of handles) {
             if (h.length < 8) continue;
+            const stem = h.slice(0, Math.max(8, h.length - 4));
             const { data: rows } = await supabase
               .from("organizations")
               .select("id, email_handle")
-              .or(
-                `email_handle.ilike.${h}%,email_handle.ilike.${h.slice(0, Math.max(8, h.length - 4))}%`,
-              )
-              .limit(2);
+              .ilike("email_handle", `${stem}%`)
+              .limit(5);
             const candidate = (rows ?? []).find((r) => {
               const eh = (r.email_handle ?? "").toLowerCase();
-              return (
-                eh.startsWith(h) ||
-                h.startsWith(eh) ||
-                (eh.length >= 8 && h.length >= 8 && eh.slice(0, 8) === h.slice(0, 8))
-              );
+              return eh.startsWith(h) || h.startsWith(eh);
             });
             if (candidate) {
               org = candidate;
@@ -116,7 +110,11 @@ Deno.serve(async (req) => {
           }
         }
 
-          // same subject; otherwise open a fresh one.
+        if (org) {
+          const fromAddr =
+            extractEmail(payload.from ?? "")?.toLowerCase() ?? "unknown";
+          const subj = (payload.subject ?? "(no subject)").trim();
+          // Try to reuse a recent inbox thread on same subject; else open new.
           const { data: existing } = await supabase
             .from("communication_threads")
             .select("id, organization_id, subject, incident_truck_id, purpose")
@@ -156,6 +154,7 @@ Deno.serve(async (req) => {
         }
       }
     }
+
 
     if (!thread) {
       console.log("incoming-email: no thread match, dropping", { recipients });
