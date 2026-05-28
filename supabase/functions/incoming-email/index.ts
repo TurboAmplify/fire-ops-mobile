@@ -114,12 +114,12 @@ Deno.serve(async (req) => {
           const fromAddr =
             extractEmail(payload.from ?? "")?.toLowerCase() ?? "unknown";
           const subj = (payload.subject ?? "(no subject)").trim();
-          // Try to reuse a recent inbox thread on same subject; else open new.
+          // Try to reuse a recent general inbox thread on same subject; else open new.
           const { data: existing } = await supabase
             .from("communication_threads")
             .select("id, organization_id, subject, incident_truck_id, purpose")
             .eq("organization_id", org.id)
-            .eq("purpose", "inbox")
+            .eq("purpose", "general")
             .eq("subject", subj)
             .order("last_message_at", { ascending: false })
             .limit(1)
@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
               .from("communication_threads")
               .insert({
                 organization_id: org.id,
-                purpose: "inbox",
+                purpose: "general",
                 subject: subj,
                 thread_token: newToken,
                 status: "open",
