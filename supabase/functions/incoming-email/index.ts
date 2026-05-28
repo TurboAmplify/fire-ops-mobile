@@ -24,10 +24,14 @@ interface ResendInbound {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-
   try {
-    const payload = (await req.json()) as ResendInbound;
+    const raw = (await req.json()) as Record<string, unknown>;
+    // Resend wraps inbound as { type: "email.received", data: { ... } }.
+    const payload = ((raw?.data ?? raw) as ResendInbound) ?? {};
+    const evtType = typeof raw?.type === "string" ? (raw.type as string) : "";
+    if (evtType && evtType !== "email.received") {
+      return json({ ok: true, skipped: `event_${evtType}` });
+    }
 
     // Service-role client (webhook is unauthenticated)
     const supabase = createClient(
@@ -35,26 +39,103 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Identify thread from any "to" address containing reply+<token>
+    // Collect all recipient addresses (to + cc).
+    const recipients: string[] = [
+      ...(payload.to ?? []),
+      ...(payload.cc ?? []),
+    ].filter(Boolean);
+
+    // 1) Try to identify thread by reply+<token>@...
     let token: string | null = null;
-    for (const addr of payload.to ?? []) {
+    for (const addr of recipients) {
       token = parseReplyToken(addr);
       if (token) break;
     }
-    if (!token) {
-      console.log("incoming-email: no reply token found, dropping");
-      return json({ ok: true, skipped: "no_token" });
+
+    let thread: {
+      id: string;
+      organization_id: string;
+      subject: string | null;
+      incident_truck_id: string | null;
+      purpose: string | null;
+    } | null = null;
+
+    if (token) {
+      const { data } = await supabase
+        .from("communication_threads")
+        .select("id, organization_id, subject, incident_truck_id, purpose")
+        .eq("thread_token", token)
+        .maybeSingle();
+      thread = data ?? null;
     }
 
-    const { data: thread } = await supabase
-      .from("communication_threads")
-      .select("id, organization_id, subject, incident_truck_id, purpose")
-      .eq("thread_token", token)
-      .maybeSingle();
+    // 2) Fallback: route by org email handle (<handle>@fireopshq.com).
+    // Look up the organization whose email_handle matches one of the recipient
+    // prefixes, then open (or reuse) a generic "inbox" thread for that org.
     if (!thread) {
-      console.log("incoming-email: thread not found for token", token);
-      return json({ ok: true, skipped: "thread_not_found" });
+      const handles = recipients
+        .map((a) => extractEmail(a)?.toLowerCase() ?? "")
+        .filter((e) => e.endsWith("@fireopshq.com") && !e.startsWith("reply+"))
+        .map((e) => e.split("@")[0]);
+
+      if (handles.length > 0) {
+        const { data: org } = await supabase
+          .from("organizations")
+          .select("id, email_handle")
+          .in("email_handle", handles)
+          .maybeSingle();
+
+        if (org) {
+          const fromAddr =
+            extractEmail(payload.from ?? "")?.toLowerCase() ?? "unknown";
+          const subj = (payload.subject ?? "(no subject)").trim();
+          // Try to reuse a recent inbox thread from the same sender on the
+          // same subject; otherwise open a fresh one.
+          const { data: existing } = await supabase
+            .from("communication_threads")
+            .select("id, organization_id, subject, incident_truck_id, purpose")
+            .eq("organization_id", org.id)
+            .eq("purpose", "inbox")
+            .eq("subject", subj)
+            .order("last_message_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (existing) {
+            thread = existing;
+          } else {
+            const newToken = crypto.randomUUID().replace(/-/g, "");
+            const { data: created, error: cErr } = await supabase
+              .from("communication_threads")
+              .insert({
+                organization_id: org.id,
+                purpose: "inbox",
+                subject: subj,
+                thread_token: newToken,
+                status: "open",
+                last_message_at: new Date().toISOString(),
+                last_message_direction: "in",
+                unread_count: 0,
+              })
+              .select("id, organization_id, subject, incident_truck_id, purpose")
+              .single();
+            if (cErr) {
+              console.error("incoming-email: failed to open inbox thread", cErr);
+            }
+            thread = created ?? null;
+          }
+          console.log(
+            `incoming-email: routed by handle ${org.email_handle} from ${fromAddr}`,
+          );
+        }
+      }
     }
+
+    if (!thread) {
+      console.log("incoming-email: no thread match, dropping", { recipients });
+      return json({ ok: true, skipped: "no_thread_match" });
+    }
+
 
     const subject = payload.subject ?? thread.subject;
     const fromEmail = extractEmail(payload.from ?? "") ?? "unknown@unknown";
