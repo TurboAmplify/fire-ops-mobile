@@ -6,6 +6,7 @@ import { ChevronLeft } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import fireLogo from "@/assets/fire-logo.png";
 import { useAppBackground } from "@/hooks/useAppBackground";
+import { NotificationBell } from "./notifications/NotificationBell";
 
 interface AppShellProps {
   children: ReactNode;
