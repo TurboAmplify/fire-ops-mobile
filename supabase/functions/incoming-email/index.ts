@@ -206,11 +206,12 @@ Deno.serve(async (req) => {
       return json({ ok: false, error: msgErr?.message }, 500);
     }
 
-    // Persist + classify attachments
+    // Persist + classify attachments. Resend receiving webhooks only include
+    // attachment metadata; fetch the actual files from Resend before storing.
     const classifications: unknown[] = [];
-    for (const att of payload.attachments ?? []) {
-      const base64 = att.content_base64 ?? (att.url ? await fetchAsBase64(att.url) : null);
-      if (!base64) continue;
+    const inboundAttachments = await loadInboundAttachments(payload);
+    for (const att of inboundAttachments) {
+      const base64 = att.base64;
       const path = `${thread.organization_id}/${thread.id}/${msg.id}/${sanitizeFilename(att.filename)}`;
       const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
       const { error: upErr } = await supabase.storage
@@ -238,7 +239,7 @@ Deno.serve(async (req) => {
           storage_path: path,
           file_name: att.filename,
           mime_type: att.content_type,
-          size_bytes: bytes.length,
+          size_bytes: att.size ?? bytes.length,
           auto_classified_as: classified?.type ?? null,
           auto_classified_stage: classified?.stage ?? null,
           classification_confidence: classified?.confidence ?? null,
