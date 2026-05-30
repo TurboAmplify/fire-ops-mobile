@@ -306,11 +306,25 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
 
   const handleDelete = async (doc: IncidentDocument) => {
     try {
-      await deleteMutation.mutateAsync({
-        id: doc.id,
-        stage: doc.stage,
-        file_name: doc.file_name,
-      });
+      // For contractor_signed, also remove any older sibling signed copies
+      // so an older version doesn't pop back into view.
+      const toDelete: IncidentDocument[] = [doc];
+      if (doc.stage === "contractor_signed") {
+        const siblings = (docs ?? []).filter(
+          (d) =>
+            d.id !== doc.id &&
+            d.stage === "contractor_signed" &&
+            d.parent_document_id === doc.parent_document_id,
+        );
+        toDelete.push(...siblings);
+      }
+      for (const d of toDelete) {
+        await deleteMutation.mutateAsync({
+          id: d.id,
+          stage: d.stage,
+          file_name: d.file_name,
+        });
+      }
       toast.success("Document removed");
       setConfirmDeleteId(null);
     } catch {
