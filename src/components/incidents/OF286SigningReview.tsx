@@ -100,7 +100,7 @@ export function OF286SigningReview({
           const ctx = canvas.getContext("2d");
           if (!ctx) continue;
           ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-          await page.render({ canvasContext: ctx, viewport }).promise;
+          await page.render({ canvas, canvasContext: ctx, viewport }).promise;
         }
         if (!cancelled) setScales(nextScales);
       } catch (err) {
