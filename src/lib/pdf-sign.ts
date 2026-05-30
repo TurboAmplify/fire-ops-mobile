@@ -265,8 +265,9 @@ export async function stampSignatureOntoPdf(opts: {
   signaturePngBlob: Blob;
   signerName: string;
   signedAt: Date;
+  placements?: Partial<Pick<PageAnchors, "signatureBox" | "dateBox" | "nameBox">>;
 }): Promise<Blob> {
-  const { sourceUrl, signaturePngBlob, signerName, signedAt } = opts;
+  const { sourceUrl, signaturePngBlob, signerName, signedAt, placements } = opts;
 
   const sourceRes = await fetch(sourceUrl);
   if (!sourceRes.ok) throw new Error("Could not download source document");
@@ -310,17 +311,27 @@ export async function stampSignatureOntoPdf(opts: {
   if (isImageFallback) {
     const page = pages[0];
     const { width: pw } = page.getSize();
-    const sigW = Math.min(220, pw * 0.32);
+    const fields = getOf286FallbackFields(0, pw, page.getSize().height);
+    const sigBox = placements?.signatureBox ?? fields.signatureBox!;
+    const dateBox = placements?.dateBox ?? fields.dateBox!;
+    const nameBox = placements?.nameBox ?? fields.nameBox!;
+    const sigW = Math.min(sigBox.w, sigBox.h * (sigImage.width / sigImage.height));
     const sigH = sigW * (sigImage.height / sigImage.width);
     page.drawImage(sigImage, {
-      x: pw - sigW - 24,
-      y: 38 + 14,
+      x: sigBox.x,
+      y: sigBox.y,
       width: sigW,
       height: sigH,
     });
-    page.drawText(`${signerName}  •  ${signedAt.toLocaleString()}`, {
-      x: pw - sigW - 24,
-      y: 38,
+    page.drawText(dateStr, {
+      x: dateBox.x,
+      y: dateBox.y,
+      size: 9,
+      font: helv,
+    });
+    page.drawText(signerName, {
+      x: nameBox.x,
+      y: nameBox.y,
       size: 8,
       font: helv,
     });
