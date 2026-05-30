@@ -19,6 +19,7 @@ import { SignedLink } from "@/components/ui/SignedLink";
 import { SignaturePicker, type SignatureMetadata } from "@/components/shift-tickets/SignaturePicker";
 import { stampSignatureOntoPdf, downloadBlob } from "@/lib/pdf-sign";
 import { getViewableUrl } from "@/lib/storage-url";
+import { supabase } from "@/integrations/supabase/client";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -27,10 +28,12 @@ import {
   Clock,
   Download,
   DollarSign,
+  Eye,
   FileSignature,
   FileText,
   Loader2,
   Pencil,
+  Send,
   Trash2,
   Upload,
 } from "lucide-react";
