@@ -3,14 +3,19 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { parseReplyToken } from "../_shared/tokens.ts";
 
+const RESEND_GATEWAY_URL = "https://connector-gateway.lovable.dev/resend";
+
 interface ResendInboundAttachment {
+  id?: string;
   filename: string;
   content_type: string;
   content_base64?: string;
   url?: string;
+  download_url?: string;
 }
 
 interface ResendInbound {
+  email_id?: string;
   from?: string;
   to?: string[];
   cc?: string[];
@@ -21,6 +26,14 @@ interface ResendInbound {
   in_reply_to?: string;
   references?: string[];
   attachments?: ResendInboundAttachment[];
+}
+
+interface NormalizedAttachment {
+  id?: string;
+  filename: string;
+  content_type: string;
+  base64: string;
+  size?: number;
 }
 
 Deno.serve(async (req) => {
@@ -195,11 +208,12 @@ Deno.serve(async (req) => {
       return json({ ok: false, error: msgErr?.message }, 500);
     }
 
-    // Persist + classify attachments
+    // Persist + classify attachments. Resend receiving webhooks only include
+    // attachment metadata; fetch the actual files from Resend before storing.
     const classifications: unknown[] = [];
-    for (const att of payload.attachments ?? []) {
-      const base64 = att.content_base64 ?? (att.url ? await fetchAsBase64(att.url) : null);
-      if (!base64) continue;
+    const inboundAttachments = await loadInboundAttachments(payload);
+    for (const att of inboundAttachments) {
+      const base64 = att.base64;
       const path = `${thread.organization_id}/${thread.id}/${msg.id}/${sanitizeFilename(att.filename)}`;
       const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
       const { error: upErr } = await supabase.storage
@@ -227,7 +241,7 @@ Deno.serve(async (req) => {
           storage_path: path,
           file_name: att.filename,
           mime_type: att.content_type,
-          size_bytes: bytes.length,
+          size_bytes: att.size ?? bytes.length,
           auto_classified_as: classified?.type ?? null,
           auto_classified_stage: classified?.stage ?? null,
           classification_confidence: classified?.confidence ?? null,
@@ -255,9 +269,9 @@ Deno.serve(async (req) => {
             organization_id: thread.organization_id,
             incident_truck_id: thread.incident_truck_id,
             document_type: "of286",
-            file_url: path,
+            file_url: `${Deno.env.get("SUPABASE_URL")}/storage/v1/object/public/communication-attachments/${encodeURIComponent(path)}`,
             file_name: att.filename,
-            stage: classified.stage ?? "of286_draft_received",
+            stage: classified.stage === "of286_finance_signed" ? "finance_signed" : "original",
             source_message_id: msg.id,
             thread_id: thread.id,
             ai_classification: classified as unknown as Record<string, unknown>,
@@ -371,6 +385,44 @@ async function fetchAsBase64(url: string): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+async function loadInboundAttachments(payload: ResendInbound): Promise<NormalizedAttachment[]> {
+  const out: NormalizedAttachment[] = [];
+  const seen = new Set<string>();
+  for (const att of payload.attachments ?? []) {
+    const base64 = att.content_base64 ?? (att.download_url ? await fetchAsBase64(att.download_url) : att.url ? await fetchAsBase64(att.url) : null);
+    if (!base64) continue;
+    const key = att.id ?? att.filename;
+    seen.add(key);
+    out.push({ id: att.id, filename: att.filename, content_type: att.content_type, base64 });
+  }
+  if (!payload.email_id) return out;
+  const metas = await listReceivedAttachments(payload.email_id);
+  for (const att of metas) {
+    const key = att.id ?? att.filename;
+    if (seen.has(key) || !att.download_url) continue;
+    const base64 = await fetchAsBase64(att.download_url);
+    if (!base64) continue;
+    seen.add(key);
+    out.push({ id: att.id, filename: att.filename, content_type: att.content_type ?? "application/octet-stream", base64, size: att.size });
+  }
+  return out;
+}
+
+async function listReceivedAttachments(emailId: string): Promise<Array<{ id?: string; filename: string; content_type?: string; size?: number; download_url?: string }>> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY_1") ?? Deno.env.get("RESEND_API_KEY");
+  if (!LOVABLE_API_KEY || !RESEND_API_KEY) return [];
+  const resp = await fetch(`${RESEND_GATEWAY_URL}/emails/receiving/${encodeURIComponent(emailId)}/attachments`, {
+    headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "X-Connection-Api-Key": RESEND_API_KEY },
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) {
+    console.error("incoming-email: failed to list received attachments", resp.status, data);
+    return [];
+  }
+  return Array.isArray(data?.data) ? data.data : [];
 }
 
 function extractEmail(s: string): string | null {
