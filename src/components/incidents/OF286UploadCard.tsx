@@ -202,10 +202,32 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
         incidentId,
       );
 
+      // Re-sign must REPLACE the existing contractor_signed for this lineage,
+      // not stack a new row on top. Otherwise deletes appear to do nothing
+      // because an older signed version resurfaces.
+      const parentId =
+        signingDoc.stage === "original" ? signingDoc.id : signingDoc.parent_document_id;
+      const existingSigned = (docs ?? []).filter(
+        (d) =>
+          d.stage === "contractor_signed" &&
+          (parentId ? d.parent_document_id === parentId : true),
+      );
+      for (const old of existingSigned) {
+        try {
+          await deleteMutation.mutateAsync({
+            id: old.id,
+            stage: old.stage,
+            file_name: old.file_name,
+          });
+        } catch (e) {
+          console.warn("Failed to remove prior signed copy", e);
+        }
+      }
+
       await createMutation.mutateAsync({
         document_type: "of286",
         stage: "contractor_signed",
-        parent_document_id: signingDoc.id,
+        parent_document_id: parentId ?? signingDoc.id,
         file_url: fileUrl,
         file_name: signedFileName,
         signature_url: sigUrl,
