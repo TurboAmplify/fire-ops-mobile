@@ -403,7 +403,17 @@ export async function stampSignatureOntoPdf(opts: {
   let stampedAny = false;
   for (let i = 0; i < pages.length; i++) {
     const page = pages[i];
-    const anchors = anchorsList[i];
+    const pageSize = page.getSize();
+    const anchors = placements
+      ? {
+          pageIndex: i,
+          pageWidth: pageSize.width,
+          pageHeight: pageSize.height,
+          signatureBox: placements.signatureBox,
+          dateBox: placements.dateBox,
+          nameBox: placements.nameBox,
+        }
+      : anchorsList[i];
 
     if (anchors?.signatureBox || anchors?.nameBox) {
       if (anchors?.signatureBox) {
