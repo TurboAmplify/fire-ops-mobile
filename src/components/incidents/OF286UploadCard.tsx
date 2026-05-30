@@ -16,8 +16,10 @@ import {
 import { useOrganization } from "@/hooks/useOrganization";
 import { useAuth } from "@/hooks/useAuth";
 import { SignedLink } from "@/components/ui/SignedLink";
-import { SignaturePicker, type SignatureMetadata } from "@/components/shift-tickets/SignaturePicker";
+import type { SignatureMetadata } from "@/components/shift-tickets/SignaturePicker";
+import { OF286SigningReview } from "@/components/incidents/OF286SigningReview";
 import { stampSignatureOntoPdf, downloadBlob } from "@/lib/pdf-sign";
+import type { BoxRect } from "@/lib/pdf-sign";
 import { getViewableUrl } from "@/lib/storage-url";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -70,7 +72,7 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
     null,
   );
   const [signingDoc, setSigningDoc] = useState<IncidentDocument | null>(null);
-  const [signatureOpen, setSignatureOpen] = useState(false);
+  const [signingSourceUrl, setSigningSourceUrl] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [editingTotalId, setEditingTotalId] = useState<string | null>(null);
   const [totalDraft, setTotalDraft] = useState("");
