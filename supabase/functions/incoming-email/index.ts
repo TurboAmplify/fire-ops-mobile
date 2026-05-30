@@ -255,36 +255,57 @@ Deno.serve(async (req) => {
       if (
         classified &&
         classified.type === "of286" &&
-        classified.confidence >= 0.8 &&
-        thread.incident_truck_id
+        classified.confidence >= 0.7
       ) {
-        const { data: it } = await supabase
-          .from("incident_trucks")
-          .select("incident_id")
-          .eq("id", thread.incident_truck_id)
-          .maybeSingle();
-        if (it?.incident_id) {
-          await supabase.from("incident_documents").insert({
-            incident_id: it.incident_id,
-            organization_id: thread.organization_id,
-            incident_truck_id: thread.incident_truck_id,
-            document_type: "of286",
-            file_url: `${Deno.env.get("SUPABASE_URL")}/storage/v1/object/public/communication-attachments/${encodeURIComponent(path)}`,
-            file_name: att.filename,
-            stage: classified.stage === "of286_finance_signed" ? "finance_signed" : "original",
-            source_message_id: msg.id,
-            thread_id: thread.id,
-            ai_classification: classified as unknown as Record<string, unknown>,
-          });
+        // Resolve incident_id from thread (preferred) or via incident_truck
+        let incidentId: string | null = thread.incident_id ?? null;
+        if (!incidentId && thread.incident_truck_id) {
+          const { data: it } = await supabase
+            .from("incident_trucks")
+            .select("incident_id")
+            .eq("id", thread.incident_truck_id)
+            .maybeSingle();
+          incidentId = it?.incident_id ?? null;
+        }
+
+        if (incidentId) {
+          const isFinanceSigned = classified.stage === "of286_finance_signed";
+          const stage = isFinanceSigned ? "finance_signed" : "original";
+
+          const { data: docRow } = await supabase
+            .from("incident_documents")
+            .insert({
+              incident_id: incidentId,
+              organization_id: thread.organization_id,
+              incident_truck_id: thread.incident_truck_id ?? null,
+              document_type: "of286",
+              file_url: `${Deno.env.get("SUPABASE_URL")}/storage/v1/object/public/communication-attachments/${encodeURIComponent(path)}`,
+              file_name: att.filename,
+              stage,
+              source_message_id: msg.id,
+              thread_id: thread.id,
+              ai_classification: classified as unknown as Record<string, unknown>,
+            })
+            .select("id")
+            .single();
+
+          const title = isFinanceSigned
+            ? "OF-286 signed copy received"
+            : "OF-286 needs review & signature";
+          const body = isFinanceSigned
+            ? `${fromName || fromEmail} returned a signed OF-286. Review the final copy.`
+            : `${fromName || fromEmail} sent an OF-286. Review and sign to send back.`;
 
           await supabase.from("app_notifications").insert({
             organization_id: thread.organization_id,
             type: "of286_received",
-            title: "OF-286 received",
-            body: `${fromName || fromEmail} sent an OF-286 for your review.`,
+            title,
+            body,
             thread_id: thread.id,
-            incident_id: it.incident_id,
-            incident_truck_id: thread.incident_truck_id,
+            incident_id: incidentId,
+            incident_truck_id: thread.incident_truck_id ?? null,
+            incident_document_id: docRow?.id ?? null,
+            link_path: `/incidents/${incidentId}`,
           });
         }
       }
@@ -299,6 +320,7 @@ Deno.serve(async (req) => {
         body: `${fromName || fromEmail}: ${(payload.text ?? "").slice(0, 120)}`,
         thread_id: thread.id,
         incident_truck_id: thread.incident_truck_id ?? null,
+        link_path: `/messages/${thread.id}`,
       });
     }
 
