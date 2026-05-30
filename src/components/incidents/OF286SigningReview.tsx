@@ -81,6 +81,8 @@ export function OF286SigningReview({
         ]);
         if (cancelled) return;
         setAnchors(foundAnchors);
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        if (cancelled) return;
 
         const availableWidth = Math.max(320, (containerRef.current?.clientWidth ?? 640) - 24);
         const nextScales: Record<number, number> = {};
