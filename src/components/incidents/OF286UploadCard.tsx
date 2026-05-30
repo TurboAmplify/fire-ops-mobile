@@ -690,15 +690,16 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
         )}
       </div>
 
-      <SignaturePicker
-        open={signatureOpen}
+      <OF286SigningReview
+        open={!!signingDoc && !!signingSourceUrl}
+        sourceUrl={signingSourceUrl}
+        defaultName={user?.email ?? ""}
+        returningToSender={!!signingDoc?.thread_id}
         onClose={() => {
-          setSignatureOpen(false);
+          setSigningSourceUrl(null);
           setSigningDoc(null);
         }}
-        onSave={handleSignatureSave}
-        title="Sign OF-286"
-        defaultName={user?.email ?? ""}
+        onComplete={handleSignatureSave}
       />
     </div>
   );
