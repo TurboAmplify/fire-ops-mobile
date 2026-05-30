@@ -90,7 +90,7 @@ function withFallbackFields(anchors: PageAnchors): PageAnchors {
  * We anchor to those text labels (case-insensitive) so the placement adapts to
  * any agency variant of the form, regardless of margins or scaling.
  */
-async function findOf286Anchors(pdfBytes: Uint8Array): Promise<PageAnchors[]> {
+export async function findOf286Anchors(pdfBytes: Uint8Array): Promise<PageAnchors[]> {
   const doc = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
   const results: PageAnchors[] = [];
 
@@ -217,10 +217,36 @@ async function findOf286Anchors(pdfBytes: Uint8Array): Promise<PageAnchors[]> {
       };
     }
 
-    results.push(anchors);
+    results.push(withFallbackFields(anchors));
   }
 
   return results;
+}
+
+export async function getOf286PageAnchorsFromUrl(sourceUrl: string): Promise<PageAnchors[]> {
+  const sourceRes = await fetch(sourceUrl);
+  if (!sourceRes.ok) throw new Error("Could not download source document");
+  const sourceBytes = new Uint8Array(await sourceRes.arrayBuffer());
+  const isPdf =
+    sourceBytes[0] === 0x25 &&
+    sourceBytes[1] === 0x50 &&
+    sourceBytes[2] === 0x44 &&
+    sourceBytes[3] === 0x46;
+
+  if (!isPdf) {
+    return [getOf286FallbackFields(0, 612, 792)];
+  }
+
+  try {
+    return await findOf286Anchors(sourceBytes);
+  } catch (err) {
+    console.warn("[pdf-sign] Anchor extraction failed:", err);
+    const pdfDoc = await PDFDocument.load(sourceBytes);
+    return pdfDoc.getPages().map((page, pageIndex) => {
+      const { width, height } = page.getSize();
+      return getOf286FallbackFields(pageIndex, width, height);
+    });
+  }
 }
 
 /**
