@@ -181,12 +181,13 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
     signerName: string;
     dateText: string;
     placements: { signatureBox: BoxRect; dateBox: BoxRect; nameBox: BoxRect };
+    placementsByPage: { signatureBox: BoxRect; dateBox: BoxRect; nameBox: BoxRect }[];
   }) => {
     if (!signingDoc || !membership?.organizationId) {
       setSigningSourceUrl(null);
       return;
     }
-    const { signatureBlob: sigBlob, metadata, signerName, dateText, placements } = payload;
+    const { signatureBlob: sigBlob, metadata, signerName, dateText, placements, placementsByPage } = payload;
     setSigningSourceUrl(null);
     setStamping(true);
     try {
@@ -203,6 +204,7 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
         signedAt,
         dateText,
         placements,
+        placementsByPage,
       });
 
       const baseName = signingDoc.file_name.replace(/\.[^.]+$/, "");
