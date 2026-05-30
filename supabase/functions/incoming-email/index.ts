@@ -387,6 +387,44 @@ async function fetchAsBase64(url: string): Promise<string | null> {
   }
 }
 
+async function loadInboundAttachments(payload: ResendInbound): Promise<NormalizedAttachment[]> {
+  const out: NormalizedAttachment[] = [];
+  const seen = new Set<string>();
+  for (const att of payload.attachments ?? []) {
+    const base64 = att.content_base64 ?? (att.download_url ? await fetchAsBase64(att.download_url) : att.url ? await fetchAsBase64(att.url) : null);
+    if (!base64) continue;
+    const key = att.id ?? att.filename;
+    seen.add(key);
+    out.push({ id: att.id, filename: att.filename, content_type: att.content_type, base64 });
+  }
+  if (!payload.email_id) return out;
+  const metas = await listReceivedAttachments(payload.email_id);
+  for (const att of metas) {
+    const key = att.id ?? att.filename;
+    if (seen.has(key) || !att.download_url) continue;
+    const base64 = await fetchAsBase64(att.download_url);
+    if (!base64) continue;
+    seen.add(key);
+    out.push({ id: att.id, filename: att.filename, content_type: att.content_type ?? "application/octet-stream", base64, size: att.size });
+  }
+  return out;
+}
+
+async function listReceivedAttachments(emailId: string): Promise<Array<{ id?: string; filename: string; content_type?: string; size?: number; download_url?: string }>> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY_1") ?? Deno.env.get("RESEND_API_KEY");
+  if (!LOVABLE_API_KEY || !RESEND_API_KEY) return [];
+  const resp = await fetch(`${RESEND_GATEWAY_URL}/emails/receiving/${encodeURIComponent(emailId)}/attachments`, {
+    headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "X-Connection-Api-Key": RESEND_API_KEY },
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) {
+    console.error("incoming-email: failed to list received attachments", resp.status, data);
+    return [];
+  }
+  return Array.isArray(data?.data) ? data.data : [];
+}
+
 function extractEmail(s: string): string | null {
   const m = s.match(/<([^>]+)>/) || s.match(/([\w.+-]+@[\w.-]+)/);
   return m ? m[1] : null;
