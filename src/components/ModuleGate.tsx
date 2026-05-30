@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useAppMode, type ModuleFlags } from "@/lib/app-mode";
 import { useOrganization } from "@/hooks/useOrganization";
+import { useImpersonation } from "@/hooks/useImpersonation";
 import { Loader2 } from "lucide-react";
 
 export function ModuleGate({ module, children }: { module: keyof ModuleFlags; children: ReactNode }) {
@@ -19,7 +20,8 @@ export function ModuleGate({ module, children }: { module: keyof ModuleFlags; ch
 
 export function AdminGate({ children }: { children: ReactNode }) {
   const { isAdmin, loading } = useOrganization();
-  if (loading) {
+  const { isImpersonating, loading: impersonationLoading } = useImpersonation();
+  if (loading || impersonationLoading || (isImpersonating && !isAdmin)) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
