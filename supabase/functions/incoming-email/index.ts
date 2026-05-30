@@ -3,6 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { parseReplyToken } from "../_shared/tokens.ts";
 
+const RESEND_GATEWAY_URL = "https://connector-gateway.lovable.dev/resend";
+
 interface ResendInboundAttachment {
   id?: string;
   filename: string;
