@@ -269,7 +269,7 @@ Deno.serve(async (req) => {
             organization_id: thread.organization_id,
             incident_truck_id: thread.incident_truck_id,
             document_type: "of286",
-            file_url: path,
+            file_url: `${Deno.env.get("SUPABASE_URL")}/storage/v1/object/public/communication-attachments/${encodeURIComponent(path)}`,
             file_name: att.filename,
             stage: classified.stage === "of286_finance_signed" ? "finance_signed" : "original",
             source_message_id: msg.id,
