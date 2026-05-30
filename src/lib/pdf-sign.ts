@@ -6,20 +6,77 @@ import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
 (pdfjsLib as any).GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
-interface BoxRect {
+export interface BoxRect {
   x: number; // PDF-space, origin bottom-left
   y: number;
   w: number;
   h: number;
 }
 
-interface PageAnchors {
+export interface PageAnchors {
   pageIndex: number;
   pageWidth: number;
   pageHeight: number;
   signatureBox?: BoxRect;
   dateBox?: BoxRect;
   nameBox?: BoxRect;
+}
+
+export function getOf286FallbackFields(
+  pageIndex: number,
+  pageWidth: number,
+  pageHeight: number,
+): PageAnchors {
+  const formLeft = pageWidth * 0.045;
+  const signatureW = pageWidth * 0.32;
+  const dateX = pageWidth * 0.37;
+  const dateW = pageWidth * 0.145;
+  const nameW = pageWidth * 0.48;
+
+  // Standard OF-286 has a footer below the signature block. Keep the fields
+  // above the footer, not down at the page edge.
+  const nameRowBottom = Math.max(54, pageHeight * 0.115);
+  const nameRowH = Math.max(26, pageHeight * 0.055);
+  const sigRowBottom = nameRowBottom + nameRowH;
+  const sigRowH = Math.max(28, pageHeight * 0.062);
+
+  return {
+    pageIndex,
+    pageWidth,
+    pageHeight,
+    signatureBox: {
+      x: formLeft + 4,
+      y: sigRowBottom + 3,
+      w: signatureW - 8,
+      h: sigRowH - 6,
+    },
+    dateBox: {
+      x: dateX + 4,
+      y: sigRowBottom + 9,
+      w: dateW - 8,
+      h: 14,
+    },
+    nameBox: {
+      x: formLeft + 4,
+      y: nameRowBottom + 7,
+      w: nameW - 8,
+      h: 14,
+    },
+  };
+}
+
+function withFallbackFields(anchors: PageAnchors): PageAnchors {
+  const fallback = getOf286FallbackFields(
+    anchors.pageIndex,
+    anchors.pageWidth,
+    anchors.pageHeight,
+  );
+  return {
+    ...anchors,
+    signatureBox: anchors.signatureBox ?? fallback.signatureBox,
+    dateBox: anchors.dateBox ?? fallback.dateBox,
+    nameBox: anchors.nameBox ?? fallback.nameBox,
+  };
 }
 
 /**
