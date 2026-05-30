@@ -20,6 +20,8 @@ export interface IncidentDocument {
   created_at: string;
   of286_invoice_total: number | null;
   of286_entered_at: string | null;
+  thread_id: string | null;
+  source_message_id: string | null;
 }
 
 export interface IncidentDocumentAuditEntry {

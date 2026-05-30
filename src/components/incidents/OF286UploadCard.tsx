@@ -19,6 +19,7 @@ import { SignedLink } from "@/components/ui/SignedLink";
 import { SignaturePicker, type SignatureMetadata } from "@/components/shift-tickets/SignaturePicker";
 import { stampSignatureOntoPdf, downloadBlob } from "@/lib/pdf-sign";
 import { getViewableUrl } from "@/lib/storage-url";
+import { supabase } from "@/integrations/supabase/client";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -27,10 +28,12 @@ import {
   Clock,
   Download,
   DollarSign,
+  Eye,
   FileSignature,
   FileText,
   Loader2,
   Pencil,
+  Send,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -210,9 +213,38 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
         signed_at: signedAt.toISOString(),
       });
 
-      // Auto-download for the user to email to finance.
-      downloadBlob(signedPdf, signedFileName);
-      toast.success("Signed and downloaded — send to finance");
+      // If the original arrived via email, return the signed copy to the sender
+      // as an email reply with the signed PDF attached. Otherwise, fall back to
+      // the legacy "download so the user can email finance" flow.
+      if (signingDoc.thread_id) {
+        try {
+          const safeName = signedFileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+          const path = `${membership.organizationId}/${signingDoc.thread_id}/signed-${crypto.randomUUID()}-${safeName}`;
+          const { error: upErr } = await supabase.storage
+            .from("communication-attachments")
+            .upload(path, signedPdf, { contentType: "application/pdf", upsert: false });
+          if (upErr) throw upErr;
+
+          const { error: sendErr } = await supabase.functions.invoke("send-thread-reply", {
+            body: {
+              thread_id: signingDoc.thread_id,
+              body_text: `Signed OF-286 attached.\n\nSigned by ${signerName} on ${signedAt.toLocaleString()}.`,
+              attachment_paths: [path],
+            },
+          });
+          if (sendErr) throw sendErr;
+          toast.success("Signed and returned to sender");
+        } catch (e: any) {
+          console.error("return-to-sender failed", e);
+          downloadBlob(signedPdf, signedFileName);
+          toast.error(
+            `Signed, but could not auto-send: ${e?.message ?? "unknown error"}. Downloaded instead.`,
+          );
+        }
+      } else {
+        downloadBlob(signedPdf, signedFileName);
+        toast.success("Signed and downloaded — send to finance");
+      }
     } catch (err: any) {
       toast.error(err?.message || "Failed to sign document");
     } finally {
@@ -396,18 +428,42 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
                   {/* Stage-specific actions */}
                   <div className="flex flex-wrap gap-2">
                     {stage === "original" && (
-                      <button
-                        onClick={() => beginSign(doc)}
-                        disabled={stamping}
-                        className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-[11px] font-bold text-primary-foreground touch-target disabled:opacity-40"
-                      >
-                        {stamping ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <FileSignature className="h-3 w-3" />
-                        )}
-                        {contractorSigned ? "Re-sign & download" : "Sign & download"}
-                      </button>
+                      <>
+                        <button
+                          onClick={async () => {
+                            const url = await getViewableUrl(doc.file_url);
+                            if (!url) {
+                              toast.error("Could not open document");
+                              return;
+                            }
+                            window.open(url, "_blank", "noopener,noreferrer");
+                          }}
+                          className="flex items-center gap-1 rounded-md bg-secondary px-2.5 py-1 text-[11px] font-bold text-secondary-foreground touch-target"
+                        >
+                          <Eye className="h-3 w-3" />
+                          Review
+                        </button>
+                        <button
+                          onClick={() => beginSign(doc)}
+                          disabled={stamping}
+                          className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-[11px] font-bold text-primary-foreground touch-target disabled:opacity-40"
+                        >
+                          {stamping ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : doc.thread_id ? (
+                            <Send className="h-3 w-3" />
+                          ) : (
+                            <FileSignature className="h-3 w-3" />
+                          )}
+                          {doc.thread_id
+                            ? contractorSigned
+                              ? "Re-sign & return"
+                              : "Sign & return to sender"
+                            : contractorSigned
+                              ? "Re-sign & download"
+                              : "Sign & download"}
+                        </button>
+                      </>
                     )}
                     {stage === "contractor_signed" && (
                       <button
