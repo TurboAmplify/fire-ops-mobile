@@ -275,65 +275,87 @@ export async function stampSignatureOntoPdf(opts: {
     };
   };
 
+  // Layout-based fallback for OF-286 pages that have no text layer (scanned /
+  // image-only PDFs). The signature block on a standard OF-286 sits at the
+  // very bottom of every page in this arrangement (fractions of page width):
+  //   [ 30. CONTRACTOR SIG  | 31. DATE | 32. RECEIVING OFFICER | 33. DATE ]
+  //   [ 34. PRINT NAME & TITLE        | 35. PRINT NAME & TITLE          ]
+  // Cell 30 occupies roughly the left ~28% of the page width; cell 31 the
+  // next ~13%. The two-row block sits in the bottom ~9% of the page.
+  const stampContractorBlockFallback = (page: any) => {
+    const { width: pw, height: ph } = page.getSize();
+    // Bottom of cell-34 row (printed name) and bottom of cell-30 row (sig).
+    const nameRowBottom = Math.max(20, ph * 0.025);
+    const sigRowBottom = nameRowBottom + Math.max(14, ph * 0.022);
+    const rowHeight = Math.max(12, ph * 0.022);
+
+    // Signature inside cell 30
+    const sigBox: BoxRect = {
+      x: pw * 0.025,
+      y: sigRowBottom,
+      w: pw * 0.26,
+      h: rowHeight,
+    };
+    const fit = fitImage(sigBox);
+    page.drawImage(sigImage, { x: fit.x, y: fit.y, width: fit.w, height: fit.h });
+
+    // Date inside cell 31 (just to the right of the signature)
+    page.drawText(dateStr, {
+      x: pw * 0.30,
+      y: sigRowBottom + 3,
+      size: 9,
+      font: helv,
+      color: rgb(0, 0, 0),
+    });
+
+    // Printed name inside cell 34
+    page.drawText(signerName, {
+      x: pw * 0.025 + 3,
+      y: nameRowBottom + 3,
+      size: 9,
+      font: helv,
+      color: rgb(0, 0, 0),
+    });
+  };
+
   let stampedAny = false;
   for (let i = 0; i < pages.length; i++) {
     const page = pages[i];
     const anchors = anchorsList[i];
 
-    // Skip pages that don't have an OF-286 signature row (e.g. addendum
-    // pages like the Deductions/Additions sheet).
-    if (!anchors?.signatureBox && !anchors?.nameBox) continue;
-
-    if (anchors?.signatureBox) {
-      const fit = fitImage(anchors.signatureBox);
-      page.drawImage(sigImage, { x: fit.x, y: fit.y, width: fit.w, height: fit.h });
+    if (anchors?.signatureBox || anchors?.nameBox) {
+      if (anchors?.signatureBox) {
+        const fit = fitImage(anchors.signatureBox);
+        page.drawImage(sigImage, { x: fit.x, y: fit.y, width: fit.w, height: fit.h });
+      }
+      if (anchors?.dateBox) {
+        page.drawText(dateStr, {
+          x: anchors.dateBox.x + 2,
+          y: anchors.dateBox.y + 2,
+          size: 9,
+          font: helv,
+          color: rgb(0, 0, 0),
+        });
+      }
+      if (anchors?.nameBox) {
+        page.drawText(signerName, {
+          x: anchors.nameBox.x + 3,
+          y: anchors.nameBox.y + 3,
+          size: 9,
+          font: helv,
+          color: rgb(0, 0, 0),
+        });
+      }
+      stampedAny = true;
+    } else {
+      // No text-layer anchors on this page — use layout fallback so the
+      // signature still lands in the CONTRACTOR cells (30/31/34), not the
+      // officer cells (32/33/35), and stamps EVERY page (not just the last).
+      stampContractorBlockFallback(page);
+      stampedAny = true;
     }
-
-    if (anchors?.dateBox) {
-      page.drawText(dateStr, {
-        x: anchors.dateBox.x + 2,
-        y: anchors.dateBox.y + 2,
-        size: 9,
-        font: helv,
-        color: rgb(0, 0, 0),
-      });
-    }
-
-    if (anchors?.nameBox) {
-      page.drawText(signerName, {
-        x: anchors.nameBox.x + 3,
-        y: anchors.nameBox.y + 3,
-        size: 9,
-        font: helv,
-        color: rgb(0, 0, 0),
-      });
-    }
-
-    stampedAny = true;
   }
 
-
-  // If anchor extraction failed across the board (e.g. scanned image PDF
-  // with no text layer), fall back to stamping the last page bottom-right
-  // so the signature still ends up *somewhere* visible.
-  if (!stampedAny) {
-    const page = pages[pages.length - 1];
-    const { width: pw } = page.getSize();
-    const sigW = Math.min(180, pw * 0.28);
-    const sigH = sigW * (sigImage.height / sigImage.width);
-    page.drawImage(sigImage, {
-      x: pw - sigW - 30,
-      y: 60,
-      width: sigW,
-      height: sigH,
-    });
-    page.drawText(`${signerName}  •  ${dateStr}`, {
-      x: pw - sigW - 30,
-      y: 48,
-      size: 9,
-      font: helv,
-    });
-  }
 
   const out = await pdfDoc.save();
   return new Blob([out.slice().buffer as ArrayBuffer], { type: "application/pdf" });
