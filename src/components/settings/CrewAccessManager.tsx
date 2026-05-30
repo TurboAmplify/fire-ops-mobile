@@ -16,14 +16,17 @@ export function CrewAccessManager() {
     queryKey: ["org-crew-list", orgId],
     enabled: !!orgId && isAdmin,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("organization_members")
-        .select("user_id, role, profiles(full_name)")
-        .eq("organization_id", orgId!)
-        .eq("role", "crew")
-        .order("created_at", { ascending: true });
+      const { data, error } = await supabase.rpc("list_org_members_with_identity", {
+        _org_id: orgId!,
+      });
       if (error) throw error;
-      return data ?? [];
+      return (data ?? [])
+        .filter((member: any) => member.role === "crew")
+        .map((member: any) => ({
+          user_id: member.user_id,
+          role: member.role,
+          profiles: { full_name: member.full_name ?? member.email ?? "Unnamed" },
+        }));
     },
   });
 
