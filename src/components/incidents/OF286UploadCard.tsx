@@ -428,18 +428,42 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
                   {/* Stage-specific actions */}
                   <div className="flex flex-wrap gap-2">
                     {stage === "original" && (
-                      <button
-                        onClick={() => beginSign(doc)}
-                        disabled={stamping}
-                        className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-[11px] font-bold text-primary-foreground touch-target disabled:opacity-40"
-                      >
-                        {stamping ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <FileSignature className="h-3 w-3" />
-                        )}
-                        {contractorSigned ? "Re-sign & download" : "Sign & download"}
-                      </button>
+                      <>
+                        <button
+                          onClick={async () => {
+                            const url = await getViewableUrl(doc.file_url);
+                            if (!url) {
+                              toast.error("Could not open document");
+                              return;
+                            }
+                            window.open(url, "_blank", "noopener,noreferrer");
+                          }}
+                          className="flex items-center gap-1 rounded-md bg-secondary px-2.5 py-1 text-[11px] font-bold text-secondary-foreground touch-target"
+                        >
+                          <Eye className="h-3 w-3" />
+                          Review
+                        </button>
+                        <button
+                          onClick={() => beginSign(doc)}
+                          disabled={stamping}
+                          className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-[11px] font-bold text-primary-foreground touch-target disabled:opacity-40"
+                        >
+                          {stamping ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : doc.thread_id ? (
+                            <Send className="h-3 w-3" />
+                          ) : (
+                            <FileSignature className="h-3 w-3" />
+                          )}
+                          {doc.thread_id
+                            ? contractorSigned
+                              ? "Re-sign & return"
+                              : "Sign & return to sender"
+                            : contractorSigned
+                              ? "Re-sign & download"
+                              : "Sign & download"}
+                        </button>
+                      </>
                     )}
                     {stage === "contractor_signed" && (
                       <button
