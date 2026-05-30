@@ -61,23 +61,32 @@ async function findOf286Anchors(pdfBytes: Uint8Array): Promise<PageAnchors[]> {
     const findFirst = (re: RegExp) => items.find((i) => re.test(i.str));
 
     // Concatenate adjacent items so multi-fragment labels still match.
+    // pdfjs commonly splits "30. CONTRACTOR SIGNATURE" into three runs
+    // (["30.", "CONTRACTOR", "SIGNATURE"]), so we slide windows of up to
+    // 5 adjacent items.
     const findCompound = (re: RegExp) => {
-      // try single
       const single = findFirst(re);
       if (single) return single;
-      // try pairs (rare for OF-286 but cheap)
-      for (let i = 0; i < items.length - 1; i++) {
-        const merged = `${items[i].str} ${items[i + 1].str}`;
-        if (re.test(merged)) {
-          return {
-            ...items[i],
-            str: merged,
-            w: (items[i + 1].x + items[i + 1].w) - items[i].x,
-          };
+      for (let win = 2; win <= 5; win++) {
+        for (let i = 0; i <= items.length - win; i++) {
+          const slice = items.slice(i, i + win);
+          // Only merge items that sit on (roughly) the same baseline.
+          const baseY = slice[0].y;
+          if (slice.some((s) => Math.abs(s.y - baseY) > 3)) continue;
+          const merged = slice.map((s) => s.str).join(" ");
+          if (re.test(merged)) {
+            const last = slice[slice.length - 1];
+            return {
+              ...slice[0],
+              str: merged,
+              w: last.x + last.w - slice[0].x,
+            };
+          }
         }
       }
       return undefined;
     };
+
 
     const labelSig = findCompound(/^30\.?\s*CONTRACTOR\s*SIGNATURE/i);
     const labelDate = findCompound(/^31\.?\s*DATE/i);
@@ -245,17 +254,22 @@ export async function stampSignatureOntoPdf(opts: {
     console.warn("[pdf-sign] Anchor extraction failed:", err);
   }
 
+  // Fit signature into the cell, anchored to the bottom-left so it sits
+  // on the signature line rather than floating in the middle of the cell.
   const fitImage = (box: BoxRect) => {
     const aspect = sigImage.width / sigImage.height;
-    let w = box.w;
+    // Leave a little breathing room inside the cell.
+    const maxW = Math.max(20, box.w - 6);
+    const maxH = Math.max(10, box.h - 4);
+    let w = maxW;
     let h = w / aspect;
-    if (h > box.h) {
-      h = box.h;
+    if (h > maxH) {
+      h = maxH;
       w = h * aspect;
     }
     return {
-      x: box.x + (box.w - w) / 2,
-      y: box.y + (box.h - h) / 2,
+      x: box.x + 3,
+      y: box.y + 2,
       w,
       h,
     };
@@ -279,7 +293,7 @@ export async function stampSignatureOntoPdf(opts: {
       page.drawText(dateStr, {
         x: anchors.dateBox.x + 2,
         y: anchors.dateBox.y + 2,
-        size: 10,
+        size: 9,
         font: helv,
         color: rgb(0, 0, 0),
       });
@@ -287,8 +301,8 @@ export async function stampSignatureOntoPdf(opts: {
 
     if (anchors?.nameBox) {
       page.drawText(signerName, {
-        x: anchors.nameBox.x + 2,
-        y: anchors.nameBox.y + Math.max(2, anchors.nameBox.h * 0.25),
+        x: anchors.nameBox.x + 3,
+        y: anchors.nameBox.y + 3,
         size: 9,
         font: helv,
         color: rgb(0, 0, 0),
@@ -297,6 +311,7 @@ export async function stampSignatureOntoPdf(opts: {
 
     stampedAny = true;
   }
+
 
   // If anchor extraction failed across the board (e.g. scanned image PDF
   // with no text layer), fall back to stamping the last page bottom-right
