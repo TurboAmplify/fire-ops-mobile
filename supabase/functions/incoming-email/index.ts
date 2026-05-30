@@ -4,13 +4,16 @@ import { corsHeaders } from "../_shared/cors.ts";
 import { parseReplyToken } from "../_shared/tokens.ts";
 
 interface ResendInboundAttachment {
+  id?: string;
   filename: string;
   content_type: string;
   content_base64?: string;
   url?: string;
+  download_url?: string;
 }
 
 interface ResendInbound {
+  email_id?: string;
   from?: string;
   to?: string[];
   cc?: string[];
@@ -21,6 +24,14 @@ interface ResendInbound {
   in_reply_to?: string;
   references?: string[];
   attachments?: ResendInboundAttachment[];
+}
+
+interface NormalizedAttachment {
+  id?: string;
+  filename: string;
+  content_type: string;
+  base64: string;
+  size?: number;
 }
 
 Deno.serve(async (req) => {
