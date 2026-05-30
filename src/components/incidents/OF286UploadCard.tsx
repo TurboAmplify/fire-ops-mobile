@@ -16,8 +16,10 @@ import {
 import { useOrganization } from "@/hooks/useOrganization";
 import { useAuth } from "@/hooks/useAuth";
 import { SignedLink } from "@/components/ui/SignedLink";
-import { SignaturePicker, type SignatureMetadata } from "@/components/shift-tickets/SignaturePicker";
+import type { SignatureMetadata } from "@/components/shift-tickets/SignaturePicker";
+import { OF286SigningReview } from "@/components/incidents/OF286SigningReview";
 import { stampSignatureOntoPdf, downloadBlob } from "@/lib/pdf-sign";
+import type { BoxRect } from "@/lib/pdf-sign";
 import { getViewableUrl } from "@/lib/storage-url";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -70,7 +72,7 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
     null,
   );
   const [signingDoc, setSigningDoc] = useState<IncidentDocument | null>(null);
-  const [signatureOpen, setSignatureOpen] = useState(false);
+  const [signingSourceUrl, setSigningSourceUrl] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [editingTotalId, setEditingTotalId] = useState<string | null>(null);
   const [totalDraft, setTotalDraft] = useState("");
@@ -162,30 +164,47 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
   };
 
   // ------- Contractor signing flow -------
-  const beginSign = (doc: IncidentDocument) => {
-    setSigningDoc(doc);
-    setSignatureOpen(true);
+  const beginSign = async (doc: IncidentDocument) => {
+    try {
+      const sourceUrl = await getViewableUrl(doc.file_url);
+      if (!sourceUrl) throw new Error("Could not access source document");
+      setSigningDoc(doc);
+      setSigningSourceUrl(sourceUrl);
+    } catch (err: any) {
+      toast.error(err?.message || "Could not open document");
+    }
   };
 
-  const handleSignatureSave = async (sigBlob: Blob, metadata: SignatureMetadata) => {
+  const handleSignatureSave = async (payload: {
+    signatureBlob: Blob;
+    metadata: SignatureMetadata;
+    signerName: string;
+    dateText: string;
+    placements: { signatureBox: BoxRect; dateBox: BoxRect; nameBox: BoxRect };
+    placementsByPage: { signatureBox: BoxRect; dateBox: BoxRect; nameBox: BoxRect }[];
+  }) => {
     if (!signingDoc || !membership?.organizationId) {
-      setSignatureOpen(false);
+      setSigningSourceUrl(null);
       return;
     }
-    setSignatureOpen(false);
+    const { signatureBlob: sigBlob, metadata, signerName, dateText, placements, placementsByPage } = payload;
+    setSigningSourceUrl(null);
     setStamping(true);
     try {
-      const sourceUrl = await getViewableUrl(signingDoc.file_url);
+      const sourceUrl = signingSourceUrl || await getViewableUrl(signingDoc.file_url);
       if (!sourceUrl) throw new Error("Could not access source document");
 
-      const signerName =
-        metadata.name?.trim() || user?.email || "Contractor";
+      const finalSignerName =
+        signerName || metadata.name?.trim() || user?.email || "Contractor";
       const signedAt = new Date();
       const signedPdf = await stampSignatureOntoPdf({
         sourceUrl,
         signaturePngBlob: sigBlob,
-        signerName,
+        signerName: finalSignerName,
         signedAt,
+        dateText,
+        placements,
+        placementsByPage,
       });
 
       const baseName = signingDoc.file_name.replace(/\.[^.]+$/, "");
@@ -231,7 +250,7 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
         file_url: fileUrl,
         file_name: signedFileName,
         signature_url: sigUrl,
-        signed_by_name: signerName,
+        signed_by_name: finalSignerName,
         signed_at: signedAt.toISOString(),
       });
 
@@ -250,7 +269,7 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
           const { error: sendErr } = await supabase.functions.invoke("send-thread-reply", {
             body: {
               thread_id: signingDoc.thread_id,
-              body_text: `Signed OF-286 attached.\n\nSigned by ${signerName} on ${signedAt.toLocaleString()}.`,
+              body_text: `Signed OF-286 attached.\n\nSigned by ${finalSignerName} on ${signedAt.toLocaleString()}.`,
               attachment_paths: [path],
             },
           });
@@ -673,15 +692,16 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
         )}
       </div>
 
-      <SignaturePicker
-        open={signatureOpen}
+      <OF286SigningReview
+        open={!!signingDoc && !!signingSourceUrl}
+        sourceUrl={signingSourceUrl}
+        defaultName={user?.email ?? ""}
+        returningToSender={!!signingDoc?.thread_id}
         onClose={() => {
-          setSignatureOpen(false);
+          setSigningSourceUrl(null);
           setSigningDoc(null);
         }}
-        onSave={handleSignatureSave}
-        title="Sign OF-286"
-        defaultName={user?.email ?? ""}
+        onComplete={handleSignatureSave}
       />
     </div>
   );

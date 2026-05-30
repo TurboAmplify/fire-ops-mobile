@@ -6,20 +6,77 @@ import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
 (pdfjsLib as any).GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
-interface BoxRect {
+export interface BoxRect {
   x: number; // PDF-space, origin bottom-left
   y: number;
   w: number;
   h: number;
 }
 
-interface PageAnchors {
+export interface PageAnchors {
   pageIndex: number;
   pageWidth: number;
   pageHeight: number;
   signatureBox?: BoxRect;
   dateBox?: BoxRect;
   nameBox?: BoxRect;
+}
+
+export function getOf286FallbackFields(
+  pageIndex: number,
+  pageWidth: number,
+  pageHeight: number,
+): PageAnchors {
+  const formLeft = pageWidth * 0.045;
+  const signatureW = pageWidth * 0.32;
+  const dateX = pageWidth * 0.37;
+  const dateW = pageWidth * 0.145;
+  const nameW = pageWidth * 0.48;
+
+  // Standard OF-286 has a footer below the signature block. Keep the fields
+  // above the footer, not down at the page edge.
+  const nameRowBottom = Math.max(54, pageHeight * 0.115);
+  const nameRowH = Math.max(26, pageHeight * 0.055);
+  const sigRowBottom = nameRowBottom + nameRowH;
+  const sigRowH = Math.max(28, pageHeight * 0.062);
+
+  return {
+    pageIndex,
+    pageWidth,
+    pageHeight,
+    signatureBox: {
+      x: formLeft + 4,
+      y: sigRowBottom + 3,
+      w: signatureW - 8,
+      h: sigRowH - 6,
+    },
+    dateBox: {
+      x: dateX + 4,
+      y: sigRowBottom + 9,
+      w: dateW - 8,
+      h: 14,
+    },
+    nameBox: {
+      x: formLeft + 4,
+      y: nameRowBottom + 7,
+      w: nameW - 8,
+      h: 14,
+    },
+  };
+}
+
+function withFallbackFields(anchors: PageAnchors): PageAnchors {
+  const fallback = getOf286FallbackFields(
+    anchors.pageIndex,
+    anchors.pageWidth,
+    anchors.pageHeight,
+  );
+  return {
+    ...anchors,
+    signatureBox: anchors.signatureBox ?? fallback.signatureBox,
+    dateBox: anchors.dateBox ?? fallback.dateBox,
+    nameBox: anchors.nameBox ?? fallback.nameBox,
+  };
 }
 
 /**
@@ -33,7 +90,7 @@ interface PageAnchors {
  * We anchor to those text labels (case-insensitive) so the placement adapts to
  * any agency variant of the form, regardless of margins or scaling.
  */
-async function findOf286Anchors(pdfBytes: Uint8Array): Promise<PageAnchors[]> {
+export async function findOf286Anchors(pdfBytes: Uint8Array): Promise<PageAnchors[]> {
   const doc = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
   const results: PageAnchors[] = [];
 
@@ -160,10 +217,36 @@ async function findOf286Anchors(pdfBytes: Uint8Array): Promise<PageAnchors[]> {
       };
     }
 
-    results.push(anchors);
+    results.push(withFallbackFields(anchors));
   }
 
   return results;
+}
+
+export async function getOf286PageAnchorsFromUrl(sourceUrl: string): Promise<PageAnchors[]> {
+  const sourceRes = await fetch(sourceUrl);
+  if (!sourceRes.ok) throw new Error("Could not download source document");
+  const sourceBytes = new Uint8Array(await sourceRes.arrayBuffer());
+  const isPdf =
+    sourceBytes[0] === 0x25 &&
+    sourceBytes[1] === 0x50 &&
+    sourceBytes[2] === 0x44 &&
+    sourceBytes[3] === 0x46;
+
+  if (!isPdf) {
+    return [getOf286FallbackFields(0, 612, 792)];
+  }
+
+  try {
+    return await findOf286Anchors(sourceBytes);
+  } catch (err) {
+    console.warn("[pdf-sign] Anchor extraction failed:", err);
+    const pdfDoc = await PDFDocument.load(sourceBytes);
+    return pdfDoc.getPages().map((page, pageIndex) => {
+      const { width, height } = page.getSize();
+      return getOf286FallbackFields(pageIndex, width, height);
+    });
+  }
 }
 
 /**
@@ -182,8 +265,11 @@ export async function stampSignatureOntoPdf(opts: {
   signaturePngBlob: Blob;
   signerName: string;
   signedAt: Date;
+  dateText?: string;
+  placements?: Partial<Pick<PageAnchors, "signatureBox" | "dateBox" | "nameBox">>;
+  placementsByPage?: Partial<Pick<PageAnchors, "signatureBox" | "dateBox" | "nameBox">>[];
 }): Promise<Blob> {
-  const { sourceUrl, signaturePngBlob, signerName, signedAt } = opts;
+  const { sourceUrl, signaturePngBlob, signerName, signedAt, dateText, placements, placementsByPage } = opts;
 
   const sourceRes = await fetch(sourceUrl);
   if (!sourceRes.ok) throw new Error("Could not download source document");
@@ -216,7 +302,7 @@ export async function stampSignatureOntoPdf(opts: {
   const sigImage = await pdfDoc.embedPng(sigBytes);
   const helv = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-  const dateStr = signedAt.toLocaleDateString("en-US", {
+  const dateStr = dateText || signedAt.toLocaleDateString("en-US", {
     month: "2-digit",
     day: "2-digit",
     year: "numeric",
@@ -227,17 +313,27 @@ export async function stampSignatureOntoPdf(opts: {
   if (isImageFallback) {
     const page = pages[0];
     const { width: pw } = page.getSize();
-    const sigW = Math.min(220, pw * 0.32);
+    const fields = getOf286FallbackFields(0, pw, page.getSize().height);
+    const sigBox = placements?.signatureBox ?? fields.signatureBox!;
+    const dateBox = placements?.dateBox ?? fields.dateBox!;
+    const nameBox = placements?.nameBox ?? fields.nameBox!;
+    const sigW = Math.min(sigBox.w, sigBox.h * (sigImage.width / sigImage.height));
     const sigH = sigW * (sigImage.height / sigImage.width);
     page.drawImage(sigImage, {
-      x: pw - sigW - 24,
-      y: 38 + 14,
+      x: sigBox.x,
+      y: sigBox.y,
       width: sigW,
       height: sigH,
     });
-    page.drawText(`${signerName}  •  ${signedAt.toLocaleString()}`, {
-      x: pw - sigW - 24,
-      y: 38,
+    page.drawText(dateStr, {
+      x: dateBox.x,
+      y: dateBox.y,
+      size: 9,
+      font: helv,
+    });
+    page.drawText(signerName, {
+      x: nameBox.x,
+      y: nameBox.y,
       size: 8,
       font: helv,
     });
@@ -259,8 +355,8 @@ export async function stampSignatureOntoPdf(opts: {
   const fitImage = (box: BoxRect) => {
     const aspect = sigImage.width / sigImage.height;
     // Leave a little breathing room inside the cell.
-    const maxW = Math.max(20, box.w - 6);
-    const maxH = Math.max(10, box.h - 4);
+    const maxW = Math.max(20, box.w - 4);
+    const maxH = Math.max(10, box.h - 2);
     let w = maxW;
     let h = w / aspect;
     if (h > maxH) {
@@ -268,8 +364,8 @@ export async function stampSignatureOntoPdf(opts: {
       w = h * aspect;
     }
     return {
-      x: box.x + 3,
-      y: box.y + 2,
+      x: box.x + 2,
+      y: box.y + 1,
       w,
       h,
     };
@@ -284,34 +380,22 @@ export async function stampSignatureOntoPdf(opts: {
   // next ~13%. The two-row block sits in the bottom ~9% of the page.
   const stampContractorBlockFallback = (page: any) => {
     const { width: pw, height: ph } = page.getSize();
-    // Bottom of cell-34 row (printed name) and bottom of cell-30 row (sig).
-    const nameRowBottom = Math.max(20, ph * 0.025);
-    const sigRowBottom = nameRowBottom + Math.max(14, ph * 0.022);
-    const rowHeight = Math.max(12, ph * 0.022);
-
-    // Signature inside cell 30
-    const sigBox: BoxRect = {
-      x: pw * 0.025,
-      y: sigRowBottom,
-      w: pw * 0.26,
-      h: rowHeight,
-    };
+    const fields = getOf286FallbackFields(0, pw, ph);
+    const sigBox = fields.signatureBox!;
     const fit = fitImage(sigBox);
     page.drawImage(sigImage, { x: fit.x, y: fit.y, width: fit.w, height: fit.h });
 
-    // Date inside cell 31 (just to the right of the signature)
     page.drawText(dateStr, {
-      x: pw * 0.30,
-      y: sigRowBottom + 3,
+      x: fields.dateBox!.x,
+      y: fields.dateBox!.y,
       size: 9,
       font: helv,
       color: rgb(0, 0, 0),
     });
 
-    // Printed name inside cell 34
     page.drawText(signerName, {
-      x: pw * 0.025 + 3,
-      y: nameRowBottom + 3,
+      x: fields.nameBox!.x,
+      y: fields.nameBox!.y,
       size: 9,
       font: helv,
       color: rgb(0, 0, 0),
@@ -321,7 +405,18 @@ export async function stampSignatureOntoPdf(opts: {
   let stampedAny = false;
   for (let i = 0; i < pages.length; i++) {
     const page = pages[i];
-    const anchors = anchorsList[i];
+    const pageSize = page.getSize();
+    const pagePlacements = placementsByPage?.[i] ?? placements;
+    const anchors = pagePlacements
+      ? {
+          pageIndex: i,
+          pageWidth: pageSize.width,
+          pageHeight: pageSize.height,
+          signatureBox: pagePlacements.signatureBox,
+          dateBox: pagePlacements.dateBox,
+          nameBox: pagePlacements.nameBox,
+        }
+      : anchorsList[i];
 
     if (anchors?.signatureBox || anchors?.nameBox) {
       if (anchors?.signatureBox) {
@@ -330,8 +425,8 @@ export async function stampSignatureOntoPdf(opts: {
       }
       if (anchors?.dateBox) {
         page.drawText(dateStr, {
-          x: anchors.dateBox.x + 2,
-          y: anchors.dateBox.y + 2,
+          x: anchors.dateBox.x,
+          y: anchors.dateBox.y,
           size: 9,
           font: helv,
           color: rgb(0, 0, 0),
@@ -339,8 +434,8 @@ export async function stampSignatureOntoPdf(opts: {
       }
       if (anchors?.nameBox) {
         page.drawText(signerName, {
-          x: anchors.nameBox.x + 3,
-          y: anchors.nameBox.y + 3,
+          x: anchors.nameBox.x,
+          y: anchors.nameBox.y,
           size: 9,
           font: helv,
           color: rgb(0, 0, 0),
