@@ -267,8 +267,9 @@ export async function stampSignatureOntoPdf(opts: {
   signedAt: Date;
   dateText?: string;
   placements?: Partial<Pick<PageAnchors, "signatureBox" | "dateBox" | "nameBox">>;
+  placementsByPage?: Partial<Pick<PageAnchors, "signatureBox" | "dateBox" | "nameBox">>[];
 }): Promise<Blob> {
-  const { sourceUrl, signaturePngBlob, signerName, signedAt, dateText, placements } = opts;
+  const { sourceUrl, signaturePngBlob, signerName, signedAt, dateText, placements, placementsByPage } = opts;
 
   const sourceRes = await fetch(sourceUrl);
   if (!sourceRes.ok) throw new Error("Could not download source document");
@@ -405,14 +406,15 @@ export async function stampSignatureOntoPdf(opts: {
   for (let i = 0; i < pages.length; i++) {
     const page = pages[i];
     const pageSize = page.getSize();
-    const anchors = placements
+    const pagePlacements = placementsByPage?.[i] ?? placements;
+    const anchors = pagePlacements
       ? {
           pageIndex: i,
           pageWidth: pageSize.width,
           pageHeight: pageSize.height,
-          signatureBox: placements.signatureBox,
-          dateBox: placements.dateBox,
-          nameBox: placements.nameBox,
+          signatureBox: pagePlacements.signatureBox,
+          dateBox: pagePlacements.dateBox,
+          nameBox: pagePlacements.nameBox,
         }
       : anchorsList[i];
 
