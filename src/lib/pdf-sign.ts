@@ -423,8 +423,8 @@ export async function stampSignatureOntoPdf(opts: {
       }
       if (anchors?.dateBox) {
         page.drawText(dateStr, {
-          x: anchors.dateBox.x + 2,
-          y: anchors.dateBox.y + 2,
+          x: anchors.dateBox.x,
+          y: anchors.dateBox.y,
           size: 9,
           font: helv,
           color: rgb(0, 0, 0),
@@ -432,8 +432,8 @@ export async function stampSignatureOntoPdf(opts: {
       }
       if (anchors?.nameBox) {
         page.drawText(signerName, {
-          x: anchors.nameBox.x + 3,
-          y: anchors.nameBox.y + 3,
+          x: anchors.nameBox.x,
+          y: anchors.nameBox.y,
           size: 9,
           font: helv,
           color: rgb(0, 0, 0),
