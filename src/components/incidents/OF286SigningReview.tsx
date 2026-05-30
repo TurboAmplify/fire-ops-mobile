@@ -18,6 +18,7 @@ interface OF286SigningReviewProps {
     signerName: string;
     dateText: string;
     placements: { signatureBox: BoxRect; dateBox: BoxRect; nameBox: BoxRect };
+    placementsByPage: { signatureBox: BoxRect; dateBox: BoxRect; nameBox: BoxRect }[];
   }) => void;
 }
 
@@ -139,6 +140,13 @@ export function OF286SigningReview({
 
   const handleComplete = () => {
     if (!signatureBlob || !firstPage?.signatureBox || !firstPage.dateBox || !firstPage.nameBox) return;
+    const placementsByPage = anchors
+      .filter((page) => page.signatureBox && page.dateBox && page.nameBox)
+      .map((page) => ({
+        signatureBox: page.signatureBox!,
+        dateBox: page.dateBox!,
+        nameBox: page.nameBox!,
+      }));
     onComplete({
       signatureBlob,
       metadata,
@@ -149,6 +157,7 @@ export function OF286SigningReview({
         dateBox: firstPage.dateBox,
         nameBox: firstPage.nameBox,
       },
+      placementsByPage,
     });
   };
 
