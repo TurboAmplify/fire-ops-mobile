@@ -265,9 +265,10 @@ export async function stampSignatureOntoPdf(opts: {
   signaturePngBlob: Blob;
   signerName: string;
   signedAt: Date;
+  dateText?: string;
   placements?: Partial<Pick<PageAnchors, "signatureBox" | "dateBox" | "nameBox">>;
 }): Promise<Blob> {
-  const { sourceUrl, signaturePngBlob, signerName, signedAt, placements } = opts;
+  const { sourceUrl, signaturePngBlob, signerName, signedAt, dateText, placements } = opts;
 
   const sourceRes = await fetch(sourceUrl);
   if (!sourceRes.ok) throw new Error("Could not download source document");
@@ -300,7 +301,7 @@ export async function stampSignatureOntoPdf(opts: {
   const sigImage = await pdfDoc.embedPng(sigBytes);
   const helv = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-  const dateStr = signedAt.toLocaleDateString("en-US", {
+  const dateStr = dateText || signedAt.toLocaleDateString("en-US", {
     month: "2-digit",
     day: "2-digit",
     year: "numeric",
