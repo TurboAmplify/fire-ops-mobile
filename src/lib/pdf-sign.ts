@@ -353,8 +353,8 @@ export async function stampSignatureOntoPdf(opts: {
   const fitImage = (box: BoxRect) => {
     const aspect = sigImage.width / sigImage.height;
     // Leave a little breathing room inside the cell.
-    const maxW = Math.max(20, box.w - 6);
-    const maxH = Math.max(10, box.h - 4);
+    const maxW = Math.max(20, box.w - 4);
+    const maxH = Math.max(10, box.h - 2);
     let w = maxW;
     let h = w / aspect;
     if (h > maxH) {
@@ -362,8 +362,8 @@ export async function stampSignatureOntoPdf(opts: {
       w = h * aspect;
     }
     return {
-      x: box.x + 3,
-      y: box.y + 2,
+      x: box.x + 2,
+      y: box.y + 1,
       w,
       h,
     };
@@ -378,34 +378,22 @@ export async function stampSignatureOntoPdf(opts: {
   // next ~13%. The two-row block sits in the bottom ~9% of the page.
   const stampContractorBlockFallback = (page: any) => {
     const { width: pw, height: ph } = page.getSize();
-    // Bottom of cell-34 row (printed name) and bottom of cell-30 row (sig).
-    const nameRowBottom = Math.max(20, ph * 0.025);
-    const sigRowBottom = nameRowBottom + Math.max(14, ph * 0.022);
-    const rowHeight = Math.max(12, ph * 0.022);
-
-    // Signature inside cell 30
-    const sigBox: BoxRect = {
-      x: pw * 0.025,
-      y: sigRowBottom,
-      w: pw * 0.26,
-      h: rowHeight,
-    };
+    const fields = getOf286FallbackFields(0, pw, ph);
+    const sigBox = fields.signatureBox!;
     const fit = fitImage(sigBox);
     page.drawImage(sigImage, { x: fit.x, y: fit.y, width: fit.w, height: fit.h });
 
-    // Date inside cell 31 (just to the right of the signature)
     page.drawText(dateStr, {
-      x: pw * 0.30,
-      y: sigRowBottom + 3,
+      x: fields.dateBox!.x,
+      y: fields.dateBox!.y,
       size: 9,
       font: helv,
       color: rgb(0, 0, 0),
     });
 
-    // Printed name inside cell 34
     page.drawText(signerName, {
-      x: pw * 0.025 + 3,
-      y: nameRowBottom + 3,
+      x: fields.nameBox!.x,
+      y: fields.nameBox!.y,
       size: 9,
       font: helv,
       color: rgb(0, 0, 0),
