@@ -61,23 +61,32 @@ async function findOf286Anchors(pdfBytes: Uint8Array): Promise<PageAnchors[]> {
     const findFirst = (re: RegExp) => items.find((i) => re.test(i.str));
 
     // Concatenate adjacent items so multi-fragment labels still match.
+    // pdfjs commonly splits "30. CONTRACTOR SIGNATURE" into three runs
+    // (["30.", "CONTRACTOR", "SIGNATURE"]), so we slide windows of up to
+    // 5 adjacent items.
     const findCompound = (re: RegExp) => {
-      // try single
       const single = findFirst(re);
       if (single) return single;
-      // try pairs (rare for OF-286 but cheap)
-      for (let i = 0; i < items.length - 1; i++) {
-        const merged = `${items[i].str} ${items[i + 1].str}`;
-        if (re.test(merged)) {
-          return {
-            ...items[i],
-            str: merged,
-            w: (items[i + 1].x + items[i + 1].w) - items[i].x,
-          };
+      for (let win = 2; win <= 5; win++) {
+        for (let i = 0; i <= items.length - win; i++) {
+          const slice = items.slice(i, i + win);
+          // Only merge items that sit on (roughly) the same baseline.
+          const baseY = slice[0].y;
+          if (slice.some((s) => Math.abs(s.y - baseY) > 3)) continue;
+          const merged = slice.map((s) => s.str).join(" ");
+          if (re.test(merged)) {
+            const last = slice[slice.length - 1];
+            return {
+              ...slice[0],
+              str: merged,
+              w: last.x + last.w - slice[0].x,
+            };
+          }
         }
       }
       return undefined;
     };
+
 
     const labelSig = findCompound(/^30\.?\s*CONTRACTOR\s*SIGNATURE/i);
     const labelDate = findCompound(/^31\.?\s*DATE/i);
