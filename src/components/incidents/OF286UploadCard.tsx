@@ -213,9 +213,38 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
         signed_at: signedAt.toISOString(),
       });
 
-      // Auto-download for the user to email to finance.
-      downloadBlob(signedPdf, signedFileName);
-      toast.success("Signed and downloaded — send to finance");
+      // If the original arrived via email, return the signed copy to the sender
+      // as an email reply with the signed PDF attached. Otherwise, fall back to
+      // the legacy "download so the user can email finance" flow.
+      if (signingDoc.thread_id) {
+        try {
+          const safeName = signedFileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+          const path = `${membership.organizationId}/${signingDoc.thread_id}/signed-${crypto.randomUUID()}-${safeName}`;
+          const { error: upErr } = await supabase.storage
+            .from("communication-attachments")
+            .upload(path, signedPdf, { contentType: "application/pdf", upsert: false });
+          if (upErr) throw upErr;
+
+          const { error: sendErr } = await supabase.functions.invoke("send-thread-reply", {
+            body: {
+              thread_id: signingDoc.thread_id,
+              body_text: `Signed OF-286 attached.\n\nSigned by ${signerName} on ${signedAt.toLocaleString()}.`,
+              attachment_paths: [path],
+            },
+          });
+          if (sendErr) throw sendErr;
+          toast.success("Signed and returned to sender");
+        } catch (e: any) {
+          console.error("return-to-sender failed", e);
+          downloadBlob(signedPdf, signedFileName);
+          toast.error(
+            `Signed, but could not auto-send: ${e?.message ?? "unknown error"}. Downloaded instead.`,
+          );
+        }
+      } else {
+        downloadBlob(signedPdf, signedFileName);
+        toast.success("Signed and downloaded — send to finance");
+      }
     } catch (err: any) {
       toast.error(err?.message || "Failed to sign document");
     } finally {
