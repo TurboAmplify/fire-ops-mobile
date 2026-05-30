@@ -24,13 +24,17 @@ export function TruckAccessSection({ truckId }: Props) {
     queryKey: ["org-crew-members", membership?.organizationId],
     enabled: !!membership?.organizationId && isAdmin,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("organization_members")
-        .select("user_id, role, profiles(full_name)")
-        .eq("organization_id", membership!.organizationId)
-        .eq("role", "crew");
+      const { data, error } = await supabase.rpc("list_org_members_with_identity", {
+        _org_id: membership!.organizationId,
+      });
       if (error) throw error;
-      return data ?? [];
+      return (data ?? [])
+        .filter((member: any) => member.role === "crew")
+        .map((member: any) => ({
+          user_id: member.user_id,
+          role: member.role,
+          profiles: { full_name: member.full_name ?? member.email ?? "Unnamed" },
+        }));
     },
   });
 
