@@ -269,7 +269,7 @@ Deno.serve(async (req) => {
             document_type: "of286",
             file_url: path,
             file_name: att.filename,
-            stage: classified.stage ?? "of286_draft_received",
+            stage: classified.stage === "of286_finance_signed" ? "finance_signed" : "original",
             source_message_id: msg.id,
             thread_id: thread.id,
             ai_classification: classified as unknown as Record<string, unknown>,
