@@ -127,7 +127,7 @@ export function OF286SigningReview({
   if (!open) return null;
 
   const firstPage = anchors[0];
-  const canSend = !!signatureBlob && signerName.trim().length > 0 && dateText.trim().length > 0 && !!firstPage?.signatureBox && !!firstPage?.dateBox && !!firstPage?.nameBox;
+  
 
   const handleSignatureSave = (blob: Blob, sigMetadata: SignatureMetadata) => {
     if (signatureUrl) URL.revokeObjectURL(signatureUrl);
