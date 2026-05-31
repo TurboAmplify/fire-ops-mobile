@@ -252,6 +252,50 @@ export function OF286SigningReview({
             className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-ring touch-target"
             autoFocus
           />
+          <button
+            onClick={() => setActiveField(null)}
+            className="mt-2 w-full rounded-xl bg-secondary py-2 text-sm font-semibold text-secondary-foreground active:opacity-80"
+          >
+            Done
+          </button>
+        </div>
+      )}
+
+      {(!activeField || activeField === "signature") && (
+        <div className="border-t border-border bg-card p-3 shadow-2xl">
+          <div className="mb-2 flex items-center justify-between text-[11px] text-muted-foreground">
+            <span className={signerName.trim() ? "text-foreground font-semibold" : ""}>
+              {signerName.trim() ? `✓ Name: ${signerName}` : "1. Tap printed-name box"}
+            </span>
+            <span className={signatureBlob ? "text-foreground font-semibold" : ""}>
+              {signatureBlob ? "✓ Signed" : "2. Tap signature box"}
+            </span>
+            <span className={dateText.trim() ? "text-foreground font-semibold" : ""}>
+              {dateText.trim() ? `✓ ${dateText}` : "3. Tap date box"}
+            </span>
+          </div>
+          <button
+            onClick={handleComplete}
+            disabled={!allFilled}
+            className="flex w-full min-h-12 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground disabled:opacity-40 active:opacity-90"
+          >
+            {returningToSender ? (
+              <>
+                <Send className="h-4 w-4" /> Return to sender
+              </>
+            ) : (
+              <>
+                <Check className="h-4 w-4" /> Save signed copy
+              </>
+            )}
+          </button>
+          {allFilled && (
+            <p className="mt-1.5 text-center text-[10px] text-muted-foreground">
+              {returningToSender
+                ? "This will email the signed OF-286 back to the sender."
+                : "This will save and download the signed OF-286."}
+            </p>
+          )}
         </div>
       )}
 
