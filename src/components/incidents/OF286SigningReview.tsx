@@ -161,6 +161,8 @@ export function OF286SigningReview({
     });
   };
 
+  const allFilled = !!signatureBlob && signerName.trim().length > 0 && dateText.trim().length > 0;
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background pt-[var(--app-safe-top)] pb-[var(--app-safe-bottom)]">
       <div className="flex min-h-14 items-center justify-between border-b border-border px-3 py-2">
@@ -169,16 +171,11 @@ export function OF286SigningReview({
         </button>
         <div className="text-center">
           <p className="text-sm font-bold">Review & sign OF-286</p>
-          <p className="text-[10px] text-muted-foreground">Tap the highlighted fields</p>
+          <p className="text-[10px] text-muted-foreground">
+            {allFilled ? "Review your entries below, then return" : "Tap the highlighted fields"}
+          </p>
         </div>
-        <button
-          onClick={handleComplete}
-          disabled={!canSend}
-          className="flex min-h-11 items-center gap-1 rounded-lg pl-2 text-sm font-bold text-primary disabled:opacity-40 active:bg-accent/30"
-        >
-          {returningToSender ? <Send className="h-4 w-4" /> : <Check className="h-4 w-4" />}
-          {returningToSender ? "Send" : "Save"}
-        </button>
+        <div className="min-w-[64px]" />
       </div>
 
       <div ref={containerRef} className="flex-1 overflow-y-auto bg-muted/40 px-3 py-4">
