@@ -127,7 +127,7 @@ export function OF286SigningReview({
   if (!open) return null;
 
   const firstPage = anchors[0];
-  const canSend = !!signatureBlob && signerName.trim().length > 0 && dateText.trim().length > 0 && !!firstPage?.signatureBox && !!firstPage?.dateBox && !!firstPage?.nameBox;
+  
 
   const handleSignatureSave = (blob: Blob, sigMetadata: SignatureMetadata) => {
     if (signatureUrl) URL.revokeObjectURL(signatureUrl);
@@ -161,6 +161,8 @@ export function OF286SigningReview({
     });
   };
 
+  const allFilled = !!signatureBlob && signerName.trim().length > 0 && dateText.trim().length > 0;
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background pt-[var(--app-safe-top)] pb-[var(--app-safe-bottom)]">
       <div className="flex min-h-14 items-center justify-between border-b border-border px-3 py-2">
@@ -169,16 +171,11 @@ export function OF286SigningReview({
         </button>
         <div className="text-center">
           <p className="text-sm font-bold">Review & sign OF-286</p>
-          <p className="text-[10px] text-muted-foreground">Tap the highlighted fields</p>
+          <p className="text-[10px] text-muted-foreground">
+            {allFilled ? "Review your entries below, then return" : "Tap the highlighted fields"}
+          </p>
         </div>
-        <button
-          onClick={handleComplete}
-          disabled={!canSend}
-          className="flex min-h-11 items-center gap-1 rounded-lg pl-2 text-sm font-bold text-primary disabled:opacity-40 active:bg-accent/30"
-        >
-          {returningToSender ? <Send className="h-4 w-4" /> : <Check className="h-4 w-4" />}
-          {returningToSender ? "Send" : "Save"}
-        </button>
+        <div className="min-w-[64px]" />
       </div>
 
       <div ref={containerRef} className="flex-1 overflow-y-auto bg-muted/40 px-3 py-4">
@@ -255,6 +252,50 @@ export function OF286SigningReview({
             className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-ring touch-target"
             autoFocus
           />
+          <button
+            onClick={() => setActiveField(null)}
+            className="mt-2 w-full rounded-xl bg-secondary py-2 text-sm font-semibold text-secondary-foreground active:opacity-80"
+          >
+            Done
+          </button>
+        </div>
+      )}
+
+      {(!activeField || activeField === "signature") && (
+        <div className="border-t border-border bg-card p-3 shadow-2xl">
+          <div className="mb-2 flex items-center justify-between text-[11px] text-muted-foreground">
+            <span className={signerName.trim() ? "text-foreground font-semibold" : ""}>
+              {signerName.trim() ? `✓ Name: ${signerName}` : "1. Tap printed-name box"}
+            </span>
+            <span className={signatureBlob ? "text-foreground font-semibold" : ""}>
+              {signatureBlob ? "✓ Signed" : "2. Tap signature box"}
+            </span>
+            <span className={dateText.trim() ? "text-foreground font-semibold" : ""}>
+              {dateText.trim() ? `✓ ${dateText}` : "3. Tap date box"}
+            </span>
+          </div>
+          <button
+            onClick={handleComplete}
+            disabled={!allFilled}
+            className="flex w-full min-h-12 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground disabled:opacity-40 active:opacity-90"
+          >
+            {returningToSender ? (
+              <>
+                <Send className="h-4 w-4" /> Return to sender
+              </>
+            ) : (
+              <>
+                <Check className="h-4 w-4" /> Save signed copy
+              </>
+            )}
+          </button>
+          {allFilled && (
+            <p className="mt-1.5 text-center text-[10px] text-muted-foreground">
+              {returningToSender
+                ? "This will email the signed OF-286 back to the sender."
+                : "This will save and download the signed OF-286."}
+            </p>
+          )}
         </div>
       )}
 
