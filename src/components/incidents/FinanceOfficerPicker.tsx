@@ -7,11 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, Search, BadgeCheck, Plus, Mail, Phone, MapPin, ChevronRight } from "lucide-react";
+import { Loader2, Search, BadgeCheck, Plus, Mail, Phone, MapPin, ChevronRight, Pencil, ArrowUpDown } from "lucide-react";
 import {
   listFinanceOfficers,
   listRegions,
   createFinanceOfficer,
+  updateFinanceOfficer,
   recordOfficerUse,
   type FinanceOfficer,
   type GaccRegion,
@@ -54,10 +55,12 @@ export function FinanceOfficerPicker({
   const [regions, setRegions] = useState<GaccRegion[]>([]);
   const [regionId, setRegionId] = useState<string | null>(defaultRegionId || null);
   const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<"name" | "recent" | "used">("name");
   const [officers, setOfficers] = useState<FinanceOfficer[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [pickingId, setPickingId] = useState<string | null>(null);
+  const [editing, setEditing] = useState<FinanceOfficer | null>(null);
 
   // New officer form
   const [form, setForm] = useState({
@@ -86,11 +89,12 @@ export function FinanceOfficerPicker({
     listFinanceOfficers({
       regionId: regionId || null,
       search,
+      sort,
     })
       .then(setOfficers)
       .catch((e) => toast.error(e.message))
       .finally(() => setLoading(false));
-  }, [open, tab, regionId, search]);
+  }, [open, tab, regionId, search, sort]);
 
   const handlePick = async (o: FinanceOfficer) => {
     setSaving(true);
@@ -160,7 +164,7 @@ export function FinanceOfficerPicker({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[92vh] overflow-y-auto p-0 gap-0">
+      <DialogContent className="max-w-lg w-[calc(100vw-1rem)] max-h-[92vh] overflow-y-auto overflow-x-hidden p-0 gap-0">
         <DialogHeader className="px-4 pt-4 pb-2">
           <DialogTitle>Add finance contact</DialogTitle>
         </DialogHeader>
@@ -177,23 +181,36 @@ export function FinanceOfficerPicker({
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search name, email, or dispatch office"
+                placeholder="Search name, email, dispatch"
                 className="pl-9 h-11"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <Select value={regionId ?? "all"} onValueChange={(v) => setRegionId(v === "all" ? null : v)}>
-              <SelectTrigger className="h-10">
-                <SelectValue placeholder="All regions" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All regions</SelectItem>
-                {regionOptions.map((r) => (
-                  <SelectItem key={r.id} value={r.id}>{r.id} — {r.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="grid grid-cols-2 gap-2">
+              <Select value={regionId ?? "all"} onValueChange={(v) => setRegionId(v === "all" ? null : v)}>
+                <SelectTrigger className="h-10 min-w-0">
+                  <SelectValue placeholder="Region" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All regions</SelectItem>
+                  {regionOptions.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>{r.id} — {r.name.replace(/^Region \d+ — /, "")}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={sort} onValueChange={(v) => setSort(v as typeof sort)}>
+                <SelectTrigger className="h-10 min-w-0">
+                  <ArrowUpDown className="h-3.5 w-3.5 mr-1 shrink-0" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">Name (A–Z)</SelectItem>
+                  <SelectItem value="used">Most used</SelectItem>
+                  <SelectItem value="recent">Recently added</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
             {defaultRegionId && regionId === defaultRegionId && (
               <p className="text-xs text-muted-foreground">
@@ -201,7 +218,7 @@ export function FinanceOfficerPicker({
               </p>
             )}
 
-            <div className="space-y-2 max-h-[55vh] overflow-y-auto -mx-1 px-1">
+            <div className="space-y-2 max-h-[55vh] overflow-y-auto overflow-x-hidden">
               {loading ? (
                 <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
               ) : officers.length === 0 ? (
@@ -217,52 +234,67 @@ export function FinanceOfficerPicker({
                 officers.map((o) => {
                   const phone = o.cell_phone || o.work_phone || o.phone;
                   return (
-                    <button
+                    <div
                       key={o.id}
-                      type="button"
-                      onClick={() => handlePick(o)}
-                      disabled={saving}
-                      className="w-full text-left p-3 border rounded-lg bg-card hover:bg-accent active:bg-accent transition-colors disabled:opacity-50 flex items-center gap-3 min-h-[64px]"
+                      className="w-full border rounded-lg bg-card flex items-stretch min-h-[64px] overflow-hidden"
                     >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-semibold text-sm truncate">{o.name}</span>
-                          {o.verified_at && <BadgeCheck className="h-4 w-4 text-primary shrink-0" aria-label="Verified" />}
-                        </div>
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                          <Mail className="h-3 w-3 shrink-0" />
-                          <span className="truncate">{o.email}</span>
-                        </div>
-                        {phone && (
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                            <Phone className="h-3 w-3 shrink-0" />
-                            <span className="truncate">{phone}</span>
+                      <button
+                        type="button"
+                        onClick={() => handlePick(o)}
+                        disabled={saving}
+                        className="flex-1 min-w-0 text-left p-3 hover:bg-accent active:bg-accent transition-colors disabled:opacity-50 flex items-center gap-3"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="font-semibold text-sm truncate min-w-0">{o.name}</span>
+                            {o.verified_at && <BadgeCheck className="h-4 w-4 text-primary shrink-0" aria-label="Verified" />}
                           </div>
-                        )}
-                        {(o.dispatch_office || o.region_id || o.agency) && (
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1 flex-wrap">
-                            {o.region_id && <Badge variant="secondary" className="text-[10px] h-4 px-1.5">{o.region_id}</Badge>}
-                            {o.dispatch_office && (
-                              <span className="inline-flex items-center gap-0.5">
-                                <MapPin className="h-3 w-3" />
-                                <span className="truncate">{o.dispatch_office}</span>
-                              </span>
-                            )}
-                            {o.agency && <Badge variant="outline" className="text-[10px] h-4 px-1.5">{o.agency}</Badge>}
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5 min-w-0">
+                            <Mail className="h-3 w-3 shrink-0" />
+                            <span className="truncate min-w-0">{o.email}</span>
                           </div>
+                          {phone && (
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5 min-w-0">
+                              <Phone className="h-3 w-3 shrink-0" />
+                              <span className="truncate min-w-0">{phone}</span>
+                            </div>
+                          )}
+                          {(o.dispatch_office || o.region_id || o.agency) && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1 min-w-0 overflow-hidden">
+                              {o.region_id && <Badge variant="secondary" className="text-[10px] h-4 px-1.5 shrink-0">{o.region_id}</Badge>}
+                              {o.dispatch_office && (
+                                <span className="inline-flex items-center gap-0.5 min-w-0 overflow-hidden">
+                                  <MapPin className="h-3 w-3 shrink-0" />
+                                  <span className="truncate min-w-0">{o.dispatch_office}</span>
+                                </span>
+                              )}
+                              {o.agency && <Badge variant="outline" className="text-[10px] h-4 px-1.5 shrink-0">{o.agency}</Badge>}
+                            </div>
+                          )}
+                        </div>
+                        {pickingId === o.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                         )}
-                      </div>
-                      {pickingId === o.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                      )}
-                    </button>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditing(o)}
+                        disabled={saving}
+                        className="px-3 border-l text-muted-foreground hover:bg-accent hover:text-foreground transition-colors disabled:opacity-50 shrink-0"
+                        aria-label={`Edit ${o.name}`}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                    </div>
                   );
                 })
               )}
             </div>
           </TabsContent>
+
+
 
           {/* NEW OFFICER */}
           <TabsContent value="new" className="space-y-3 mt-3">
@@ -309,9 +341,122 @@ export function FinanceOfficerPicker({
           </TabsContent>
         </Tabs>
       </DialogContent>
+
+      <EditFinanceOfficerDialog
+        officer={editing}
+        regions={regionOptions}
+        onClose={() => setEditing(null)}
+        onSaved={(updated) => {
+          setOfficers((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+          setEditing(null);
+        }}
+      />
     </Dialog>
   );
 }
+
+function EditFinanceOfficerDialog({
+  officer,
+  regions,
+  onClose,
+  onSaved,
+}: {
+  officer: FinanceOfficer | null;
+  regions: GaccRegion[];
+  onClose: () => void;
+  onSaved: (o: FinanceOfficer) => void;
+}) {
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    work_phone: "",
+    cell_phone: "",
+    dispatch_office: "",
+    region_id: "",
+    agency: "",
+  });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!officer) return;
+    setForm({
+      name: officer.name ?? "",
+      email: officer.email ?? "",
+      work_phone: officer.work_phone ?? "",
+      cell_phone: officer.cell_phone ?? "",
+      dispatch_office: officer.dispatch_office ?? "",
+      region_id: officer.region_id ?? "",
+      agency: officer.agency ?? "",
+    });
+  }, [officer]);
+
+  const handleSave = async () => {
+    if (!officer) return;
+    if (!form.name.trim() || !form.email.trim()) {
+      toast.error("Name and email required");
+      return;
+    }
+    setSaving(true);
+    try {
+      const updated = await updateFinanceOfficer(officer.id, {
+        name: form.name,
+        email: form.email,
+        work_phone: form.work_phone || null,
+        cell_phone: form.cell_phone || null,
+        dispatch_office: form.dispatch_office || null,
+        region_id: form.region_id || null,
+        agency: form.agency || null,
+      });
+      toast.success("Contact updated");
+      onSaved(updated);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to update");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={!!officer} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-lg w-[calc(100vw-1rem)] max-h-[92vh] overflow-y-auto overflow-x-hidden">
+        <DialogHeader>
+          <DialogTitle>Edit finance contact</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <Field label="Name *"><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
+          <Field label="Email *"><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></Field>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Work phone"><Input type="tel" inputMode="tel" value={form.work_phone} onChange={(e) => setForm({ ...form, work_phone: e.target.value })} /></Field>
+            <Field label="Cell phone"><Input type="tel" inputMode="tel" value={form.cell_phone} onChange={(e) => setForm({ ...form, cell_phone: e.target.value })} /></Field>
+          </div>
+          <Field label="Dispatch office"><Input value={form.dispatch_office} onChange={(e) => setForm({ ...form, dispatch_office: e.target.value })} /></Field>
+          <Field label="Region">
+            <Select value={form.region_id || "none"} onValueChange={(v) => setForm({ ...form, region_id: v === "none" ? "" : v })}>
+              <SelectTrigger><SelectValue placeholder="Pick region" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No region</SelectItem>
+                {regions.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>{r.id} — {r.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Agency"><Input value={form.agency} onChange={(e) => setForm({ ...form, agency: e.target.value })} placeholder="USFS, BLM, etc." /></Field>
+          <div className="flex gap-2 pt-1">
+            <Button variant="outline" onClick={onClose} className="flex-1 h-11">Cancel</Button>
+            <Button onClick={handleSave} disabled={saving} className="flex-1 h-11">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+            </Button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Note: Only the original creator or org admin can edit. Others will get a permission error.
+          </p>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (

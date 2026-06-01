@@ -37,14 +37,24 @@ export async function listFinanceOfficers(opts: {
   regionId?: string | null;
   search?: string;
   limit?: number;
+  sort?: "name" | "recent" | "used";
 }): Promise<FinanceOfficer[]> {
   let q = supabase
     .from("finance_officers")
     .select("*")
-    .eq("is_active", true)
-    .order("verified_at", { ascending: false, nullsFirst: false })
-    .order("use_count", { ascending: false })
-    .limit(opts.limit ?? 50);
+    .eq("is_active", true);
+
+  const sort = opts.sort ?? "name";
+  if (sort === "name") {
+    q = q.order("name", { ascending: true });
+  } else if (sort === "used") {
+    q = q.order("use_count", { ascending: false }).order("name", { ascending: true });
+  } else {
+    q = q.order("verified_at", { ascending: false, nullsFirst: false })
+         .order("last_used_at", { ascending: false, nullsFirst: false })
+         .order("name", { ascending: true });
+  }
+  q = q.limit(opts.limit ?? 100);
 
   if (opts.regionId) q = q.eq("region_id", opts.regionId);
   if (opts.search && opts.search.trim()) {
@@ -54,6 +64,35 @@ export async function listFinanceOfficers(opts: {
   const { data, error } = await q;
   if (error) throw error;
   return (data ?? []) as FinanceOfficer[];
+}
+
+export async function updateFinanceOfficer(
+  id: string,
+  patch: Partial<{
+    name: string;
+    email: string;
+    work_phone: string | null;
+    cell_phone: string | null;
+    dispatch_office: string | null;
+    region_id: string | null;
+    agency: string | null;
+    notes: string | null;
+  }>,
+): Promise<FinanceOfficer> {
+  const clean: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  for (const [k, v] of Object.entries(patch)) {
+    clean[k] = typeof v === "string" ? (v.trim() || null) : v;
+  }
+  if (typeof clean.email === "string") clean.email = (clean.email as string).toLowerCase();
+  const { data, error } = await supabase
+    .from("finance_officers")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .update(clean as any)
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data as FinanceOfficer;
 }
 
 export async function createFinanceOfficer(input: {
