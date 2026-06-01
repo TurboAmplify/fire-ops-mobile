@@ -70,6 +70,7 @@ Deno.serve(async (req) => {
       organization_id: string;
       subject: string | null;
       incident_truck_id: string | null;
+      incident_id: string | null;
       purpose: string | null;
     } | null = null;
 
