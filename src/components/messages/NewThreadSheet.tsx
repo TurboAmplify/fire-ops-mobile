@@ -146,19 +146,20 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
     setLoading(true);
     try {
       let attachments: string[] = [];
+      let finalBody = body.trim();
 
       if (purpose === "red_cards") {
         const pool = [...assignedCrew, ...allCrew];
         const picked: CrewWithRedCard[] = [];
         const seen = new Set<string>();
         for (const c of pool) {
-          if (selectedIds.has(c.crew_member_id) && !seen.has(c.crew_member_id)) {
+          if (selectedIds.has(c.crew_member_id) && !seen.has(c.crew_member_id) && c.card) {
             picked.push(c);
             seen.add(c.crew_member_id);
           }
         }
         const { blob, fileName } = await generateRedCardsPdfBlob(
-          picked.map((p) => ({ card: p.card, memberName: p.name })),
+          picked.map((p) => ({ card: p.card!, memberName: p.name })),
           incidentName,
         );
         const orgId = contact.organization_id;
@@ -169,6 +170,32 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
         if (upErr) throw upErr;
         attachments = [path];
         void fileName;
+
+        // Append truck + crew summary so the recipient knows who/what is attached.
+        const byTruck = new Map<string, string[]>();
+        const noTruck: string[] = [];
+        for (const p of picked) {
+          const line = p.position ? `${p.name} (${p.position})` : p.name;
+          if (p.truck_name) {
+            const arr = byTruck.get(p.truck_name) ?? [];
+            arr.push(line);
+            byTruck.set(p.truck_name, arr);
+          } else {
+            noTruck.push(line);
+          }
+        }
+        const summaryLines: string[] = [`Attached: ${picked.length} red card${picked.length === 1 ? "" : "s"}.`];
+        const truckNames = Array.from(byTruck.keys()).sort();
+        for (const t of truckNames) {
+          const members = byTruck.get(t)!;
+          summaryLines.push("", `${t} (${members.length}):`);
+          for (const m of members) summaryLines.push(`  • ${m}`);
+        }
+        if (noTruck.length) {
+          summaryLines.push("", `Unassigned (${noTruck.length}):`);
+          for (const m of noTruck) summaryLines.push(`  • ${m}`);
+        }
+        finalBody = `${finalBody}\n\n---\n${summaryLines.join("\n")}`;
       }
 
       const thread = await create.mutateAsync({
@@ -178,7 +205,7 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
         purpose,
         subject: subject.trim(),
       });
-      await sendReply(thread.id, body.trim(), attachments);
+      await sendReply(thread.id, finalBody, attachments);
       toast.success(purpose === "red_cards" ? "Red cards sent" : "Thread started");
       onOpenChange(false);
       nav(`/messages/${thread.id}`);
