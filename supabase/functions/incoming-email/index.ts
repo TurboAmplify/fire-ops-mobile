@@ -70,13 +70,14 @@ Deno.serve(async (req) => {
       organization_id: string;
       subject: string | null;
       incident_truck_id: string | null;
+      incident_id: string | null;
       purpose: string | null;
     } | null = null;
 
     if (token) {
       const { data } = await supabase
         .from("communication_threads")
-        .select("id, organization_id, subject, incident_truck_id, purpose")
+        .select("id, organization_id, subject, incident_truck_id, incident_id, purpose")
         .eq("thread_token", token)
         .maybeSingle();
       thread = data ?? null;
@@ -130,7 +131,7 @@ Deno.serve(async (req) => {
           // Try to reuse a recent general inbox thread on same subject; else open new.
           const { data: existing } = await supabase
             .from("communication_threads")
-            .select("id, organization_id, subject, incident_truck_id, purpose")
+            .select("id, organization_id, subject, incident_truck_id, incident_id, purpose")
             .eq("organization_id", org.id)
             .eq("purpose", "general")
             .eq("subject", subj)
@@ -154,7 +155,7 @@ Deno.serve(async (req) => {
                 last_message_direction: "in",
                 unread_count: 0,
               })
-              .select("id, organization_id, subject, incident_truck_id, purpose")
+              .select("id, organization_id, subject, incident_truck_id, incident_id, purpose")
               .single();
             if (cErr) {
               console.error("incoming-email: failed to open inbox thread", cErr);
@@ -224,10 +225,13 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      let classified: { type: string; stage?: string; confidence: number; model: string } | null = null;
+      let classified: { type: string; stage?: string; confidence: number; stage_confidence?: number; model: string } | null = null;
       if ((att.content_type === "application/pdf" || att.filename.toLowerCase().endsWith(".pdf"))) {
         try {
-          classified = await classifyPdf(att.filename, base64);
+          classified = await classifyPdf(att.filename, base64, {
+            subject: subject ?? "",
+            body: payload.text ?? "",
+          });
         } catch (e) {
           console.error("AI classify failed", e);
         }
@@ -269,8 +273,24 @@ Deno.serve(async (req) => {
         }
 
         if (incidentId) {
-          const isFinanceSigned = classified.stage === "of286_finance_signed";
-          const stage = isFinanceSigned ? "finance_signed" : "original";
+          // 3-way intent mapping. If the model isn't confident enough on the
+          // sign-vs-review distinction, fall back to review_only — never
+          // auto-prompt a signature the FO didn't actually ask for.
+          const rawStage = classified.stage ?? "of286_review_only";
+          const stageConf = classified.stage_confidence ?? classified.confidence ?? 0;
+          const safeStage =
+            rawStage === "of286_finance_signed"
+              ? "of286_finance_signed"
+              : rawStage === "of286_awaiting_signature" && stageConf >= 0.6
+                ? "of286_awaiting_signature"
+                : "of286_review_only";
+
+          const docStage =
+            safeStage === "of286_finance_signed"
+              ? "finance_signed"
+              : safeStage === "of286_awaiting_signature"
+                ? "original"
+                : "review";
 
           const { data: docRow } = await supabase
             .from("incident_documents")
@@ -281,20 +301,34 @@ Deno.serve(async (req) => {
               document_type: "of286",
               file_url: `${Deno.env.get("SUPABASE_URL")}/storage/v1/object/public/communication-attachments/${encodeURIComponent(path)}`,
               file_name: att.filename,
-              stage,
+              stage: docStage,
               source_message_id: msg.id,
               thread_id: thread.id,
-              ai_classification: classified as unknown as Record<string, unknown>,
+              ai_classification: { ...classified, safe_stage: safeStage } as unknown as Record<string, unknown>,
             })
             .select("id")
             .single();
 
-          const title = isFinanceSigned
-            ? "OF-286 signed copy received"
-            : "OF-286 needs review & signature";
-          const body = isFinanceSigned
-            ? `${fromName || fromEmail} returned a signed OF-286. Review the final copy.`
-            : `${fromName || fromEmail} sent an OF-286. Review and sign to send back.`;
+          // Link the attachment back to the doc for the UI override flow.
+          if (docRow?.id && maRow?.id) {
+            await supabase
+              .from("message_attachments")
+              .update({ linked_incident_document_id: docRow.id })
+              .eq("id", maRow.id);
+          }
+
+          const title =
+            safeStage === "of286_finance_signed"
+              ? "OF-286 signed copy received"
+              : safeStage === "of286_awaiting_signature"
+                ? "OF-286 needs review & signature"
+                : "OF-286 draft to review";
+          const body =
+            safeStage === "of286_finance_signed"
+              ? `${fromName || fromEmail} returned a signed OF-286. Review the final copy.`
+              : safeStage === "of286_awaiting_signature"
+                ? `${fromName || fromEmail} sent an OF-286. Review and sign to send back.`
+                : `${fromName || fromEmail} sent a draft OF-286 for your review. No signature requested.`;
 
           await supabase.from("app_notifications").insert({
             organization_id: thread.organization_id,
@@ -305,7 +339,7 @@ Deno.serve(async (req) => {
             incident_id: incidentId,
             incident_truck_id: thread.incident_truck_id ?? null,
             incident_document_id: docRow?.id ?? null,
-            link_path: `/incidents/${incidentId}`,
+            link_path: `/messages/${thread.id}`,
           });
         }
       }
@@ -348,8 +382,9 @@ Deno.serve(async (req) => {
 
 async function classifyPdf(
   filename: string,
-  _base64: string,
-): Promise<{ type: string; stage?: string; confidence: number; model: string }> {
+  base64: string,
+  ctx: { subject: string; body: string },
+): Promise<{ type: string; stage?: string; confidence: number; stage_confidence?: number; model: string }> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
 
@@ -363,15 +398,32 @@ async function classifyPdf(
         ? "demob"
         : "other";
 
-  // Ask AI gateway to confirm + score
-  const model = "google/gemini-2.5-flash-lite";
-  const prompt = `You are classifying a PDF email attachment from a wildland-fire incident.
-Filename: "${filename}"
-Likely type from filename: ${hint}.
+  const model = "google/gemini-2.5-flash";
+  const sys = `You classify a PDF attachment from a wildland-fire incident email and decide what the sender is asking the recipient (a fire contractor) to do.
 
-Return strict JSON: {"type":"of286|of297|demob|other","stage":"of286_draft_received|of286_finance_signed|null","confidence":0-1}.
-OF-286 is "Emergency Equipment Use Invoice". OF-297 is the daily shift ticket. Demob = release/demobilization paperwork.
-If type != of286, stage must be null.`;
+Return STRICT JSON with this exact shape:
+{"type":"of286|of297|demob|other","stage":"of286_review_only|of286_awaiting_signature|of286_finance_signed|null","confidence":0-1,"stage_confidence":0-1}
+
+Definitions:
+- type=of286 = "Emergency Equipment Use Invoice" (OF-286). of297 = daily shift ticket. demob = release/demobilization paperwork.
+- If type != of286, stage MUST be null and stage_confidence MUST be 0.
+
+OF-286 stages (read the email subject/body carefully):
+- of286_review_only: Finance officer sent a DRAFT for the contractor to review and confirm details. No signature requested yet. Cues: "for your review", "please review", "do not sign yet", "verify totals", "draft", "preliminary".
+- of286_awaiting_signature: FO is asking the contractor to SIGN and return. Cues: "please sign and return", "sign and email back", "needs your signature", "for signature".
+- of286_finance_signed: FO has already countersigned and is returning the FINAL copy. Cues: "signed copy attached", "final invoice", "fully executed", visible finance/agency signature on the PDF.
+
+When in doubt between review_only and awaiting_signature, lean toward of286_review_only and lower stage_confidence.`;
+
+  // Truncate PDF to ~3 MB of base64 to stay under model limits.
+  const MAX_B64 = 3_500_000;
+  const safeB64 = base64.length > MAX_B64 ? base64.slice(0, MAX_B64) : base64;
+
+  const userText = `Filename: "${filename}"
+Filename hint: ${hint}
+Email subject: ${ctx.subject.slice(0, 300)}
+Email body (truncated):
+${(ctx.body || "(no plain text body)").slice(0, 2000)}`;
 
   const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
@@ -381,10 +433,26 @@ If type != of286, stage must be null.`;
     },
     body: JSON.stringify({
       model,
-      messages: [{ role: "user", content: prompt }],
+      messages: [
+        { role: "system", content: sys },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: userText },
+            {
+              type: "image_url",
+              image_url: { url: `data:application/pdf;base64,${safeB64}` },
+            },
+          ],
+        },
+      ],
       response_format: { type: "json_object" },
     }),
   });
+  if (!resp.ok) {
+    const txt = await resp.text();
+    throw new Error(`AI gateway ${resp.status}: ${txt.slice(0, 200)}`);
+  }
   const data = await resp.json();
   const content = data?.choices?.[0]?.message?.content ?? "{}";
   const parsed = JSON.parse(content);
@@ -392,6 +460,7 @@ If type != of286, stage must be null.`;
     type: parsed.type ?? "other",
     stage: parsed.stage ?? undefined,
     confidence: typeof parsed.confidence === "number" ? parsed.confidence : 0.5,
+    stage_confidence: typeof parsed.stage_confidence === "number" ? parsed.stage_confidence : undefined,
     model,
   };
 }

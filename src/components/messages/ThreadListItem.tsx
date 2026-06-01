@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNowStrict } from "date-fns";
 import type { ThreadListItem as TItem } from "@/services/threads";
-import { ArrowDownLeft, ArrowUpRight, Paperclip, PenLine } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Paperclip, PenLine, Eye, CheckCircle2 } from "lucide-react";
 
 const PURPOSE_LABEL: Record<string, string> = {
   general: "General",
@@ -53,12 +53,22 @@ export function ThreadListItem({ item }: { item: TItem }) {
               {item.attachment_count}
             </span>
           )}
-          {item.needs_signature && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-semibold rounded-full bg-primary/15 text-primary px-1.5 py-0.5">
+          {item.needs_signature ? (
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 px-1.5 py-0.5">
               <PenLine className="h-3 w-3" />
               Needs signature
             </span>
-          )}
+          ) : item.of286_stage === "review" ? (
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium rounded-full bg-secondary/60 text-muted-foreground px-1.5 py-0.5">
+              <Eye className="h-3 w-3" />
+              Review only
+            </span>
+          ) : item.of286_stage === "finance_signed" || item.of286_stage === "signed" ? (
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5">
+              <CheckCircle2 className="h-3 w-3" />
+              Final signed
+            </span>
+          ) : null}
           {item.incident_name && (
             <span className="text-[10px] text-muted-foreground truncate">{item.incident_name}</span>
           )}
