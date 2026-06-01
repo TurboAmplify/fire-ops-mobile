@@ -115,13 +115,24 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
     if (!subject.trim() || subject.startsWith("Red Cards") === false) {
       setSubject(`Red Cards — ${incidentName || "Incident"}`);
     }
-    if (!body.trim()) {
-      setBody(
-        `Hello,\n\nAttached are the requested red cards for ${incidentName || "this incident"}.\n\nPlease let me know if you have any questions.\n\nThanks,`,
-      );
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, purpose, incidentId, contacts, incidentName, incidentOrgId]);
+
+  // Auto-build the message body for red-cards purpose. Re-runs when the truck or
+  // incident name changes, but only if the user hasn't typed over the last auto value.
+  const [lastAutoBody, setLastAutoBody] = useState<string>("");
+  useEffect(() => {
+    if (!open || purpose !== "red_cards") return;
+    const truckName =
+      trucks.find((t) => t.incident_truck_id === selectedTruckId)?.truck_name ?? "";
+    const subject = truckName
+      ? `${truckName}'s Crew for ${incidentName || "this incident"}`
+      : `${incidentName || "this incident"}`;
+    const next = `Hello,\n\nAttached are the red cards for ${subject}.\n\nPlease let me know if you have any questions.\n\nThanks,`;
+    setBody((prev) => (prev.trim() === "" || prev === lastAutoBody ? next : prev));
+    setLastAutoBody(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, purpose, selectedTruckId, trucks, incidentName]);
 
   const assignedCrewForTruck = useMemo(
     () => (selectedTruckId ? assignedCrew.filter((c) => c.incident_truck_id === selectedTruckId) : []),
