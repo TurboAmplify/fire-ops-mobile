@@ -293,11 +293,8 @@ export function FinanceOfficerPicker({
               )}
             </div>
           </TabsContent>
-                  );
-                })
-              )}
-            </div>
-          </TabsContent>
+
+
 
           {/* NEW OFFICER */}
           <TabsContent value="new" className="space-y-3 mt-3">
