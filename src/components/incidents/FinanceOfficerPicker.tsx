@@ -7,11 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, Search, BadgeCheck, Plus, Mail, Phone, MapPin, ChevronRight } from "lucide-react";
+import { Loader2, Search, BadgeCheck, Plus, Mail, Phone, MapPin, ChevronRight, Pencil, ArrowUpDown } from "lucide-react";
 import {
   listFinanceOfficers,
   listRegions,
   createFinanceOfficer,
+  updateFinanceOfficer,
   recordOfficerUse,
   type FinanceOfficer,
   type GaccRegion,
