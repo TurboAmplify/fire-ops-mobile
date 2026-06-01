@@ -87,6 +87,43 @@ export interface CrewWithRedCard {
   position: string | null;
   card: RedCard | null;
   truck_name?: string | null;
+  incident_truck_id?: string | null;
+}
+
+export interface IncidentTruckForPicker {
+  incident_truck_id: string;
+  truck_name: string;
+  crew_count: number;
+}
+
+/** Trucks on an incident with active-crew counts, for the red-card resource picker. */
+export async function listIncidentTrucksForPicker(incidentId: string): Promise<IncidentTruckForPicker[]> {
+  const { data: trucks, error } = await supabase
+    .from("incident_trucks")
+    .select("id, trucks(id, name)")
+    .eq("incident_id", incidentId);
+  if (error) throw error;
+  const list = trucks ?? [];
+  if (list.length === 0) return [];
+
+  const ids = list.map((t: any) => t.id);
+  const { data: rows } = await supabase
+    .from("incident_truck_crew")
+    .select("incident_truck_id, crew_member_id")
+    .in("incident_truck_id", ids)
+    .eq("is_active", true);
+  const counts = new Map<string, number>();
+  for (const r of rows ?? []) {
+    const k = (r as any).incident_truck_id as string;
+    counts.set(k, (counts.get(k) ?? 0) + 1);
+  }
+  return list
+    .map((t: any) => ({
+      incident_truck_id: t.id as string,
+      truck_name: (t.trucks?.name as string) ?? "Truck",
+      crew_count: counts.get(t.id) ?? 0,
+    }))
+    .sort((a, b) => a.truck_name.localeCompare(b.truck_name));
 }
 
 /** All crew members assigned to any truck on this incident, with red card (if any) and truck name. */
@@ -110,15 +147,18 @@ export async function listAssignedCrewWithRedCards(incidentId: string): Promise<
     .eq("is_active", true);
   if (error) throw error;
 
-  const memberMap = new Map<string, { name: string; position: string | null; truck_name: string | null }>();
+  type Info = { name: string; position: string | null; truck_name: string | null; incident_truck_id: string | null };
+  const memberMap = new Map<string, Info>();
   for (const r of rows ?? []) {
     const cm: any = (r as any).crew_members;
     if (!cm?.id) continue;
     if (!memberMap.has(cm.id)) {
+      const itId = (r as any).incident_truck_id as string;
       memberMap.set(cm.id, {
         name: cm.name ?? "Unnamed",
         position: cm.position ?? null,
-        truck_name: truckNameById.get((r as any).incident_truck_id) ?? null,
+        truck_name: truckNameById.get(itId) ?? null,
+        incident_truck_id: itId ?? null,
       });
     }
   }
@@ -136,6 +176,7 @@ export async function listAssignedCrewWithRedCards(incidentId: string): Promise<
       name: info.name,
       position: info.position,
       truck_name: info.truck_name,
+      incident_truck_id: info.incident_truck_id,
       card: cardByMember.get(id) ?? null,
     };
   });
