@@ -296,7 +296,7 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
                     scope === "assigned" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"
                   }`}
                 >
-                  Assigned ({assignedCrew.length})
+                  Assigned to truck ({scope === "assigned" ? assignedCrewForTruck.length : (trucks.find(t => t.incident_truck_id === selectedTruckId)?.crew_count ?? 0)})
                 </button>
                 <button
                   onClick={() => setScope("all")}
@@ -307,6 +307,34 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
                   All crew ({allCrew.length})
                 </button>
               </div>
+
+              {scope === "assigned" && (
+                <div>
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Resource
+                  </label>
+                  {trucks.length === 0 ? (
+                    <p className="mt-1 text-xs text-muted-foreground">No trucks on this incident yet.</p>
+                  ) : trucks.length === 1 ? (
+                    <div className="mt-1 rounded-md border border-border bg-background px-3 py-2 text-sm">
+                      {trucks[0].truck_name} · {trucks[0].crew_count} crew
+                    </div>
+                  ) : (
+                    <select
+                      value={selectedTruckId ?? ""}
+                      onChange={(e) => setSelectedTruckId(e.target.value || null)}
+                      className="w-full mt-1 rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="">Pick a truck…</option>
+                      {trucks.map((t) => (
+                        <option key={t.incident_truck_id} value={t.incident_truck_id}>
+                          {t.truck_name} · {t.crew_count} crew
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              )}
               <div className="relative">
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
