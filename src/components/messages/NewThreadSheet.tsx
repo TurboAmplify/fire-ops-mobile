@@ -408,7 +408,8 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
             disabled={
               loading ||
               contacts.length === 0 ||
-              (purpose === "red_cards" && selectedIds.size === 0)
+              (purpose === "red_cards" && selectedIds.size === 0) ||
+              (purpose === "red_cards" && scope === "assigned" && !selectedTruckId)
             }
             className="w-full rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground touch-target flex items-center justify-center gap-2 disabled:opacity-40"
           >
