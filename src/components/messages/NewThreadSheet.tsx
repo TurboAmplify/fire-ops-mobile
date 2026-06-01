@@ -17,7 +17,9 @@ import { useNavigate } from "react-router-dom";
 import {
   listAssignedCrewWithRedCards,
   listOrgCrewWithRedCards,
+  listIncidentTrucksForPicker,
   type CrewWithRedCard,
+  type IncidentTruckForPicker,
 } from "@/services/red-cards";
 import { generateRedCardsPdfBlob } from "@/lib/pdf-red-cards";
 import { supabase } from "@/integrations/supabase/client";
