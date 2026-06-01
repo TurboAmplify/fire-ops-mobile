@@ -161,12 +161,12 @@ export default function IncidentDetail() {
 
         {/* Tabs — Tickets is default */}
         <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="tickets">Tickets</TabsTrigger>
-            <TabsTrigger value="trucks">Trucks</TabsTrigger>
-            <TabsTrigger value="crew">Crew</TabsTrigger>
-            <TabsTrigger value="messages">Messages</TabsTrigger>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-5 gap-1">
+            <TabsTrigger value="tickets" className="text-xs sm:text-sm px-1">Tickets</TabsTrigger>
+            <TabsTrigger value="trucks" className="text-xs sm:text-sm px-1">Trucks</TabsTrigger>
+            <TabsTrigger value="crew" className="text-xs sm:text-sm px-1">Crew</TabsTrigger>
+            <TabsTrigger value="messages" className="text-xs sm:text-sm px-1">Messages</TabsTrigger>
+            <TabsTrigger value="overview" className="text-xs sm:text-sm px-1">Overview</TabsTrigger>
           </TabsList>
 
           {/* TICKETS — primary workflow */}
