@@ -10,11 +10,15 @@ import {
 import { useAppNotifications, type AppNotification } from "@/hooks/useAppNotifications";
 
 function defaultLink(n: AppNotification): string {
-  if (n.link_path) return n.link_path;
+  // Prefer the thread when present so the user lands on the message + attachment
+  // (e.g. OF-286 needs review & signature). Fall back to explicit link_path,
+  // then incident, then global inbox.
   if (n.thread_id) return `/messages/${n.thread_id}`;
+  if (n.link_path) return n.link_path;
   if (n.incident_id) return `/incidents/${n.incident_id}`;
   return "/messages";
 }
+
 
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
