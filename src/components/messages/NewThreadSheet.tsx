@@ -139,6 +139,11 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
     [assignedCrew, selectedTruckId],
   );
 
+  const selectedTruckCrewCount = useMemo(
+    () => trucks.find((t) => t.incident_truck_id === selectedTruckId)?.crew_count ?? 0,
+    [trucks, selectedTruckId],
+  );
+
   const visibleCrew = useMemo(() => {
     const src = scope === "assigned" ? assignedCrewForTruck : allCrew;
     const q = search.trim().toLowerCase();
@@ -307,7 +312,7 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
                     scope === "assigned" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"
                   }`}
                 >
-                  Assigned to truck ({scope === "assigned" ? assignedCrewForTruck.length : (trucks.find(t => t.incident_truck_id === selectedTruckId)?.crew_count ?? 0)})
+                  Assigned to truck ({selectedTruckCrewCount})
                 </button>
                 <button
                   onClick={() => setScope("all")}
