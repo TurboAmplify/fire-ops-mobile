@@ -55,10 +55,12 @@ export function FinanceOfficerPicker({
   const [regions, setRegions] = useState<GaccRegion[]>([]);
   const [regionId, setRegionId] = useState<string | null>(defaultRegionId || null);
   const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<"name" | "recent" | "used">("name");
   const [officers, setOfficers] = useState<FinanceOfficer[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [pickingId, setPickingId] = useState<string | null>(null);
+  const [editing, setEditing] = useState<FinanceOfficer | null>(null);
 
   // New officer form
   const [form, setForm] = useState({
