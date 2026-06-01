@@ -1,14 +1,16 @@
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNowStrict } from "date-fns";
 import type { ThreadListItem as TItem } from "@/services/threads";
-import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Paperclip, PenLine } from "lucide-react";
 
 const PURPOSE_LABEL: Record<string, string> = {
   general: "General",
   shift_ticket: "Shift",
   demob: "Demob",
   of286: "OF-286",
+  red_cards: "Red Cards",
 };
+
 
 export function ThreadListItem({ item }: { item: TItem }) {
   const nav = useNavigate();
