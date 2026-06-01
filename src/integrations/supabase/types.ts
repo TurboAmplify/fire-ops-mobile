@@ -831,6 +831,7 @@ export type Database = {
       finance_officers: {
         Row: {
           agency: string | null
+          cell_phone: string | null
           created_at: string
           created_by_org_id: string | null
           created_by_user_id: string | null
@@ -846,9 +847,11 @@ export type Database = {
           updated_at: string
           use_count: number
           verified_at: string | null
+          work_phone: string | null
         }
         Insert: {
           agency?: string | null
+          cell_phone?: string | null
           created_at?: string
           created_by_org_id?: string | null
           created_by_user_id?: string | null
@@ -864,9 +867,11 @@ export type Database = {
           updated_at?: string
           use_count?: number
           verified_at?: string | null
+          work_phone?: string | null
         }
         Update: {
           agency?: string | null
+          cell_phone?: string | null
           created_at?: string
           created_by_org_id?: string | null
           created_by_user_id?: string | null
@@ -882,6 +887,7 @@ export type Database = {
           updated_at?: string
           use_count?: number
           verified_at?: string | null
+          work_phone?: string | null
         }
         Relationships: [
           {
@@ -1157,6 +1163,7 @@ export type Database = {
       }
       incident_truck_finance_contacts: {
         Row: {
+          cell_phone_override: string | null
           created_at: string
           email_override: string | null
           finance_officer_id: string | null
@@ -1172,8 +1179,10 @@ export type Database = {
           selected_at: string
           selected_by_user_id: string | null
           updated_at: string
+          work_phone_override: string | null
         }
         Insert: {
+          cell_phone_override?: string | null
           created_at?: string
           email_override?: string | null
           finance_officer_id?: string | null
@@ -1189,8 +1198,10 @@ export type Database = {
           selected_at?: string
           selected_by_user_id?: string | null
           updated_at?: string
+          work_phone_override?: string | null
         }
         Update: {
+          cell_phone_override?: string | null
           created_at?: string
           email_override?: string | null
           finance_officer_id?: string | null
@@ -1206,6 +1217,7 @@ export type Database = {
           selected_at?: string
           selected_by_user_id?: string | null
           updated_at?: string
+          work_phone_override?: string | null
         }
         Relationships: [
           {
