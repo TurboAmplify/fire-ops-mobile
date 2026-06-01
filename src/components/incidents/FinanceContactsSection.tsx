@@ -42,14 +42,14 @@ export function FinanceContactsSection({ incidentTruckId, incidentId, organizati
           ? await listTruckFinanceContacts(incidentTruckId)
           : [];
       const officerIds = raw.map((c) => c.finance_officer_id).filter(Boolean) as string[];
-      const officersById: Record<string, { name: string; email: string; phone: string | null }> = {};
+      const officersById: Record<string, { name: string; email: string; phone: string | null; work_phone: string | null; cell_phone: string | null }> = {};
       if (officerIds.length) {
         const { data } = await supabase
           .from("finance_officers")
-          .select("id, name, email, phone")
+          .select("id, name, email, phone, work_phone, cell_phone")
           .in("id", officerIds);
         for (const o of data ?? []) {
-          officersById[o.id] = { name: o.name, email: o.email, phone: o.phone };
+          officersById[o.id] = { name: o.name, email: o.email, phone: o.phone, work_phone: o.work_phone, cell_phone: o.cell_phone };
         }
       }
       const resolved: ResolvedContact[] = raw.map((c) => {
@@ -58,7 +58,8 @@ export function FinanceContactsSection({ incidentTruckId, incidentId, organizati
           ...c,
           display_name: c.name_override || o?.name || "(no name)",
           display_email: c.email_override || o?.email || "",
-          display_phone: c.phone_override || o?.phone || null,
+          display_work_phone: c.work_phone_override || o?.work_phone || null,
+          display_cell_phone: c.cell_phone_override || o?.cell_phone || c.phone_override || o?.phone || null,
         };
       });
       setContacts(resolved);
