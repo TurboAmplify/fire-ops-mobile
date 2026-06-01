@@ -86,7 +86,8 @@ export async function updateFinanceOfficer(
   if (typeof clean.email === "string") clean.email = (clean.email as string).toLowerCase();
   const { data, error } = await supabase
     .from("finance_officers")
-    .update(clean)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .update(clean as any)
     .eq("id", id)
     .select("*")
     .single();
