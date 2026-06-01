@@ -40,6 +40,7 @@ const PURPOSES: { value: ThreadPurpose; label: string }[] = [
 ];
 
 type CrewScope = "assigned" | "all";
+type IncidentSummary = { name: string | null; organization_id: string | null };
 
 export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject }: Props) {
   const [contacts, setContacts] = useState<IncidentTruckFinanceContact[]>([]);
@@ -88,8 +89,9 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
       .eq("id", incidentId)
       .maybeSingle()
       .then(({ data }) => {
-        setIncidentName((data as any)?.name ?? "");
-        setIncidentOrgId((data as any)?.organization_id ?? null);
+        const incident = data as IncidentSummary | null;
+        setIncidentName(incident?.name ?? "");
+        setIncidentOrgId(incident?.organization_id ?? null);
       });
   }, [open, incidentId, defaultSubject]);
 
@@ -137,6 +139,11 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
   const assignedCrewForTruck = useMemo(
     () => (selectedTruckId ? assignedCrew.filter((c) => c.incident_truck_id === selectedTruckId) : []),
     [assignedCrew, selectedTruckId],
+  );
+
+  const selectedTruckCrewCount = useMemo(
+    () => trucks.find((t) => t.incident_truck_id === selectedTruckId)?.crew_count ?? 0,
+    [trucks, selectedTruckId],
   );
 
   const visibleCrew = useMemo(() => {
@@ -307,7 +314,7 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
                     scope === "assigned" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"
                   }`}
                 >
-                  Assigned to truck ({scope === "assigned" ? assignedCrewForTruck.length : (trucks.find(t => t.incident_truck_id === selectedTruckId)?.crew_count ?? 0)})
+                  Assigned to truck ({selectedTruckCrewCount})
                 </button>
                 <button
                   onClick={() => setScope("all")}
