@@ -9,6 +9,8 @@ export interface IncidentTruckFinanceContact {
   name_override: string | null;
   email_override: string | null;
   phone_override: string | null;
+  work_phone_override: string | null;
+  cell_phone_override: string | null;
   role: "shift_tickets" | "demob" | "both";
   is_active: boolean;
   notes: string | null;
