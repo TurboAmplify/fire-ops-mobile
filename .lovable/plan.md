@@ -1,46 +1,49 @@
-## Goal
+# Messaging cleanup + global inbox upgrade
 
-When sending **Red Cards** from a new message thread, the user should first pick which **truck/resource** the cards are for. The crew list then shows the people assigned to that specific truck (auto-selected if only one truck is on the incident). The message body already auto-appends a truck + crew summary on send — that part stays.
+## Problems observed
 
-Right now the assigned tab pools everyone across every truck on the incident and shows a flat list, which is why DL62's 3 crew aren't surfacing as "the DL62 crew."
+1. **Incident tab leaks global threads.** Threads with `incident_id = null` (e.g. "TEST", "Lovable inbound test", and any thread created without an incident link) are appearing inside an incident's Messages tab. The `listThreads` filter is `eq("incident_id", incidentId)`, so it shouldn't, but inbound replies and red-card threads sometimes attach to a different `incident_truck_id` whose `incident_id` was inferred wrong, and threads without `incident_id` are also flowing through other paths. We'll audit and tighten.
+2. **OF-286 from Joney (Ash Pole) is not visible in /messages.** The inbound OF-286 was attached to thread `0ac8ebcf…` whose `purpose='shift_ticket'` and subject `"Shift Ticket — Ash Pole 2026-05-27"`. There's an `app_notifications` row `"OF-286 needs review & signature"` linked to it, but in the inbox the thread reads as a shift ticket with no visible attachment-to-sign affordance — so the user can't find or act on it.
+3. **No grouping/search in /messages.** Hard to find anything once there are dozens of shift-ticket threads.
 
-## Data check (incident `9b9ca1aa…`)
+## What we'll build
 
-- 1 incident truck: **DL62** with **3 active crew** assigned.
-- So after this change: Resource picker auto-selects DL62, crew list shows those 3.
+### 1. Incident-scoped tab — strict filter
+- In `MessagesInbox`, when `incidentId` is set, only show threads where `incident_id === incidentId`. (Already in SQL — add a defensive client-side filter, and confirm no caller passes `showCompose` without `incidentId`.)
+- Also surface threads attached only via `incident_truck_id`: extend `listThreads` to also match `incident_truck_id` belonging to that incident (via `incident_trucks.incident_id = :incidentId`). This catches red-card / shift-ticket threads created against a truck without `incident_id` set.
 
-## Changes
+### 2. Global inbox — group by incident + search
+On `/messages`:
+- **Search bar** (sticky, top): filters by `subject`, `from_name`, `from_email`, `last_snippet` (client-side over the loaded list — already capped at 200).
+- **Grouping toggle**: "By incident" (default) / "Flat".
+  - By incident: collapsible sections per `incidents.name`, plus a "No incident" group at the bottom for general/inbound-unmatched threads.
+  - Flat: existing chronological list.
+- Thread row gets an **attachment badge** (paperclip + count) when the thread's last message — or any message — has attachments, so OF-286/red-card/shift-ticket attachments are discoverable at a glance.
 
-**`src/services/red-cards.ts`**
-- Extend `CrewWithRedCard` with `incident_truck_id: string | null` (already has `truck_name`).
-- Populate `incident_truck_id` from `incident_truck_crew.incident_truck_id` in `listAssignedCrewWithRedCards`.
-- Add a small helper `listIncidentTrucksForPicker(incidentId)` returning `{ incident_truck_id, truck_name, crew_count }[]` so the picker can render quickly without extra round-trips.
+### 3. Attachment-aware thread row + "Needs signature" affordance
+- `ThreadListItem` shows:
+  - existing subject + snippet + unread dot
+  - new: paperclip + count if attachments exist
+  - new: pill **"Needs signature"** when a linked `incident_documents` row of type `of286` is `stage='original'` (or unsigned) and belongs to this thread. Tapping the thread opens `ThreadView` where the attachment chip already links to the signing flow (no changes to signing itself in this pass).
+- To power this in one query, extend `listThreads` to also fetch:
+  - `message_attachments` count per thread (single grouped query),
+  - any `incident_documents` rows where `thread_id IN (...)` and `document_type='of286'` and not yet signed.
 
-**`src/components/messages/NewThreadSheet.tsx`**
-- Add state: `trucks: { incident_truck_id, truck_name, crew_count }[]`, `selectedTruckId: string | null`.
-- When `purpose === "red_cards"` opens, load trucks. If exactly one truck → auto-select it. If none → show empty-state hint.
-- Insert a **Resource** row above the Assigned/All toggle:
-  - Single truck: render as a read-only chip ("Resource: DL62 · 3 crew").
-  - Multiple trucks: render a compact native `<select>` (mobile-friendly) listing each `Truck name · N crew`.
-  - Hidden entirely when `scope === "all"` (org-wide fallback).
-- `visibleCrew` (assigned scope): filter to `c.incident_truck_id === selectedTruckId`.
-- Update the Assigned button label from `Assigned (N)` to `Assigned to truck (N)` where N reflects the selected truck's crew count, not the pooled total.
-- Reset `selectedIds` when `selectedTruckId` changes (avoids stale picks from a previously-viewed truck).
-- Disable Send when `scope === "assigned"` and no truck selected.
+### 4. Small polish
+- More → Messages entry stays; add unread total badge styling parity with tab bar.
+- Empty state copy updated: "Replies, OF-286s, demob acks, and red-card threads will show up here."
 
-**Body summary (already in place)**: groups picked crew by `truck_name`, so the existing append logic stays untouched and will read naturally now that selections come from one truck.
+## Technical notes
 
-## Out of scope
+- All changes are frontend + one service function update in `src/services/threads.ts`. No schema changes, no migrations.
+- Files touched:
+  - `src/services/threads.ts` — extend `listThreads` (incident_truck join, attachment count, unsigned of286 flag).
+  - `src/components/messages/MessagesInbox.tsx` — search input, group-by-incident toggle, grouped render.
+  - `src/components/messages/ThreadListItem.tsx` — paperclip count + "Needs signature" pill.
+  - `src/pages/MessagesInbox.tsx` — pass `showCompose={false}` (global inbox composes from an incident context anyway) and render the new header controls.
+- Realtime invalidation already in place via `useThreadList`.
 
-- No backend / RLS / migration changes.
-- No changes to org-wide "All crew" tab behavior.
-- No new attachment types or PDF format changes.
-
-## What to test
-
-1. Open incident `9b9ca1aa…` → Messages → New → Purpose: Red cards.
-   - Resource shows **DL62 · 3 crew** (auto-selected).
-   - Crew list shows those 3 (greyed out if no card on file).
-2. Select 1–3 members → Send → recipient message body contains `DL62 (N):` followed by names.
-3. On an incident with 2+ trucks: dropdown appears, switching trucks updates the crew list and clears prior selections.
-4. Switch to "All crew" tab → resource picker hides, full org list still works.
+## Out of scope (this pass)
+- Changing how OF-286 signing actually works (still happens from the existing thread/document flow).
+- Adding push notifications or email digest.
+- Changing how inbound emails get routed to a thread.
