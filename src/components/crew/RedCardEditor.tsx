@@ -198,7 +198,7 @@ export function RedCardEditor({ crewMemberId, memberName, onClose }: Props) {
             </div>
 
             <Section title="Identity">
-              <Input label="Card ID" value={form.card_id} onChange={(v) => setForm({ ...form, card_id: v })} />
+              <Input label="Certifying Entity" value={form.card_id} onChange={(v) => setForm({ ...form, card_id: v })} />
               <Input label="Agency" value={form.agency} onChange={(v) => setForm({ ...form, agency: v })} />
               <Input label="Primary Position" value={form.primary_position} onChange={(v) => setForm({ ...form, primary_position: v })} />
             </Section>
