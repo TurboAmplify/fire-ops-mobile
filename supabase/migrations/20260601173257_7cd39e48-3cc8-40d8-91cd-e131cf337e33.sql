@@ -1,0 +1,2 @@
+ALTER TABLE public.communication_threads DROP CONSTRAINT ct_purpose_chk;
+ALTER TABLE public.communication_threads ADD CONSTRAINT ct_purpose_chk CHECK (purpose = ANY (ARRAY['shift_ticket','demob','of286','general','red_cards']));
