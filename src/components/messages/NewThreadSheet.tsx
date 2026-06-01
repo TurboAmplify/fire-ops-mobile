@@ -123,14 +123,24 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, purpose, incidentId, contacts, incidentName, incidentOrgId]);
 
+  const assignedCrewForTruck = useMemo(
+    () => (selectedTruckId ? assignedCrew.filter((c) => c.incident_truck_id === selectedTruckId) : []),
+    [assignedCrew, selectedTruckId],
+  );
+
   const visibleCrew = useMemo(() => {
-    const src = scope === "assigned" ? assignedCrew : allCrew;
+    const src = scope === "assigned" ? assignedCrewForTruck : allCrew;
     const q = search.trim().toLowerCase();
     const filtered = q
       ? src.filter((c) => c.name.toLowerCase().includes(q) || (c.position ?? "").toLowerCase().includes(q))
       : src;
     return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
-  }, [scope, assignedCrew, allCrew, search]);
+  }, [scope, assignedCrewForTruck, allCrew, search]);
+
+  // Clear selections when switching the resource (truck), to avoid stale picks.
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [selectedTruckId, scope]);
 
   const toggle = (id: string) => {
     setSelectedIds((prev) => {
