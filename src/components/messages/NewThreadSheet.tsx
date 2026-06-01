@@ -78,10 +78,13 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
       .catch(() => setContacts([]));
     supabase
       .from("incidents")
-      .select("name")
+      .select("name, organization_id")
       .eq("id", incidentId)
       .maybeSingle()
-      .then(({ data }) => setIncidentName((data as any)?.name ?? ""));
+      .then(({ data }) => {
+        setIncidentName((data as any)?.name ?? "");
+        setIncidentOrgId((data as any)?.organization_id ?? null);
+      });
   }, [open, incidentId, defaultSubject]);
 
   // Load crew lists when red_cards purpose selected
