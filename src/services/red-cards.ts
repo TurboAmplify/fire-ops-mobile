@@ -157,7 +157,7 @@ export async function listAssignedCrewWithRedCards(incidentId: string): Promise<
   if (ids.length === 0) return [];
 
   const [{ data: members }, { data: cards }] = await Promise.all([
-    supabase.from("crew_members").select("id, name, position").in("id", ids),
+    supabase.from("crew_members").select("id, name, role").in("id", ids),
     supabase.from("red_cards").select("*").in("crew_member_id", ids),
   ]);
   const cardByMember = new Map<string, RedCard>();
@@ -168,7 +168,7 @@ export async function listAssignedCrewWithRedCards(incidentId: string): Promise<
     return {
       crew_member_id: m.id,
       name: m.name ?? "Unnamed",
-      position: m.position ?? null,
+      position: m.role ?? null,
       truck_name: itId ? truckNameById.get(itId) ?? null : null,
       incident_truck_id: itId,
       card: cardByMember.get(m.id) ?? null,
@@ -180,7 +180,7 @@ export async function listAssignedCrewWithRedCards(incidentId: string): Promise<
 export async function listOrgCrewWithRedCards(organizationId: string): Promise<CrewWithRedCard[]> {
   const { data: members, error } = await supabase
     .from("crew_members")
-    .select("id, name, position")
+    .select("id, name, role")
     .eq("organization_id", organizationId);
   if (error) throw error;
   const ids = (members ?? []).map((m: any) => m.id);
@@ -191,7 +191,7 @@ export async function listOrgCrewWithRedCards(organizationId: string): Promise<C
   return (members ?? []).map((m: any) => ({
     crew_member_id: m.id,
     name: m.name ?? "Unnamed",
-    position: m.position ?? null,
+    position: m.role ?? null,
     card: cardByMember.get(m.id) ?? null,
   }));
 }
