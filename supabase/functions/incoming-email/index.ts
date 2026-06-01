@@ -224,10 +224,13 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      let classified: { type: string; stage?: string; confidence: number; model: string } | null = null;
+      let classified: { type: string; stage?: string; confidence: number; stage_confidence?: number; model: string } | null = null;
       if ((att.content_type === "application/pdf" || att.filename.toLowerCase().endsWith(".pdf"))) {
         try {
-          classified = await classifyPdf(att.filename, base64);
+          classified = await classifyPdf(att.filename, base64, {
+            subject: subject ?? "",
+            body: payload.text ?? "",
+          });
         } catch (e) {
           console.error("AI classify failed", e);
         }
@@ -269,8 +272,24 @@ Deno.serve(async (req) => {
         }
 
         if (incidentId) {
-          const isFinanceSigned = classified.stage === "of286_finance_signed";
-          const stage = isFinanceSigned ? "finance_signed" : "original";
+          // 3-way intent mapping. If the model isn't confident enough on the
+          // sign-vs-review distinction, fall back to review_only — never
+          // auto-prompt a signature the FO didn't actually ask for.
+          const rawStage = classified.stage ?? "of286_review_only";
+          const stageConf = classified.stage_confidence ?? classified.confidence ?? 0;
+          const safeStage =
+            rawStage === "of286_finance_signed"
+              ? "of286_finance_signed"
+              : rawStage === "of286_awaiting_signature" && stageConf >= 0.6
+                ? "of286_awaiting_signature"
+                : "of286_review_only";
+
+          const docStage =
+            safeStage === "of286_finance_signed"
+              ? "finance_signed"
+              : safeStage === "of286_awaiting_signature"
+                ? "original"
+                : "review";
 
           const { data: docRow } = await supabase
             .from("incident_documents")
@@ -281,20 +300,34 @@ Deno.serve(async (req) => {
               document_type: "of286",
               file_url: `${Deno.env.get("SUPABASE_URL")}/storage/v1/object/public/communication-attachments/${encodeURIComponent(path)}`,
               file_name: att.filename,
-              stage,
+              stage: docStage,
               source_message_id: msg.id,
               thread_id: thread.id,
-              ai_classification: classified as unknown as Record<string, unknown>,
+              ai_classification: { ...classified, safe_stage: safeStage } as unknown as Record<string, unknown>,
             })
             .select("id")
             .single();
 
-          const title = isFinanceSigned
-            ? "OF-286 signed copy received"
-            : "OF-286 needs review & signature";
-          const body = isFinanceSigned
-            ? `${fromName || fromEmail} returned a signed OF-286. Review the final copy.`
-            : `${fromName || fromEmail} sent an OF-286. Review and sign to send back.`;
+          // Link the attachment back to the doc for the UI override flow.
+          if (docRow?.id && maRow?.id) {
+            await supabase
+              .from("message_attachments")
+              .update({ linked_incident_document_id: docRow.id })
+              .eq("id", maRow.id);
+          }
+
+          const title =
+            safeStage === "of286_finance_signed"
+              ? "OF-286 signed copy received"
+              : safeStage === "of286_awaiting_signature"
+                ? "OF-286 needs review & signature"
+                : "OF-286 draft to review";
+          const body =
+            safeStage === "of286_finance_signed"
+              ? `${fromName || fromEmail} returned a signed OF-286. Review the final copy.`
+              : safeStage === "of286_awaiting_signature"
+                ? `${fromName || fromEmail} sent an OF-286. Review and sign to send back.`
+                : `${fromName || fromEmail} sent a draft OF-286 for your review. No signature requested.`;
 
           await supabase.from("app_notifications").insert({
             organization_id: thread.organization_id,
@@ -305,7 +338,7 @@ Deno.serve(async (req) => {
             incident_id: incidentId,
             incident_truck_id: thread.incident_truck_id ?? null,
             incident_document_id: docRow?.id ?? null,
-            link_path: `/incidents/${incidentId}`,
+            link_path: `/messages/${thread.id}`,
           });
         }
       }
