@@ -74,6 +74,8 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
     setScope("assigned");
     setAssignedCrew([]);
     setAllCrew([]);
+    setTrucks([]);
+    setSelectedTruckId(null);
     listIncidentFinanceContacts(incidentId)
       .then((rows) => {
         setContacts(rows);
