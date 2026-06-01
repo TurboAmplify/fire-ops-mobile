@@ -276,17 +276,21 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
                 ) : visibleCrew.length === 0 ? (
                   <p className="py-6 text-center text-xs text-muted-foreground">
                     {scope === "assigned"
-                      ? "No assigned crew with red cards on file."
-                      : "No crew with red cards on file."}
+                      ? "No crew assigned to trucks on this incident yet."
+                      : "No crew in your organization yet."}
                   </p>
                 ) : (
                   visibleCrew.map((c) => {
                     const checked = selectedIds.has(c.crew_member_id);
+                    const hasCard = !!c.card;
                     return (
                       <button
                         key={c.crew_member_id}
-                        onClick={() => toggle(c.crew_member_id)}
-                        className="flex w-full items-center gap-2 border-b border-border/60 px-3 py-2.5 text-left text-sm last:border-b-0 hover:bg-accent/40"
+                        onClick={() => hasCard && toggle(c.crew_member_id)}
+                        disabled={!hasCard}
+                        className={`flex w-full items-center gap-2 border-b border-border/60 px-3 py-2.5 text-left text-sm last:border-b-0 ${
+                          hasCard ? "hover:bg-accent/40" : "opacity-50 cursor-not-allowed"
+                        }`}
                       >
                         <span
                           className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
@@ -297,9 +301,10 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
                         </span>
                         <span className="flex-1 min-w-0">
                           <p className="truncate font-medium">{c.name}</p>
-                          {c.position && (
-                            <p className="truncate text-[11px] text-muted-foreground">{c.position}</p>
-                          )}
+                          <p className="truncate text-[11px] text-muted-foreground">
+                            {[c.position, c.truck_name].filter(Boolean).join(" · ")}
+                            {!hasCard && (c.position || c.truck_name ? " · " : "") + "No card on file"}
+                          </p>
                         </span>
                       </button>
                     );
