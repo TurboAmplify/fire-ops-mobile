@@ -61,6 +61,8 @@ export interface AttachmentRow {
   mime_type: string | null;
   size_bytes: number | null;
   auto_classified_as: string | null;
+  auto_classified_stage: string | null;
+  linked_incident_document_id: string | null;
 }
 
 export async function listThreads(opts: {
