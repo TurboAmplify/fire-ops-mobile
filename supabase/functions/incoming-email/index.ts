@@ -381,8 +381,9 @@ Deno.serve(async (req) => {
 
 async function classifyPdf(
   filename: string,
-  _base64: string,
-): Promise<{ type: string; stage?: string; confidence: number; model: string }> {
+  base64: string,
+  ctx: { subject: string; body: string },
+): Promise<{ type: string; stage?: string; confidence: number; stage_confidence?: number; model: string }> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
 
@@ -396,15 +397,32 @@ async function classifyPdf(
         ? "demob"
         : "other";
 
-  // Ask AI gateway to confirm + score
-  const model = "google/gemini-2.5-flash-lite";
-  const prompt = `You are classifying a PDF email attachment from a wildland-fire incident.
-Filename: "${filename}"
-Likely type from filename: ${hint}.
+  const model = "google/gemini-2.5-flash";
+  const sys = `You classify a PDF attachment from a wildland-fire incident email and decide what the sender is asking the recipient (a fire contractor) to do.
 
-Return strict JSON: {"type":"of286|of297|demob|other","stage":"of286_draft_received|of286_finance_signed|null","confidence":0-1}.
-OF-286 is "Emergency Equipment Use Invoice". OF-297 is the daily shift ticket. Demob = release/demobilization paperwork.
-If type != of286, stage must be null.`;
+Return STRICT JSON with this exact shape:
+{"type":"of286|of297|demob|other","stage":"of286_review_only|of286_awaiting_signature|of286_finance_signed|null","confidence":0-1,"stage_confidence":0-1}
+
+Definitions:
+- type=of286 = "Emergency Equipment Use Invoice" (OF-286). of297 = daily shift ticket. demob = release/demobilization paperwork.
+- If type != of286, stage MUST be null and stage_confidence MUST be 0.
+
+OF-286 stages (read the email subject/body carefully):
+- of286_review_only: Finance officer sent a DRAFT for the contractor to review and confirm details. No signature requested yet. Cues: "for your review", "please review", "do not sign yet", "verify totals", "draft", "preliminary".
+- of286_awaiting_signature: FO is asking the contractor to SIGN and return. Cues: "please sign and return", "sign and email back", "needs your signature", "for signature".
+- of286_finance_signed: FO has already countersigned and is returning the FINAL copy. Cues: "signed copy attached", "final invoice", "fully executed", visible finance/agency signature on the PDF.
+
+When in doubt between review_only and awaiting_signature, lean toward of286_review_only and lower stage_confidence.`;
+
+  // Truncate PDF to ~3 MB of base64 to stay under model limits.
+  const MAX_B64 = 3_500_000;
+  const safeB64 = base64.length > MAX_B64 ? base64.slice(0, MAX_B64) : base64;
+
+  const userText = `Filename: "${filename}"
+Filename hint: ${hint}
+Email subject: ${ctx.subject.slice(0, 300)}
+Email body (truncated):
+${(ctx.body || "(no plain text body)").slice(0, 2000)}`;
 
   const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
@@ -414,10 +432,26 @@ If type != of286, stage must be null.`;
     },
     body: JSON.stringify({
       model,
-      messages: [{ role: "user", content: prompt }],
+      messages: [
+        { role: "system", content: sys },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: userText },
+            {
+              type: "image_url",
+              image_url: { url: `data:application/pdf;base64,${safeB64}` },
+            },
+          ],
+        },
+      ],
       response_format: { type: "json_object" },
     }),
   });
+  if (!resp.ok) {
+    const txt = await resp.text();
+    throw new Error(`AI gateway ${resp.status}: ${txt.slice(0, 200)}`);
+  }
   const data = await resp.json();
   const content = data?.choices?.[0]?.message?.content ?? "{}";
   const parsed = JSON.parse(content);
@@ -425,6 +459,7 @@ If type != of286, stage must be null.`;
     type: parsed.type ?? "other",
     stage: parsed.stage ?? undefined,
     confidence: typeof parsed.confidence === "number" ? parsed.confidence : 0.5,
+    stage_confidence: typeof parsed.stage_confidence === "number" ? parsed.stage_confidence : undefined,
     model,
   };
 }
