@@ -47,6 +47,7 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
   const [body, setBody] = useState("");
   const [loading, setLoading] = useState(false);
   const [incidentName, setIncidentName] = useState<string>("");
+  const [incidentOrgId, setIncidentOrgId] = useState<string | null>(null);
 
   // Red card picker state
   const [scope, setScope] = useState<CrewScope>("assigned");
@@ -77,16 +78,19 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
       .catch(() => setContacts([]));
     supabase
       .from("incidents")
-      .select("name")
+      .select("name, organization_id")
       .eq("id", incidentId)
       .maybeSingle()
-      .then(({ data }) => setIncidentName((data as any)?.name ?? ""));
+      .then(({ data }) => {
+        setIncidentName((data as any)?.name ?? "");
+        setIncidentOrgId((data as any)?.organization_id ?? null);
+      });
   }, [open, incidentId, defaultSubject]);
 
   // Load crew lists when red_cards purpose selected
   useEffect(() => {
     if (!open || purpose !== "red_cards") return;
-    const orgId = contacts[0]?.organization_id;
+    const orgId = incidentOrgId ?? contacts[0]?.organization_id;
     setCrewLoading(true);
     Promise.all([
       listAssignedCrewWithRedCards(incidentId).catch(() => []),
@@ -106,7 +110,7 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, purpose, incidentId, contacts, incidentName]);
+  }, [open, purpose, incidentId, contacts, incidentName, incidentOrgId]);
 
   const visibleCrew = useMemo(() => {
     const src = scope === "assigned" ? assignedCrew : allCrew;
@@ -142,19 +146,20 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
     setLoading(true);
     try {
       let attachments: string[] = [];
+      let finalBody = body.trim();
 
       if (purpose === "red_cards") {
         const pool = [...assignedCrew, ...allCrew];
         const picked: CrewWithRedCard[] = [];
         const seen = new Set<string>();
         for (const c of pool) {
-          if (selectedIds.has(c.crew_member_id) && !seen.has(c.crew_member_id)) {
+          if (selectedIds.has(c.crew_member_id) && !seen.has(c.crew_member_id) && c.card) {
             picked.push(c);
             seen.add(c.crew_member_id);
           }
         }
         const { blob, fileName } = await generateRedCardsPdfBlob(
-          picked.map((p) => ({ card: p.card, memberName: p.name })),
+          picked.map((p) => ({ card: p.card!, memberName: p.name })),
           incidentName,
         );
         const orgId = contact.organization_id;
@@ -165,6 +170,32 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
         if (upErr) throw upErr;
         attachments = [path];
         void fileName;
+
+        // Append truck + crew summary so the recipient knows who/what is attached.
+        const byTruck = new Map<string, string[]>();
+        const noTruck: string[] = [];
+        for (const p of picked) {
+          const line = p.position ? `${p.name} (${p.position})` : p.name;
+          if (p.truck_name) {
+            const arr = byTruck.get(p.truck_name) ?? [];
+            arr.push(line);
+            byTruck.set(p.truck_name, arr);
+          } else {
+            noTruck.push(line);
+          }
+        }
+        const summaryLines: string[] = [`Attached: ${picked.length} red card${picked.length === 1 ? "" : "s"}.`];
+        const truckNames = Array.from(byTruck.keys()).sort();
+        for (const t of truckNames) {
+          const members = byTruck.get(t)!;
+          summaryLines.push("", `${t} (${members.length}):`);
+          for (const m of members) summaryLines.push(`  • ${m}`);
+        }
+        if (noTruck.length) {
+          summaryLines.push("", `Unassigned (${noTruck.length}):`);
+          for (const m of noTruck) summaryLines.push(`  • ${m}`);
+        }
+        finalBody = `${finalBody}\n\n---\n${summaryLines.join("\n")}`;
       }
 
       const thread = await create.mutateAsync({
@@ -174,7 +205,7 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
         purpose,
         subject: subject.trim(),
       });
-      await sendReply(thread.id, body.trim(), attachments);
+      await sendReply(thread.id, finalBody, attachments);
       toast.success(purpose === "red_cards" ? "Red cards sent" : "Thread started");
       onOpenChange(false);
       nav(`/messages/${thread.id}`);
@@ -218,21 +249,15 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
 
           <div>
             <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Purpose</label>
-            <div className="mt-1 grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap">
+            <select
+              value={purpose}
+              onChange={(e) => setPurpose(e.target.value as ThreadPurpose)}
+              className="w-full mt-1 rounded-md border border-border bg-background px-3 py-2 text-sm"
+            >
               {PURPOSES.map((p) => (
-                <button
-                  key={p.value}
-                  onClick={() => setPurpose(p.value)}
-                  className={`rounded-full px-3 py-2 text-xs min-h-[44px] sm:min-h-0 sm:py-1.5 ${
-                    purpose === p.value
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-secondary text-secondary-foreground"
-                  }`}
-                >
-                  {p.label}
-                </button>
+                <option key={p.value} value={p.value}>{p.label}</option>
               ))}
-            </div>
+            </select>
           </div>
 
           {purpose === "red_cards" && (
@@ -278,17 +303,21 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
                 ) : visibleCrew.length === 0 ? (
                   <p className="py-6 text-center text-xs text-muted-foreground">
                     {scope === "assigned"
-                      ? "No assigned crew with red cards on file."
-                      : "No crew with red cards on file."}
+                      ? "No crew assigned to trucks on this incident yet."
+                      : "No crew in your organization yet."}
                   </p>
                 ) : (
                   visibleCrew.map((c) => {
                     const checked = selectedIds.has(c.crew_member_id);
+                    const hasCard = !!c.card;
                     return (
                       <button
                         key={c.crew_member_id}
-                        onClick={() => toggle(c.crew_member_id)}
-                        className="flex w-full items-center gap-2 border-b border-border/60 px-3 py-2.5 text-left text-sm last:border-b-0 hover:bg-accent/40"
+                        onClick={() => hasCard && toggle(c.crew_member_id)}
+                        disabled={!hasCard}
+                        className={`flex w-full items-center gap-2 border-b border-border/60 px-3 py-2.5 text-left text-sm last:border-b-0 ${
+                          hasCard ? "hover:bg-accent/40" : "opacity-50 cursor-not-allowed"
+                        }`}
                       >
                         <span
                           className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
@@ -299,9 +328,10 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
                         </span>
                         <span className="flex-1 min-w-0">
                           <p className="truncate font-medium">{c.name}</p>
-                          {c.position && (
-                            <p className="truncate text-[11px] text-muted-foreground">{c.position}</p>
-                          )}
+                          <p className="truncate text-[11px] text-muted-foreground">
+                            {[c.position, c.truck_name].filter(Boolean).join(" · ")}
+                            {!hasCard && (c.position || c.truck_name ? " · " : "") + "No card on file"}
+                          </p>
                         </span>
                       </button>
                     );
