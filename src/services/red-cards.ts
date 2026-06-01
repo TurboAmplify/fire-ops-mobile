@@ -142,42 +142,36 @@ export async function listAssignedCrewWithRedCards(incidentId: string): Promise<
 
   const { data: rows, error } = await supabase
     .from("incident_truck_crew")
-    .select("crew_member_id, incident_truck_id, crew_members(id, name, position, organization_id)")
+    .select("crew_member_id, incident_truck_id")
     .in("incident_truck_id", truckIds)
     .eq("is_active", true);
   if (error) throw error;
 
-  type Info = { name: string; position: string | null; truck_name: string | null; incident_truck_id: string | null };
-  const memberMap = new Map<string, Info>();
+  // First-seen truck per crew member (a member could appear on multiple trucks)
+  const truckByMember = new Map<string, string>();
   for (const r of rows ?? []) {
-    const cm: any = (r as any).crew_members;
-    if (!cm?.id) continue;
-    if (!memberMap.has(cm.id)) {
-      const itId = (r as any).incident_truck_id as string;
-      memberMap.set(cm.id, {
-        name: cm.name ?? "Unnamed",
-        position: cm.position ?? null,
-        truck_name: truckNameById.get(itId) ?? null,
-        incident_truck_id: itId ?? null,
-      });
-    }
+    const cmId = (r as any).crew_member_id as string;
+    if (!truckByMember.has(cmId)) truckByMember.set(cmId, (r as any).incident_truck_id as string);
   }
-  const ids = Array.from(memberMap.keys());
+  const ids = Array.from(truckByMember.keys());
   if (ids.length === 0) return [];
 
-  const { data: cards } = await supabase.from("red_cards").select("*").in("crew_member_id", ids);
+  const [{ data: members }, { data: cards }] = await Promise.all([
+    supabase.from("crew_members").select("id, name, position").in("id", ids),
+    supabase.from("red_cards").select("*").in("crew_member_id", ids),
+  ]);
   const cardByMember = new Map<string, RedCard>();
   for (const c of cards ?? []) cardByMember.set((c as any).crew_member_id, c as RedCard);
 
-  return ids.map((id) => {
-    const info = memberMap.get(id)!;
+  return (members ?? []).map((m: any) => {
+    const itId = truckByMember.get(m.id) ?? null;
     return {
-      crew_member_id: id,
-      name: info.name,
-      position: info.position,
-      truck_name: info.truck_name,
-      incident_truck_id: info.incident_truck_id,
-      card: cardByMember.get(id) ?? null,
+      crew_member_id: m.id,
+      name: m.name ?? "Unnamed",
+      position: m.position ?? null,
+      truck_name: itId ? truckNameById.get(itId) ?? null : null,
+      incident_truck_id: itId,
+      card: cardByMember.get(m.id) ?? null,
     };
   });
 }
