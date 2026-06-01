@@ -101,10 +101,15 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
     Promise.all([
       listAssignedCrewWithRedCards(incidentId).catch(() => []),
       orgId ? listOrgCrewWithRedCards(orgId).catch(() => []) : Promise.resolve([]),
+      listIncidentTrucksForPicker(incidentId).catch(() => []),
     ])
-      .then(([a, b]) => {
+      .then(([a, b, ts]) => {
         setAssignedCrew(a);
         setAllCrew(b);
+        setTrucks(ts as IncidentTruckForPicker[]);
+        if ((ts as IncidentTruckForPicker[]).length === 1) {
+          setSelectedTruckId((ts as IncidentTruckForPicker[])[0].incident_truck_id);
+        }
       })
       .finally(() => setCrewLoading(false));
     if (!subject.trim() || subject.startsWith("Red Cards") === false) {
