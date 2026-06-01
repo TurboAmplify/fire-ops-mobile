@@ -19,6 +19,8 @@ export interface ThreadRow {
   created_at: string;
 }
 
+export type Of286Stage = "review" | "original" | "finance_signed" | "signed";
+
 export interface ThreadListItem extends ThreadRow {
   incident_name: string | null;
   last_snippet: string | null;
@@ -26,6 +28,8 @@ export interface ThreadListItem extends ThreadRow {
   counterparty_email: string | null;
   attachment_count: number;
   needs_signature: boolean;
+  /** Latest OF-286 doc stage on this thread, if any. */
+  of286_stage: Of286Stage | null;
 }
 
 
