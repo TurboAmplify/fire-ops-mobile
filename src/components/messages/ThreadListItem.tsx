@@ -43,14 +43,27 @@ export function ThreadListItem({ item }: { item: TItem }) {
         {item.last_snippet && (
           <p className="text-xs text-muted-foreground truncate mt-0.5">{item.last_snippet}</p>
         )}
-        <div className="flex items-center gap-1.5 mt-1">
+        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
           <span className="text-[10px] uppercase tracking-wider rounded-full bg-secondary/60 px-1.5 py-0.5">
             {PURPOSE_LABEL[item.purpose] ?? item.purpose}
           </span>
+          {item.attachment_count > 0 && (
+            <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground">
+              <Paperclip className="h-3 w-3" />
+              {item.attachment_count}
+            </span>
+          )}
+          {item.needs_signature && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold rounded-full bg-primary/15 text-primary px-1.5 py-0.5">
+              <PenLine className="h-3 w-3" />
+              Needs signature
+            </span>
+          )}
           {item.incident_name && (
             <span className="text-[10px] text-muted-foreground truncate">{item.incident_name}</span>
           )}
         </div>
+
       </div>
     </button>
   );
