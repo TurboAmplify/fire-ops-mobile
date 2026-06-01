@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
     if (token) {
       const { data } = await supabase
         .from("communication_threads")
-        .select("id, organization_id, subject, incident_truck_id, purpose")
+        .select("id, organization_id, subject, incident_truck_id, incident_id, purpose")
         .eq("thread_token", token)
         .maybeSingle();
       thread = data ?? null;
@@ -130,7 +130,7 @@ Deno.serve(async (req) => {
           // Try to reuse a recent general inbox thread on same subject; else open new.
           const { data: existing } = await supabase
             .from("communication_threads")
-            .select("id, organization_id, subject, incident_truck_id, purpose")
+            .select("id, organization_id, subject, incident_truck_id, incident_id, purpose")
             .eq("organization_id", org.id)
             .eq("purpose", "general")
             .eq("subject", subj)
@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
                 last_message_direction: "in",
                 unread_count: 0,
               })
-              .select("id, organization_id, subject, incident_truck_id, purpose")
+              .select("id, organization_id, subject, incident_truck_id, incident_id, purpose")
               .single();
             if (cErr) {
               console.error("incoming-email: failed to open inbox thread", cErr);
