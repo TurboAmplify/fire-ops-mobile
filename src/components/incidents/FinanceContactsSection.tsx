@@ -24,7 +24,8 @@ interface Props {
 interface ResolvedContact extends IncidentTruckFinanceContact {
   display_name: string;
   display_email: string;
-  display_phone: string | null;
+  display_work_phone: string | null;
+  display_cell_phone: string | null;
 }
 
 export function FinanceContactsSection({ incidentTruckId, incidentId, organizationId, incidentRegionId }: Props) {
