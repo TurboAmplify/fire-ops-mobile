@@ -106,10 +106,18 @@ export function FinanceContactsSection({ incidentTruckId, incidentId, organizati
                   <Mail className="h-3 w-3" />
                   <span className="truncate">{c.display_email}</span>
                 </div>
-                {c.display_phone && (
+                {c.display_work_phone && (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Phone className="h-3 w-3" />
-                    <span>{c.display_phone}</span>
+                    <span>{c.display_work_phone}</span>
+                    <span className="text-[10px] uppercase tracking-wide">work</span>
+                  </div>
+                )}
+                {c.display_cell_phone && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Phone className="h-3 w-3" />
+                    <span>{c.display_cell_phone}</span>
+                    <span className="text-[10px] uppercase tracking-wide">cell</span>
                   </div>
                 )}
               </div>
