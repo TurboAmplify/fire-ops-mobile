@@ -155,10 +155,14 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
     return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
   }, [scope, assignedCrewForTruck, allCrew, search]);
 
-  // Clear selections when switching the resource (truck), to avoid stale picks.
+  // Auto-select all crew with red cards when the resource/scope changes,
+  // so the Send button is active by default. User can uncheck individuals.
   useEffect(() => {
-    setSelectedIds(new Set());
-  }, [selectedTruckId, scope]);
+    const src = scope === "assigned" ? assignedCrewForTruck : allCrew;
+    const next = new Set<string>();
+    for (const c of src) if (c.card) next.add(c.crew_member_id);
+    setSelectedIds(next);
+  }, [selectedTruckId, scope, assignedCrewForTruck, allCrew]);
 
   const toggle = (id: string) => {
     setSelectedIds((prev) => {
