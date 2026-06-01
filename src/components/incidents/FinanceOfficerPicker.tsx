@@ -89,11 +89,12 @@ export function FinanceOfficerPicker({
     listFinanceOfficers({
       regionId: regionId || null,
       search,
+      sort,
     })
       .then(setOfficers)
       .catch((e) => toast.error(e.message))
       .finally(() => setLoading(false));
-  }, [open, tab, regionId, search]);
+  }, [open, tab, regionId, search, sort]);
 
   const handlePick = async (o: FinanceOfficer) => {
     setSaving(true);
