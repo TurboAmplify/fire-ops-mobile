@@ -90,7 +90,7 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
   // Load crew lists when red_cards purpose selected
   useEffect(() => {
     if (!open || purpose !== "red_cards") return;
-    const orgId = contacts[0]?.organization_id;
+    const orgId = incidentOrgId ?? contacts[0]?.organization_id;
     setCrewLoading(true);
     Promise.all([
       listAssignedCrewWithRedCards(incidentId).catch(() => []),
@@ -110,7 +110,7 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, purpose, incidentId, contacts, incidentName]);
+  }, [open, purpose, incidentId, contacts, incidentName, incidentOrgId]);
 
   const visibleCrew = useMemo(() => {
     const src = scope === "assigned" ? assignedCrew : allCrew;
