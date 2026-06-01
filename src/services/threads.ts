@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type ThreadPurpose = "general" | "shift_ticket" | "demob" | "of286";
+export type ThreadPurpose = "general" | "shift_ticket" | "demob" | "of286" | "red_cards";
 
 export interface ThreadRow {
   id: string;

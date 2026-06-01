@@ -80,3 +80,65 @@ export async function uploadRedCardFile(
   if (error) throw error;
   return path; // store the storage path; use getViewableUrl/SignedImage to display
 }
+
+export interface CrewWithRedCard {
+  crew_member_id: string;
+  name: string;
+  position: string | null;
+  card: RedCard;
+}
+
+/** Crew members assigned to any truck on this incident who have a red card on file. */
+export async function listAssignedCrewWithRedCards(incidentId: string): Promise<CrewWithRedCard[]> {
+  const { data: trucks, error: tErr } = await supabase
+    .from("incident_trucks")
+    .select("id")
+    .eq("incident_id", incidentId);
+  if (tErr) throw tErr;
+  const truckIds = (trucks ?? []).map((t: any) => t.id);
+  if (truckIds.length === 0) return [];
+
+  const { data: rows, error } = await supabase
+    .from("incident_truck_crew")
+    .select("crew_member_id, crew_members(id, name, position, organization_id)")
+    .in("incident_truck_id", truckIds)
+    .eq("is_active", true);
+  if (error) throw error;
+
+  const memberMap = new Map<string, { name: string; position: string | null }>();
+  for (const r of rows ?? []) {
+    const cm: any = (r as any).crew_members;
+    if (cm?.id) memberMap.set(cm.id, { name: cm.name ?? "Unnamed", position: cm.position ?? null });
+  }
+  const ids = Array.from(memberMap.keys());
+  if (ids.length === 0) return [];
+
+  const { data: cards, error: cErr } = await supabase
+    .from("red_cards")
+    .select("*")
+    .in("crew_member_id", ids);
+  if (cErr) throw cErr;
+
+  return (cards ?? [])
+    .map((card: any) => {
+      const info = memberMap.get(card.crew_member_id);
+      if (!info) return null;
+      return { crew_member_id: card.crew_member_id, name: info.name, position: info.position, card };
+    })
+    .filter(Boolean) as CrewWithRedCard[];
+}
+
+/** All crew members in the org with a red card on file. */
+export async function listOrgCrewWithRedCards(organizationId: string): Promise<CrewWithRedCard[]> {
+  const { data: cards, error } = await supabase
+    .from("red_cards")
+    .select("*, crew_members!inner(id, name, position, organization_id)")
+    .eq("crew_members.organization_id", organizationId);
+  if (error) throw error;
+  return (cards ?? []).map((row: any) => ({
+    crew_member_id: row.crew_member_id,
+    name: row.crew_members?.name ?? "Unnamed",
+    position: row.crew_members?.position ?? null,
+    card: row,
+  }));
+}
