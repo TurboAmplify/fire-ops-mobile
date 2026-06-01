@@ -352,7 +352,9 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
                 ) : visibleCrew.length === 0 ? (
                   <p className="py-6 text-center text-xs text-muted-foreground">
                     {scope === "assigned"
-                      ? "No crew assigned to trucks on this incident yet."
+                      ? selectedTruckId
+                        ? "No crew assigned to this truck yet."
+                        : "Pick a resource above to see its crew."
                       : "No crew in your organization yet."}
                   </p>
                 ) : (
