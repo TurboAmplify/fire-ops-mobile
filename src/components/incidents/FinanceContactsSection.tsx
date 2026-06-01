@@ -24,7 +24,8 @@ interface Props {
 interface ResolvedContact extends IncidentTruckFinanceContact {
   display_name: string;
   display_email: string;
-  display_phone: string | null;
+  display_work_phone: string | null;
+  display_cell_phone: string | null;
 }
 
 export function FinanceContactsSection({ incidentTruckId, incidentId, organizationId, incidentRegionId }: Props) {
@@ -41,14 +42,14 @@ export function FinanceContactsSection({ incidentTruckId, incidentId, organizati
           ? await listTruckFinanceContacts(incidentTruckId)
           : [];
       const officerIds = raw.map((c) => c.finance_officer_id).filter(Boolean) as string[];
-      const officersById: Record<string, { name: string; email: string; phone: string | null }> = {};
+      const officersById: Record<string, { name: string; email: string; phone: string | null; work_phone: string | null; cell_phone: string | null }> = {};
       if (officerIds.length) {
         const { data } = await supabase
           .from("finance_officers")
-          .select("id, name, email, phone")
+          .select("id, name, email, phone, work_phone, cell_phone")
           .in("id", officerIds);
         for (const o of data ?? []) {
-          officersById[o.id] = { name: o.name, email: o.email, phone: o.phone };
+          officersById[o.id] = { name: o.name, email: o.email, phone: o.phone, work_phone: o.work_phone, cell_phone: o.cell_phone };
         }
       }
       const resolved: ResolvedContact[] = raw.map((c) => {
@@ -57,7 +58,8 @@ export function FinanceContactsSection({ incidentTruckId, incidentId, organizati
           ...c,
           display_name: c.name_override || o?.name || "(no name)",
           display_email: c.email_override || o?.email || "",
-          display_phone: c.phone_override || o?.phone || null,
+          display_work_phone: c.work_phone_override || o?.work_phone || null,
+          display_cell_phone: c.cell_phone_override || o?.cell_phone || c.phone_override || o?.phone || null,
         };
       });
       setContacts(resolved);
@@ -104,10 +106,18 @@ export function FinanceContactsSection({ incidentTruckId, incidentId, organizati
                   <Mail className="h-3 w-3" />
                   <span className="truncate">{c.display_email}</span>
                 </div>
-                {c.display_phone && (
+                {c.display_work_phone && (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Phone className="h-3 w-3" />
-                    <span>{c.display_phone}</span>
+                    <span>{c.display_work_phone}</span>
+                    <span className="text-[10px] uppercase tracking-wide">work</span>
+                  </div>
+                )}
+                {c.display_cell_phone && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Phone className="h-3 w-3" />
+                    <span>{c.display_cell_phone}</span>
+                    <span className="text-[10px] uppercase tracking-wide">cell</span>
                   </div>
                 )}
               </div>

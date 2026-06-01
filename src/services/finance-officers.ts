@@ -12,6 +12,8 @@ export interface FinanceOfficer {
   name: string;
   email: string;
   phone: string | null;
+  work_phone: string | null;
+  cell_phone: string | null;
   dispatch_office: string | null;
   region_id: string | null;
   agency: string | null;
@@ -58,6 +60,8 @@ export async function createFinanceOfficer(input: {
   name: string;
   email: string;
   phone?: string;
+  work_phone?: string;
+  cell_phone?: string;
   dispatch_office?: string;
   region_id?: string | null;
   agency?: string;
@@ -70,7 +74,9 @@ export async function createFinanceOfficer(input: {
     .insert({
       name: input.name.trim(),
       email: input.email.trim().toLowerCase(),
-      phone: input.phone || null,
+      phone: input.phone || input.cell_phone || input.work_phone || null,
+      work_phone: input.work_phone || null,
+      cell_phone: input.cell_phone || null,
       dispatch_office: input.dispatch_office || null,
       region_id: input.region_id || null,
       agency: input.agency || null,

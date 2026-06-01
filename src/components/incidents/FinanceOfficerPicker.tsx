@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { useEffect, useMemo, useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, Search, CheckCircle2, Plus } from "lucide-react";
+import { Loader2, Search, BadgeCheck, Plus, Mail, Phone, MapPin, ChevronRight } from "lucide-react";
 import {
   listFinanceOfficers,
   listRegions,
@@ -41,7 +41,7 @@ export function FinanceOfficerPicker({
   defaultRole = "both",
   onAdded,
 }: Props) {
-  const addContact = (extra: Parameters<typeof addTruckFinanceContact>[0] extends infer _ ? Omit<Parameters<typeof addIncidentFinanceContact>[0], "incident_id" | "organization_id"> : never) => {
+  const addContact = (extra: Omit<Parameters<typeof addIncidentFinanceContact>[0], "incident_id" | "organization_id">) => {
     if (incidentId) {
       return addIncidentFinanceContact({ incident_id: incidentId, organization_id: organizationId, ...extra });
     }
@@ -52,17 +52,19 @@ export function FinanceOfficerPicker({
   };
   const [tab, setTab] = useState<"directory" | "new" | "oneoff">("directory");
   const [regions, setRegions] = useState<GaccRegion[]>([]);
-  const [regionId, setRegionId] = useState<string | "all" | null>(defaultRegionId || null);
+  const [regionId, setRegionId] = useState<string | null>(defaultRegionId || null);
   const [search, setSearch] = useState("");
   const [officers, setOfficers] = useState<FinanceOfficer[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [pickingId, setPickingId] = useState<string | null>(null);
 
   // New officer form
   const [form, setForm] = useState({
     name: "",
     email: "",
-    phone: "",
+    work_phone: "",
+    cell_phone: "",
     dispatch_office: "",
     region_id: defaultRegionId ?? "",
     agency: "",
@@ -70,7 +72,7 @@ export function FinanceOfficerPicker({
   });
 
   // One-off contact form
-  const [oneOff, setOneOff] = useState({ name: "", email: "", phone: "" });
+  const [oneOff, setOneOff] = useState({ name: "", email: "", work_phone: "", cell_phone: "" });
 
   useEffect(() => {
     if (!open) return;
@@ -82,7 +84,7 @@ export function FinanceOfficerPicker({
     if (!open || tab !== "directory") return;
     setLoading(true);
     listFinanceOfficers({
-      regionId: regionId === "all" || !regionId ? null : regionId,
+      regionId: regionId || null,
       search,
     })
       .then(setOfficers)
@@ -92,12 +94,9 @@ export function FinanceOfficerPicker({
 
   const handlePick = async (o: FinanceOfficer) => {
     setSaving(true);
+    setPickingId(o.id);
     try {
       await addContact({ finance_officer_id: o.id, role: defaultRole });
-      recordOfficerUse(o.id).catch(() => {});
-      toast.success(`${o.name} added as finance contact`);
-      onAdded?.();
-      onOpenChange(false);
       recordOfficerUse(o.id).catch(() => {});
       toast.success(`${o.name} added as finance contact`);
       onAdded?.();
@@ -106,6 +105,7 @@ export function FinanceOfficerPicker({
       toast.error(e instanceof Error ? e.message : "Failed to add contact");
     } finally {
       setSaving(false);
+      setPickingId(null);
     }
   };
 
@@ -142,7 +142,8 @@ export function FinanceOfficerPicker({
       await addContact({
         name_override: oneOff.name || undefined,
         email_override: oneOff.email,
-        phone_override: oneOff.phone || undefined,
+        work_phone_override: oneOff.work_phone || undefined,
+        cell_phone_override: oneOff.cell_phone || undefined,
         role: defaultRole,
       });
       toast.success("One-off contact added");
@@ -155,86 +156,125 @@ export function FinanceOfficerPicker({
     }
   };
 
+  const regionOptions = useMemo(() => regions, [regions]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-lg max-h-[92vh] overflow-y-auto p-0 gap-0">
+        <DialogHeader className="px-4 pt-4 pb-2">
           <DialogTitle>Add finance contact</DialogTitle>
         </DialogHeader>
 
-        <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
-          <TabsList className="w-full grid grid-cols-3">
+        <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)} className="px-4 pb-4">
+          <TabsList className="w-full grid grid-cols-3 h-10">
             <TabsTrigger value="directory">Directory</TabsTrigger>
             <TabsTrigger value="new">New officer</TabsTrigger>
             <TabsTrigger value="oneoff">One-off</TabsTrigger>
           </TabsList>
 
+          {/* DIRECTORY */}
           <TabsContent value="directory" className="space-y-3 mt-3">
-            <div className="flex gap-2">
-              <Select value={regionId ?? "all"} onValueChange={(v) => setRegionId(v === "all" ? null : v)}>
-                <SelectTrigger className="w-40"><SelectValue placeholder="Region" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All regions</SelectItem>
-                  {regions.map((r) => (
-                    <SelectItem key={r.id} value={r.id}>{r.id}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <div className="relative flex-1">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search name, email, office"
-                  className="pl-8"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search name, email, or dispatch office"
+                className="pl-9 h-11"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
             </div>
+            <Select value={regionId ?? "all"} onValueChange={(v) => setRegionId(v === "all" ? null : v)}>
+              <SelectTrigger className="h-10">
+                <SelectValue placeholder="All regions" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All regions</SelectItem>
+                {regionOptions.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>{r.id} — {r.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             {defaultRegionId && regionId === defaultRegionId && (
               <p className="text-xs text-muted-foreground">
-                Showing officers matched to incident region <strong>{defaultRegionId}</strong>.
+                Showing officers in incident region <strong>{defaultRegionId}</strong>.
               </p>
             )}
 
-            <div className="space-y-2 max-h-80 overflow-y-auto">
+            <div className="space-y-2 max-h-[55vh] overflow-y-auto -mx-1 px-1">
               {loading ? (
-                <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin" /></div>
+                <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
               ) : officers.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  No officers found. Try a different region or add a new one.
-                </p>
+                <div className="text-center py-10 px-4 border border-dashed rounded-lg">
+                  <p className="text-sm text-muted-foreground mb-3">
+                    No officers match your search.
+                  </p>
+                  <Button size="sm" variant="outline" onClick={() => setTab("new")}>
+                    <Plus className="h-4 w-4 mr-1" /> Add new officer
+                  </Button>
+                </div>
               ) : (
-                officers.map((o) => (
-                  <button
-                    key={o.id}
-                    type="button"
-                    onClick={() => handlePick(o)}
-                    disabled={saving}
-                    className="w-full text-left p-3 border rounded-lg hover:bg-accent transition-colors disabled:opacity-50"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium">{o.name}</span>
-                      {o.verified_at && <CheckCircle2 className="h-4 w-4 text-primary" />}
-                    </div>
-                    <div className="text-xs text-muted-foreground">{o.email}</div>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {o.region_id && <Badge variant="secondary" className="text-xs">{o.region_id}</Badge>}
-                      {o.dispatch_office && <Badge variant="outline" className="text-xs">{o.dispatch_office}</Badge>}
-                      {o.agency && <Badge variant="outline" className="text-xs">{o.agency}</Badge>}
-                    </div>
-                  </button>
-                ))
+                officers.map((o) => {
+                  const phone = o.cell_phone || o.work_phone || o.phone;
+                  return (
+                    <button
+                      key={o.id}
+                      type="button"
+                      onClick={() => handlePick(o)}
+                      disabled={saving}
+                      className="w-full text-left p-3 border rounded-lg bg-card hover:bg-accent active:bg-accent transition-colors disabled:opacity-50 flex items-center gap-3 min-h-[64px]"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-semibold text-sm truncate">{o.name}</span>
+                          {o.verified_at && <BadgeCheck className="h-4 w-4 text-primary shrink-0" aria-label="Verified" />}
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+                          <Mail className="h-3 w-3 shrink-0" />
+                          <span className="truncate">{o.email}</span>
+                        </div>
+                        {phone && (
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+                            <Phone className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{phone}</span>
+                          </div>
+                        )}
+                        {(o.dispatch_office || o.region_id || o.agency) && (
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1 flex-wrap">
+                            {o.region_id && <Badge variant="secondary" className="text-[10px] h-4 px-1.5">{o.region_id}</Badge>}
+                            {o.dispatch_office && (
+                              <span className="inline-flex items-center gap-0.5">
+                                <MapPin className="h-3 w-3" />
+                                <span className="truncate">{o.dispatch_office}</span>
+                              </span>
+                            )}
+                            {o.agency && <Badge variant="outline" className="text-[10px] h-4 px-1.5">{o.agency}</Badge>}
+                          </div>
+                        )}
+                      </div>
+                      {pickingId === o.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                      )}
+                    </button>
+                  );
+                })
               )}
             </div>
           </TabsContent>
 
+          {/* NEW OFFICER */}
           <TabsContent value="new" className="space-y-3 mt-3">
             <p className="text-xs text-muted-foreground">
               Adds to the shared directory — visible to all crews.
             </p>
             <Field label="Name *"><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
             <Field label="Email *"><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></Field>
-            <Field label="Phone"><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></Field>
+            <div className="grid grid-cols-2 gap-2">
+              <Field label="Work phone"><Input type="tel" inputMode="tel" value={form.work_phone} onChange={(e) => setForm({ ...form, work_phone: e.target.value })} /></Field>
+              <Field label="Cell phone"><Input type="tel" inputMode="tel" value={form.cell_phone} onChange={(e) => setForm({ ...form, cell_phone: e.target.value })} /></Field>
+            </div>
             <Field label="Dispatch office"><Input value={form.dispatch_office} onChange={(e) => setForm({ ...form, dispatch_office: e.target.value })} /></Field>
             <Field label="Region">
               <Select value={form.region_id} onValueChange={(v) => setForm({ ...form, region_id: v })}>
@@ -247,27 +287,27 @@ export function FinanceOfficerPicker({
               </Select>
             </Field>
             <Field label="Agency"><Input value={form.agency} onChange={(e) => setForm({ ...form, agency: e.target.value })} placeholder="USFS, BLM, etc." /></Field>
-            <Button onClick={handleCreateNew} disabled={saving} className="w-full">
+            <Button onClick={handleCreateNew} disabled={saving} className="w-full h-11">
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Plus className="h-4 w-4 mr-1" />Save and add</>}
             </Button>
           </TabsContent>
 
+          {/* ONE-OFF */}
           <TabsContent value="oneoff" className="space-y-3 mt-3">
             <p className="text-xs text-muted-foreground">
               Use only for one-time contacts (not saved to directory).
             </p>
             <Field label="Name"><Input value={oneOff.name} onChange={(e) => setOneOff({ ...oneOff, name: e.target.value })} /></Field>
             <Field label="Email *"><Input type="email" value={oneOff.email} onChange={(e) => setOneOff({ ...oneOff, email: e.target.value })} /></Field>
-            <Field label="Phone"><Input value={oneOff.phone} onChange={(e) => setOneOff({ ...oneOff, phone: e.target.value })} /></Field>
-            <Button onClick={handleOneOff} disabled={saving} className="w-full">
+            <div className="grid grid-cols-2 gap-2">
+              <Field label="Work phone"><Input type="tel" inputMode="tel" value={oneOff.work_phone} onChange={(e) => setOneOff({ ...oneOff, work_phone: e.target.value })} /></Field>
+              <Field label="Cell phone"><Input type="tel" inputMode="tel" value={oneOff.cell_phone} onChange={(e) => setOneOff({ ...oneOff, cell_phone: e.target.value })} /></Field>
+            </div>
+            <Button onClick={handleOneOff} disabled={saving} className="w-full h-11">
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add one-off contact"}
             </Button>
           </TabsContent>
         </Tabs>
-
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
