@@ -74,6 +74,8 @@ export async function addTruckFinanceContact(input: {
   name_override?: string;
   email_override?: string;
   phone_override?: string;
+  work_phone_override?: string;
+  cell_phone_override?: string;
   role?: "shift_tickets" | "demob" | "both";
   notes?: string;
 }): Promise<IncidentTruckFinanceContact> {
@@ -86,7 +88,9 @@ export async function addTruckFinanceContact(input: {
       finance_officer_id: input.finance_officer_id ?? null,
       name_override: input.name_override || null,
       email_override: input.email_override || null,
-      phone_override: input.phone_override || null,
+      phone_override: input.phone_override || input.cell_phone_override || input.work_phone_override || null,
+      work_phone_override: input.work_phone_override || null,
+      cell_phone_override: input.cell_phone_override || null,
       role: input.role ?? "both",
       notes: input.notes || null,
       selected_by_user_id: user?.id ?? null,
@@ -104,6 +108,8 @@ export async function addIncidentFinanceContact(input: {
   name_override?: string;
   email_override?: string;
   phone_override?: string;
+  work_phone_override?: string;
+  cell_phone_override?: string;
   role?: "shift_tickets" | "demob" | "both";
   notes?: string;
 }): Promise<IncidentTruckFinanceContact> {
@@ -117,7 +123,9 @@ export async function addIncidentFinanceContact(input: {
       finance_officer_id: input.finance_officer_id ?? null,
       name_override: input.name_override || null,
       email_override: input.email_override || null,
-      phone_override: input.phone_override || null,
+      phone_override: input.phone_override || input.cell_phone_override || input.work_phone_override || null,
+      work_phone_override: input.work_phone_override || null,
+      cell_phone_override: input.cell_phone_override || null,
       role: input.role ?? "both",
       notes: input.notes || null,
       selected_by_user_id: user?.id ?? null,
