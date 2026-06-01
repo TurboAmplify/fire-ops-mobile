@@ -127,20 +127,27 @@ export async function listThreads(opts: {
     attachmentCount.set(tid, (attachmentCount.get(tid) ?? 0) + 1);
   }
 
-  // Unsigned OF-286 docs linked to these threads.
+  // OF-286 docs linked to these threads — pick the latest per thread.
   const { data: docRows } = await supabase
     .from("incident_documents")
-    .select("thread_id, document_type, signed_at, stage")
+    .select("thread_id, document_type, signed_at, stage, created_at")
     .in("thread_id", ids)
-    .eq("document_type", "of286");
-  const needsSig = new Set<string>();
+    .eq("document_type", "of286")
+    .order("created_at", { ascending: false });
+  const latestDocByThread = new Map<string, { stage: string | null; signed_at: string | null }>();
   for (const d of (docRows ?? []) as Array<{ thread_id: string | null; signed_at: string | null; stage: string | null }>) {
     if (!d.thread_id) continue;
-    if (!d.signed_at && d.stage !== "signed") needsSig.add(d.thread_id);
+    if (latestDocByThread.has(d.thread_id)) continue;
+    latestDocByThread.set(d.thread_id, { stage: d.stage, signed_at: d.signed_at });
   }
 
   return scoped.map((r) => {
     const last = snippetByThread.get(r.id);
+    const doc = latestDocByThread.get(r.id) ?? null;
+    const stage = (doc?.stage ?? null) as Of286Stage | null;
+    // Needs-signature pill ONLY fires for stage='original' (sign-and-return)
+    // that hasn't been signed yet. Review-only drafts never trigger it.
+    const needs = !!doc && stage === "original" && !doc.signed_at;
     return {
       ...r,
       incident_name: r.incidents?.name ?? null,
@@ -148,7 +155,8 @@ export async function listThreads(opts: {
       counterparty_name: last?.from_name ?? null,
       counterparty_email: last?.from_email ?? null,
       attachment_count: attachmentCount.get(r.id) ?? 0,
-      needs_signature: needsSig.has(r.id),
+      needs_signature: needs,
+      of286_stage: stage,
     };
   });
 }
