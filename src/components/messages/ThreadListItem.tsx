@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNowStrict } from "date-fns";
 import type { ThreadListItem as TItem } from "@/services/threads";
-import { ArrowDownLeft, ArrowUpRight, Paperclip, PenLine } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Paperclip, PenLine, Eye, CheckCircle2 } from "lucide-react";
 
 const PURPOSE_LABEL: Record<string, string> = {
   general: "General",
