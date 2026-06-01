@@ -47,6 +47,7 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
   const [body, setBody] = useState("");
   const [loading, setLoading] = useState(false);
   const [incidentName, setIncidentName] = useState<string>("");
+  const [incidentOrgId, setIncidentOrgId] = useState<string | null>(null);
 
   // Red card picker state
   const [scope, setScope] = useState<CrewScope>("assigned");
