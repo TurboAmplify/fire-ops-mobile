@@ -24,7 +24,10 @@ export interface ThreadListItem extends ThreadRow {
   last_snippet: string | null;
   counterparty_name: string | null;
   counterparty_email: string | null;
+  attachment_count: number;
+  needs_signature: boolean;
 }
+
 
 export interface MessageRow {
   id: string;
