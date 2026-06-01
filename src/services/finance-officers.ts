@@ -12,6 +12,8 @@ export interface FinanceOfficer {
   name: string;
   email: string;
   phone: string | null;
+  work_phone: string | null;
+  cell_phone: string | null;
   dispatch_office: string | null;
   region_id: string | null;
   agency: string | null;
