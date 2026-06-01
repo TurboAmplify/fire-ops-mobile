@@ -56,6 +56,8 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
   const [crewLoading, setCrewLoading] = useState(false);
   const [assignedCrew, setAssignedCrew] = useState<CrewWithRedCard[]>([]);
   const [allCrew, setAllCrew] = useState<CrewWithRedCard[]>([]);
+  const [trucks, setTrucks] = useState<IncidentTruckForPicker[]>([]);
+  const [selectedTruckId, setSelectedTruckId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
 
