@@ -222,21 +222,15 @@ export function NewThreadSheet({ open, onOpenChange, incidentId, defaultSubject 
 
           <div>
             <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Purpose</label>
-            <div className="mt-1 grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap">
+            <select
+              value={purpose}
+              onChange={(e) => setPurpose(e.target.value as ThreadPurpose)}
+              className="w-full mt-1 rounded-md border border-border bg-background px-3 py-2 text-sm"
+            >
               {PURPOSES.map((p) => (
-                <button
-                  key={p.value}
-                  onClick={() => setPurpose(p.value)}
-                  className={`rounded-full px-3 py-2 text-xs min-h-[44px] sm:min-h-0 sm:py-1.5 ${
-                    purpose === p.value
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-secondary text-secondary-foreground"
-                  }`}
-                >
-                  {p.label}
-                </button>
+                <option key={p.value} value={p.value}>{p.label}</option>
               ))}
-            </div>
+            </select>
           </div>
 
           {purpose === "red_cards" && (
