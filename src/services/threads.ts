@@ -69,14 +69,33 @@ export async function listThreads(opts: {
     .eq("organization_id", opts.organizationId)
     .order("last_message_at", { ascending: false, nullsFirst: false })
     .limit(200);
-  if (opts.incidentId) q = q.eq("incident_id", opts.incidentId);
+  if (opts.incidentId) {
+    // Match threads tied to the incident directly OR via an incident_truck that
+    // belongs to this incident (red-card / shift-ticket threads sometimes only
+    // carry incident_truck_id).
+    const { data: itRows } = await supabase
+      .from("incident_trucks")
+      .select("id")
+      .eq("incident_id", opts.incidentId);
+    const truckIds = (itRows ?? []).map((r) => r.id);
+    if (truckIds.length > 0) {
+      q = q.or(`incident_id.eq.${opts.incidentId},incident_truck_id.in.(${truckIds.join(",")})`);
+    } else {
+      q = q.eq("incident_id", opts.incidentId);
+    }
+  }
   const { data, error } = await q;
   if (error) throw error;
   const rows = (data ?? []) as Array<ThreadRow & { incidents?: { name: string } | null }>;
   if (rows.length === 0) return [];
 
+  // Defensive client-side filter for incident scope.
+  const scoped = opts.incidentId
+    ? rows.filter((r) => r.incident_id === opts.incidentId || !!r.incident_truck_id)
+    : rows;
+
   // Fetch the last message per thread (cheap: bounded list of ids).
-  const ids = rows.map((r) => r.id);
+  const ids = scoped.map((r) => r.id);
   const { data: lastMsgs } = await supabase
     .from("messages")
     .select("thread_id, body_text, from_email, from_name, direction, created_at")
@@ -92,7 +111,31 @@ export async function listThreads(opts: {
     });
   }
 
-  return rows.map((r) => {
+  // Attachment counts per thread.
+  const attachmentCount = new Map<string, number>();
+  const { data: attRows } = await supabase
+    .from("message_attachments")
+    .select("id, messages!inner(thread_id)")
+    .in("messages.thread_id", ids);
+  for (const a of (attRows ?? []) as Array<{ messages: { thread_id: string } | null }>) {
+    const tid = a.messages?.thread_id;
+    if (!tid) continue;
+    attachmentCount.set(tid, (attachmentCount.get(tid) ?? 0) + 1);
+  }
+
+  // Unsigned OF-286 docs linked to these threads.
+  const { data: docRows } = await supabase
+    .from("incident_documents")
+    .select("thread_id, document_type, signed_at, stage")
+    .in("thread_id", ids)
+    .eq("document_type", "of286");
+  const needsSig = new Set<string>();
+  for (const d of (docRows ?? []) as Array<{ thread_id: string | null; signed_at: string | null; stage: string | null }>) {
+    if (!d.thread_id) continue;
+    if (!d.signed_at && d.stage !== "signed") needsSig.add(d.thread_id);
+  }
+
+  return scoped.map((r) => {
     const last = snippetByThread.get(r.id);
     return {
       ...r,
@@ -100,9 +143,12 @@ export async function listThreads(opts: {
       last_snippet: last?.snippet ?? null,
       counterparty_name: last?.from_name ?? null,
       counterparty_email: last?.from_email ?? null,
+      attachment_count: attachmentCount.get(r.id) ?? 0,
+      needs_signature: needsSig.has(r.id),
     };
   });
 }
+
 
 export async function getThread(threadId: string): Promise<{
   thread: ThreadRow;
