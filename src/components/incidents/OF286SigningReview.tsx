@@ -282,7 +282,7 @@ export function OF286SigningReview({
                     <button
                       type="button"
                       onClick={() => setActiveField("date")}
-                      className={`absolute border-2 border-primary bg-primary/10 px-1 text-left text-[11px] font-semibold text-foreground active:bg-primary/20 ${activeField === "date" ? "ring-2 ring-primary" : ""}`}
+                      className={`absolute border-2 border-primary bg-primary/10 px-1 text-left text-[11px] font-semibold text-slate-900 active:bg-primary/20 ${activeField === "date" ? "ring-2 ring-primary" : ""}`}
                       style={overlayStyle(page.dateBox, page, scale)}
                     >
                       {dateText || "Date"}
@@ -293,10 +293,12 @@ export function OF286SigningReview({
                     <button
                       type="button"
                       onClick={() => setActiveField("name")}
-                      className={`absolute border-2 border-primary bg-primary/10 px-1 text-left text-[11px] font-semibold text-foreground active:bg-primary/20 ${activeField === "name" ? "ring-2 ring-primary" : ""}`}
+                      className={`absolute border-2 border-primary bg-primary/10 px-1 text-left text-[11px] font-semibold text-slate-900 active:bg-primary/20 ${activeField === "name" ? "ring-2 ring-primary" : ""}`}
                       style={overlayStyle(page.nameBox, page, scale)}
                     >
-                      {signerName || "Printed name"}
+                      {signerName || (
+                        <span className="text-primary">Tap to type name &amp; title</span>
+                      )}
                     </button>
                   )}
                 </div>
