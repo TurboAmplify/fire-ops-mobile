@@ -345,8 +345,23 @@ Deno.serve(async (req) => {
       }
     }
 
+    const hasOf286 = classifications.some((c) => (c as { type?: string })?.type === "of286");
+
+    // If OF-286 came in but we couldn't resolve an incident, still notify so the
+    // user can manually attach it from the inbox.
+    if (hasOf286 && !thread.incident_id && !thread.incident_truck_id) {
+      await supabase.from("app_notifications").insert({
+        organization_id: thread.organization_id,
+        type: "of286_received",
+        title: "OF-286 received — attach to incident",
+        body: `${fromName || fromEmail} sent an OF-286. Open the message and tap the attachment menu to attach it to the right incident.`,
+        thread_id: thread.id,
+        link_path: `/messages/${thread.id}`,
+      });
+    }
+
     // Notify on plain reply (no auto-attach)
-    if (!classifications.some((c) => (c as { type?: string })?.type === "of286")) {
+    if (!hasOf286) {
       await supabase.from("app_notifications").insert({
         organization_id: thread.organization_id,
         type: "message_received",
@@ -357,6 +372,7 @@ Deno.serve(async (req) => {
         link_path: `/messages/${thread.id}`,
       });
     }
+
 
     // Update thread + bump unread
     const { data: cur } = await supabase
