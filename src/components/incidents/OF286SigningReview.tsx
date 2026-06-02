@@ -105,7 +105,7 @@ export function OF286SigningReview({
     setDateText(formatToday());
     setSignatureBlob(null);
     setSignatureUrl(null);
-    setActiveField(defaultName ? null : "name");
+    setActiveField(null);
     setMetadata({ method: "typed", name: defaultName });
   }, [open, defaultName]);
 
