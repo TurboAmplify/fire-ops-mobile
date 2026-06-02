@@ -128,7 +128,7 @@ export function OF286SigningReview({
       }
       setSignatureBlob(blob);
       setSignatureUrl(URL.createObjectURL(blob));
-      setMetadata({ method: "auto", name: signerName.trim(), font: AUTO_FONT } as SignatureMetadata);
+      setMetadata({ method: "auto", name: signerName.trim(), font: AUTO_FONT });
     })();
     return () => {
       cancelled = true;
