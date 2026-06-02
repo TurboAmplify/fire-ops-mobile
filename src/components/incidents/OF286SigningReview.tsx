@@ -272,7 +272,7 @@ export function OF286SigningReview({
                         <img src={signatureUrl} alt="Signature preview" className="h-full w-full object-contain" />
                       ) : (
                         <span className="flex h-full items-center justify-center gap-1 text-[10px] font-bold text-primary">
-                          <PenLine className="h-3 w-3" /> Sign
+                          <PenLine className="h-3 w-3" /> Tap to change style
                         </span>
                       )}
                     </button>
