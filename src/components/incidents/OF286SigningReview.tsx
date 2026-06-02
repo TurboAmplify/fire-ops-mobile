@@ -105,9 +105,36 @@ export function OF286SigningReview({
     setDateText(formatToday());
     setSignatureBlob(null);
     setSignatureUrl(null);
-    setActiveField(null);
+    setActiveField(defaultName ? null : "name");
     setMetadata({ method: "typed", name: defaultName });
   }, [open, defaultName]);
+
+  // Auto-generate a typed signature from the printed name. The user can still
+  // tap the signature box to pick a different font / draw their own, which
+  // sets metadata.method to "typed" (font picked) or "drawn" and locks the
+  // signature so we stop overwriting it here.
+  useEffect(() => {
+    if (!open) return;
+    if (metadata.method !== "auto" && signatureBlob) return;
+    let cancelled = false;
+    (async () => {
+      const blob = await renderTypedSignatureBlob(signerName);
+      if (cancelled) return;
+      if (signatureUrl) URL.revokeObjectURL(signatureUrl);
+      if (!blob) {
+        setSignatureBlob(null);
+        setSignatureUrl(null);
+        return;
+      }
+      setSignatureBlob(blob);
+      setSignatureUrl(URL.createObjectURL(blob));
+      setMetadata({ method: "auto", name: signerName.trim(), font: AUTO_FONT } as SignatureMetadata);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, signerName]);
 
   useEffect(() => {
     if (!open || !sourceUrl) return;
