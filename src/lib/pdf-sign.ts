@@ -354,9 +354,9 @@ export async function stampSignatureOntoPdf(opts: {
   // on the signature line rather than floating in the middle of the cell.
   const fitImage = (box: BoxRect) => {
     const aspect = sigImage.width / sigImage.height;
-    // Leave a little breathing room inside the cell.
-    const maxW = Math.max(20, box.w - 4);
-    const maxH = Math.max(10, box.h - 2);
+    // Use nearly the full cell; tiny inset just to avoid touching the borders.
+    const maxW = Math.max(20, box.w - 2);
+    const maxH = Math.max(10, box.h - 1);
     let w = maxW;
     let h = w / aspect;
     if (h > maxH) {
@@ -364,8 +364,8 @@ export async function stampSignatureOntoPdf(opts: {
       w = h * aspect;
     }
     return {
-      x: box.x + 2,
-      y: box.y + 1,
+      x: box.x + 1,
+      y: box.y + 0.5,
       w,
       h,
     };
