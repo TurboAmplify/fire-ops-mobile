@@ -695,7 +695,7 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
       <OF286SigningReview
         open={!!signingDoc && !!signingSourceUrl}
         sourceUrl={signingSourceUrl}
-        defaultName={user?.email ?? ""}
+        defaultName=""
         returningToSender={!!signingDoc?.thread_id}
         onClose={() => {
           setSigningSourceUrl(null);

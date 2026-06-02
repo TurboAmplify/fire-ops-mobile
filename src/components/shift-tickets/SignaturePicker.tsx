@@ -13,7 +13,7 @@ const FONT_OPTIONS = [
 ] as const;
 
 export interface SignatureMetadata {
-  method: "typed" | "drawn";
+  method: "typed" | "drawn" | "auto";
   font?: string;
   name?: string;
 }

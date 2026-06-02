@@ -1,8 +1,47 @@
+import "@fontsource/dancing-script/700.css";
 import { useEffect, useRef, useState } from "react";
 import * as pdfjsLib from "pdfjs-dist";
 import { Check, Loader2, PenLine, Send, X } from "lucide-react";
 import { SignaturePicker, type SignatureMetadata } from "@/components/shift-tickets/SignaturePicker";
 import { type BoxRect, type PageAnchors, getOf286PageAnchorsFromUrl } from "@/lib/pdf-sign";
+
+const AUTO_FONT = "Dancing Script";
+const AUTO_WEIGHT = 700;
+
+async function renderTypedSignatureBlob(name: string): Promise<Blob | null> {
+  const trimmed = name.trim();
+  if (!trimmed) return null;
+  try {
+    await document.fonts.load(`${AUTO_WEIGHT} 96px "${AUTO_FONT}"`, trimmed);
+  } catch {
+    // ignore – fallback font will be used
+  }
+  const measure = document.createElement("canvas").getContext("2d");
+  if (!measure) return null;
+  const fontSize = 96;
+  measure.font = `${AUTO_WEIGHT} ${fontSize}px "${AUTO_FONT}", cursive`;
+  const metrics = measure.measureText(trimmed);
+  const ascent = metrics.actualBoundingBoxAscent || fontSize * 0.85;
+  const descent = metrics.actualBoundingBoxDescent || fontSize * 0.25;
+  const pad = 6;
+  const w = Math.ceil(metrics.width) + pad * 2;
+  const h = Math.ceil(ascent + descent) + pad * 2;
+  const canvas = document.createElement("canvas");
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.max(1, Math.floor(w * dpr));
+  canvas.height = Math.max(1, Math.floor(h * dpr));
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = "hsl(222 47% 11%)";
+  ctx.font = `${AUTO_WEIGHT} ${fontSize}px "${AUTO_FONT}", cursive`;
+  ctx.textBaseline = "alphabetic";
+  ctx.fillText(trimmed, pad, pad + ascent);
+  return await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob((b) => resolve(b), "image/png"),
+  );
+}
 
 type FieldKey = "signature" | "date" | "name";
 
@@ -66,9 +105,36 @@ export function OF286SigningReview({
     setDateText(formatToday());
     setSignatureBlob(null);
     setSignatureUrl(null);
-    setActiveField(null);
+    setActiveField(defaultName ? null : "name");
     setMetadata({ method: "typed", name: defaultName });
   }, [open, defaultName]);
+
+  // Auto-generate a typed signature from the printed name. The user can still
+  // tap the signature box to pick a different font / draw their own, which
+  // sets metadata.method to "typed" (font picked) or "drawn" and locks the
+  // signature so we stop overwriting it here.
+  useEffect(() => {
+    if (!open) return;
+    if (metadata.method !== "auto" && signatureBlob) return;
+    let cancelled = false;
+    (async () => {
+      const blob = await renderTypedSignatureBlob(signerName);
+      if (cancelled) return;
+      if (signatureUrl) URL.revokeObjectURL(signatureUrl);
+      if (!blob) {
+        setSignatureBlob(null);
+        setSignatureUrl(null);
+        return;
+      }
+      setSignatureBlob(blob);
+      setSignatureUrl(URL.createObjectURL(blob));
+      setMetadata({ method: "auto", name: signerName.trim(), font: AUTO_FONT });
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, signerName]);
 
   useEffect(() => {
     if (!open || !sourceUrl) return;
@@ -206,7 +272,7 @@ export function OF286SigningReview({
                         <img src={signatureUrl} alt="Signature preview" className="h-full w-full object-contain" />
                       ) : (
                         <span className="flex h-full items-center justify-center gap-1 text-[10px] font-bold text-primary">
-                          <PenLine className="h-3 w-3" /> Sign
+                          <PenLine className="h-3 w-3" /> Tap to change style
                         </span>
                       )}
                     </button>
@@ -216,7 +282,7 @@ export function OF286SigningReview({
                     <button
                       type="button"
                       onClick={() => setActiveField("date")}
-                      className={`absolute border-2 border-primary bg-primary/10 px-1 text-left text-[11px] font-semibold text-foreground active:bg-primary/20 ${activeField === "date" ? "ring-2 ring-primary" : ""}`}
+                      className={`absolute border-2 border-primary bg-primary/10 px-1 text-left text-[11px] font-semibold text-slate-900 active:bg-primary/20 ${activeField === "date" ? "ring-2 ring-primary" : ""}`}
                       style={overlayStyle(page.dateBox, page, scale)}
                     >
                       {dateText || "Date"}
@@ -227,10 +293,12 @@ export function OF286SigningReview({
                     <button
                       type="button"
                       onClick={() => setActiveField("name")}
-                      className={`absolute border-2 border-primary bg-primary/10 px-1 text-left text-[11px] font-semibold text-foreground active:bg-primary/20 ${activeField === "name" ? "ring-2 ring-primary" : ""}`}
+                      className={`absolute border-2 border-primary bg-primary/10 px-1 text-left text-[11px] font-semibold text-slate-900 active:bg-primary/20 ${activeField === "name" ? "ring-2 ring-primary" : ""}`}
                       style={overlayStyle(page.nameBox, page, scale)}
                     >
-                      {signerName || "Printed name"}
+                      {signerName || (
+                        <span className="text-primary">Tap to type name &amp; title</span>
+                      )}
                     </button>
                   )}
                 </div>
@@ -243,13 +311,14 @@ export function OF286SigningReview({
       {activeField && activeField !== "signature" && (
         <div className="border-t border-border bg-card p-3 shadow-2xl">
           <label className="mb-1 block text-[11px] font-medium text-muted-foreground">
-            {activeField === "name" ? "Printed name" : "Date"}
+            {activeField === "name" ? "Printed name & title" : "Date"}
           </label>
           <input
             type="text"
             value={activeField === "name" ? signerName : dateText}
             onChange={(e) => activeField === "name" ? setSignerName(e.target.value) : setDateText(e.target.value)}
-            className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-ring touch-target"
+            placeholder={activeField === "name" ? "Jane Doe, Owner" : "MM/DD/YYYY"}
+            className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring touch-target"
             autoFocus
           />
           <button

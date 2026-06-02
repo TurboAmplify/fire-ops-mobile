@@ -623,7 +623,7 @@ export function ShiftTicketForm({
           signer_type: sigType,
           signer_name: sigType === "contractor" ? contractorRepName : supervisorName,
           signature_url: url,
-          method: metadata.method,
+          method: metadata.method === "auto" ? "typed" : metadata.method,
           font_used: metadata.font || null,
         });
       }
