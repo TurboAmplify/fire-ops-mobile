@@ -1,11 +1,9 @@
-import { Paperclip, Loader2, Download, MoreVertical, Eye, PenLine, CheckCircle2, Link2, Search } from "lucide-react";
-import { useState, useMemo } from "react";
+import { Paperclip, Loader2, Download, MoreVertical, Eye, PenLine, CheckCircle2 } from "lucide-react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { AttachmentRow } from "@/services/threads";
 import { useQueryClient } from "@tanstack/react-query";
-import { useIncidents } from "@/hooks/useIncidents";
-import { useOrganization } from "@/hooks/useOrganization";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,14 +12,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 
 type DocStage = "review" | "original" | "finance_signed";
 
@@ -57,35 +47,11 @@ function attachmentStage(att: AttachmentRow): DocStage | null {
   }
 }
 
-const STAGE_TO_DOC: Record<DocStage, string> = {
-  review: "review",
-  original: "original",
-  finance_signed: "finance_signed",
-};
-
 export function AttachmentChip({ att }: { att: AttachmentRow }) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [filter, setFilter] = useState("");
   const qc = useQueryClient();
-  const { membership } = useOrganization();
-  const { data: incidents } = useIncidents();
   const stage = attachmentStage(att);
-  const isPdf = (att.mime_type === "application/pdf") || att.file_name?.toLowerCase().endsWith(".pdf");
-  const isAttachable = isPdf && !att.linked_incident_document_id;
-
-  const filteredIncidents = useMemo(() => {
-    const list = (incidents ?? []).filter((i: any) => i.status !== "archived");
-    if (!filter.trim()) return list.slice(0, 30);
-    const q = filter.toLowerCase();
-    return list
-      .filter((i: any) =>
-        (i.name ?? "").toLowerCase().includes(q) ||
-        (i.incident_number ?? "").toLowerCase().includes(q),
-      )
-      .slice(0, 30);
-  }, [incidents, filter]);
 
   const download = async () => {
     setLoading(true);
@@ -145,7 +111,7 @@ export function AttachmentChip({ att }: { att: AttachmentRow }) {
         if (att.linked_incident_document_id) {
           await supabase
             .from("incident_documents")
-            .update({ stage: STAGE_TO_DOC[next] })
+            .update({ stage: next })
             .eq("id", att.linked_incident_document_id);
         }
       }
@@ -161,85 +127,8 @@ export function AttachmentChip({ att }: { att: AttachmentRow }) {
     }
   };
 
-  const attachToIncident = async (incidentId: string, incidentOrgId: string) => {
-    setSaving(true);
-    try {
-      // Find the message + thread for context
-      const { data: msgRow, error: msgErr } = await supabase
-        .from("messages")
-        .select("id, thread_id, organization_id")
-        .eq("id", att.message_id)
-        .maybeSingle();
-      if (msgErr || !msgRow) throw msgErr ?? new Error("Message not found");
-
-      const orgId = membership?.organizationId ?? incidentOrgId ?? msgRow.organization_id;
-
-      // Stage: prefer existing AI classification → otherwise default to "needs signature"
-      let docStage: string = "original";
-      if (att.auto_classified_stage === "of286_finance_signed") docStage = "finance_signed";
-      else if (att.auto_classified_stage === "of286_review_only") docStage = "review";
-
-      const fileUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/communication-attachments/${att.storage_path
-        .split("/")
-        .map(encodeURIComponent)
-        .join("/")}`;
-
-      const { data: doc, error: docErr } = await supabase
-        .from("incident_documents")
-        .insert({
-          incident_id: incidentId,
-          organization_id: orgId,
-          document_type: "of286",
-          file_url: fileUrl,
-          file_name: att.file_name,
-          stage: docStage,
-          source_message_id: msgRow.id,
-          thread_id: msgRow.thread_id,
-          ai_classification: {
-            manual_attach: true,
-            auto_classified_as: att.auto_classified_as,
-            auto_classified_stage: att.auto_classified_stage,
-          },
-        })
-        .select("id")
-        .single();
-      if (docErr || !doc) throw docErr ?? new Error("Could not create document");
-
-      // Link attachment ↔ doc; ensure it's flagged as OF-286
-      await supabase
-        .from("message_attachments")
-        .update({
-          linked_incident_document_id: doc.id,
-          auto_classified_as: "of286",
-          auto_classified_stage:
-            att.auto_classified_stage ?? "of286_awaiting_signature",
-        })
-        .eq("id", att.id);
-
-      // Promote thread to the chosen incident if it's not already pinned
-      await supabase
-        .from("communication_threads")
-        .update({ incident_id: incidentId })
-        .eq("id", msgRow.thread_id)
-        .is("incident_id", null);
-
-      toast.success("Attached to incident");
-      setPickerOpen(false);
-      qc.invalidateQueries({ queryKey: ["thread"] });
-      qc.invalidateQueries({ queryKey: ["threads"] });
-      qc.invalidateQueries({ queryKey: ["incident-documents", incidentId] });
-      qc.invalidateQueries({ queryKey: ["incident-of286-flags"] });
-    } catch (e: any) {
-      console.error(e);
-      toast.error(e?.message ?? "Could not attach to incident");
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const pill = stage ? STAGE_PILL[stage] : null;
   const PillIcon = pill?.icon;
-  const showMenu = att.auto_classified_as === "of286" || isAttachable;
 
   return (
     <div className="inline-flex items-center gap-1 max-w-full">
@@ -264,95 +153,36 @@ export function AttachmentChip({ att }: { att: AttachmentRow }) {
           {pill.label}
         </span>
       )}
-      {showMenu && (
+      {att.auto_classified_as === "of286" && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               className="inline-flex items-center justify-center h-6 w-6 rounded-md hover:bg-secondary/40 text-muted-foreground touch-target"
-              aria-label="Attachment actions"
+              aria-label="Change classification"
               disabled={saving}
             >
               {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MoreVertical className="h-3.5 w-3.5" />}
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {isAttachable && (
-              <>
-                <DropdownMenuItem onClick={() => setPickerOpen(true)}>
-                  <Link2 className="h-3.5 w-3.5 mr-2" /> Attach to incident…
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-              </>
-            )}
-            {att.auto_classified_as === "of286" && (
-              <>
-                <DropdownMenuLabel>Change classification</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => reclassify("review")}>
-                  <Eye className="h-3.5 w-3.5 mr-2" /> Review only (draft)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => reclassify("original")}>
-                  <PenLine className="h-3.5 w-3.5 mr-2" /> Needs signature
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => reclassify("finance_signed")}>
-                  <CheckCircle2 className="h-3.5 w-3.5 mr-2" /> Final signed (from FO)
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => reclassify("not_of286")} className="text-destructive">
-                  Not an OF-286
-                </DropdownMenuItem>
-              </>
-            )}
+            <DropdownMenuLabel>Change classification</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => reclassify("review")}>
+              <Eye className="h-3.5 w-3.5 mr-2" /> Review only (draft)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => reclassify("original")}>
+              <PenLine className="h-3.5 w-3.5 mr-2" /> Needs signature
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => reclassify("finance_signed")}>
+              <CheckCircle2 className="h-3.5 w-3.5 mr-2" /> Final signed (from FO)
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => reclassify("not_of286")} className="text-destructive">
+              Not an OF-286
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )}
-
-      <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Attach to incident</DialogTitle>
-            <DialogDescription>
-              Pick the incident this OF-286 belongs to. It'll show up on that
-              incident with the Sign action.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              autoFocus
-              placeholder="Search incidents…"
-              className="pl-7"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-            />
-          </div>
-          <div className="max-h-72 overflow-y-auto -mx-1">
-            {filteredIncidents.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-6">
-                No incidents found.
-              </p>
-            ) : (
-              <ul className="divide-y divide-border">
-                {filteredIncidents.map((i: any) => (
-                  <li key={i.id}>
-                    <button
-                      disabled={saving}
-                      onClick={() => attachToIncident(i.id, i.organization_id)}
-                      className="w-full text-left px-3 py-2.5 hover:bg-secondary/50 disabled:opacity-50 touch-target"
-                    >
-                      <div className="text-sm font-medium">{i.name}</div>
-                      <div className="text-[11px] text-muted-foreground flex items-center gap-2">
-                        {i.incident_number && <span>#{i.incident_number}</span>}
-                        <span className="capitalize">{i.status}</span>
-                      </div>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
