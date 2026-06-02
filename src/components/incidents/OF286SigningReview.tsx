@@ -311,13 +311,14 @@ export function OF286SigningReview({
       {activeField && activeField !== "signature" && (
         <div className="border-t border-border bg-card p-3 shadow-2xl">
           <label className="mb-1 block text-[11px] font-medium text-muted-foreground">
-            {activeField === "name" ? "Printed name" : "Date"}
+            {activeField === "name" ? "Printed name & title" : "Date"}
           </label>
           <input
             type="text"
             value={activeField === "name" ? signerName : dateText}
             onChange={(e) => activeField === "name" ? setSignerName(e.target.value) : setDateText(e.target.value)}
-            className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-ring touch-target"
+            placeholder={activeField === "name" ? "Jane Doe, Owner" : "MM/DD/YYYY"}
+            className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring touch-target"
             autoFocus
           />
           <button
