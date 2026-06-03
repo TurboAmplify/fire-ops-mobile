@@ -222,39 +222,41 @@ export default function IncidentDetail() {
             {/* OF-286 only matters at demob/close */}
             <OF286UploadCard incidentId={incident.id} incidentStatus={incident.status} />
 
-            <div className="pt-2 flex justify-end">
-              {!confirmDelete ? (
-                <button
-                  onClick={() => setConfirmDelete(true)}
-                  className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-colors touch-target"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Delete Incident
-                </button>
-              ) : (
-                <div className="w-full space-y-3">
-                  <p className="text-sm text-destructive font-medium">
-                    Are you sure? This cannot be undone.
-                  </p>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={handleDelete}
-                      disabled={deleteMutation.isPending}
-                      className="flex-1 rounded-xl bg-destructive py-3 text-sm font-bold text-destructive-foreground touch-target flex items-center justify-center gap-2"
-                    >
-                      {deleteMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                      Yes, Delete
-                    </button>
-                    <button
-                      onClick={() => setConfirmDelete(false)}
-                      className="flex-1 rounded-xl bg-secondary py-3 text-sm font-bold text-secondary-foreground touch-target"
-                    >
-                      Cancel
-                    </button>
+            {isEngineBoss && (
+              <div className="pt-2 flex justify-end">
+                {!confirmDelete ? (
+                  <button
+                    onClick={() => setConfirmDelete(true)}
+                    className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-colors touch-target"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Delete Incident
+                  </button>
+                ) : (
+                  <div className="w-full space-y-3">
+                    <p className="text-sm text-destructive font-medium">
+                      Are you sure? This cannot be undone.
+                    </p>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={handleDelete}
+                        disabled={deleteMutation.isPending}
+                        className="flex-1 rounded-xl bg-destructive py-3 text-sm font-bold text-destructive-foreground touch-target flex items-center justify-center gap-2"
+                      >
+                        {deleteMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                        Yes, Delete
+                      </button>
+                      <button
+                        onClick={() => setConfirmDelete(false)}
+                        className="flex-1 rounded-xl bg-secondary py-3 text-sm font-bold text-secondary-foreground touch-target"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>
