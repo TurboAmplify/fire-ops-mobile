@@ -55,7 +55,7 @@ export async function fetchOrgFactoringSettings(orgId: string): Promise<OrgFacto
     .eq("organization_id", orgId)
     .maybeSingle();
   if (error) throw error;
-  return (data as OrgFactoringSettings | null) ?? null;
+  return (data as unknown as OrgFactoringSettings | null) ?? null;
 }
 
 export async function upsertOrgFactoringSettings(
@@ -71,7 +71,7 @@ export async function upsertOrgFactoringSettings(
     .select()
     .single();
   if (error) throw error;
-  return data as OrgFactoringSettings;
+  return data as unknown as OrgFactoringSettings;
 }
 
 export async function uploadFactoringSignature(orgId: string, blob: Blob): Promise<string> {
@@ -109,7 +109,7 @@ export async function fetchFactoringSubmissions(
     .eq("incident_id", incidentId)
     .order("submitted_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []) as FactoringSubmission[];
+  return (data ?? []) as unknown as FactoringSubmission[];
 }
 
 export async function updateOf286Parsed(
