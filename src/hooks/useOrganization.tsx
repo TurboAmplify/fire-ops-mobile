@@ -16,6 +16,11 @@ interface OrganizationContextType {
   membership: OrgMembership | null;
   loading: boolean;
   isAdmin: boolean;
+  /** True for admins AND engine bosses (and platform admins via impersonation). */
+  isEngineBoss: boolean;
+  /** True only for the lowest-privilege role. */
+  isCrewMember: boolean;
+  role: string | null;
   /** All orgs the current user belongs to (real memberships, not impersonation). */
   memberships: OrgMembership[];
   /** Switch the active org (persists across reloads via localStorage). */
@@ -34,6 +39,9 @@ const OrganizationContext = createContext<OrganizationContextType>({
   membership: null,
   loading: true,
   isAdmin: false,
+  isEngineBoss: false,
+  isCrewMember: false,
+  role: null,
   memberships: [],
   setActiveOrgId: () => {},
   refetch: async () => {},
@@ -233,18 +241,24 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   );
 
   const effectiveLoading = loading || (isImpersonating && !!target && !impersonatedMembership);
-  const isAdmin = membership?.role === "admin";
+  const role = membership?.role ?? null;
+  const isAdmin = role === "admin";
+  const isEngineBoss = role === "admin" || role === "engine_boss";
+  const isCrewMember = role === "crew_member";
 
   const value = useMemo(
     () => ({
       membership,
       loading: effectiveLoading,
       isAdmin,
+      isEngineBoss,
+      isCrewMember,
+      role,
       memberships: allMemberships,
       setActiveOrgId,
       refetch: fetchMembership,
     }),
-    [membership, effectiveLoading, isAdmin, allMemberships, setActiveOrgId, fetchMembership],
+    [membership, effectiveLoading, isAdmin, isEngineBoss, isCrewMember, role, allMemberships, setActiveOrgId, fetchMembership],
   );
 
   return (

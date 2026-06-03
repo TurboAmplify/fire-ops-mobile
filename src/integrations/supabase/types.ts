@@ -3372,7 +3372,15 @@ export type Database = {
       }
       get_user_crew_member_id: { Args: { _user_id: string }; Returns: string }
       get_user_org_ids: { Args: { _user_id: string }; Returns: string[] }
+      get_user_role_in_org: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: string
+      }
       is_org_admin: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_org_engine_boss: {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
       }

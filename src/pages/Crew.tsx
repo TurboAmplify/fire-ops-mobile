@@ -10,6 +10,7 @@ import { formatPhone } from "@/lib/phone";
 import { isCrewMemberComplete } from "@/lib/profile-completion";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { CachedDataPill, OfflineNoCacheEmpty } from "@/components/OfflineIndicators";
+import { useOrganization } from "@/hooks/useOrganization";
 
 function getInitials(name: string) {
   return name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
@@ -18,6 +19,7 @@ function getInitials(name: string) {
 export default function Crew() {
   const { data: members, isLoading, error } = useCrewMembers();
   const { isOffline } = useOnlineStatus();
+  const { isEngineBoss } = useOrganization();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewingId, setViewingId] = useState<string | null>(null);
@@ -68,13 +70,15 @@ export default function Crew() {
     <AppShell
       title="Crew"
       headerRight={
-        <button
-          onClick={() => { setEditingId(null); setShowForm(true); }}
-          className="flex items-center gap-1 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground touch-target"
-        >
-          <Plus className="h-4 w-4" />
-          Add
-        </button>
+        isEngineBoss ? (
+          <button
+            onClick={() => { setEditingId(null); setShowForm(true); }}
+            className="flex items-center gap-1 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground touch-target"
+          >
+            <Plus className="h-4 w-4" />
+            Add
+          </button>
+        ) : null
       }
     >
       <div className="p-4 space-y-4">

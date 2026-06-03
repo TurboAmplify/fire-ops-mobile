@@ -17,7 +17,7 @@ export default function Fleet() {
   const [filter, setFilter] = useState<TruckStatus | "all">("all");
   const { data: trucks, isLoading, error } = useTrucks();
   const { isOffline } = useOnlineStatus();
-  const { isAdmin } = useOrganization();
+  const { isAdmin, isEngineBoss } = useOrganization();
   const { modules } = useAppMode();
   const showRatesLink = isAdmin && modules.payroll;
 
@@ -30,13 +30,15 @@ export default function Fleet() {
     <AppShell
       title="Fleet"
       headerRight={
-        <Link
-          to="/fleet/new"
-          className="flex items-center gap-1.5 rounded-full bg-primary px-3.5 h-9 text-sm font-semibold text-primary-foreground active:bg-primary/90"
-        >
-          <Plus className="h-4 w-4" />
-          Add Truck
-        </Link>
+        isEngineBoss ? (
+          <Link
+            to="/fleet/new"
+            className="flex items-center gap-1.5 rounded-full bg-primary px-3.5 h-9 text-sm font-semibold text-primary-foreground active:bg-primary/90"
+          >
+            <Plus className="h-4 w-4" />
+            Add Truck
+          </Link>
+        ) : null
       }
     >
       <div className="p-4 space-y-3">
@@ -98,7 +100,7 @@ export default function Fleet() {
                 <p className="text-sm text-muted-foreground">
                   {filter === "all" ? "No trucks yet" : "No trucks match this filter"}
                 </p>
-                {filter === "all" && (
+                {filter === "all" && isEngineBoss && (
                   <Link to="/fleet/new" className="text-xs font-semibold text-primary mt-1 inline-block">
                     Add your first truck
                   </Link>

@@ -33,7 +33,7 @@ import IncidentDetail from "./pages/IncidentDetail";
 import More from "./pages/More";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
-import { ModuleGate, AdminGate } from "@/components/ModuleGate";
+import { ModuleGate, AdminGate, EngineBossGate } from "@/components/ModuleGate";
 import { PlatformAdminGate } from "@/components/PlatformAdminGate";
 
 // Lazy-loaded — secondary flows, heavy PDF/xlsx pages, admin & super-admin surfaces.
@@ -111,10 +111,10 @@ const App = () => (
                     <Route path="/account-unavailable" element={<AccountUnavailable />} />
                     <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                     <Route path="/incidents" element={<ProtectedRoute><Incidents /></ProtectedRoute>} />
-                    <Route path="/incidents/new" element={<ProtectedRoute><IncidentCreate /></ProtectedRoute>} />
-                    <Route path="/incidents/from-agreement" element={<ProtectedRoute><IncidentFromAgreement /></ProtectedRoute>} />
+                    <Route path="/incidents/new" element={<ProtectedRoute><EngineBossGate><IncidentCreate /></EngineBossGate></ProtectedRoute>} />
+                    <Route path="/incidents/from-agreement" element={<ProtectedRoute><EngineBossGate><IncidentFromAgreement /></EngineBossGate></ProtectedRoute>} />
                     <Route path="/incidents/:incidentId" element={<ProtectedRoute><IncidentDetail /></ProtectedRoute>} />
-                    <Route path="/incidents/:incidentId/edit" element={<ProtectedRoute><IncidentEdit /></ProtectedRoute>} />
+                    <Route path="/incidents/:incidentId/edit" element={<ProtectedRoute><EngineBossGate><IncidentEdit /></EngineBossGate></ProtectedRoute>} />
                     <Route path="/incidents/:incidentId/trucks/:incidentTruckId/shift-ticket/new" element={<ProtectedRoute><ShiftTicketCreate /></ProtectedRoute>} />
                     <Route path="/incidents/:incidentId/trucks/:incidentTruckId/shift-ticket/:ticketId" element={<ProtectedRoute><ShiftTicketEdit /></ProtectedRoute>} />
                     <Route path="/shift-tickets/log" element={<ProtectedRoute><ShiftTicketLog /></ProtectedRoute>} />
@@ -123,12 +123,12 @@ const App = () => (
                     <Route path="/crews/:crewId" element={<ProtectedRoute><CrewDetail /></ProtectedRoute>} />
                     <Route path="/fleet" element={<ProtectedRoute><Fleet /></ProtectedRoute>} />
                     <Route path="/fleet/rates" element={<ProtectedRoute><AdminGate><ModuleGate module="payroll"><FleetTruckRates /></ModuleGate></AdminGate></ProtectedRoute>} />
-                    <Route path="/fleet/new" element={<ProtectedRoute><FleetTruckCreate /></ProtectedRoute>} />
+                    <Route path="/fleet/new" element={<ProtectedRoute><EngineBossGate><FleetTruckCreate /></EngineBossGate></ProtectedRoute>} />
                     <Route path="/fleet/:truckId" element={<ProtectedRoute><FleetTruckDetail /></ProtectedRoute>} />
-                    <Route path="/fleet/:truckId/edit" element={<ProtectedRoute><FleetTruckEdit /></ProtectedRoute>} />
+                    <Route path="/fleet/:truckId/edit" element={<ProtectedRoute><EngineBossGate><FleetTruckEdit /></EngineBossGate></ProtectedRoute>} />
                     <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
                     <Route path="/expenses/new" element={<ProtectedRoute><ExpenseEdit /></ProtectedRoute>} />
-                    <Route path="/expenses/review" element={<ProtectedRoute><ExpenseReview /></ProtectedRoute>} />
+                    <Route path="/expenses/review" element={<ProtectedRoute><EngineBossGate><ExpenseReview /></EngineBossGate></ProtectedRoute>} />
                     <Route path="/expenses/:id" element={<ProtectedRoute><ExpenseDetail /></ProtectedRoute>} />
                     <Route path="/expenses/:id/edit" element={<ProtectedRoute><ExpenseEdit /></ProtectedRoute>} />
                     <Route path="/expenses/batch-scan" element={<ProtectedRoute><BatchReceiptScan /></ProtectedRoute>} />
