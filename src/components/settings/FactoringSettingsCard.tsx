@@ -186,7 +186,7 @@ export function FactoringSettingsCard() {
                 />
               </div>
               <div>
-                <Label className="text-xs">Factoring agreement date</Label>
+                <Label className="text-xs">Factoring agreement date <span className="text-muted-foreground">(optional)</span></Label>
                 <Input
                   type="date"
                   value={agreementDate}
@@ -207,6 +207,14 @@ export function FactoringSettingsCard() {
                   value={signerTitle}
                   onChange={(e) => setSignerTitle(e.target.value)}
                   placeholder="Owner"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Signer phone <span className="text-muted-foreground">(optional)</span></Label>
+                <Input
+                  value={signerPhone}
+                  onChange={(e) => setSignerPhone(e.target.value)}
+                  placeholder="605-891-8916"
                 />
               </div>
             </div>
