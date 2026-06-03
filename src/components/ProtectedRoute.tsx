@@ -44,7 +44,21 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" replace />;
   }
 
-  if (isPlatformAdmin && !isImpersonating && !membership) {
+  // Defensive: if a view-as target is queued in sessionStorage but the
+  // ImpersonationProvider hasn't reflected it yet (race during navigate
+  // right after startViewAs), treat the user as impersonating. Prevents
+  // an Org-Setup → Super-Admin bounce loop while impersonatedMembership
+  // is still hydrating.
+  const hasPendingImpersonation = (() => {
+    try {
+      return !!sessionStorage.getItem("fireops.viewAsOrgId");
+    } catch {
+      return false;
+    }
+  })();
+  const effectivelyImpersonating = isImpersonating || (isPlatformAdmin && hasPendingImpersonation);
+
+  if (isPlatformAdmin && !effectivelyImpersonating && !membership) {
     if (location.pathname === "/") {
       guardLog("protected", "redirect-super-admin");
       return <Navigate to="/super-admin" replace />;
@@ -54,6 +68,14 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!membership) {
+    if (effectivelyImpersonating) {
+      guardLog("protected", "hold-impersonation-hydrating", { path: location.pathname });
+      return (
+        <div className="flex min-h-screen items-center justify-center bg-background">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      );
+    }
     guardLog("protected", "redirect-org-setup", { path: location.pathname });
     return <Navigate to="/org-setup" replace />;
   }
