@@ -16,6 +16,7 @@ export default function Incidents() {
   const [filter, setFilter] = useState<IncidentStatus | "all">("all");
   const { data: incidents, isLoading, error } = useIncidents();
   const { isOffline } = useOnlineStatus();
+  const { isEngineBoss } = useOrganization();
 
   const incidentIds = useMemo(() => (incidents ?? []).map((i) => i.id), [incidents]);
   const { data: of286Ids } = useIncidentsWithOF286(incidentIds);
