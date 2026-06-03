@@ -1,0 +1,1 @@
+ALTER TABLE public.org_factoring_settings ADD COLUMN IF NOT EXISTS signer_phone text;

@@ -1804,6 +1804,7 @@ export type Database = {
           reserve_percent: number
           signature_url: string | null
           signer_name: string | null
+          signer_phone: string | null
           signer_title: string
           updated_at: string
         }
@@ -1820,6 +1821,7 @@ export type Database = {
           reserve_percent?: number
           signature_url?: string | null
           signer_name?: string | null
+          signer_phone?: string | null
           signer_title?: string
           updated_at?: string
         }
@@ -1836,6 +1838,7 @@ export type Database = {
           reserve_percent?: number
           signature_url?: string | null
           signer_name?: string | null
+          signer_phone?: string | null
           signer_title?: string
           updated_at?: string
         }

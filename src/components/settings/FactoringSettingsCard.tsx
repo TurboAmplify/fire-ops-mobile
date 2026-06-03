@@ -33,6 +33,7 @@ export function FactoringSettingsCard() {
   const [agreementDate, setAgreementDate] = useState("");
   const [signerName, setSignerName] = useState("");
   const [signerTitle, setSignerTitle] = useState("Owner");
+  const [signerPhone, setSignerPhone] = useState("");
   const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
   const [savedSigPreview, setSavedSigPreview] = useState<string | null>(null);
   const initialized = useRef(false);
@@ -48,6 +49,7 @@ export function FactoringSettingsCard() {
     setAgreementDate(settings.agreement_date ?? "");
     setSignerName(settings.signer_name ?? "");
     setSignerTitle(settings.signer_title ?? "Owner");
+    setSignerPhone((settings as any).signer_phone ?? "");
     if (settings.signature_url) {
       getViewableUrl(settings.signature_url).then((u) => setSavedSigPreview(u));
     }
@@ -105,8 +107,9 @@ export function FactoringSettingsCard() {
         agreement_date: agreementDate || null,
         signer_name: trimmedName,
         signer_title: signerTitle.trim() || "Owner",
+        signer_phone: signerPhone.trim() || null,
         signature_url: signatureUrl,
-      });
+      } as any);
       if (signatureUrl) {
         const preview = await getViewableUrl(signatureUrl);
         setSavedSigPreview(preview);
@@ -183,7 +186,7 @@ export function FactoringSettingsCard() {
                 />
               </div>
               <div>
-                <Label className="text-xs">Factoring agreement date</Label>
+                <Label className="text-xs">Factoring agreement date <span className="text-muted-foreground">(optional)</span></Label>
                 <Input
                   type="date"
                   value={agreementDate}
@@ -204,6 +207,14 @@ export function FactoringSettingsCard() {
                   value={signerTitle}
                   onChange={(e) => setSignerTitle(e.target.value)}
                   placeholder="Owner"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Signer phone <span className="text-muted-foreground">(optional)</span></Label>
+                <Input
+                  value={signerPhone}
+                  onChange={(e) => setSignerPhone(e.target.value)}
+                  placeholder="605-891-8916"
                 />
               </div>
             </div>
