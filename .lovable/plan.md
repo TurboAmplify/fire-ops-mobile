@@ -1,72 +1,74 @@
-## Problem
-
-The FO workflow for OF-286 has **three** inbound variants, not two:
-
-1. **Draft for review only** — FO wants eyes on it, *not* a signature yet.
-2. **Review and sign** — FO wants you to sign and return.
-3. **Final, FO-signed** — FO sends back her countersigned final copy.
-
-Today the classifier only knows #2 and #3. Anything that isn't `of286_finance_signed` becomes "needs signature," which is why the Ash Pole draft showed a Sign prompt and you ended up signing the review copy.
-
 ## Goal
 
-Have the AI pick the correct intent from the PDF + email body, surface it clearly in the inbox/thread, prevent accidental signing on review-only drafts, and let the user override when the AI is wrong.
+Replace today's two-role system (`admin` / `crew`) with three roles: **admin**, **engine_boss**, **crew_member**. Enforce permissions in both the database (RLS + helper functions) and the UI (gating menus, buttons, routes).
 
-## Changes
+## Role matrix
 
-### 1. Smarter classifier (`supabase/functions/incoming-email/index.ts`)
+| Capability | crew_member | engine_boss | admin |
+|---|---|---|---|
+| View incidents their assigned truck is on | yes | yes (all org) | yes (all org) |
+| Create / edit incidents | no | yes | yes |
+| Assign crew members to incident_trucks | no | yes | yes |
+| Submit shift tickets (incidents they're on) | yes | yes | yes |
+| Scan / submit expenses | yes (own) | yes | yes |
+| View expenses | own only | all org | all org |
+| View crew roster + current assignment | yes | yes | yes |
+| Add / edit / delete crew members | no | yes | yes |
+| Needs list — view & add | yes | yes | yes |
+| Needs list — edit/delete others' items | no | yes | yes |
+| Pack checklist (own) | yes | yes | yes |
+| Payroll — own paystubs | yes | yes | yes |
+| Payroll — others, rates, withholding | no | no | admin only |
+| Fleet trucks — view | yes (assigned) | yes | yes |
+| Fleet trucks — create/edit | no | yes | yes |
+| Accounts Payable, financial reports, audit logs | no | no | admin only |
+| Org settings, billing, plan, modules | no | no | admin only |
+| Invite members, change member roles | no | no | admin only |
+| Master agreement, payroll settings | no | no | admin only |
+| Super-admin surfaces | no | no | platform admin only |
 
-- Actually feed the PDF bytes to the model (currently the base64 is ignored — only filename is used).
-- Also pass the email **subject + body text** to the model — that's where "for your review," "please sign and return," "final signed copy attached," etc. live.
-- Expand the returned `stage` enum to:
-  - `of286_review_only` — draft, no signature requested
-  - `of286_awaiting_signature` — sign and return
-  - `of286_finance_signed` — final countersigned copy
-- Keep a conservative fallback: if confidence < 0.6 on the sign-vs-review distinction, default to `of286_review_only` (safer — never auto-prompts a sign action that wasn't asked for).
+## Data migration
 
-### 2. Document stage mapping (`incident_documents.stage`)
+1. Add `engine_boss` value to the membership role set (`organization_members.role` is `text` today with a CHECK; broaden it to admin / engine_boss / crew_member).
+2. Rename existing `'crew'` rows to `'crew_member'`.
+3. Auto-promote to `engine_boss` any member whose linked `crew_members.role` (via `profiles.crew_member_id`) is `'Engine Boss'` or `'Crew Boss'`.
+4. Leave current `admin` rows alone (Dustin, Les, Briana, Brandon, demo seeds stay admin).
 
-Map classifier stage → `incident_documents.stage`:
-- `of286_review_only` → `review`
-- `of286_awaiting_signature` → `original`
-- `of286_finance_signed` → `finance_signed`
+## Database changes
 
-(`stage` is a text column, no migration needed.)
+- New helper functions:
+  - `is_org_engine_boss(uid, org)` — true if member role is `engine_boss` OR `admin` OR platform admin.
+  - `is_org_member_any(uid, org)` — true if member of org in any role.
+  - Keep `is_org_admin` semantics unchanged (admin OR platform admin).
+- Update RLS policies on: `incidents`, `incident_trucks`, `incident_truck_crew`, `crew_members`, `crew_compensation`, `trucks`, `truck_*` tables, `expenses`, `needs_list_items`, `agreements`, `org_payroll_settings`, `org_role_default_rates`, `payroll_adjustments`, `organization_invites`, `organization_members`.
+- Pattern:
+  - Writes that mutate roster/incident/truck setup → require `is_org_engine_boss`.
+  - Admin-only writes (rates, settings, invites, member role changes) → keep `is_org_admin`.
+  - Crew member reads scoped via `incident_truck_crew` / `crew_truck_access` joins (already partially in place).
+- Add SELECT policy on `expenses` so crew_members see only rows where `submitted_by_user_id = auth.uid()`.
 
-### 3. Notifications
+## Frontend changes
 
-- `review_only` → title "OF-286 draft to review" / body "...sent a draft for your review. No signature requested."
-- `awaiting_signature` → existing "OF-286 needs review & signature"
-- `finance_signed` → existing "OF-286 signed copy received"
+- `useOrganization` exposes `role`, `isAdmin`, `isEngineBoss` (true for admin OR engine_boss), `isCrewMember`.
+- New `EngineBossGate` component analogous to `AdminGate` for routes like incident create/edit, fleet create/edit, crew member create/edit, accounts-payable stays `AdminGate`.
+- Gate buttons / menu items:
+  - `More.tsx` and `BottomNav` hide Payroll-rates, AP, Reports, Org Settings for non-admins; hide "New Incident", "Add Truck", "Add Crew Member" for crew_member.
+  - `IncidentDetail` hides edit/assign-crew controls for crew_member.
+  - `CrewMemberForm`, `TruckForm`, `FleetTruckCreate` gated behind `EngineBossGate`.
+  - `NeedsList` allows all roles to add; restrict edit/delete of items the user did not create to engine_boss+.
+  - `Expenses` list filters to own when `isCrewMember`.
+- Settings page: keep all current admin-only sections behind `AdminGate`. Engine bosses get a slimmer Settings view (profile, pack checklist, notification prefs only).
 
-### 4. Inbox + thread UI
+## Out of scope (this pass)
 
-**`src/services/threads.ts`** — `needs_signature` flips on only when an unsigned `incident_documents` row has `stage = 'original'` (i.e. `awaiting_signature`). `review` stage never triggers the pill.
+- UI in Org Settings to flip a member between engine_boss and crew_member — admins can do it from the existing member row dropdown once the role values are wired; deeper UX polish can follow.
+- Renaming the legacy `'crew'` label anywhere it's hardcoded in copy — values migrate cleanly; visible labels updated where they're encountered.
+- Reworking impersonation / view-as to support engine_boss preview (still works as today; impersonating member uses whatever role they have in target org).
 
-**`src/components/messages/ThreadListItem.tsx`** — show one of three small pills based on the latest OF-286 doc on the thread:
-- "Review only" (muted)
-- "Needs signature" (amber, existing)
-- "Final signed" (green)
+## Rollout order
 
-**`src/components/messages/ThreadView.tsx`** (attachment row) — same three-state badge on the OF-286 attachment chip, and:
-- On `review` stage: primary action is "Mark reviewed" + secondary "Reply"; Sign button is hidden behind a "Sign anyway" overflow item.
-- On `original` stage: primary action is "Review & sign" (today's behavior).
-- On `finance_signed`: read-only, "View final" + "Save to incident."
-
-### 5. Manual override
-
-Small kebab menu on the attachment chip: **"Change classification…"** → bottom sheet with the three options + "Not an OF-286." Writes back to `message_attachments.auto_classified_stage` and updates/creates the linked `incident_documents.stage`. Logs to `incident_document_audit`. This is the escape hatch for when the AI guesses wrong.
-
-### 6. One-off fix for the Ash Pole thread
-
-After deploy, reclassify the existing `incident_documents` row for thread `0ac8ebcf-…` from `original` → `review` so the misleading "Needs signature" pill drops off and the Sign action stops being primary. Done as a one-row update via the manual-override path (or a tiny SQL note in the migration if you'd rather).
-
-## Out of scope
-
-- No schema migration required (using existing `stage` text column + existing classifier columns).
-- No change to outbound send flow — once the user does sign and reply, today's logic already attaches the signed PDF and the new `needs_signature` rule will clear the pill.
-
-## Technical notes
-
-- Gemini 2.5 Flash Lite supports PDF input via `image_url` with a `data:application/pdf;base64,...` URI through the Lovable AI gateway; we'll send the first ~2 pages worth (truncate if > ~4 MB) plus the email subject/body as a second user message.
-- Prompt will explicitly list the three stages with one-line cues each, and require `confidence_stage` separate from `confidence_type` so we can apply the conservative fallback only to the stage decision.
+1. Migration: role values + RLS + helpers.
+2. `useOrganization` exposes new flags + `EngineBossGate`.
+3. Route gates in `App.tsx` for incident create/edit, fleet create/edit.
+4. UI gating in `More`, `IncidentDetail`, `CrewMemberForm`, `Expenses`, `NeedsList`, `Settings`.
+5. Spot-check Dry Lightning users land in correct buckets.
