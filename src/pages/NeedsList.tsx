@@ -151,12 +151,13 @@ export default function NeedsList() {
                   onClick={() =>
                     item.is_purchased ? handleReactivate(item) : handlePurchase(item)
                   }
+                  disabled={!canModify(item)}
                   aria-label={item.is_purchased ? "Mark as needed" : "Mark as purchased"}
                   className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-all ${
                     item.is_purchased
                       ? "border-green-500 bg-green-500/15 text-green-600"
                       : "border-border text-transparent active:border-primary/60 active:bg-primary/5"
-                  }`}
+                  } ${!canModify(item) ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
                   {item.is_purchased ? (
                     <Check className="h-3.5 w-3.5" />
