@@ -11,6 +11,7 @@ export interface OrgFactoringSettings {
   agreement_date: string | null;
   signer_name: string | null;
   signer_title: string;
+  signer_phone: string | null;
   signature_url: string | null;
   next_schedule_number: number;
   created_at: string;
