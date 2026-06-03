@@ -1,74 +1,100 @@
-## Goal
 
-Replace today's two-role system (`admin` / `crew`) with three roles: **admin**, **engine_boss**, **crew_member**. Enforce permissions in both the database (RLS + helper functions) and the UI (gating menus, buttons, routes).
+# Factoring (WideQ Financial) — Schedule of Accounts workflow
 
-## Role matrix
+A new opt-in module that lets owner/admins package the finance-signed OF-286(s) for an incident into a WideQ "Schedule of Accounts" PDF and send it to the org's factoring contact.
 
-| Capability | crew_member | engine_boss | admin |
-|---|---|---|---|
-| View incidents their assigned truck is on | yes | yes (all org) | yes (all org) |
-| Create / edit incidents | no | yes | yes |
-| Assign crew members to incident_trucks | no | yes | yes |
-| Submit shift tickets (incidents they're on) | yes | yes | yes |
-| Scan / submit expenses | yes (own) | yes | yes |
-| View expenses | own only | all org | all org |
-| View crew roster + current assignment | yes | yes | yes |
-| Add / edit / delete crew members | no | yes | yes |
-| Needs list — view & add | yes | yes | yes |
-| Needs list — edit/delete others' items | no | yes | yes |
-| Pack checklist (own) | yes | yes | yes |
-| Payroll — own paystubs | yes | yes | yes |
-| Payroll — others, rates, withholding | no | no | admin only |
-| Fleet trucks — view | yes (assigned) | yes | yes |
-| Fleet trucks — create/edit | no | yes | yes |
-| Accounts Payable, financial reports, audit logs | no | no | admin only |
-| Org settings, billing, plan, modules | no | no | admin only |
-| Invite members, change member roles | no | no | admin only |
-| Master agreement, payroll settings | no | no | admin only |
-| Super-admin surfaces | no | no | platform admin only |
+## 1. Super-admin toggle (per org)
 
-## Data migration
+- Add `modules_enabled.factoring` (boolean) on `organizations` (same pattern as `payroll`).
+- New component `src/components/super-admin/FactoringAccessToggle.tsx` mirroring `OrgPayrollToggle`.
+- Wire into `SuperAdminOrgDetail.tsx`.
+- When toggled on for Dry Lightning, the org's owner/admins see the factoring features below; everyone else (engine_boss, crew_member) sees nothing.
 
-1. Add `engine_boss` value to the membership role set (`organization_members.role` is `text` today with a CHECK; broaden it to admin / engine_boss / crew_member).
-2. Rename existing `'crew'` rows to `'crew_member'`.
-3. Auto-promote to `engine_boss` any member whose linked `crew_members.role` (via `profiles.crew_member_id`) is `'Engine Boss'` or `'Crew Boss'`.
-4. Leave current `admin` rows alone (Dustin, Les, Briana, Brandon, demo seeds stay admin).
+## 2. Org factoring profile (admin-only onboarding form)
 
-## Database changes
+New table `public.org_factoring_settings` (one row per org):
 
-- New helper functions:
-  - `is_org_engine_boss(uid, org)` — true if member role is `engine_boss` OR `admin` OR platform admin.
-  - `is_org_member_any(uid, org)` — true if member of org in any role.
-  - Keep `is_org_admin` semantics unchanged (admin OR platform admin).
-- Update RLS policies on: `incidents`, `incident_trucks`, `incident_truck_crew`, `crew_members`, `crew_compensation`, `trucks`, `truck_*` tables, `expenses`, `needs_list_items`, `agreements`, `org_payroll_settings`, `org_role_default_rates`, `payroll_adjustments`, `organization_invites`, `organization_members`.
-- Pattern:
-  - Writes that mutate roster/incident/truck setup → require `is_org_engine_boss`.
-  - Admin-only writes (rates, settings, invites, member role changes) → keep `is_org_admin`.
-  - Crew member reads scoped via `incident_truck_crew` / `crew_truck_access` joins (already partially in place).
-- Add SELECT policy on `expenses` so crew_members see only rows where `submitted_by_user_id = auth.uid()`.
+- `organization_id` (PK/FK)
+- `factor_company_name` (default `WideQ Financial LLC`)
+- `factor_contact_name` (e.g. `Anita Hall`)
+- `factor_contact_email`
+- `factor_contact_phone`
+- `reserve_percent` (numeric, default `15.00`)
+- `agreement_date` (date — the factoring agreement effective date inserted in clause 2)
+- `signer_name` (org owner name)
+- `signer_title` (default `Owner`)
+- `signature_url` (saved signature image; reuse `SignaturePicker` + `incident-documents` bucket pattern)
+- `next_schedule_number` (int, default 1; auto-increments per submission)
 
-## Frontend changes
+RLS: select/update restricted to `is_org_admin(auth.uid(), organization_id)`. GRANTs for `authenticated` + `service_role`.
 
-- `useOrganization` exposes `role`, `isAdmin`, `isEngineBoss` (true for admin OR engine_boss), `isCrewMember`.
-- New `EngineBossGate` component analogous to `AdminGate` for routes like incident create/edit, fleet create/edit, crew member create/edit, accounts-payable stays `AdminGate`.
-- Gate buttons / menu items:
-  - `More.tsx` and `BottomNav` hide Payroll-rates, AP, Reports, Org Settings for non-admins; hide "New Incident", "Add Truck", "Add Crew Member" for crew_member.
-  - `IncidentDetail` hides edit/assign-crew controls for crew_member.
-  - `CrewMemberForm`, `TruckForm`, `FleetTruckCreate` gated behind `EngineBossGate`.
-  - `NeedsList` allows all roles to add; restrict edit/delete of items the user did not create to engine_boss+.
-  - `Expenses` list filters to own when `isCrewMember`.
-- Settings page: keep all current admin-only sections behind `AdminGate`. Engine bosses get a slimmer Settings view (profile, pack checklist, notification prefs only).
+UI: `src/pages/OrgFactoringSettings.tsx` (linked from `OrgSettings.tsx`, admin-only, gated behind `modules_enabled.factoring`). Lets the owner pre-fill recurring info + capture/replace their signature. Banner appears on incident page when profile incomplete.
 
-## Out of scope (this pass)
+## 3. Schedule generation on the incident
 
-- UI in Org Settings to flip a member between engine_boss and crew_member — admins can do it from the existing member row dropdown once the role values are wired; deeper UX polish can follow.
-- Renaming the legacy `'crew'` label anywhere it's hardcoded in copy — values migrate cleanly; visible labels updated where they're encountered.
-- Reworking impersonation / view-as to support engine_boss preview (still works as today; impersonating member uses whatever role they have in target org).
+On `IncidentDetail` Overview, when factoring is enabled for the org AND the incident has at least one `incident_documents` row with `stage='finance_signed'` (type `of286`):
+
+- New `FactoringSubmitCard` component shows:
+  - List of finance-signed OF-286s on this incident, each row with parsed/entered invoice metadata (debtor agency, invoice number, amount, date) — editable inline.
+  - Reserve % (defaulted from org profile, editable per submission).
+  - Auto-computed totals: count of accounts, total amount sold, reserve $ = total × reserve%.
+  - "Generate Schedule" → renders PDF (pdf-lib) and opens review modal.
+  - "Submit to WideQ" → emails the contact with the Schedule PDF + each finance-signed OF-286 PDF attached, logs an audit event, and increments `next_schedule_number`.
+
+### AI extraction to pre-fill the schedule
+
+New edge function `parse-of286` (mirrors `parse-shift-ticket`/`parse-agreement`):
+- Input: signed file URL
+- Uses Lovable AI (`google/gemini-2.5-pro`) with structured output to extract:
+  - `dispatch_office` (Seller — e.g. "Bureau of Land Management")
+  - `invoice_number` (resource order / agreement #)
+  - `invoice_amount` (uses existing `of286_invoice_total` if already entered, otherwise parsed)
+  - `invoice_date` (finance-signed date or doc date)
+  - `account_debtor` (incident host agency / paying office)
+- Result cached on `incident_documents` in new JSONB column `of286_parsed` and editable in the card.
+
+## 4. Schedule of Accounts PDF
+
+`src/lib/pdf-schedule-of-accounts.ts` using pdf-lib generates a single-page PDF matching the WideQ template:
+
+- Header: "WideQ Financial LLC — SCHEDULE OF ACCOUNTS"
+- DATE (today) · SCHEDULE NO. (from `next_schedule_number`)
+- SELLER: dispatch office (taken from the OF-286s; if multiple, lists each)
+- Totals: count, total amount, reserve
+- Table rows: one per finance-signed OF-286 (Account Debtor / Invoice # / Amount / Date)
+- Clauses 1–6 with `signer_title` substituted into clause 1 and `agreement_date` into clause 2
+- "IN WITNESS WHEREOF" line filled with today's day/month/year
+- "By:" line stamps `signature_url`; "Print Name:" = `signer_name`; "Title:" = `signer_title`
+
+## 5. Submission delivery
+
+- New edge function `send-factoring-submission` (verify_jwt=true) — accepts `{ incident_id, document_ids[], reserve_percent, line_items[] }`.
+- Reuses the Resend connector + per-org sender (`<email_handle>@mail.fireopshq.com`) and Reply-To token pattern.
+- Subject: `Schedule #N — <Incident Name> — <Org>`.
+- Body: short cover note to Anita (or the configured contact) with totals.
+- Attachments: generated Schedule PDF + every selected finance-signed OF-286 PDF.
+- On success: insert `factoring_submissions` row (org_id, incident_id, schedule_number, total_amount, reserve_amount, recipient_email, submitted_by, submitted_at, pdf_url, document_ids[]) + audit log entry.
+
+New table `public.factoring_submissions` with admin-only RLS (select for engine_boss+, insert/update admin-only via the edge function using service role).
+
+## 6. Notification when FO returns the OF-286
+
+Already: `incoming-email` ingests finance replies and creates `incident_documents` rows. Extend it to:
+- When a new `stage='finance_signed'` doc lands AND the org has `modules_enabled.factoring`, insert a row into `app_notifications` ("Final OF-286 received — ready to submit for factoring") for org admins, deep-linking to the incident overview.
 
 ## Rollout order
 
-1. Migration: role values + RLS + helpers.
-2. `useOrganization` exposes new flags + `EngineBossGate`.
-3. Route gates in `App.tsx` for incident create/edit, fleet create/edit.
-4. UI gating in `More`, `IncidentDetail`, `CrewMemberForm`, `Expenses`, `NeedsList`, `Settings`.
-5. Spot-check Dry Lightning users land in correct buckets.
+1. Migration: `modules_enabled.factoring`, `org_factoring_settings`, `factoring_submissions`, `incident_documents.of286_parsed`, GRANTs + RLS.
+2. Super-admin `FactoringAccessToggle` + wire into `SuperAdminOrgDetail`.
+3. `OrgFactoringSettings` page + link in `OrgSettings`.
+4. `parse-of286` edge function.
+5. `pdf-schedule-of-accounts.ts` + `FactoringSubmitCard` on `IncidentDetail`.
+6. `send-factoring-submission` edge function + audit/notification + incoming-email notification hook.
+7. Enable for Dry Lightning, pre-fill Anita Hall / WideQ defaults via insert.
+
+## Out of scope (ask if needed)
+
+- Custom WideQ "agreement on file" upload/storage.
+- Editing the schedule PDF template per-org (assumes all factoring orgs use the same WideQ form).
+- Tracking remittance/payment status after submission (could be a Phase 2 on `factoring_submissions`).
+- Multiple factoring contacts per org (one contact per org for now; orgs that aren't Dry Lightning just configure their own contact in step 2).
