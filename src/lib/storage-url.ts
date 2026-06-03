@@ -37,6 +37,7 @@ const KNOWN_BUCKETS = new Set([
   "incident-documents",
   "communication-attachments",
   "red-cards",
+  "factoring-documents",
 ]);
 
 /**
