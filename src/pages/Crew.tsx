@@ -10,6 +10,7 @@ import { formatPhone } from "@/lib/phone";
 import { isCrewMemberComplete } from "@/lib/profile-completion";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { CachedDataPill, OfflineNoCacheEmpty } from "@/components/OfflineIndicators";
+import { useOrganization } from "@/hooks/useOrganization";
 
 function getInitials(name: string) {
   return name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
