@@ -790,6 +790,75 @@ export type Database = {
           },
         ]
       }
+      factoring_submissions: {
+        Row: {
+          account_count: number
+          document_ids: string[]
+          email_message_id: string | null
+          factor_company_name: string | null
+          id: string
+          incident_id: string
+          line_items: Json
+          notes: string | null
+          organization_id: string
+          pdf_url: string | null
+          recipient_email: string
+          recipient_name: string | null
+          reserve_amount: number
+          reserve_percent: number
+          schedule_number: number
+          seller: string | null
+          submitted_at: string
+          submitted_by_name: string | null
+          submitted_by_user_id: string | null
+          total_amount: number
+        }
+        Insert: {
+          account_count?: number
+          document_ids?: string[]
+          email_message_id?: string | null
+          factor_company_name?: string | null
+          id?: string
+          incident_id: string
+          line_items?: Json
+          notes?: string | null
+          organization_id: string
+          pdf_url?: string | null
+          recipient_email: string
+          recipient_name?: string | null
+          reserve_amount?: number
+          reserve_percent?: number
+          schedule_number: number
+          seller?: string | null
+          submitted_at?: string
+          submitted_by_name?: string | null
+          submitted_by_user_id?: string | null
+          total_amount?: number
+        }
+        Update: {
+          account_count?: number
+          document_ids?: string[]
+          email_message_id?: string | null
+          factor_company_name?: string | null
+          id?: string
+          incident_id?: string
+          line_items?: Json
+          notes?: string | null
+          organization_id?: string
+          pdf_url?: string | null
+          recipient_email?: string
+          recipient_name?: string | null
+          reserve_amount?: number
+          reserve_percent?: number
+          schedule_number?: number
+          seller?: string | null
+          submitted_at?: string
+          submitted_by_name?: string | null
+          submitted_by_user_id?: string | null
+          total_amount?: number
+        }
+        Relationships: []
+      }
       finance_officer_audit: {
         Row: {
           actor_org_id: string | null
@@ -1025,6 +1094,7 @@ export type Database = {
           incident_truck_id: string | null
           of286_entered_at: string | null
           of286_invoice_total: number | null
+          of286_parsed: Json | null
           organization_id: string
           parent_document_id: string | null
           signature_url: string | null
@@ -1048,6 +1118,7 @@ export type Database = {
           incident_truck_id?: string | null
           of286_entered_at?: string | null
           of286_invoice_total?: number | null
+          of286_parsed?: Json | null
           organization_id: string
           parent_document_id?: string | null
           signature_url?: string | null
@@ -1071,6 +1142,7 @@ export type Database = {
           incident_truck_id?: string | null
           of286_entered_at?: string | null
           of286_invoice_total?: number | null
+          of286_parsed?: Json | null
           organization_id?: string
           parent_document_id?: string | null
           signature_url?: string | null
@@ -1717,6 +1789,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      org_factoring_settings: {
+        Row: {
+          agreement_date: string | null
+          created_at: string
+          factor_company_name: string
+          factor_contact_email: string | null
+          factor_contact_name: string | null
+          factor_contact_phone: string | null
+          id: string
+          next_schedule_number: number
+          organization_id: string
+          reserve_percent: number
+          signature_url: string | null
+          signer_name: string | null
+          signer_title: string
+          updated_at: string
+        }
+        Insert: {
+          agreement_date?: string | null
+          created_at?: string
+          factor_company_name?: string
+          factor_contact_email?: string | null
+          factor_contact_name?: string | null
+          factor_contact_phone?: string | null
+          id?: string
+          next_schedule_number?: number
+          organization_id: string
+          reserve_percent?: number
+          signature_url?: string | null
+          signer_name?: string | null
+          signer_title?: string
+          updated_at?: string
+        }
+        Update: {
+          agreement_date?: string | null
+          created_at?: string
+          factor_company_name?: string
+          factor_contact_email?: string | null
+          factor_contact_name?: string | null
+          factor_contact_phone?: string | null
+          id?: string
+          next_schedule_number?: number
+          organization_id?: string
+          reserve_percent?: number
+          signature_url?: string | null
+          signer_name?: string | null
+          signer_title?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       org_payroll_settings: {
         Row: {

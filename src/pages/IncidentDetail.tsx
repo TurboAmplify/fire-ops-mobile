@@ -11,6 +11,7 @@ import { IncidentResourceOrdersRollup } from "@/components/incidents/IncidentRes
 import { IncidentTicketsTab } from "@/components/incidents/IncidentTicketsTab";
 import { IncidentFinanceContactsCard } from "@/components/incidents/IncidentFinanceContactsCard";
 import { OF286UploadCard } from "@/components/incidents/OF286UploadCard";
+import { FactoringSubmitCard } from "@/components/incidents/FactoringSubmitCard";
 import { MessagesInbox } from "@/components/messages/MessagesInbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
@@ -221,6 +222,10 @@ export default function IncidentDetail() {
 
             {/* OF-286 only matters at demob/close */}
             <OF286UploadCard incidentId={incident.id} incidentStatus={incident.status} />
+
+            {/* Factoring (hidden unless module enabled + user is admin) */}
+            <FactoringSubmitCard incidentId={incident.id} />
+
 
             {isEngineBoss && (
               <div className="pt-2 flex justify-end">
