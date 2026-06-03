@@ -11,6 +11,8 @@ import { Plus, Loader2, Check, RotateCcw, Pencil, Trash2, ShoppingCart } from "l
 import { useState } from "react";
 import { NeedsListForm } from "@/components/needs/NeedsListForm";
 import type { NeedsListItem } from "@/services/needs-list";
+import { useOrganization } from "@/hooks/useOrganization";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function NeedsList() {
   const { data: items, isLoading, error } = useNeedsList();
@@ -18,6 +20,10 @@ export default function NeedsList() {
   const { data: trucks } = useTrucks();
   const updateItem = useUpdateNeedsListItem();
   const deleteItem = useDeleteNeedsListItem();
+  const { isEngineBoss } = useOrganization();
+  const { user } = useAuth();
+  const canModify = (item: NeedsListItem) =>
+    isEngineBoss || item.created_by_user_id === user?.id;
 
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<NeedsListItem | null>(null);
