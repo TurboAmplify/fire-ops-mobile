@@ -11,6 +11,8 @@ import { Plus, Loader2, Check, RotateCcw, Pencil, Trash2, ShoppingCart } from "l
 import { useState } from "react";
 import { NeedsListForm } from "@/components/needs/NeedsListForm";
 import type { NeedsListItem } from "@/services/needs-list";
+import { useOrganization } from "@/hooks/useOrganization";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function NeedsList() {
   const { data: items, isLoading, error } = useNeedsList();
@@ -18,6 +20,10 @@ export default function NeedsList() {
   const { data: trucks } = useTrucks();
   const updateItem = useUpdateNeedsListItem();
   const deleteItem = useDeleteNeedsListItem();
+  const { isEngineBoss } = useOrganization();
+  const { user } = useAuth();
+  const canModify = (item: NeedsListItem) =>
+    isEngineBoss || item.created_by_user_id === user?.id;
 
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<NeedsListItem | null>(null);
@@ -145,12 +151,13 @@ export default function NeedsList() {
                   onClick={() =>
                     item.is_purchased ? handleReactivate(item) : handlePurchase(item)
                   }
+                  disabled={!canModify(item)}
                   aria-label={item.is_purchased ? "Mark as needed" : "Mark as purchased"}
                   className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-all ${
                     item.is_purchased
                       ? "border-green-500 bg-green-500/15 text-green-600"
                       : "border-border text-transparent active:border-primary/60 active:bg-primary/5"
-                  }`}
+                  } ${!canModify(item) ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
                   {item.is_purchased ? (
                     <Check className="h-3.5 w-3.5" />
@@ -160,28 +167,47 @@ export default function NeedsList() {
                 </button>
 
                 {/* Title + inline tag (single row) */}
-                <button
-                  onClick={() => handleEdit(item)}
-                  className="flex-1 min-w-0 flex items-center gap-2 text-left active:opacity-70"
-                >
-                  <span
-                    className={`font-semibold text-sm truncate ${
-                      item.is_purchased ? "line-through text-muted-foreground" : ""
-                    }`}
+                {canModify(item) ? (
+                  <button
+                    onClick={() => handleEdit(item)}
+                    className="flex-1 min-w-0 flex items-center gap-2 text-left active:opacity-70"
                   >
-                    {item.title}
-                  </span>
-                  <span
-                    className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${getCategoryColor(
-                      item
-                    )}`}
-                  >
-                    {getLinkedName(item)}
-                  </span>
-                </button>
+                    <span
+                      className={`font-semibold text-sm truncate ${
+                        item.is_purchased ? "line-through text-muted-foreground" : ""
+                      }`}
+                    >
+                      {item.title}
+                    </span>
+                    <span
+                      className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${getCategoryColor(
+                        item
+                      )}`}
+                    >
+                      {getLinkedName(item)}
+                    </span>
+                  </button>
+                ) : (
+                  <div className="flex-1 min-w-0 flex items-center gap-2">
+                    <span
+                      className={`font-semibold text-sm truncate ${
+                        item.is_purchased ? "line-through text-muted-foreground" : ""
+                      }`}
+                    >
+                      {item.title}
+                    </span>
+                    <span
+                      className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${getCategoryColor(
+                        item
+                      )}`}
+                    >
+                      {getLinkedName(item)}
+                    </span>
+                  </div>
+                )}
 
-                {/* Single action: revert or delete */}
-                {item.is_purchased ? (
+                {/* Single action: revert or delete — only if user can modify */}
+                {canModify(item) && (item.is_purchased ? (
                   <button
                     onClick={() => handleReactivate(item)}
                     aria-label="Move back to active"
@@ -199,7 +225,7 @@ export default function NeedsList() {
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
-                )}
+                ))}
               </div>
             ))}
           </div>
