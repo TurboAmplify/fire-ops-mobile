@@ -49,6 +49,7 @@ export function FactoringSettingsCard() {
     setAgreementDate(settings.agreement_date ?? "");
     setSignerName(settings.signer_name ?? "");
     setSignerTitle(settings.signer_title ?? "Owner");
+    setSignerPhone((settings as any).signer_phone ?? "");
     if (settings.signature_url) {
       getViewableUrl(settings.signature_url).then((u) => setSavedSigPreview(u));
     }
