@@ -17,7 +17,7 @@ export default function Fleet() {
   const [filter, setFilter] = useState<TruckStatus | "all">("all");
   const { data: trucks, isLoading, error } = useTrucks();
   const { isOffline } = useOnlineStatus();
-  const { isAdmin } = useOrganization();
+  const { isAdmin, isEngineBoss } = useOrganization();
   const { modules } = useAppMode();
   const showRatesLink = isAdmin && modules.payroll;
 
