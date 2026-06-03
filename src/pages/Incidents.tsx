@@ -34,21 +34,23 @@ export default function Incidents() {
     <AppShell
       title="Incidents"
       headerRight={
-        <div className="flex items-center gap-1.5">
-          <Link
-            to="/incidents/from-agreement"
-            className="flex items-center justify-center h-9 w-9 rounded-full bg-secondary text-secondary-foreground active:bg-secondary/70"
-          >
-            <FileUp className="h-4 w-4" />
-          </Link>
-          <Link
-            to="/incidents/new"
-            className="flex items-center gap-1.5 rounded-full bg-primary px-3.5 h-9 text-sm font-semibold text-primary-foreground active:bg-primary/90"
-          >
-            <Plus className="h-4 w-4" />
-            New
-          </Link>
-        </div>
+        isEngineBoss ? (
+          <div className="flex items-center gap-1.5">
+            <Link
+              to="/incidents/from-agreement"
+              className="flex items-center justify-center h-9 w-9 rounded-full bg-secondary text-secondary-foreground active:bg-secondary/70"
+            >
+              <FileUp className="h-4 w-4" />
+            </Link>
+            <Link
+              to="/incidents/new"
+              className="flex items-center gap-1.5 rounded-full bg-primary px-3.5 h-9 text-sm font-semibold text-primary-foreground active:bg-primary/90"
+            >
+              <Plus className="h-4 w-4" />
+              New
+            </Link>
+          </div>
+        ) : null
       }
     >
       <div className="p-4 space-y-3">
