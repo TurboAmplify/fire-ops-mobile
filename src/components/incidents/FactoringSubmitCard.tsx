@@ -338,7 +338,19 @@ export function FactoringSubmitCard({ incidentId }: Props) {
               <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0" />
               <span className="font-semibold">Schedule #{s.schedule_number}</span>
               <span className="text-muted-foreground">{fmt(Number(s.total_amount))}</span>
-              <span className="text-muted-foreground ml-auto">
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!s.pdf_url) return toast.error("PDF not available");
+                  const url = await getViewableUrl(s.pdf_url);
+                  if (url) window.open(url, "_blank", "noopener,noreferrer");
+                  else toast.error("Could not open PDF");
+                }}
+                className="ml-auto underline text-primary touch-target"
+              >
+                View PDF
+              </button>
+              <span className="text-muted-foreground">
                 {new Date(s.submitted_at).toLocaleDateString()}
               </span>
             </div>
