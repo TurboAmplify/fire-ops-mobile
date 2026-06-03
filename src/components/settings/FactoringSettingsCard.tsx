@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Landmark, Loader2, PenLine } from "lucide-react";
+import { Landmark, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   useOrgFactoringSettings,
@@ -13,15 +12,14 @@ import {
 } from "@/hooks/useFactoring";
 import { uploadFactoringSignature } from "@/services/factoring";
 import { useOrganization } from "@/hooks/useOrganization";
-import { SignaturePicker } from "@/components/shift-tickets/SignaturePicker";
+import { renderAutoSignatureBlob } from "@/lib/auto-signature";
 import { getViewableUrl } from "@/lib/storage-url";
 
 /**
- * Admin-only settings card for the factoring module. Only renders when the
- * super admin has toggled factoring on for the org.
+ * Admin-only settings card for the factoring module. Signature is auto-
+ * generated from the printed signer name (same style as OF-286 auto-sign).
  */
 export function FactoringSettingsCard() {
-  const qc = useQueryClient();
   const { membership, isAdmin } = useOrganization();
   const { data: enabled } = useFactoringEnabled();
   const { data: settings, isLoading } = useOrgFactoringSettings();
@@ -35,9 +33,8 @@ export function FactoringSettingsCard() {
   const [agreementDate, setAgreementDate] = useState("");
   const [signerName, setSignerName] = useState("");
   const [signerTitle, setSignerTitle] = useState("Owner");
-  const [signaturePreview, setSignaturePreview] = useState<string | null>(null);
-  const [signaturePickerOpen, setSignaturePickerOpen] = useState(false);
-  const [uploadingSig, setUploadingSig] = useState(false);
+  const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
+  const [savedSigPreview, setSavedSigPreview] = useState<string | null>(null);
   const initialized = useRef(false);
 
   useEffect(() => {
@@ -52,9 +49,29 @@ export function FactoringSettingsCard() {
     setSignerName(settings.signer_name ?? "");
     setSignerTitle(settings.signer_title ?? "Owner");
     if (settings.signature_url) {
-      getViewableUrl(settings.signature_url).then((u) => setSignaturePreview(u));
+      getViewableUrl(settings.signature_url).then((u) => setSavedSigPreview(u));
     }
   }, [settings]);
+
+  // Live preview of the auto signature.
+  useEffect(() => {
+    let cancelled = false;
+    let url: string | null = null;
+    (async () => {
+      const blob = await renderAutoSignatureBlob(signerName);
+      if (cancelled) return;
+      if (!blob) {
+        setPreviewDataUrl(null);
+        return;
+      }
+      url = URL.createObjectURL(blob);
+      setPreviewDataUrl(url);
+    })();
+    return () => {
+      cancelled = true;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [signerName]);
 
   if (!isAdmin || !enabled) return null;
 
@@ -64,7 +81,21 @@ export function FactoringSettingsCard() {
       toast.error("Reserve % must be between 0 and 100");
       return;
     }
+    const trimmedName = signerName.trim();
+    if (!trimmedName) {
+      toast.error("Signer name is required to generate the signature");
+      return;
+    }
+    if (!membership?.organizationId) return;
+
     try {
+      // Regenerate + upload signature whenever settings are saved so it always
+      // matches the current signer name.
+      const sigBlob = await renderAutoSignatureBlob(trimmedName);
+      let signatureUrl = settings?.signature_url ?? null;
+      if (sigBlob) {
+        signatureUrl = await uploadFactoringSignature(membership.organizationId, sigBlob);
+      }
       await upsert.mutateAsync({
         factor_company_name: factorCompanyName.trim() || "WideQ Financial LLC",
         factor_contact_name: factorContactName.trim() || null,
@@ -72,29 +103,17 @@ export function FactoringSettingsCard() {
         factor_contact_phone: factorContactPhone.trim() || null,
         reserve_percent: pct,
         agreement_date: agreementDate || null,
-        signer_name: signerName.trim() || null,
+        signer_name: trimmedName,
         signer_title: signerTitle.trim() || "Owner",
+        signature_url: signatureUrl,
       });
+      if (signatureUrl) {
+        const preview = await getViewableUrl(signatureUrl);
+        setSavedSigPreview(preview);
+      }
       toast.success("Factoring settings saved");
     } catch (err: any) {
       toast.error(err?.message || "Failed to save");
-    }
-  };
-
-  const handleSignatureSave = async (blob: Blob) => {
-    if (!membership?.organizationId) return;
-    setSignaturePickerOpen(false);
-    setUploadingSig(true);
-    try {
-      const url = await uploadFactoringSignature(membership.organizationId, blob);
-      await upsert.mutateAsync({ signature_url: url });
-      const preview = await getViewableUrl(url);
-      setSignaturePreview(preview);
-      toast.success("Signature saved");
-    } catch (err: any) {
-      toast.error(err?.message || "Could not save signature");
-    } finally {
-      setUploadingSig(false);
     }
   };
 
@@ -176,7 +195,7 @@ export function FactoringSettingsCard() {
                 <Input
                   value={signerName}
                   onChange={(e) => setSignerName(e.target.value)}
-                  placeholder="Jane Doe"
+                  placeholder="Dustin Aldrich"
                 />
               </div>
               <div>
@@ -190,33 +209,28 @@ export function FactoringSettingsCard() {
             </div>
 
             <div className="rounded-lg border border-border p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs">Owner signature</Label>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSignaturePickerOpen(true)}
-                  disabled={uploadingSig}
-                >
-                  {uploadingSig ? (
-                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                  ) : (
-                    <PenLine className="h-3 w-3 mr-1" />
-                  )}
-                  {signaturePreview ? "Replace" : "Add"}
-                </Button>
-              </div>
-              {signaturePreview ? (
+              <Label className="text-xs">Owner signature (auto-generated)</Label>
+              {previewDataUrl ? (
                 <img
-                  src={signaturePreview}
+                  src={previewDataUrl}
+                  alt="Auto signature preview"
+                  className="h-16 object-contain bg-background rounded border border-border"
+                />
+              ) : savedSigPreview ? (
+                <img
+                  src={savedSigPreview}
                   alt="Saved signature"
                   className="h-16 object-contain bg-background rounded border border-border"
                 />
               ) : (
                 <p className="text-xs text-muted-foreground italic">
-                  No signature on file. Required to generate signed Schedules.
+                  Enter the signer name above to preview the signature.
                 </p>
               )}
+              <p className="text-[11px] text-muted-foreground">
+                Same script signature style used on OF-286 auto-signing. Saving updates the
+                signature to match the current signer name.
+              </p>
             </div>
 
             <Button onClick={handleSave} disabled={upsert.isPending} className="w-full">
@@ -225,14 +239,6 @@ export function FactoringSettingsCard() {
             </Button>
           </>
         )}
-
-        <SignaturePicker
-          open={signaturePickerOpen}
-          onClose={() => setSignaturePickerOpen(false)}
-          onSave={handleSignatureSave}
-          title="Owner signature"
-          defaultName={signerName}
-        />
       </CardContent>
     </Card>
   );
