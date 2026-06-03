@@ -70,13 +70,15 @@ export default function Crew() {
     <AppShell
       title="Crew"
       headerRight={
-        <button
-          onClick={() => { setEditingId(null); setShowForm(true); }}
-          className="flex items-center gap-1 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground touch-target"
-        >
-          <Plus className="h-4 w-4" />
-          Add
-        </button>
+        isEngineBoss ? (
+          <button
+            onClick={() => { setEditingId(null); setShowForm(true); }}
+            className="flex items-center gap-1 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground touch-target"
+          >
+            <Plus className="h-4 w-4" />
+            Add
+          </button>
+        ) : null
       }
     >
       <div className="p-4 space-y-4">
