@@ -100,7 +100,7 @@ export default function Fleet() {
                 <p className="text-sm text-muted-foreground">
                   {filter === "all" ? "No trucks yet" : "No trucks match this filter"}
                 </p>
-                {filter === "all" && (
+                {filter === "all" && isEngineBoss && (
                   <Link to="/fleet/new" className="text-xs font-semibold text-primary mt-1 inline-block">
                     Add your first truck
                   </Link>
