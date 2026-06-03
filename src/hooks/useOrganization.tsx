@@ -16,6 +16,11 @@ interface OrganizationContextType {
   membership: OrgMembership | null;
   loading: boolean;
   isAdmin: boolean;
+  /** True for admins AND engine bosses (and platform admins via impersonation). */
+  isEngineBoss: boolean;
+  /** True only for the lowest-privilege role. */
+  isCrewMember: boolean;
+  role: string | null;
   /** All orgs the current user belongs to (real memberships, not impersonation). */
   memberships: OrgMembership[];
   /** Switch the active org (persists across reloads via localStorage). */
