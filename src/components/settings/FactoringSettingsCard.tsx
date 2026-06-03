@@ -107,8 +107,9 @@ export function FactoringSettingsCard() {
         agreement_date: agreementDate || null,
         signer_name: trimmedName,
         signer_title: signerTitle.trim() || "Owner",
+        signer_phone: signerPhone.trim() || null,
         signature_url: signatureUrl,
-      });
+      } as any);
       if (signatureUrl) {
         const preview = await getViewableUrl(signatureUrl);
         setSavedSigPreview(preview);
