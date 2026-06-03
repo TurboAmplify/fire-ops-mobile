@@ -123,9 +123,9 @@ const App = () => (
                     <Route path="/crews/:crewId" element={<ProtectedRoute><CrewDetail /></ProtectedRoute>} />
                     <Route path="/fleet" element={<ProtectedRoute><Fleet /></ProtectedRoute>} />
                     <Route path="/fleet/rates" element={<ProtectedRoute><AdminGate><ModuleGate module="payroll"><FleetTruckRates /></ModuleGate></AdminGate></ProtectedRoute>} />
-                    <Route path="/fleet/new" element={<ProtectedRoute><FleetTruckCreate /></ProtectedRoute>} />
+                    <Route path="/fleet/new" element={<ProtectedRoute><EngineBossGate><FleetTruckCreate /></EngineBossGate></ProtectedRoute>} />
                     <Route path="/fleet/:truckId" element={<ProtectedRoute><FleetTruckDetail /></ProtectedRoute>} />
-                    <Route path="/fleet/:truckId/edit" element={<ProtectedRoute><FleetTruckEdit /></ProtectedRoute>} />
+                    <Route path="/fleet/:truckId/edit" element={<ProtectedRoute><EngineBossGate><FleetTruckEdit /></EngineBossGate></ProtectedRoute>} />
                     <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
                     <Route path="/expenses/new" element={<ProtectedRoute><ExpenseEdit /></ProtectedRoute>} />
                     <Route path="/expenses/review" element={<ProtectedRoute><ExpenseReview /></ProtectedRoute>} />
