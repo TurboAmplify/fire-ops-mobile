@@ -31,3 +31,17 @@ export function AdminGate({ children }: { children: ReactNode }) {
   if (!isAdmin) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
+
+export function EngineBossGate({ children }: { children: ReactNode }) {
+  const { isEngineBoss, loading } = useOrganization();
+  const { isImpersonating, loading: impersonationLoading } = useImpersonation();
+  if (loading || impersonationLoading || (isImpersonating && !isEngineBoss)) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  if (!isEngineBoss) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
