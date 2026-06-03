@@ -33,7 +33,7 @@ import IncidentDetail from "./pages/IncidentDetail";
 import More from "./pages/More";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
-import { ModuleGate, AdminGate } from "@/components/ModuleGate";
+import { ModuleGate, AdminGate, EngineBossGate } from "@/components/ModuleGate";
 import { PlatformAdminGate } from "@/components/PlatformAdminGate";
 
 // Lazy-loaded — secondary flows, heavy PDF/xlsx pages, admin & super-admin surfaces.
