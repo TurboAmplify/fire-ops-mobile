@@ -8,6 +8,7 @@ import { useState, useMemo } from "react";
 import type { IncidentStatus } from "@/services/incidents";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { CachedDataPill, OfflineNoCacheEmpty } from "@/components/OfflineIndicators";
+import { useOrganization } from "@/hooks/useOrganization";
 
 const filters: (IncidentStatus | "all")[] = ["all", "active", "demob", "closed"];
 
