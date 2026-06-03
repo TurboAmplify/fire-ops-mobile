@@ -11,7 +11,7 @@ import { useEffect, useState } from "react";
 
 export default function More() {
   const navigate = useNavigate();
-  const { isAdmin } = useOrganization();
+  const { isAdmin, isEngineBoss } = useOrganization();
   const { isPlatformAdmin } = usePlatformAdmin();
   const { modules } = useAppMode();
   const redCardsEnabled = useRedCardsEnabled();
@@ -103,6 +103,29 @@ export default function More() {
                   <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
                 </button>
               ))}
+            </div>
+          </section>
+        )}
+
+        {isEngineBoss && !isAdmin && (
+          <section className="space-y-2">
+            <h2 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
+              Operations
+            </h2>
+            <div className="rounded-2xl bg-card overflow-hidden divide-y divide-border/60 card-shadow">
+              <button
+                onClick={() => navigate("/shift-tickets/log")}
+                className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors active:bg-secondary/50 touch-target"
+              >
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 shrink-0">
+                  <ClipboardList className="h-[18px] w-[18px] text-primary" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">Shift Ticket Log</p>
+                  <p className="text-[11px] text-muted-foreground">All tickets, lunch, per diem, signatures</p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
+              </button>
             </div>
           </section>
         )}
