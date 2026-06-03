@@ -19,6 +19,7 @@ function getInitials(name: string) {
 export default function Crew() {
   const { data: members, isLoading, error } = useCrewMembers();
   const { isOffline } = useOnlineStatus();
+  const { isEngineBoss } = useOrganization();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewingId, setViewingId] = useState<string | null>(null);
