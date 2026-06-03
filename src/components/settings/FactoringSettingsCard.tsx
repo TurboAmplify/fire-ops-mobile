@@ -33,6 +33,7 @@ export function FactoringSettingsCard() {
   const [agreementDate, setAgreementDate] = useState("");
   const [signerName, setSignerName] = useState("");
   const [signerTitle, setSignerTitle] = useState("Owner");
+  const [signerPhone, setSignerPhone] = useState("");
   const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
   const [savedSigPreview, setSavedSigPreview] = useState<string | null>(null);
   const initialized = useRef(false);
