@@ -241,18 +241,24 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   );
 
   const effectiveLoading = loading || (isImpersonating && !!target && !impersonatedMembership);
-  const isAdmin = membership?.role === "admin";
+  const role = membership?.role ?? null;
+  const isAdmin = role === "admin";
+  const isEngineBoss = role === "admin" || role === "engine_boss";
+  const isCrewMember = role === "crew_member";
 
   const value = useMemo(
     () => ({
       membership,
       loading: effectiveLoading,
       isAdmin,
+      isEngineBoss,
+      isCrewMember,
+      role,
       memberships: allMemberships,
       setActiveOrgId,
       refetch: fetchMembership,
     }),
-    [membership, effectiveLoading, isAdmin, allMemberships, setActiveOrgId, fetchMembership],
+    [membership, effectiveLoading, isAdmin, isEngineBoss, isCrewMember, role, allMemberships, setActiveOrgId, fetchMembership],
   );
 
   return (
