@@ -8,3 +8,10 @@ verify_jwt = false
 
 [functions.incoming-email]
 verify_jwt = false
+
+[functions.parse-of286]
+verify_jwt = true
+
+[functions.send-factoring-submission]
+verify_jwt = true
+
