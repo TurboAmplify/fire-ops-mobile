@@ -93,9 +93,14 @@ export function FactoringSubmitCard({ incidentId }: Props) {
   };
 
   const openPdf = async (url: string | null | undefined, label = "PDF") => {
+    const opened = window.open("about:blank", "_blank", "noopener,noreferrer");
     const viewable = await getViewableUrl(url);
-    if (!viewable) return toast.error(`${label} not available`);
-    window.open(viewable, "_blank", "noopener,noreferrer");
+    if (!viewable) {
+      opened?.close();
+      return toast.error(`${label} not available`);
+    }
+    if (opened) opened.location.href = viewable;
+    else window.location.href = viewable;
   };
 
   const downloadPdf = async (url: string | null | undefined, filename: string) => {
