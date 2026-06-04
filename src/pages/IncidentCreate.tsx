@@ -39,6 +39,7 @@ export default function IncidentCreate() {
   // "" = skip / attach later. null = not yet chosen.
   const [selectedTruckId, setSelectedTruckId] = useState<string | null>(null);
   const [suggestedTruckId, setSuggestedTruckId] = useState<string | null>(null);
+  const [duplicateRO, setDuplicateRO] = useState<ExistingResourceOrderMatch | null>(null);
 
   const canSubmit =
     name.trim() &&
