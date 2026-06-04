@@ -109,6 +109,17 @@ export default function IncidentCreate() {
       setSuggestedTruckId(suggestion);
       setSelectedTruckId(suggestion);
 
+      // Duplicate-RO safeguard: warn if this RO# is already on another incident.
+      if (parsed.resource_order_number && membership?.organizationId) {
+        const dup = await findIncidentTruckForResourceOrder(
+          membership.organizationId,
+          String(parsed.resource_order_number),
+        );
+        setDuplicateRO(dup);
+      } else {
+        setDuplicateRO(null);
+      }
+
       toast.success("Resource order parsed — review and confirm");
       setStep("form");
     } catch {
