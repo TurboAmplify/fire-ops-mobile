@@ -35,11 +35,12 @@ export default function IncidentDetail() {
   const updateMutation = useUpdateIncident();
   const deleteMutation = useDeleteIncident();
   const restoreMutation = useRestoreIncident();
-  const { data: impact } = useIncidentImpactCounts(confirmDeleteOpen(id) ? id : null);
   const [editingStatus, setEditingStatus] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [tab, setTab] = useState<"overview" | "trucks" | "tickets" | "crew" | "messages">("tickets");
   const { isEngineBoss } = useOrganization();
+  const { data: impact } = useIncidentImpactCounts(confirmDelete ? id : null);
+
 
 
   if (isLoading) {
