@@ -1,11 +1,9 @@
-import { Paperclip, Loader2, Download, MoreVertical, Eye, PenLine, CheckCircle2, FilePlus2 } from "lucide-react";
+import { Paperclip, Loader2, Download, MoreVertical, Eye, PenLine, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import type { AttachmentRow, ThreadRow } from "@/services/threads";
+import type { AttachmentRow } from "@/services/threads";
 import { useQueryClient } from "@tanstack/react-query";
-import { recoverShiftTicketFromPdfAttachment } from "@/services/shift-tickets";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,44 +49,13 @@ function attachmentStage(att: AttachmentRow): DocStage | null {
 
 export function AttachmentChip({
   att,
-  thread,
 }: {
   att: AttachmentRow;
-  thread?: Pick<ThreadRow, "incident_id" | "incident_truck_id" | "organization_id"> | null;
 }) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [restoring, setRestoring] = useState(false);
   const qc = useQueryClient();
-  const navigate = useNavigate();
   const stage = attachmentStage(att);
-  const isPdf =
-    (att.mime_type ?? "").toLowerCase().includes("pdf") ||
-    att.file_name?.toLowerCase().endsWith(".pdf");
-  const canRestoreShiftTicket =
-    isPdf && !!thread?.incident_truck_id && !!thread?.organization_id;
-
-  const restoreAsShiftTicket = async () => {
-    if (!thread?.incident_truck_id || !thread?.organization_id) return;
-    setRestoring(true);
-    try {
-      const ticket = await recoverShiftTicketFromPdfAttachment({
-        storagePath: att.storage_path,
-        fileName: att.file_name,
-        incidentTruckId: thread.incident_truck_id,
-        organizationId: thread.organization_id,
-      });
-      toast.success("Draft shift ticket created — review and re-sign.");
-      qc.invalidateQueries({ queryKey: ["shift-tickets", thread.incident_truck_id] });
-      qc.invalidateQueries({ queryKey: ["shift-tickets-recent"] });
-      navigate(`/incidents/${thread.incident_id}/trucks/${thread.incident_truck_id}/shift-ticket/${ticket.id}`);
-    } catch (e: any) {
-      console.error(e);
-      toast.error(e?.message || "Could not restore shift ticket");
-    } finally {
-      setRestoring(false);
-    }
-  };
 
   const download = async () => {
     setLoading(true);
@@ -189,21 +156,6 @@ export function AttachmentChip({
           <PillIcon className="h-3 w-3" />
           {pill.label}
         </span>
-      )}
-      {canRestoreShiftTicket && (
-        <button
-          onClick={restoreAsShiftTicket}
-          disabled={restoring}
-          title="Recreate a draft shift ticket from this PDF"
-          className="inline-flex items-center gap-1 rounded-md bg-secondary/60 px-1.5 py-1 text-[10px] font-semibold text-foreground hover:bg-secondary touch-target disabled:opacity-50"
-        >
-          {restoring ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
-            <FilePlus2 className="h-3 w-3" />
-          )}
-          Restore as shift ticket
-        </button>
       )}
       {att.auto_classified_as === "of286" && (
         <DropdownMenu>

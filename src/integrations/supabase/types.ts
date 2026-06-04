@@ -1325,6 +1325,9 @@ export type Database = {
       incident_trucks: {
         Row: {
           assigned_at: string
+          deleted_at: string | null
+          deleted_by_user_id: string | null
+          deleted_reason: string | null
           id: string
           incident_id: string
           status: string
@@ -1332,6 +1335,9 @@ export type Database = {
         }
         Insert: {
           assigned_at?: string
+          deleted_at?: string | null
+          deleted_by_user_id?: string | null
+          deleted_reason?: string | null
           id?: string
           incident_id: string
           status?: string
@@ -1339,6 +1345,9 @@ export type Database = {
         }
         Update: {
           assigned_at?: string
+          deleted_at?: string | null
+          deleted_by_user_id?: string | null
+          deleted_reason?: string | null
           id?: string
           incident_id?: string
           status?: string
@@ -1366,6 +1375,9 @@ export type Database = {
           acres: number | null
           containment: number | null
           created_at: string
+          deleted_at: string | null
+          deleted_by_user_id: string | null
+          deleted_reason: string | null
           id: string
           location: string
           name: string
@@ -1381,6 +1393,9 @@ export type Database = {
           acres?: number | null
           containment?: number | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by_user_id?: string | null
+          deleted_reason?: string | null
           id?: string
           location: string
           name: string
@@ -1396,6 +1411,9 @@ export type Database = {
           acres?: number | null
           containment?: number | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by_user_id?: string | null
+          deleted_reason?: string | null
           id?: string
           location?: string
           name?: string
@@ -3478,6 +3496,17 @@ export type Database = {
             Returns: string
           }
       delete_user_data: { Args: { _user_id: string }; Returns: undefined }
+      find_incident_truck_for_resource_order: {
+        Args: { _org_id: string; _ro_number: string }
+        Returns: {
+          incident_id: string
+          incident_name: string
+          incident_truck_id: string
+          resource_order_id: string
+          resource_order_number: string
+          truck_id: string
+        }[]
+      }
       generate_invite_code: { Args: never; Returns: string }
       get_auth_email: { Args: never; Returns: string }
       get_org_from_incident: { Args: { _incident_id: string }; Returns: string }

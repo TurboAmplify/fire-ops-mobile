@@ -10,12 +10,14 @@ import {
   parseResourceOrderAI,
   createResourceOrder,
   updateResourceOrderParsed,
+  findIncidentTruckForResourceOrder,
+  type ExistingResourceOrderMatch,
 } from "@/services/resource-orders";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useAvailableTrucks } from "@/hooks/useIncidentTrucks";
 import { assignTruckToIncident } from "@/services/incident-trucks";
 import { fuzzyMatchName } from "@/lib/fuzzy-name";
-import { Loader2, Upload, FileText, PenLine, Truck as TruckIcon, Sparkles } from "lucide-react";
+import { Loader2, Upload, FileText, PenLine, Truck as TruckIcon, Sparkles, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 type Step = "choose" | "parsing" | "form";
@@ -37,6 +39,7 @@ export default function IncidentCreate() {
   // "" = skip / attach later. null = not yet chosen.
   const [selectedTruckId, setSelectedTruckId] = useState<string | null>(null);
   const [suggestedTruckId, setSuggestedTruckId] = useState<string | null>(null);
+  const [duplicateRO, setDuplicateRO] = useState<ExistingResourceOrderMatch | null>(null);
 
   const canSubmit =
     name.trim() &&
@@ -106,6 +109,17 @@ export default function IncidentCreate() {
       setSuggestedTruckId(suggestion);
       setSelectedTruckId(suggestion);
 
+      // Duplicate-RO safeguard: warn if this RO# is already on another incident.
+      if (parsed.resource_order_number && membership?.organizationId) {
+        const dup = await findIncidentTruckForResourceOrder(
+          membership.organizationId,
+          String(parsed.resource_order_number),
+        );
+        setDuplicateRO(dup);
+      } else {
+        setDuplicateRO(null);
+      }
+
       toast.success("Resource order parsed — review and confirm");
       setStep("form");
     } catch {
@@ -119,6 +133,15 @@ export default function IncidentCreate() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
+    if (duplicateRO) {
+      const ok = window.confirm(
+        `Resource Order #${duplicateRO.resource_order_number} is already attached to "${duplicateRO.incident_name}". Create a SECOND incident for the same order anyway?\n\nThis is usually a mistake — tap Cancel to open the existing incident instead.`,
+      );
+      if (!ok) {
+        navigate(`/incidents/${duplicateRO.incident_id}`);
+        return;
+      }
+    }
     try {
       const incident = await createMutation.mutateAsync({
         name: name.trim(),
@@ -254,6 +277,31 @@ export default function IncidentCreate() {
               <p className="text-xs text-primary font-medium truncate">
                 Filled from: {uploadedFileName}
               </p>
+            </div>
+          )}
+
+          {duplicateRO && (
+            <div className="rounded-xl border-2 border-warning bg-warning/10 p-3 space-y-2">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-bold text-warning">
+                    Resource Order #{duplicateRO.resource_order_number} is already in use
+                  </p>
+                  <p className="text-xs text-foreground/80 mt-1">
+                    It's attached to <span className="font-semibold">{duplicateRO.incident_name}</span>.
+                    Creating a second incident for the same order is almost always a mistake —
+                    shift tickets and emails could end up split across both.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate(`/incidents/${duplicateRO.incident_id}`)}
+                className="w-full rounded-lg bg-primary text-primary-foreground px-3 py-2 text-sm font-semibold touch-target"
+              >
+                Open existing incident
+              </button>
             </div>
           )}
 
