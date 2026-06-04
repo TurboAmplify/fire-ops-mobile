@@ -6,6 +6,11 @@ interface ReplyBody {
   thread_id: string;
   body_text: string;
   attachment_paths?: string[]; // storage paths in communication-attachments bucket
+  // Optional explicit recipient override. When provided (and non-empty),
+  // these addresses are used instead of deriving from the thread's
+  // contact_id / finance_officer_id. Lets a single message fan out to
+  // multiple finance officers without creating duplicate threads.
+  to_emails?: string[];
   // Cross-incident send guard: callers attaching a doc that belongs to a
   // specific incident/truck should pass these so we can refuse to send via a
   // thread on the wrong incident.
@@ -108,9 +113,20 @@ Deno.serve(async (req) => {
       return json({ error: "Organization email handle not configured" }, 400);
     }
 
-    // Resolve recipient(s)
+    // Resolve recipient(s) — explicit override wins, else fall back to thread links
     const toEmails: string[] = [];
-    if (thread.contact_id) {
+    const overrides = (body.to_emails ?? [])
+      .map((s) => (typeof s === "string" ? s.trim() : ""))
+      .filter((s) => s.length > 0 && s.includes("@"));
+    // de-dupe case-insensitively
+    const seen = new Set<string>();
+    for (const e of overrides) {
+      const k = e.toLowerCase();
+      if (seen.has(k)) continue;
+      seen.add(k);
+      toEmails.push(e);
+    }
+    if (toEmails.length === 0 && thread.contact_id) {
       const { data: c } = await supabase
         .from("incident_truck_finance_contacts")
         .select("email_override, finance_officer_id, finance_officers ( email )")
@@ -118,7 +134,8 @@ Deno.serve(async (req) => {
         .maybeSingle();
       const e = c?.email_override ?? (c?.finance_officers as { email?: string } | null)?.email;
       if (e) toEmails.push(e);
-    } else if (thread.finance_officer_id) {
+    }
+    if (toEmails.length === 0 && thread.finance_officer_id) {
       const { data: fo } = await supabase
         .from("finance_officers")
         .select("email")
