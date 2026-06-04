@@ -1,4 +1,5 @@
 import type { CrewPayrollLine } from "@/lib/payroll";
+import { shareOrDownload } from "@/services/reports/exporters/share";
 
 interface Args {
   line: CrewPayrollLine;
@@ -221,5 +222,6 @@ export async function generatePaystubPdf({ line, organizationName, periodLabel }
 
   const safeName = line.name.replace(/[^a-z0-9]/gi, "_");
   const safePeriod = periodLabel.replace(/[^a-z0-9]/gi, "_");
-  doc.save(`paystub_${safeName}_${safePeriod}.pdf`);
+  const blob = doc.output("blob");
+  await shareOrDownload(`paystub_${safeName}_${safePeriod}.pdf`, blob, "application/pdf");
 }
