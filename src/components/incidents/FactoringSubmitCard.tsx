@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Landmark, FileText, Send, Sparkles, AlertTriangle, CheckCircle2, Download, ExternalLink } from "lucide-react";
+import { Loader2, Landmark, FileText, Send, Sparkles, AlertTriangle, CheckCircle2, Download, Eye, X } from "lucide-react";
 import { toast } from "sonner";
 import { useIncidentDocuments } from "@/hooks/useIncidentDocuments";
 import { useFactoringEnabled, useOrgFactoringSettings, useFactoringSubmissions } from "@/hooks/useFactoring";
@@ -41,6 +41,7 @@ export function FactoringSubmitCard({ incidentId }: Props) {
   // falls back to a `blob:` URL if signing fails.
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [pendingPdf, setPendingPdf] = useState<{ url: string; scheduleNumber: number } | null>(null);
+  const [pdfViewer, setPdfViewer] = useState<{ title: string; url: string; filename: string } | null>(null);
   const [reviewConfirmed, setReviewConfirmed] = useState(false);
   const [sentConfirmation, setSentConfirmation] = useState<{
     scheduleNumber: number;
@@ -74,6 +75,12 @@ export function FactoringSubmitCard({ incidentId }: Props) {
     if (settings?.reserve_percent != null) setReservePercent(String(settings.reserve_percent));
   }, [settings?.reserve_percent]);
 
+  useEffect(() => {
+    return () => {
+      if (pdfViewer?.url.startsWith("blob:")) URL.revokeObjectURL(pdfViewer.url);
+    };
+  }, [pdfViewer?.url]);
+
   if (!enabled || !isAdmin) return null;
 
   const totals = (() => {
@@ -93,47 +100,46 @@ export function FactoringSubmitCard({ incidentId }: Props) {
     setLines((prev) => prev.map((l) => (l.document_id === id ? { ...l, ...patch } : l)));
   };
 
-  const openPdf = async (url: string | null | undefined, label = "PDF") => {
+  const showPdf = async (url: string | null | undefined, label = "PDF", filename = "document.pdf") => {
     const viewable = await getViewableUrl(url);
     if (!viewable) return toast.error(`${label} not available`);
     try {
-      // Fetch as blob so it opens reliably inside sandboxed preview iframes
-      // and on mobile webviews where signed-URL redirects can be blocked.
+      const res = await fetch(viewable);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      setPdfViewer({ title: label, url: blobUrl, filename });
+    } catch {
+      setPdfViewer({ title: label, url: viewable, filename });
+    }
+  };
+
+  const downloadPdf = async (url: string | null | undefined, filename: string) => {
+    const viewable = await getViewableUrl(url);
+    if (!viewable) return toast.error("Download not available");
+    try {
       const res = await fetch(viewable);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const blob = await res.blob();
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = blobUrl;
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
-      // Revoke after a delay to let the new tab load
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
-    } catch (e) {
-      // Fallback: try a plain anchor to the signed URL
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10_000);
+    } catch {
+      const downloadUrl = await getDownloadUrl(url, filename);
+      if (!downloadUrl) return toast.error("Download not available");
       const a = document.createElement("a");
-      a.href = viewable;
-      a.target = "_blank";
+      a.href = downloadUrl;
+      a.download = filename;
       a.rel = "noopener noreferrer";
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
+      a.remove();
     }
-  };
-
-  const downloadPdf = async (url: string | null | undefined, filename: string) => {
-    const downloadUrl = await getDownloadUrl(url, filename);
-    if (!downloadUrl) return toast.error("Download not available");
-    const a = document.createElement("a");
-    a.href = downloadUrl;
-    a.download = filename;
-    a.rel = "noopener noreferrer";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
   };
 
   const handleAiExtract = async (docId: string) => {
