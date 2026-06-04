@@ -159,6 +159,27 @@ export async function getViewableUrl(
   }
 }
 
+export async function getDownloadUrl(
+  url: string | null | undefined,
+  filename?: string,
+): Promise<string | null> {
+  if (!url) return null;
+
+  const parsed = parseStorageUrl(url) ?? parseBareRedCardPath(url);
+  if (!parsed) return url;
+
+  const { data, error } = await supabase.storage
+    .from(parsed.bucket)
+    .createSignedUrl(parsed.path, SIGNED_URL_TTL_SECONDS, filename ? { download: filename } : { download: true });
+  const rawSignedUrl = (data as { signedUrl?: string; signedURL?: string } | null)?.signedUrl
+    ?? (data as { signedUrl?: string; signedURL?: string } | null)?.signedURL;
+  if (error || !rawSignedUrl) {
+    console.warn("Failed to create download URL:", parsed.bucket, parsed.path, error?.message);
+    return null;
+  }
+  return normalizeSignedUrl(rawSignedUrl);
+}
+
 /** Clear the in-memory signed-URL cache (e.g. on sign-out). */
 export function clearSignedUrlCache() {
   cache.clear();
