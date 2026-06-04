@@ -113,9 +113,20 @@ Deno.serve(async (req) => {
       return json({ error: "Organization email handle not configured" }, 400);
     }
 
-    // Resolve recipient(s)
+    // Resolve recipient(s) — explicit override wins, else fall back to thread links
     const toEmails: string[] = [];
-    if (thread.contact_id) {
+    const overrides = (body.to_emails ?? [])
+      .map((s) => (typeof s === "string" ? s.trim() : ""))
+      .filter((s) => s.length > 0 && s.includes("@"));
+    // de-dupe case-insensitively
+    const seen = new Set<string>();
+    for (const e of overrides) {
+      const k = e.toLowerCase();
+      if (seen.has(k)) continue;
+      seen.add(k);
+      toEmails.push(e);
+    }
+    if (toEmails.length === 0 && thread.contact_id) {
       const { data: c } = await supabase
         .from("incident_truck_finance_contacts")
         .select("email_override, finance_officer_id, finance_officers ( email )")
