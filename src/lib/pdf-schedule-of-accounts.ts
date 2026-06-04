@@ -103,9 +103,9 @@ export async function buildScheduleOfAccountsPdf(input: ScheduleOfAccountsInput)
   drawFitText(page, String(input.scheduleNumber || ""), 472, 678, 70, font, 10.5);
   drawFitText(page, input.seller || "", 93, 650, 230, font, 10.5);
 
-  drawFitText(page, String(input.lineItems.length), 421, 626, 75, font, 10.5, "center");
-  drawFitText(page, fmtUSD(total), 370, 600, 125, font, 10.5, "center");
-  drawFitText(page, fmtUSD(reserve), 325, 574, 170, font, 10.5, "center");
+  drawFitText(page, String(input.lineItems.length), 421, 629, 75, font, 10.5, "center");
+  drawFitText(page, fmtUSD(total), 370, 610, 125, font, 10.5, "center");
+  drawFitText(page, fmtUSD(reserve), 325, 586, 170, font, 10.5, "center");
 
   drawFitText(page, signerTitle, 230, 335, 110, font, 10, "center");
   drawFitText(page, formatMonthDay(agreementDate), 70, 312, 120, bold, 10, "center");
