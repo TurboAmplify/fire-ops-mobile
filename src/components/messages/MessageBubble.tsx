@@ -1,8 +1,16 @@
 import { format } from "date-fns";
-import type { AttachmentRow, MessageRow } from "@/services/threads";
+import type { AttachmentRow, MessageRow, ThreadRow } from "@/services/threads";
 import { AttachmentChip } from "./AttachmentChip";
 
-export function MessageBubble({ msg, attachments }: { msg: MessageRow; attachments: AttachmentRow[] }) {
+export function MessageBubble({
+  msg,
+  attachments,
+  thread,
+}: {
+  msg: MessageRow;
+  attachments: AttachmentRow[];
+  thread?: Pick<ThreadRow, "incident_id" | "incident_truck_id" | "organization_id"> | null;
+}) {
   const isOut = msg.direction === "out";
   const ts = msg.sent_at ?? msg.received_at ?? msg.created_at;
   return (
@@ -32,7 +40,7 @@ export function MessageBubble({ msg, attachments }: { msg: MessageRow; attachmen
         {attachments.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {attachments.map((a) => (
-              <AttachmentChip key={a.id} att={a} />
+              <AttachmentChip key={a.id} att={a} thread={thread ?? null} />
             ))}
           </div>
         )}
