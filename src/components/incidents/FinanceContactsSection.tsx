@@ -84,6 +84,18 @@ export function FinanceContactsSection({ incidentTruckId, incidentId, organizati
     }
   };
 
+  const toggleFlag = async (c: ResolvedContact, key: DocumentFlagKey) => {
+    const next = !c[key];
+    setContacts((prev) => prev.map((x) => (x.id === c.id ? { ...x, [key]: next } : x)));
+    try {
+      await updateContactFlags(c.id, { [key]: next });
+    } catch (e) {
+      // revert
+      setContacts((prev) => prev.map((x) => (x.id === c.id ? { ...x, [key]: !next } : x)));
+      toast.error(e instanceof Error ? e.message : "Failed to update");
+    }
+  };
+
   return (
     <div className="space-y-2">
       {loading ? (
