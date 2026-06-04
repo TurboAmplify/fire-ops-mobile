@@ -38,7 +38,7 @@ export function ThreadListItem({ item }: { item: TItem }) {
           <span className="ml-auto text-[10px] text-muted-foreground shrink-0">{when}</span>
         </div>
         <p className="text-xs text-muted-foreground truncate">
-          {item.counterparty_name || item.counterparty_email || "—"}
+          {item.counterparty_label || item.counterparty_name || item.counterparty_email || "—"}
         </p>
         {item.last_snippet && (
           <p className="text-xs text-muted-foreground truncate mt-0.5">{item.last_snippet}</p>

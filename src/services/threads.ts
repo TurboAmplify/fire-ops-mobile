@@ -26,6 +26,10 @@ export interface ThreadListItem extends ThreadRow {
   last_snippet: string | null;
   counterparty_name: string | null;
   counterparty_email: string | null;
+  /** Pre-formatted preview label, e.g. "To: Dawn Hernandez +1" or "Loren Dragg". */
+  counterparty_label: string | null;
+  /** Direction of the latest message in the thread. */
+  last_direction: "in" | "out" | null;
   attachment_count: number;
   needs_signature: boolean;
   /** Latest OF-286 doc stage on this thread, if any. */
@@ -104,17 +108,44 @@ export async function listThreads(opts: {
   const ids = scoped.map((r) => r.id);
   const { data: lastMsgs } = await supabase
     .from("messages")
-    .select("thread_id, body_text, from_email, from_name, direction, created_at")
+    .select("thread_id, body_text, from_email, from_name, to_emails, direction, created_at")
     .in("thread_id", ids)
     .order("created_at", { ascending: false });
-  const snippetByThread = new Map<string, { snippet: string; from_email: string; from_name: string | null }>();
+  const snippetByThread = new Map<
+    string,
+    {
+      snippet: string;
+      from_email: string;
+      from_name: string | null;
+      to_emails: string[];
+      direction: "in" | "out";
+    }
+  >();
   for (const m of lastMsgs ?? []) {
     if (snippetByThread.has(m.thread_id)) continue;
     snippetByThread.set(m.thread_id, {
       snippet: (m.body_text ?? "").slice(0, 140),
       from_email: m.from_email,
       from_name: m.from_name,
+      to_emails: (m.to_emails ?? []) as string[],
+      direction: (m.direction as "in" | "out") ?? "out",
     });
+  }
+
+  // Resolve recipient emails -> display names via finance_officers directory.
+  const allToEmails = new Set<string>();
+  for (const v of snippetByThread.values()) {
+    for (const e of v.to_emails) if (e) allToEmails.add(e.toLowerCase());
+  }
+  const nameByEmail = new Map<string, string>();
+  if (allToEmails.size > 0) {
+    const { data: foRows } = await supabase
+      .from("finance_officers")
+      .select("name, email")
+      .in("email", Array.from(allToEmails));
+    for (const fo of (foRows ?? []) as Array<{ name: string | null; email: string | null }>) {
+      if (fo.email) nameByEmail.set(fo.email.toLowerCase(), fo.name ?? fo.email);
+    }
   }
 
   // Attachment counts per thread.
@@ -143,6 +174,20 @@ export async function listThreads(opts: {
     latestDocByThread.set(d.thread_id, { stage: d.stage, signed_at: d.signed_at });
   }
 
+  function buildLabel(last: ReturnType<typeof snippetByThread.get>): string | null {
+    if (!last) return null;
+    if (last.direction === "out") {
+      const names = last.to_emails
+        .filter(Boolean)
+        .map((e) => nameByEmail.get(e.toLowerCase()) ?? e);
+      if (names.length === 0) return null;
+      const head = names.slice(0, 2).join(", ");
+      const extra = names.length > 2 ? ` +${names.length - 2}` : "";
+      return `To: ${head}${extra}`;
+    }
+    return last.from_name || last.from_email || null;
+  }
+
   return scoped.map((r) => {
     const last = snippetByThread.get(r.id);
     const doc = latestDocByThread.get(r.id) ?? null;
@@ -156,6 +201,8 @@ export async function listThreads(opts: {
       last_snippet: last?.snippet ?? null,
       counterparty_name: last?.from_name ?? null,
       counterparty_email: last?.from_email ?? null,
+      counterparty_label: buildLabel(last),
+      last_direction: last?.direction ?? null,
       attachment_count: attachmentCount.get(r.id) ?? 0,
       needs_signature: needs,
       of286_stage: stage,
