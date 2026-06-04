@@ -388,6 +388,32 @@ export function SendShiftTicketDialog({
                 )}
               </div>
 
+              {recentSendWarning && willResendTo.length === 0 && (
+                <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-2.5 text-xs">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                    <div className="space-y-2 flex-1">
+                      <p>
+                        This ticket was just sent{" "}
+                        <span className="font-medium">
+                          {minutesSinceLastSend === 0
+                            ? "less than a minute ago"
+                            : `${minutesSinceLastSend} min ago`}
+                        </span>
+                        . Sending again may create a duplicate.
+                      </p>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <Checkbox
+                          checked={confirmResend}
+                          onCheckedChange={(v) => setConfirmResend(!!v)}
+                        />
+                        <span>Yes, send anyway</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {willResendTo.length > 0 && (
                 <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-2.5 text-xs">
                   <div className="flex items-start gap-2">
