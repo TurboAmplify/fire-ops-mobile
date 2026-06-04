@@ -280,6 +280,31 @@ export default function IncidentCreate() {
             </div>
           )}
 
+          {duplicateRO && (
+            <div className="rounded-xl border-2 border-warning bg-warning/10 p-3 space-y-2">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-bold text-warning">
+                    Resource Order #{duplicateRO.resource_order_number} is already in use
+                  </p>
+                  <p className="text-xs text-foreground/80 mt-1">
+                    It's attached to <span className="font-semibold">{duplicateRO.incident_name}</span>.
+                    Creating a second incident for the same order is almost always a mistake —
+                    shift tickets and emails could end up split across both.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate(`/incidents/${duplicateRO.incident_id}`)}
+                className="w-full rounded-lg bg-primary text-primary-foreground px-3 py-2 text-sm font-semibold touch-target"
+              >
+                Open existing incident
+              </button>
+            </div>
+          )}
+
           <div className="space-y-2">
             <label className="text-sm font-medium text-muted-foreground">Incident Name</label>
             <input
