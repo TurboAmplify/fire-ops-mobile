@@ -133,6 +133,15 @@ export default function IncidentCreate() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
+    if (duplicateRO) {
+      const ok = window.confirm(
+        `Resource Order #${duplicateRO.resource_order_number} is already attached to "${duplicateRO.incident_name}". Create a SECOND incident for the same order anyway?\n\nThis is usually a mistake — tap Cancel to open the existing incident instead.`,
+      );
+      if (!ok) {
+        navigate(`/incidents/${duplicateRO.incident_id}`);
+        return;
+      }
+    }
     try {
       const incident = await createMutation.mutateAsync({
         name: name.trim(),
