@@ -94,15 +94,34 @@ export function FactoringSubmitCard({ incidentId }: Props) {
   };
 
   const openPdf = async (url: string | null | undefined, label = "PDF") => {
-    const opened = window.open("about:blank", "_blank");
-    if (opened) opened.opener = null;
     const viewable = await getViewableUrl(url);
-    if (!viewable) {
-      opened?.close();
-      return toast.error(`${label} not available`);
+    if (!viewable) return toast.error(`${label} not available`);
+    try {
+      // Fetch as blob so it opens reliably inside sandboxed preview iframes
+      // and on mobile webviews where signed-URL redirects can be blocked.
+      const res = await fetch(viewable);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      // Revoke after a delay to let the new tab load
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+    } catch (e) {
+      // Fallback: try a plain anchor to the signed URL
+      const a = document.createElement("a");
+      a.href = viewable;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     }
-    if (opened) opened.location.href = viewable;
-    else window.location.href = viewable;
   };
 
   const downloadPdf = async (url: string | null | undefined, filename: string) => {
