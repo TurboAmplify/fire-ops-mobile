@@ -146,17 +146,7 @@ export async function buildScheduleOfAccountsPdf(input: ScheduleOfAccountsInput)
   drawUnderline(schedFillX, y, schedFillW);
   y -= 28;
 
-  // ---------------- SELLER + Totals box ----------------
-  const sellerLabel = "SELLER:";
-  const sellerLabelW = serif.widthOfTextAtSize(sellerLabel, labelSize);
-  drawText(sellerLabel, margin, y, { font: serif, size: labelSize });
-  drawUnderline(margin, y, sellerLabelW);
-  const sellerFillX = margin + sellerLabelW + 6;
-  const sellerFillW = 240;
-  drawText(input.seller || "", sellerFillX + 4, y, { font: serif, size: fillSize });
-  drawUnderline(sellerFillX, y, sellerFillW);
-
-  // Totals box on the right
+  // ---------------- Totals box (right) ----------------
   const total = input.lineItems.reduce((s, li) => s + (Number(li.invoice_amount) || 0), 0);
   const reserve = total * (input.reservePercent / 100);
 
@@ -190,6 +180,25 @@ export async function buildScheduleOfAccountsPdf(input: ScheduleOfAccountsInput)
     drawUnderline(valX, boxRowY, valW);
     boxRowY -= boxRowH;
   }
+
+  // ---------------- SELLER row (left, sized to never overlap the box) ----------------
+  const sellerLabel = "SELLER:";
+  const sellerLabelW = serif.widthOfTextAtSize(sellerLabel, labelSize);
+  drawText(sellerLabel, margin, y, { font: serif, size: labelSize });
+  drawUnderline(margin, y, sellerLabelW);
+  const sellerFillX = margin + sellerLabelW + 6;
+  const sellerFillW = Math.max(80, boxX - sellerFillX - 14);
+  let sellerText = input.seller || "";
+  const sellerMaxW = sellerFillW - 8;
+  while (sellerText && serif.widthOfTextAtSize(sellerText, fillSize) > sellerMaxW && sellerText.length > 1) {
+    sellerText = sellerText.slice(0, -1);
+  }
+  if (sellerText !== (input.seller || "") && sellerText.length > 1) {
+    sellerText = sellerText.slice(0, -1) + "…";
+  }
+  drawText(sellerText, sellerFillX + 4, y, { font: serif, size: fillSize });
+  drawUnderline(sellerFillX, y, sellerFillW);
+
   // advance below the taller of (seller row, box)
   y = Math.min(y - 14, boxTopY - boxH - 22);
 
@@ -309,9 +318,12 @@ export async function buildScheduleOfAccountsPdf(input: ScheduleOfAccountsInput)
   }
   y -= 8;
 
-  const agreementDateStr = input.agreementDate
-    ? new Date(input.agreementDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
-    : "______________________________";
+  // Fall back to the schedule date when no factoring agreement date has been
+  // saved, so the certification paragraph never renders with a blank line.
+  const agreementDateStr = (input.agreementDate
+    ? new Date(input.agreementDate)
+    : input.scheduleDate
+  ).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 
   const numbered: string[] = [
     `He or she is the duly elected, qualified, and acting ${input.signerTitle || "Owner"} of Seller.`,
