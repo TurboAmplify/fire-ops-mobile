@@ -150,8 +150,10 @@ export function FactoringSubmitCard({ incidentId }: Props) {
         scheduleNumber,
       );
       setPendingPdf({ url, scheduleNumber });
-      const preview = URL.createObjectURL(pdfBlob);
-      setPreviewUrl(preview);
+      // Prefer a signed https URL — works in iOS/Android in-app webviews where
+      // `blob:` previews silently fail. Fall back to blob if signing fails.
+      const signed = await getViewableUrl(url).catch(() => null);
+      setPreviewUrl(signed || URL.createObjectURL(pdfBlob));
     } catch (err: any) {
       toast.error(err?.message || "Failed to generate schedule");
     } finally {
