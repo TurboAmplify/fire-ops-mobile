@@ -26,6 +26,10 @@ export interface ThreadListItem extends ThreadRow {
   last_snippet: string | null;
   counterparty_name: string | null;
   counterparty_email: string | null;
+  /** Pre-formatted preview label, e.g. "To: Dawn Hernandez +1" or "Loren Dragg". */
+  counterparty_label: string | null;
+  /** Direction of the latest message in the thread. */
+  last_direction: "in" | "out" | null;
   attachment_count: number;
   needs_signature: boolean;
   /** Latest OF-286 doc stage on this thread, if any. */
