@@ -177,3 +177,21 @@ export function FinanceContactsSection({ incidentTruckId, incidentId, organizati
     </div>
   );
 }
+
+function FlagChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "text-[11px] px-2 py-1 rounded-full border transition-colors min-h-[28px]",
+        active
+          ? "bg-primary text-primary-foreground border-primary"
+          : "bg-background text-muted-foreground border-border hover:bg-muted",
+      )}
+      aria-pressed={active}
+    >
+      {label}
+    </button>
+  );
+}
