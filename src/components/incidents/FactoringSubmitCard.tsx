@@ -41,6 +41,7 @@ export function FactoringSubmitCard({ incidentId }: Props) {
   // falls back to a `blob:` URL if signing fails.
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [pendingPdf, setPendingPdf] = useState<{ url: string; scheduleNumber: number } | null>(null);
+  const [reviewConfirmed, setReviewConfirmed] = useState(false);
   const [sentConfirmation, setSentConfirmation] = useState<{
     scheduleNumber: number;
     documentCount: number;
@@ -156,6 +157,7 @@ export function FactoringSubmitCard({ incidentId }: Props) {
     }
     setGenerating(true);
     setSentConfirmation(null);
+    setReviewConfirmed(false);
     try {
       const sigBlob = settings.signature_url
         ? await fetchSignatureBlob(settings.signature_url)
