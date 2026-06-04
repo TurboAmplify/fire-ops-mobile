@@ -134,7 +134,8 @@ Deno.serve(async (req) => {
         .maybeSingle();
       const e = c?.email_override ?? (c?.finance_officers as { email?: string } | null)?.email;
       if (e) toEmails.push(e);
-    } else if (thread.finance_officer_id) {
+    }
+    if (toEmails.length === 0 && thread.finance_officer_id) {
       const { data: fo } = await supabase
         .from("finance_officers")
         .select("email")
