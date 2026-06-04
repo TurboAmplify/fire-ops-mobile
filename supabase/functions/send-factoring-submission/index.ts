@@ -52,13 +52,20 @@ Deno.serve(async (req) => {
     }
     if (!body.schedule_pdf_url) return json({ error: "schedule_pdf_url required" }, 400);
 
-    // Load incident → org
+    // Load incident → org. Refuse if soft-deleted (Trash).
     const { data: incident, error: incErr } = await supabase
       .from("incidents")
-      .select("id, organization_id, name")
+      .select("id, organization_id, name, deleted_at")
       .eq("id", body.incident_id)
       .maybeSingle();
     if (incErr || !incident) return json({ error: "Incident not found" }, 404);
+    if ((incident as { deleted_at?: string | null }).deleted_at) {
+      return json({
+        error: "incident_in_trash",
+        detail: "This incident is in Trash. Restore it from Settings → Trash before sending a factoring submission.",
+      }, 422);
+    }
+
 
     // Admin check
     const { data: adminOk } = await supabase.rpc("is_org_admin", {

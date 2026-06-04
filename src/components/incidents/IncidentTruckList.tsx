@@ -62,13 +62,17 @@ export function IncidentTruckList({ incidentId, incidentName, organizationId }: 
   const handleRemove = async (it: IncidentTruckWithTruck) => {
     try {
       await removeMutation.mutateAsync(it.id);
-      toast.success(`${it.trucks.name} removed from incident`);
+      toast.success(`${it.trucks.name} moved to Trash`, {
+        description: "Shift tickets and docs are preserved. Restore from Settings → Trash.",
+        duration: 6000,
+      });
       setConfirmRemoveId(null);
       if (expandedTruck === it.id) setExpandedTruck(null);
     } catch (err: any) {
-      toast.error(err?.message || "Failed to remove. Truck may have shift tickets or other data attached.");
+      toast.error(err?.message || "Failed to remove truck from incident");
     }
   };
+
 
   return (
     <section className="space-y-3">

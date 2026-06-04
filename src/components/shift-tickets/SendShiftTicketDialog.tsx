@@ -94,7 +94,12 @@ export function SendShiftTicketDialog({
         subject,
       });
       // 4. Send reply with attachment
-      await sendReply(thread.id, body.trim() || "Shift ticket attached.", [path]);
+      await sendReply(thread.id, body.trim() || "Shift ticket attached.", [path], {
+        incidentId,
+        incidentTruckId: ticket.incident_truck_id,
+        documentLabel: `Shift Ticket ${subjectDate || ticket.id.slice(0, 8)}`,
+      });
+
       toast.success("Shift ticket sent to finance officer");
       onOpenChange(false);
       nav(`/messages/${thread.id}`);

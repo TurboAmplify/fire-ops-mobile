@@ -287,15 +287,28 @@ export async function sendReply(
   threadId: string,
   bodyText: string,
   attachmentPaths?: string[],
+  source?: {
+    incidentId?: string | null;
+    incidentTruckId?: string | null;
+    documentLabel?: string;
+  },
 ): Promise<{ message_id: string }> {
   const { data, error } = await supabase.functions.invoke("send-thread-reply", {
     body: {
       thread_id: threadId,
       body_text: bodyText,
       attachment_paths: attachmentPaths && attachmentPaths.length ? attachmentPaths : undefined,
+      source_incident_id: source?.incidentId ?? undefined,
+      source_incident_truck_id: source?.incidentTruckId ?? undefined,
+      source_document_label: source?.documentLabel ?? undefined,
     },
   });
   if (error) throw error;
-  if (data?.error) throw new Error(data.error);
+  if (data?.error) {
+    const err = new Error(data.detail || data.error) as Error & { code?: string };
+    err.code = data.error;
+    throw err;
+  }
   return data as { message_id: string };
 }
+

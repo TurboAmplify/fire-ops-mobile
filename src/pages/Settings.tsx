@@ -241,8 +241,14 @@ export default function Settings() {
               label="Customize Nav Bar"
               onClick={() => setShowNavCustomizer(true)}
             />
+            <LinkRow
+              icon={Trash2}
+              label="Trash (deleted incidents & trucks)"
+              onClick={() => navigate("/settings/trash")}
+            />
           </div>
         </section>
+
 
         {/* App info */}
         <section className="space-y-2">

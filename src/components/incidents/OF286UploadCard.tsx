@@ -271,9 +271,13 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
               thread_id: signingDoc.thread_id,
               body_text: `Signed OF-286 attached.\n\nSigned by ${finalSignerName} on ${signedAt.toLocaleString()}.`,
               attachment_paths: [path],
+              source_incident_id: incidentId,
+              source_incident_truck_id: (signingDoc as { incident_truck_id?: string | null }).incident_truck_id ?? undefined,
+              source_document_label: `OF-286 ${signedFileName}`,
             },
           });
           if (sendErr) throw sendErr;
+
           toast.success("Signed and returned to sender");
         } catch (e: any) {
           console.error("return-to-sender failed", e);
