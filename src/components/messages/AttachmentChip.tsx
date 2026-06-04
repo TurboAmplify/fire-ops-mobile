@@ -1,9 +1,11 @@
-import { Paperclip, Loader2, Download, MoreVertical, Eye, PenLine, CheckCircle2 } from "lucide-react";
+import { Paperclip, Loader2, Download, MoreVertical, Eye, PenLine, CheckCircle2, FilePlus2 } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import type { AttachmentRow } from "@/services/threads";
+import type { AttachmentRow, ThreadRow } from "@/services/threads";
 import { useQueryClient } from "@tanstack/react-query";
+import { recoverShiftTicketFromPdfAttachment } from "@/services/shift-tickets";
 import {
   DropdownMenu,
   DropdownMenuContent,
