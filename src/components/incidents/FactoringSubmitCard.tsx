@@ -307,13 +307,20 @@ export function FactoringSubmitCard({ incidentId }: Props) {
             </button>
           ) : (
             <div className="space-y-2">
+              <div className="rounded-md border border-border overflow-hidden bg-background">
+                <iframe
+                  src={previewUrl}
+                  title="Schedule of Accounts preview"
+                  className="w-full h-[70vh] bg-white"
+                />
+              </div>
               <a
                 href={previewUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block text-center rounded-md bg-secondary py-2 text-xs font-bold text-secondary-foreground touch-target"
               >
-                Open preview PDF
+                Open in new tab
               </a>
               <button
                 onClick={handleSubmit}
