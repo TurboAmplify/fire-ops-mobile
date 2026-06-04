@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Loader2, Send, Mail } from "lucide-react";
+import { Loader2, Send, Mail, CheckCircle2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
