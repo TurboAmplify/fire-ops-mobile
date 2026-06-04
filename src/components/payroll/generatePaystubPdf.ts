@@ -1,4 +1,5 @@
 import type { CrewPayrollLine } from "@/lib/payroll";
+import { shareOrDownload } from "@/services/reports/exporters/share";
 
 interface Args {
   line: CrewPayrollLine;
