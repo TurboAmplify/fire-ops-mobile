@@ -99,20 +99,20 @@ export async function buildScheduleOfAccountsPdf(input: ScheduleOfAccountsInput)
 
   // These coordinates fill Anita's original WideQ Word form converted to a Letter PDF.
   // The form itself supplies all boxes, lines, headers, table text, and legal language.
-  drawFitText(page, formatLongDate(scheduleDate), 82, 678, 190, font, 11);
-  drawFitText(page, String(input.scheduleNumber || ""), 463, 678, 80, font, 11);
-  drawFitText(page, input.seller || "", 75, 650, 250, font, 11);
+  drawFitText(page, formatLongDate(scheduleDate), 86, 678, 180, font, 10.5);
+  drawFitText(page, String(input.scheduleNumber || ""), 472, 678, 70, font, 10.5);
+  drawFitText(page, input.seller || "", 93, 650, 230, font, 10.5);
 
-  drawFitText(page, String(input.lineItems.length), 416, 626, 70, font, 11, "center");
-  drawFitText(page, fmtUSD(total), 361, 600, 125, font, 11, "center");
-  drawFitText(page, fmtUSD(reserve), 320, 574, 165, font, 11, "center");
+  drawFitText(page, String(input.lineItems.length), 421, 626, 75, font, 10.5, "center");
+  drawFitText(page, fmtUSD(total), 370, 600, 125, font, 10.5, "center");
+  drawFitText(page, fmtUSD(reserve), 325, 574, 170, font, 10.5, "center");
 
-  drawFitText(page, signerTitle, 227, 335, 115, font, 10.5, "center");
-  drawFitText(page, formatMonthDay(agreementDate), 70, 301, 120, bold, 10.5, "center");
+  drawFitText(page, signerTitle, 230, 335, 110, font, 10, "center");
+  drawFitText(page, formatMonthDay(agreementDate), 70, 312, 120, bold, 10, "center");
 
-  drawFitText(page, ordinal(scheduleDate.getDate()), 323, 158, 55, font, 11, "center");
-  drawFitText(page, MONTHS[scheduleDate.getMonth()], 399, 158, 130, font, 11, "center");
-  drawFitText(page, scheduleDate.getFullYear().toString().slice(-2), 534, 158, 34, font, 11, "center");
+  drawFitText(page, ordinal(scheduleDate.getDate()), 323, 178, 55, font, 10.5, "center");
+  drawFitText(page, MONTHS[scheduleDate.getMonth()], 399, 178, 130, font, 10.5, "center");
+  drawFitText(page, scheduleDate.getFullYear().toString().slice(-2), 534, 178, 34, font, 10.5, "center");
 
   if (input.signaturePngBlob) {
     try {
@@ -125,7 +125,7 @@ export async function buildScheduleOfAccountsPdf(input: ScheduleOfAccountsInput)
       const height = sigImg.height * scale;
       page.drawImage(sigImg, {
         x: 284,
-        y: 112,
+        y: 135,
         width,
         height,
       });
@@ -134,8 +134,8 @@ export async function buildScheduleOfAccountsPdf(input: ScheduleOfAccountsInput)
     }
   }
 
-  drawFitText(page, input.signerName || "", 313, 86, 140, font, 11, "center");
-  drawFitText(page, signerTitle, 290, 56, 160, font, 11, "center");
+  drawFitText(page, input.signerName || "", 313, 108, 140, font, 10.5, "center");
+  drawFitText(page, signerTitle, 290, 79, 160, font, 10.5, "center");
 
   const bytes = await pdf.save();
   return new Blob([bytes.slice().buffer as ArrayBuffer], { type: "application/pdf" });
