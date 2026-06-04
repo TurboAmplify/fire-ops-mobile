@@ -45,6 +45,13 @@ export function SendShiftTicketDialog({
   const [body, setBody] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingContacts, setLoadingContacts] = useState(false);
+  const [sent, setSent] = useState<null | {
+    threadId: string;
+    recipientName: string;
+    recipientEmail: string;
+    fileName: string;
+    sentAt: string;
+  }>(null);
   const create = useCreateThread();
   const nav = useNavigate();
 
