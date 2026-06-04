@@ -42,7 +42,7 @@ export function PdfPreview({ url }: PdfPreviewProps) {
         canvas.className = "mx-auto mb-4 rounded-md bg-background shadow-sm";
         context.setTransform(dpr, 0, 0, dpr, 0, 0);
         container.appendChild(canvas);
-        await page.render({ canvasContext: context, viewport }).promise;
+        await page.render({ canvas, canvasContext: context, viewport }).promise;
       }
       if (!cancelled) setLoading(false);
     })().catch((err) => {
