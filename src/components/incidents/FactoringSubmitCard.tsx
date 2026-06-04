@@ -92,6 +92,24 @@ export function FactoringSubmitCard({ incidentId }: Props) {
     setLines((prev) => prev.map((l) => (l.document_id === id ? { ...l, ...patch } : l)));
   };
 
+  const openPdf = async (url: string | null | undefined, label = "PDF") => {
+    const viewable = await getViewableUrl(url);
+    if (!viewable) return toast.error(`${label} not available`);
+    window.open(viewable, "_blank", "noopener,noreferrer");
+  };
+
+  const downloadPdf = async (url: string | null | undefined, filename: string) => {
+    const downloadUrl = await getDownloadUrl(url, filename);
+    if (!downloadUrl) return toast.error("Download not available");
+    const a = document.createElement("a");
+    a.href = downloadUrl;
+    a.download = filename;
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
   const handleAiExtract = async (docId: string) => {
     const doc = financeSigned.find((d) => d.id === docId);
     if (!doc) return;
@@ -131,6 +149,7 @@ export function FactoringSubmitCard({ incidentId }: Props) {
       return;
     }
     setGenerating(true);
+    setSentConfirmation(null);
     try {
       const sigBlob = settings.signature_url
         ? await fetchSignatureBlob(settings.signature_url)
@@ -183,7 +202,12 @@ export function FactoringSubmitCard({ incidentId }: Props) {
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
-      toast.success("Submitted to factor");
+      toast.success("Factoring package sent");
+      setSentConfirmation({
+        scheduleNumber: pendingPdf.scheduleNumber,
+        documentCount: financeSigned.length,
+        recipient: settings?.factor_contact_email || "factoring contact",
+      });
       setPreviewUrl(null);
       setPendingPdf(null);
       qc.invalidateQueries({ queryKey: ["factoring-submissions", incidentId] });
