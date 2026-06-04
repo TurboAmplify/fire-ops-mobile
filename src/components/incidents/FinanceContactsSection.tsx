@@ -1,16 +1,18 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, X, Mail, Phone } from "lucide-react";
 import { toast } from "sonner";
 import {
   listTruckFinanceContacts,
   listIncidentFinanceContacts,
   removeTruckFinanceContact,
+  updateContactFlags,
   type IncidentTruckFinanceContact,
+  type DocumentFlagKey,
 } from "@/services/incident-truck-finance-contacts";
 import { supabase } from "@/integrations/supabase/client";
 import { FinanceOfficerPicker } from "./FinanceOfficerPicker";
+import { cn } from "@/lib/utils";
 
 interface Props {
   /** Attach contacts to a single truck. Mutually exclusive with incidentId. */
