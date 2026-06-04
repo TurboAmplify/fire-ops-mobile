@@ -4,7 +4,11 @@ import {
   fetchIncident,
   createIncident,
   updateIncident,
-  deleteIncident,
+  softDeleteIncident,
+  restoreIncident,
+  hardDeleteIncident,
+  fetchTrashedIncidents,
+  fetchIncidentImpactCounts,
 } from "@/services/incidents";
 import type { IncidentInsert, IncidentUpdate } from "@/services/incidents";
 import { useOrganization } from "@/hooks/useOrganization";
@@ -17,8 +21,8 @@ export function useIncidents() {
     queryKey: ["incidents", orgId],
     queryFn: () => fetchIncidents(orgId),
     enabled: !!orgId,
-    staleTime: 1000 * 60 * 10, // 10 min — Phase 1 cache extension
-    gcTime: 1000 * 60 * 60 * 24 * 7, // 7 days — survive multi-day offline
+    staleTime: 1000 * 60 * 10,
+    gcTime: 1000 * 60 * 60 * 24 * 7,
   });
 }
 
@@ -29,6 +33,26 @@ export function useIncident(id: string) {
     enabled: !!id,
     staleTime: 1000 * 60 * 10,
     gcTime: 1000 * 60 * 60 * 24 * 7,
+  });
+}
+
+export function useTrashedIncidents() {
+  const { membership } = useOrganization();
+  const orgId = membership?.organizationId ?? null;
+  return useQuery({
+    queryKey: ["incidents", "trash", orgId],
+    queryFn: () => fetchTrashedIncidents(orgId),
+    enabled: !!orgId,
+    staleTime: 1000 * 30,
+  });
+}
+
+export function useIncidentImpactCounts(id: string | null | undefined) {
+  return useQuery({
+    queryKey: ["incidents", id, "impact"],
+    queryFn: () => fetchIncidentImpactCounts(id!),
+    enabled: !!id,
+    staleTime: 1000 * 30,
   });
 }
 
@@ -66,9 +90,39 @@ export function useUpdateIncident() {
 export function useDeleteIncident() {
   const qc = useQueryClient();
   return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string } | string) => {
+      assertOnlineForWrite();
+      const args = typeof id === "string" ? { id, reason: undefined } : { id, reason };
+      // Support both legacy `mutateAsync(id)` and new `mutateAsync({id, reason})`.
+      const finalId = typeof id === "string" ? (id as string) : (id as any).id;
+      const finalReason = typeof id === "string" ? undefined : (id as any).reason;
+      return softDeleteIncident(finalId, finalReason);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["incidents"] });
+    },
+  });
+}
+
+export function useRestoreIncident() {
+  const qc = useQueryClient();
+  return useMutation({
     mutationFn: (id: string) => {
       assertOnlineForWrite();
-      return deleteIncident(id);
+      return restoreIncident(id);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["incidents"] });
+    },
+  });
+}
+
+export function useHardDeleteIncident() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => {
+      assertOnlineForWrite();
+      return hardDeleteIncident(id);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["incidents"] });
