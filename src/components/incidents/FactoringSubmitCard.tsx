@@ -357,52 +357,70 @@ export function FactoringSubmitCard({ incidentId }: Props) {
             </button>
           ) : (
             <div className="space-y-2">
-              <div className="rounded-md border border-border bg-background p-2 space-y-2">
-                <p className="text-[11px] font-semibold text-muted-foreground uppercase">
-                  Ready to send · review before submitting
-                </p>
-                <a
-                  href={previewUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 rounded-md border border-border bg-card px-2 py-1.5 text-xs hover:bg-accent touch-target"
-                >
-                  <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
-                  <span className="flex-1 truncate font-semibold">
-                    Schedule-{pendingPdf?.scheduleNumber}.pdf
-                  </span>
-                  <span className="text-[11px] underline text-primary">Open</span>
-                </a>
+              <div className="rounded-md border border-primary/30 bg-primary/5 p-3 space-y-3">
+                <div className="flex items-start gap-2">
+                  <FileText className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold">Review the factoring invoice package</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Open or download the Schedule of Accounts, then confirm it looks correct before sending.
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openPdf(pendingPdf?.url, "Schedule PDF")}
+                    className="flex items-center justify-center gap-1.5 rounded-md bg-secondary px-3 py-2 text-xs font-bold text-secondary-foreground touch-target"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    View Schedule PDF
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadPdf(pendingPdf?.url, `Schedule-${pendingPdf?.scheduleNumber ?? "preview"}.pdf`)}
+                    className="flex items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 py-2 text-xs font-bold touch-target"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Download Schedule
+                  </button>
+                </div>
                 {financeSigned.length > 0 && (
                   <div className="space-y-1">
-                    <p className="text-[11px] text-muted-foreground">
-                      Plus {financeSigned.length} signed OF-286
-                      {financeSigned.length === 1 ? "" : "s"} attached:
+                    <p className="text-[11px] font-semibold text-muted-foreground">
+                      Dual-signed OF-286 attachment{financeSigned.length === 1 ? "" : "s"} to send:
                     </p>
                     {financeSigned.map((d) => (
                       <button
                         key={d.id}
                         type="button"
-                        onClick={async () => {
-                          const url = await getViewableUrl(d.file_url);
-                          if (url) window.open(url, "_blank", "noopener,noreferrer");
-                          else toast.error("Could not open OF-286");
-                        }}
+                        onClick={() => openPdf(d.file_url, "OF-286")}
                         className="flex w-full items-center gap-2 rounded-md border border-border/60 bg-background px-2 py-1 text-left text-[11px] hover:bg-accent touch-target"
                       >
                         <FileText className="h-3 w-3 text-muted-foreground shrink-0" />
                         <span className="flex-1 truncate">{d.file_name}</span>
-                        <span className="underline text-primary">Open</span>
+                        <span className="underline text-primary">View</span>
                       </button>
                     ))}
                   </div>
                 )}
+                <label className="flex items-start gap-2 rounded-md border border-border bg-background px-2 py-2 text-[11px] touch-target">
+                  <input
+                    type="checkbox"
+                    checked={reviewConfirmed}
+                    onChange={(e) => setReviewConfirmed(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 accent-primary"
+                  />
+                  <span className="leading-relaxed">
+                    I reviewed the Schedule of Accounts and the dual-signed OF-286 attachment{financeSigned.length === 1 ? "" : "s"}; send this package to {settings?.factor_contact_name || settings?.factor_company_name || "the factor"}.
+                  </span>
+                </label>
               </div>
 
               <button
                 onClick={handleSubmit}
-                disabled={submitting || !settingsComplete}
-                title={!settingsComplete ? "Complete factoring settings first" : undefined}
+                disabled={submitting || !settingsComplete || !reviewConfirmed}
+                title={!settingsComplete ? "Complete factoring settings first" : !reviewConfirmed ? "Review and confirm the package first" : undefined}
                 className="flex w-full items-center justify-center gap-1.5 rounded-md bg-primary py-2.5 text-xs font-bold text-primary-foreground touch-target disabled:opacity-40"
               >
                 {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
