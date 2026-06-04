@@ -38,6 +38,7 @@ import {
   Send,
   Trash2,
   Upload,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -78,6 +79,13 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
   const [totalDraft, setTotalDraft] = useState("");
   const [showAudit, setShowAudit] = useState(false);
   const [stamping, setStamping] = useState(false);
+  const [reviewPdf, setReviewPdf] = useState<{ title: string; url: string; doc: IncidentDocument } | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (reviewPdf?.url.startsWith("blob:")) URL.revokeObjectURL(reviewPdf.url);
+    };
+  }, [reviewPdf?.url]);
 
   // Group docs by stage; pick the most recent of each.
   const byStage = useMemo(() => {
@@ -299,6 +307,23 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
   };
 
   // ------- Download with audit log -------
+  const handleReviewPdf = async (doc: IncidentDocument) => {
+    const url = await getViewableUrl(doc.file_url);
+    if (!url) {
+      toast.error("Could not open document");
+      return;
+    }
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("fetch failed");
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      setReviewPdf({ title: doc.file_name, url: blobUrl, doc });
+    } catch {
+      setReviewPdf({ title: doc.file_name, url, doc });
+    }
+  };
+
   const handleDownload = async (doc: IncidentDocument) => {
     const url = await getViewableUrl(doc.file_url);
     if (!url) {
