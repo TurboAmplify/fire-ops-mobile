@@ -80,15 +80,33 @@ export default function IncidentDetail() {
   };
 
   const handleDelete = async () => {
+    const incidentName = incident.name;
+    const incidentIdLocal = incident.id;
     try {
-      await deleteMutation.mutateAsync(incident.id);
-      toast.success("Incident deleted");
+      await deleteMutation.mutateAsync(incidentIdLocal);
+      toast.success(`"${incidentName}" moved to Trash`, {
+        description: "Restore from Settings → Trash within 30 days.",
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            try {
+              await restoreMutation.mutateAsync(incidentIdLocal);
+              toast.success(`Restored "${incidentName}"`);
+              navigate(`/incidents/${incidentIdLocal}`);
+            } catch (e: any) {
+              toast.error(e?.message || "Failed to restore");
+            }
+          },
+        },
+        duration: 8000,
+      });
       navigate("/incidents");
     } catch (err: any) {
       toast.error(err?.message || "Failed to delete incident");
       setConfirmDelete(false);
     }
   };
+
 
   return (
     <AppShell
