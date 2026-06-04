@@ -259,6 +259,19 @@ export function FactoringSubmitCard({ incidentId }: Props) {
         </div>
       )}
 
+      {sentConfirmation && (
+        <div className="rounded-lg border border-success/30 bg-success/10 p-3 text-xs flex items-start gap-2">
+          <CheckCircle2 className="h-4 w-4 text-success shrink-0 mt-0.5" />
+          <div className="min-w-0 space-y-0.5">
+            <p className="font-bold text-success">Factoring package sent</p>
+            <p className="text-muted-foreground">
+              Schedule #{sentConfirmation.scheduleNumber} and {sentConfirmation.documentCount} dual-signed OF-286
+              {sentConfirmation.documentCount === 1 ? "" : "s"} were emailed to {sentConfirmation.recipient}.
+            </p>
+          </div>
+        </div>
+      )}
+
       {financeSigned.length === 0 ? (
         <p className="text-xs text-muted-foreground italic">
           Waiting on a finance-signed OF-286 for this incident.
