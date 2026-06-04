@@ -1,100 +1,61 @@
+# Fix: Schedule of Accounts PDF doesn't match WideQ template
 
-# Factoring (WideQ Financial) — Schedule of Accounts workflow
+## Problem
 
-A new opt-in module that lets owner/admins package the finance-signed OF-286(s) for an incident into a WideQ "Schedule of Accounts" PDF and send it to the org's factoring contact.
+The generated Schedule of Accounts I send to Anita is laid out from scratch (header text, table proportions, certification wording, signature block) — it does not match the WideQ Financial template you originally attached. The OF-286 attachment itself is fine (the finance-signed file is the one being sent); the only fix is the schedule layout/wording.
 
-## 1. Super-admin toggle (per org)
+## Approach
 
-- Add `modules_enabled.factoring` (boolean) on `organizations` (same pattern as `payroll`).
-- New component `src/components/super-admin/FactoringAccessToggle.tsx` mirroring `OrgPayrollToggle`.
-- Wire into `SuperAdminOrgDetail.tsx`.
-- When toggled on for Dry Lightning, the org's owner/admins see the factoring features below; everyone else (engine_boss, crew_member) sees nothing.
+Rebuild `src/lib/pdf-schedule-of-accounts.ts` so its output is a 1:1 visual match of Anita's blank template, then re-preview on Ashpole before any send.
 
-## 2. Org factoring profile (admin-only onboarding form)
+### 1. Re-anchor on the template
 
-New table `public.org_factoring_settings` (one row per org):
+The template was attached as 2 images back in your original factoring request, but I want to be 100% sure I'm matching what Anita actually expects today. I'd like you to re-attach the blank WideQ "Schedule of Accounts" PDF (or a clean screenshot of page 1) in your next message. I'll use it as the visual source of truth.
 
-- `organization_id` (PK/FK)
-- `factor_company_name` (default `WideQ Financial LLC`)
-- `factor_contact_name` (e.g. `Anita Hall`)
-- `factor_contact_email`
-- `factor_contact_phone`
-- `reserve_percent` (numeric, default `15.00`)
-- `agreement_date` (date — the factoring agreement effective date inserted in clause 2)
-- `signer_name` (org owner name)
-- `signer_title` (default `Owner`)
-- `signature_url` (saved signature image; reuse `SignaturePicker` + `incident-documents` bucket pattern)
-- `next_schedule_number` (int, default 1; auto-increments per submission)
+If you prefer not to re-upload, I'll work from the original attached images — just say so.
 
-RLS: select/update restricted to `is_org_admin(auth.uid(), organization_id)`. GRANTs for `authenticated` + `service_role`.
+### 2. Rewrite the PDF generator
 
-UI: `src/pages/OrgFactoringSettings.tsx` (linked from `OrgSettings.tsx`, admin-only, gated behind `modules_enabled.factoring`). Lets the owner pre-fill recurring info + capture/replace their signature. Banner appears on incident page when profile incomplete.
+Replace the current ad-hoc layout in `pdf-schedule-of-accounts.ts` with one that mirrors the template's:
 
-## 3. Schedule generation on the incident
+- Title block ("WideQ Financial LLC" branding + "Schedule of Accounts" heading) at the exact position/size used in the template
+- DATE / SCHEDULE NO. row formatted like the template (right-aligned schedule number, same font weight)
+- SELLER line
+- Totals block (Number of Accounts Sold / Total Amount Sold / Reserve %)
+- Accounts table — same column order, widths, header style, and row height as the template
+- Certification paragraphs 1–6 — verbatim wording from the template (currently mine is paraphrased)
+- "IN WITNESS WHEREOF…" closing line with the day/month/year merge fields
+- Signature block: `By: ___` (with embedded signature PNG), `Print Name:`, `Title:` — positioned to match the template
 
-On `IncidentDetail` Overview, when factoring is enabled for the org AND the incident has at least one `incident_documents` row with `stage='finance_signed'` (type `of286`):
+### 3. Keep the existing data wiring intact
 
-- New `FactoringSubmitCard` component shows:
-  - List of finance-signed OF-286s on this incident, each row with parsed/entered invoice metadata (debtor agency, invoice number, amount, date) — editable inline.
-  - Reserve % (defaulted from org profile, editable per submission).
-  - Auto-computed totals: count of accounts, total amount sold, reserve $ = total × reserve%.
-  - "Generate Schedule" → renders PDF (pdf-lib) and opens review modal.
-  - "Submit to WideQ" → emails the contact with the Schedule PDF + each finance-signed OF-286 PDF attached, logs an audit event, and increments `next_schedule_number`.
+No changes to:
+- `FactoringSubmitCard` (line items, totals, preview/submit flow)
+- `send-factoring-submission` edge function (attachments, recipient, email body)
+- `org_factoring_settings` schema
+- The finance-signed OF-286 attachment logic
 
-### AI extraction to pre-fill the schedule
+Only the PDF builder changes.
 
-New edge function `parse-of286` (mirrors `parse-shift-ticket`/`parse-agreement`):
-- Input: signed file URL
-- Uses Lovable AI (`google/gemini-2.5-pro`) with structured output to extract:
-  - `dispatch_office` (Seller — e.g. "Bureau of Land Management")
-  - `invoice_number` (resource order / agreement #)
-  - `invoice_amount` (uses existing `of286_invoice_total` if already entered, otherwise parsed)
-  - `invoice_date` (finance-signed date or doc date)
-  - `account_debtor` (incident host agency / paying office)
-- Result cached on `incident_documents` in new JSONB column `of286_parsed` and editable in the card.
+### 4. Verify before sending
 
-## 4. Schedule of Accounts PDF
+After the rewrite, on the Ashpole incident you'll:
+1. Click **Generate Schedule of Accounts** → opens the new PDF preview
+2. Eyeball it against Anita's template
+3. If good, **Submit**; if not, tell me what's off and I'll iterate
 
-`src/lib/pdf-schedule-of-accounts.ts` using pdf-lib generates a single-page PDF matching the WideQ template:
+I will NOT auto-send a test to Anita.
 
-- Header: "WideQ Financial LLC — SCHEDULE OF ACCOUNTS"
-- DATE (today) · SCHEDULE NO. (from `next_schedule_number`)
-- SELLER: dispatch office (taken from the OF-286s; if multiple, lists each)
-- Totals: count, total amount, reserve
-- Table rows: one per finance-signed OF-286 (Account Debtor / Invoice # / Amount / Date)
-- Clauses 1–6 with `signer_title` substituted into clause 1 and `agreement_date` into clause 2
-- "IN WITNESS WHEREOF" line filled with today's day/month/year
-- "By:" line stamps `signature_url`; "Print Name:" = `signer_name`; "Title:" = `signer_title`
+## Technical notes
 
-## 5. Submission delivery
+- `pdf-lib` + Helvetica/Helvetica-Bold standard fonts (no new deps)
+- Certification wording will be copied verbatim from the template so the legal language matches what she's expecting
+- The `schedule_number` will continue to draw from `org_factoring_settings.next_schedule_number` (currently 2 for Dry Lightning — the previous Ashpole send already bumped it from 1 to 2)
+- Signature PNG embed logic stays the same (auto-stamps `signature_url` from settings onto the `By:` line)
 
-- New edge function `send-factoring-submission` (verify_jwt=true) — accepts `{ incident_id, document_ids[], reserve_percent, line_items[] }`.
-- Reuses the Resend connector + per-org sender (`<email_handle>@mail.fireopshq.com`) and Reply-To token pattern.
-- Subject: `Schedule #N — <Incident Name> — <Org>`.
-- Body: short cover note to Anita (or the configured contact) with totals.
-- Attachments: generated Schedule PDF + every selected finance-signed OF-286 PDF.
-- On success: insert `factoring_submissions` row (org_id, incident_id, schedule_number, total_amount, reserve_amount, recipient_email, submitted_by, submitted_at, pdf_url, document_ids[]) + audit log entry.
+## Out of scope
 
-New table `public.factoring_submissions` with admin-only RLS (select for engine_boss+, insert/update admin-only via the edge function using service role).
-
-## 6. Notification when FO returns the OF-286
-
-Already: `incoming-email` ingests finance replies and creates `incident_documents` rows. Extend it to:
-- When a new `stage='finance_signed'` doc lands AND the org has `modules_enabled.factoring`, insert a row into `app_notifications` ("Final OF-286 received — ready to submit for factoring") for org admins, deep-linking to the incident overview.
-
-## Rollout order
-
-1. Migration: `modules_enabled.factoring`, `org_factoring_settings`, `factoring_submissions`, `incident_documents.of286_parsed`, GRANTs + RLS.
-2. Super-admin `FactoringAccessToggle` + wire into `SuperAdminOrgDetail`.
-3. `OrgFactoringSettings` page + link in `OrgSettings`.
-4. `parse-of286` edge function.
-5. `pdf-schedule-of-accounts.ts` + `FactoringSubmitCard` on `IncidentDetail`.
-6. `send-factoring-submission` edge function + audit/notification + incoming-email notification hook.
-7. Enable for Dry Lightning, pre-fill Anita Hall / WideQ defaults via insert.
-
-## Out of scope (ask if needed)
-
-- Custom WideQ "agreement on file" upload/storage.
-- Editing the schedule PDF template per-org (assumes all factoring orgs use the same WideQ form).
-- Tracking remittance/payment status after submission (could be a Phase 2 on `factoring_submissions`).
-- Multiple factoring contacts per org (one contact per org for now; orgs that aren't Dry Lightning just configure their own contact in step 2).
+- OF-286 attachment logic (working correctly — the finance-signed file is what's sent)
+- Email body / subject changes
+- Adding a per-org overridable schedule template
+- Re-sending the existing Ashpole submission (you can regenerate and resubmit after the fix; it'll become Schedule #2)
