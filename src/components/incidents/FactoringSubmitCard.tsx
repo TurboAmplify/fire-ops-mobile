@@ -93,7 +93,8 @@ export function FactoringSubmitCard({ incidentId }: Props) {
   };
 
   const openPdf = async (url: string | null | undefined, label = "PDF") => {
-    const opened = window.open("about:blank", "_blank", "noopener,noreferrer");
+    const opened = window.open("about:blank", "_blank");
+    if (opened) opened.opener = null;
     const viewable = await getViewableUrl(url);
     if (!viewable) {
       opened?.close();
