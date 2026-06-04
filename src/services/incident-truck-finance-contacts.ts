@@ -87,9 +87,32 @@ export async function addTruckFinanceContact(input: {
   work_phone_override?: string;
   cell_phone_override?: string;
   role?: "shift_tickets" | "demob" | "both";
+  receives_shift_tickets?: boolean;
+  receives_demob?: boolean;
+  receives_red_cards?: boolean;
+  receives_of286?: boolean;
   notes?: string;
 }): Promise<IncidentTruckFinanceContact> {
   const { data: { user } } = await supabase.auth.getUser();
+  // Reactivate-or-insert: if this finance_officer is already attached, just reactivate.
+  if (input.finance_officer_id) {
+    const { data: existing } = await supabase
+      .from("incident_truck_finance_contacts")
+      .select("*")
+      .eq("incident_truck_id", input.incident_truck_id)
+      .eq("finance_officer_id", input.finance_officer_id)
+      .maybeSingle();
+    if (existing) {
+      const { data: updated, error } = await supabase
+        .from("incident_truck_finance_contacts")
+        .update({ is_active: true })
+        .eq("id", existing.id)
+        .select("*")
+        .single();
+      if (error) throw error;
+      return updated as IncidentTruckFinanceContact;
+    }
+  }
   const { data, error } = await supabase
     .from("incident_truck_finance_contacts")
     .insert({
@@ -102,6 +125,10 @@ export async function addTruckFinanceContact(input: {
       work_phone_override: input.work_phone_override || null,
       cell_phone_override: input.cell_phone_override || null,
       role: input.role ?? "both",
+      receives_shift_tickets: input.receives_shift_tickets ?? true,
+      receives_demob: input.receives_demob ?? true,
+      receives_red_cards: input.receives_red_cards ?? false,
+      receives_of286: input.receives_of286 ?? false,
       notes: input.notes || null,
       selected_by_user_id: user?.id ?? null,
     })
@@ -121,9 +148,33 @@ export async function addIncidentFinanceContact(input: {
   work_phone_override?: string;
   cell_phone_override?: string;
   role?: "shift_tickets" | "demob" | "both";
+  receives_shift_tickets?: boolean;
+  receives_demob?: boolean;
+  receives_red_cards?: boolean;
+  receives_of286?: boolean;
   notes?: string;
 }): Promise<IncidentTruckFinanceContact> {
   const { data: { user } } = await supabase.auth.getUser();
+  // Reactivate-or-insert: if this finance_officer is already attached to this incident, reactivate.
+  if (input.finance_officer_id) {
+    const { data: existing } = await supabase
+      .from("incident_truck_finance_contacts")
+      .select("*")
+      .eq("incident_id", input.incident_id)
+      .is("incident_truck_id", null)
+      .eq("finance_officer_id", input.finance_officer_id)
+      .maybeSingle();
+    if (existing) {
+      const { data: updated, error } = await supabase
+        .from("incident_truck_finance_contacts")
+        .update({ is_active: true })
+        .eq("id", existing.id)
+        .select("*")
+        .single();
+      if (error) throw error;
+      return updated as IncidentTruckFinanceContact;
+    }
+  }
   const { data, error } = await supabase
     .from("incident_truck_finance_contacts")
     .insert({
@@ -133,10 +184,14 @@ export async function addIncidentFinanceContact(input: {
       finance_officer_id: input.finance_officer_id ?? null,
       name_override: input.name_override || null,
       email_override: input.email_override || null,
-      phone_override: input.phone_override || input.cell_phone_override || input.work_phone_override || null,
+      phone_override: input.phone_override || null,
       work_phone_override: input.work_phone_override || null,
       cell_phone_override: input.cell_phone_override || null,
       role: input.role ?? "both",
+      receives_shift_tickets: input.receives_shift_tickets ?? true,
+      receives_demob: input.receives_demob ?? true,
+      receives_red_cards: input.receives_red_cards ?? false,
+      receives_of286: input.receives_of286 ?? false,
       notes: input.notes || null,
       selected_by_user_id: user?.id ?? null,
     })
@@ -150,6 +205,18 @@ export async function removeTruckFinanceContact(id: string): Promise<void> {
   const { error } = await supabase
     .from("incident_truck_finance_contacts")
     .update({ is_active: false })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function updateContactFlags(
+  id: string,
+  flags: Partial<Pick<IncidentTruckFinanceContact,
+    "receives_shift_tickets" | "receives_demob" | "receives_red_cards" | "receives_of286">>,
+): Promise<void> {
+  const { error } = await supabase
+    .from("incident_truck_finance_contacts")
+    .update(flags)
     .eq("id", id);
   if (error) throw error;
 }
