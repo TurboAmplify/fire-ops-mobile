@@ -12,6 +12,10 @@ export interface IncidentTruckFinanceContact {
   work_phone_override: string | null;
   cell_phone_override: string | null;
   role: "shift_tickets" | "demob" | "both";
+  receives_shift_tickets: boolean;
+  receives_demob: boolean;
+  receives_red_cards: boolean;
+  receives_of286: boolean;
   is_active: boolean;
   notes: string | null;
   selected_at: string;
@@ -20,6 +24,12 @@ export interface IncidentTruckFinanceContact {
   /** Joined email from finance_officers when no override is set. */
   finance_officer_email?: string | null;
 }
+
+export type DocumentFlagKey =
+  | "receives_shift_tickets"
+  | "receives_demob"
+  | "receives_red_cards"
+  | "receives_of286";
 
 /** Display-friendly name: override first, fall back to directory entry. */
 export function contactDisplayName(c: IncidentTruckFinanceContact): string {
