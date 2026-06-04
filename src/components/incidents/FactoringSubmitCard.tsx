@@ -436,6 +436,23 @@ export function FactoringSubmitCard({ incidentId }: Props) {
                 </label>
               </div>
 
+              {!settingsComplete && (
+                <div className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-[11px] space-y-1">
+                  <p className="font-semibold text-warning-foreground">
+                    Finish factoring settings to enable sending
+                  </p>
+                  <p className="text-muted-foreground">
+                    Add factor contact email, signer name, and signature in Settings → Factoring.
+                  </p>
+                  <a
+                    href="/settings"
+                    className="inline-block underline font-semibold text-primary"
+                  >
+                    Open Factoring Settings
+                  </a>
+                </div>
+              )}
+
               <button
                 onClick={handleSubmit}
                 disabled={submitting || !settingsComplete || !reviewConfirmed}

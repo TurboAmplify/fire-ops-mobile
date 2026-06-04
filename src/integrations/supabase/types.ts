@@ -1247,6 +1247,10 @@ export type Database = {
           notes: string | null
           organization_id: string
           phone_override: string | null
+          receives_demob: boolean
+          receives_of286: boolean
+          receives_red_cards: boolean
+          receives_shift_tickets: boolean
           role: string
           selected_at: string
           selected_by_user_id: string | null
@@ -1266,6 +1270,10 @@ export type Database = {
           notes?: string | null
           organization_id: string
           phone_override?: string | null
+          receives_demob?: boolean
+          receives_of286?: boolean
+          receives_red_cards?: boolean
+          receives_shift_tickets?: boolean
           role?: string
           selected_at?: string
           selected_by_user_id?: string | null
@@ -1285,6 +1293,10 @@ export type Database = {
           notes?: string | null
           organization_id?: string
           phone_override?: string | null
+          receives_demob?: boolean
+          receives_of286?: boolean
+          receives_red_cards?: boolean
+          receives_shift_tickets?: boolean
           role?: string
           selected_at?: string
           selected_by_user_id?: string | null
