@@ -90,19 +90,18 @@ export function useUpdateIncident() {
 export function useDeleteIncident() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason?: string } | string) => {
+    mutationFn: (arg: string | { id: string; reason?: string }) => {
       assertOnlineForWrite();
-      const args = typeof id === "string" ? { id, reason: undefined } : { id, reason };
-      // Support both legacy `mutateAsync(id)` and new `mutateAsync({id, reason})`.
-      const finalId = typeof id === "string" ? (id as string) : (id as any).id;
-      const finalReason = typeof id === "string" ? undefined : (id as any).reason;
-      return softDeleteIncident(finalId, finalReason);
+      const id = typeof arg === "string" ? arg : arg.id;
+      const reason = typeof arg === "string" ? undefined : arg.reason;
+      return softDeleteIncident(id, reason);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["incidents"] });
     },
   });
 }
+
 
 export function useRestoreIncident() {
   const qc = useQueryClient();

@@ -127,18 +127,32 @@ export async function fetchTrashedIncidents(orgId?: string | null) {
 
 /** Counts of related rows for the delete-confirmation dialog. */
 export async function fetchIncidentImpactCounts(id: string) {
-  const [trucks, tickets, docs, expenses, threads] = await Promise.all([
-    supabase.from("incident_trucks").select("id", { count: "exact", head: true }).eq("incident_id", id).is("deleted_at", null),
-    supabase.from("shift_tickets").select("id", { count: "exact", head: true }).eq("incident_id", id),
+  const trucksRes = await supabase
+    .from("incident_trucks")
+    .select("id", { count: "exact" })
+    .eq("incident_id", id)
+    .is("deleted_at", null);
+  const truckIds = (trucksRes.data ?? []).map((r) => r.id);
+
+  const ticketsCountPromise = truckIds.length
+    ? supabase
+        .from("shift_tickets")
+        .select("id", { count: "exact", head: true })
+        .in("incident_truck_id", truckIds)
+    : Promise.resolve({ count: 0 } as { count: number | null });
+
+  const [tickets, docs, expenses, threads] = await Promise.all([
+    ticketsCountPromise,
     supabase.from("incident_documents").select("id", { count: "exact", head: true }).eq("incident_id", id),
     supabase.from("expenses").select("id", { count: "exact", head: true }).eq("incident_id", id),
     supabase.from("communication_threads").select("id", { count: "exact", head: true }).eq("incident_id", id),
   ]);
   return {
-    trucks: trucks.count ?? 0,
+    trucks: trucksRes.count ?? 0,
     tickets: tickets.count ?? 0,
     documents: docs.count ?? 0,
     expenses: expenses.count ?? 0,
     threads: threads.count ?? 0,
   };
 }
+
