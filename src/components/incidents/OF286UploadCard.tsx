@@ -21,6 +21,7 @@ import { OF286SigningReview } from "@/components/incidents/OF286SigningReview";
 import { stampSignatureOntoPdf, downloadBlob } from "@/lib/pdf-sign";
 import type { BoxRect } from "@/lib/pdf-sign";
 import { getViewableUrl } from "@/lib/storage-url";
+import { PdfPreview } from "@/components/ui/PdfPreview";
 import { supabase } from "@/integrations/supabase/client";
 import {
   AlertTriangle,
@@ -749,11 +750,7 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <iframe
-              title={reviewPdf.title}
-              src={reviewPdf.url}
-              className="min-h-0 flex-1 rounded-lg border border-border bg-card"
-            />
+            <PdfPreview url={reviewPdf.url} />
           </div>
         </div>
       )}
