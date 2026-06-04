@@ -128,77 +128,127 @@ export function SendShiftTicketDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5" />
-            Send shift ticket?
-          </DialogTitle>
-          <DialogDescription>
-            Email this OF-297 as a PDF to a finance officer on this incident.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-3">
-          <div>
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              To
-            </label>
-            {loadingContacts ? (
-              <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
-                <Loader2 className="h-3 w-3 animate-spin" /> Loading contacts…
+        {sent ? (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-primary" />
+                Shift ticket sent
+              </DialogTitle>
+              <DialogDescription>Confirmation of your email.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2 text-sm">
+              <div className="rounded-md border bg-muted/40 p-3 space-y-1.5">
+                <div>
+                  <span className="text-[11px] uppercase tracking-wider text-muted-foreground">To</span>
+                  <p className="font-medium">{sent.recipientName}</p>
+                  {sent.recipientEmail && <p className="text-xs text-muted-foreground">{sent.recipientEmail}</p>}
+                </div>
+                <div>
+                  <span className="text-[11px] uppercase tracking-wider text-muted-foreground">Attachment</span>
+                  <p className="font-mono text-xs break-all">{sent.fileName}</p>
+                </div>
+                <div>
+                  <span className="text-[11px] uppercase tracking-wider text-muted-foreground">Sent</span>
+                  <p className="text-xs">{sent.sentAt}</p>
+                </div>
               </div>
-            ) : contacts.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-2">
-                No finance contacts on this incident. Add one from the incident Overview tab first.
+              <p className="text-[11px] text-muted-foreground">
+                Replies will arrive in Messages. A copy is in the thread for your records.
               </p>
-            ) : (
-              <select
-                value={contactId}
-                onChange={(e) => setContactId(e.target.value)}
-                className="w-full mt-1 rounded-md border border-border bg-background px-3 py-2 text-sm"
+            </div>
+            <DialogFooter className="gap-2 sm:gap-2">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Done
+              </Button>
+              <Button
+                onClick={() => {
+                  const tid = sent.threadId;
+                  onOpenChange(false);
+                  nav(`/messages/${tid}`);
+                }}
+                className="gap-2"
               >
-                {contacts.map((c) => {
-                  const email = contactDisplayEmail(c);
-                  return (
-                    <option key={c.id} value={c.id}>
-                      {contactDisplayName(c)}{email ? ` · ${email}` : ""}
-                    </option>
-                  );
-                })}
-              </select>
-            )}
-          </div>
+                View thread
+              </Button>
+            </DialogFooter>
+          </>
+        ) : (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Mail className="h-5 w-5" />
+                Send shift ticket?
+              </DialogTitle>
+              <DialogDescription>
+                Email this OF-297 as a PDF to a finance officer on this incident.
+              </DialogDescription>
+            </DialogHeader>
 
-          <div>
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Message
-            </label>
-            <Textarea
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              rows={6}
-              className="mt-1"
-            />
-          </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  To
+                </label>
+                {loadingContacts ? (
+                  <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Loading contacts…
+                  </div>
+                ) : contacts.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-2">
+                    No finance contacts on this incident are set to receive shift tickets. Add one — or enable the
+                    “Shift tickets” toggle on an existing contact — from the incident Overview tab.
+                  </p>
+                ) : (
+                  <select
+                    value={contactId}
+                    onChange={(e) => setContactId(e.target.value)}
+                    className="w-full mt-1 rounded-md border border-border bg-background px-3 py-2 text-sm"
+                  >
+                    {contacts.map((c) => {
+                      const email = contactDisplayEmail(c);
+                      return (
+                        <option key={c.id} value={c.id}>
+                          {contactDisplayName(c)}{email ? ` · ${email}` : ""}
+                        </option>
+                      );
+                    })}
+                  </select>
+                )}
+              </div>
 
-          <p className="text-[11px] text-muted-foreground">
-            The OF-297 PDF will be attached automatically. Replies come back into Messages.
-          </p>
-        </div>
+              <div>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Message
+                </label>
+                <Textarea
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  rows={6}
+                  className="mt-1"
+                />
+              </div>
 
-        <DialogFooter className="gap-2 sm:gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-            Not now
-          </Button>
-          <Button
-            onClick={handleSend}
-            disabled={loading || contacts.length === 0 || !contactId}
-            className="gap-2"
-          >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            Send
-          </Button>
-        </DialogFooter>
+              <p className="text-[11px] text-muted-foreground">
+                The OF-297 PDF will be attached automatically. Replies come back into Messages.
+              </p>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-2">
+              <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+                Not now
+              </Button>
+              <Button
+                onClick={handleSend}
+                disabled={loading || contacts.length === 0 || !contactId}
+                className="gap-2"
+              >
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                Send
+              </Button>
+            </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
