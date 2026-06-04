@@ -75,3 +75,34 @@ export async function parseResourceOrderAI(fileUrl: string, fileName: string): P
   if (error) throw error;
   return data?.parsed || {};
 }
+
+/**
+ * Look up any incident_truck in the org that's already attached to the given
+ * Resource Order number. Used to warn the user before they create a duplicate
+ * incident/truck for the same order.
+ */
+export interface ExistingResourceOrderMatch {
+  incident_truck_id: string;
+  incident_id: string;
+  incident_name: string;
+  truck_id: string;
+  resource_order_number: string;
+  resource_order_id: string;
+}
+
+export async function findIncidentTruckForResourceOrder(
+  organizationId: string,
+  resourceOrderNumber: string,
+): Promise<ExistingResourceOrderMatch | null> {
+  if (!resourceOrderNumber || !resourceOrderNumber.trim()) return null;
+  const { data, error } = await supabase.rpc("find_incident_truck_for_resource_order", {
+    _org_id: organizationId,
+    _ro_number: resourceOrderNumber,
+  });
+  if (error) {
+    console.warn("RO duplicate check failed", error);
+    return null;
+  }
+  const rows = (data ?? []) as ExistingResourceOrderMatch[];
+  return rows[0] ?? null;
+}
