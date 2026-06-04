@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Landmark, FileText, Send, Sparkles, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Loader2, Landmark, FileText, Send, Sparkles, AlertTriangle, CheckCircle2, Download, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { useIncidentDocuments } from "@/hooks/useIncidentDocuments";
 import { useFactoringEnabled, useOrgFactoringSettings, useFactoringSubmissions } from "@/hooks/useFactoring";
 import { useOrganization } from "@/hooks/useOrganization";
-import { getViewableUrl } from "@/lib/storage-url";
+import { getDownloadUrl, getViewableUrl } from "@/lib/storage-url";
 import { buildScheduleOfAccountsPdf } from "@/lib/pdf-schedule-of-accounts";
 import { uploadFactoringSchedulePdf, updateOf286Parsed, type ScheduleLineItem } from "@/services/factoring";
 import { Link } from "react-router-dom";
@@ -41,6 +41,11 @@ export function FactoringSubmitCard({ incidentId }: Props) {
   // falls back to a `blob:` URL if signing fails.
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [pendingPdf, setPendingPdf] = useState<{ url: string; scheduleNumber: number } | null>(null);
+  const [sentConfirmation, setSentConfirmation] = useState<{
+    scheduleNumber: number;
+    documentCount: number;
+    recipient: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!financeSigned.length) {
