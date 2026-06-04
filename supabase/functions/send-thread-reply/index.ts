@@ -43,11 +43,60 @@ Deno.serve(async (req) => {
     // Load thread + org
     const { data: thread, error: threadErr } = await supabase
       .from("communication_threads")
-      .select("id, organization_id, subject, thread_token, purpose, incident_truck_id, contact_id, finance_officer_id, status")
+      .select("id, organization_id, subject, thread_token, purpose, incident_id, incident_truck_id, contact_id, finance_officer_id, status")
       .eq("id", body.thread_id)
       .maybeSingle();
     if (threadErr || !thread) return json({ error: "Thread not found" }, 404);
     if (thread.status === "closed") return json({ error: "Thread closed" }, 400);
+
+    // ----- Cross-incident send guard -----
+    // If the caller is attaching a document tied to a specific incident/truck,
+    // refuse to send it via a thread that belongs to a different one.
+    const label = body.source_document_label || "this document";
+    if (
+      body.source_incident_truck_id &&
+      thread.incident_truck_id &&
+      body.source_incident_truck_id !== thread.incident_truck_id
+    ) {
+      await supabase.from("incident_document_audit").insert({
+        organization_id: thread.organization_id,
+        incident_id: thread.incident_id ?? body.source_incident_id ?? null,
+        event_type: "send_blocked_wrong_incident",
+        document_type: "other",
+        actor_user_id: userId,
+        notes: `Blocked send: ${label} belongs to truck ${body.source_incident_truck_id} but thread is on truck ${thread.incident_truck_id}`,
+      });
+      return json({
+        error: "incident_mismatch",
+        detail: `${label} belongs to a different truck than this thread. Pick a thread on the correct truck, or create a new one.`,
+        thread_incident_id: thread.incident_id,
+        thread_incident_truck_id: thread.incident_truck_id,
+        source_incident_id: body.source_incident_id,
+        source_incident_truck_id: body.source_incident_truck_id,
+      }, 422);
+    }
+    if (
+      body.source_incident_id &&
+      thread.incident_id &&
+      body.source_incident_id !== thread.incident_id &&
+      !body.source_incident_truck_id
+    ) {
+      await supabase.from("incident_document_audit").insert({
+        organization_id: thread.organization_id,
+        incident_id: thread.incident_id,
+        event_type: "send_blocked_wrong_incident",
+        document_type: "other",
+        actor_user_id: userId,
+        notes: `Blocked send: ${label} belongs to incident ${body.source_incident_id} but thread is on incident ${thread.incident_id}`,
+      });
+      return json({
+        error: "incident_mismatch",
+        detail: `${label} belongs to a different incident than this thread. Pick a thread on the correct incident, or create a new one.`,
+        thread_incident_id: thread.incident_id,
+        source_incident_id: body.source_incident_id,
+      }, 422);
+    }
+
 
     // Resolve org handle
     const { data: org } = await supabase
