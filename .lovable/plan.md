@@ -1,108 +1,102 @@
-# Restore Shift Tickets + Prevent Duplicate-Incident Mistakes
+# Soft-delete incidents + Cross-incident send guard
 
-## What happened
+## Part 1 — Soft-delete for incidents (and incident trucks)
 
-- An incident for the same resource order was created twice.
-- 3 shift tickets were filed under incident A; the signed PDFs were emailed out through incident B's thread.
-- Incident A was later deleted. `incident_trucks` and `shift_tickets` cascade on incident delete, so the 3 tickets were hard-deleted (only `c1799b00` on the surviving incident is still present, soft-deleted).
-- The 3 signed PDFs still exist in storage as attachments on outbound messages in the surviving incident `9b9ca1aa…` / truck `ed22a43b…` (DL62).
+### Goal
+Make incident/truck delete recoverable. A fat-finger no longer cascades shift tickets, OF-286s, expenses, messages, etc. into the void.
 
-PDFs to recover (all on truck DL62 of "2026 Long Term Severity"):
+The `deleted_at` / `deleted_by_user_id` / `deleted_reason` columns are already in place from the prior migration.
 
-| Sent | Storage path |
-|---|---|
-| 2026-06-02 13:23 | `…/shift-tickets/fceed0fc-…-1780406590864.pdf` |
-| 2026-06-02 13:34 | `…/shift-tickets/fceed0fc-…-1780407279163.pdf` |
-| 2026-06-03 12:44 | `…/shift-tickets/77d9c548-…-1780490668813.pdf` |
+### Behavior
 
-The 2026-06-02 pair is the same ticket re-sent — only one row should be created for it.
+- **"Delete incident"** in `IncidentDetail` becomes **"Move to Trash"**:
+  - Sets `deleted_at = now()`, `deleted_by_user_id = auth.uid()`, optional `deleted_reason`.
+  - No row cascade. Shift tickets, trucks, docs, threads all stay intact.
+  - Confirmation dialog summarizes what will be hidden (truck count, ticket count, doc count, message count, expense count) so the user knows what they're "removing".
+  - Toast on success: **"Moved to Trash. Restore from Settings → Trash within 30 days."** with an inline **Undo** action (5 sec).
+- **"Delete truck assignment"** in the truck detail / IncidentDetail truck list: same pattern — soft-delete `incident_trucks` row, no cascade, restorable.
+- Hide soft-deleted rows everywhere:
+  - All `from("incidents").select(...)` and `from("incident_trucks").select(...)` queries get a `.is("deleted_at", null)` filter. The audited callsites are listed in **Files touched**.
+  - Realtime / dashboards already use these selects — same filter.
+- **Trash page** at `/settings/trash`:
+  - Tabs: **Incidents** / **Truck assignments**.
+  - List shows name, who deleted, when, and how many days remain (30 − age).
+  - Actions per row: **Restore** (clears `deleted_at`), **Permanently delete** (true hard delete; requires typing the incident/truck name; logs to `incident_document_audit` with `event_type='hard_deleted'` and a payload count summary).
+- **Auto-purge job** (deferred — out of scope this turn): nightly cron via `pg_cron` to hard-delete rows older than 30 days. For now, "30 days" is a UX promise enforced manually by Permanently Delete.
+- RLS already allows org members to update incidents (engine boss / admin); restore uses the same path. No new policies needed.
 
----
+### Why no policy change
 
-## Part 1 — Restore the tickets (no UI, one-time recovery)
+Soft-deleted rows remain visible to RLS — the UI just filters them out. This keeps the implementation a one-line `.is("deleted_at", null)` in queries plus the Trash page that intentionally omits the filter.
 
-Server-side script (`scripts/recover-lts-shift-tickets.ts`) run once locally via Deno/Node against the service role:
+## Part 2 — Cross-incident send guard
 
-1. For each of the 3 attachments, sign the storage URL and invoke the existing `parse-shift-ticket` edge function to extract structured fields.
-2. Deduplicate: if two parsed payloads share the same `shift_date` / equipment hours, keep one.
-3. Insert into `shift_tickets` with:
-   - `incident_truck_id` = `ed22a43b-a4bf-472e-80a9-dc901f7660ff`
-   - `organization_id` = surviving incident's org
-   - `status` = `submitted`
-   - All parsed text fields (incident name/number, agreement #, equipment & personnel entries, remarks, miles, etc.)
-   - `contractor_rep_name` / `supervisor_name` from the PDF text
-   - `contractor_rep_signed_at` / `supervisor_signed_at` ≈ the original email `sent_at` (signatures are baked into the PDF; no signature image URL is recreated)
-   - `paper_ticket_photo_url` = signed URL of the original PDF, so the finalized PDF is reachable from the ticket detail view
-4. Back-link each restored row to its source message by updating `messages.system_event` note (audit only, no schema change).
-5. Log a row per recovery into `incident_document_audit` with `event_type='ticket_recovered'`.
+### Goal
+Refuse to send any document via a thread that doesn't belong to the document's incident/truck. This is the actual root cause of the duplicate-incident pain: PDFs from Incident A were emailed through Incident B's thread.
 
-No new UI is exposed. The tickets simply appear in the truck's shift-ticket list as already-submitted entries with the original PDF attached.
+### Edge function changes
 
-## Part 2 — Remove the "Restore as shift ticket" button
+**`send-thread-reply`** (used by shift tickets, OF-286 replies, demob, and regular replies):
+- Accept new optional body fields:
+  - `source_incident_truck_id?: string`
+  - `source_incident_id?: string`
+  - `source_document_label?: string` (e.g. `"Shift Ticket 2026-06-02"`, used only for the error message)
+- After loading `thread`, validate:
+  - If `source_incident_truck_id` provided and `thread.incident_truck_id` differs → return 422 with:
+    ```
+    {
+      error: "incident_mismatch",
+      detail: "This Shift Ticket 2026-06-02 belongs to incident truck X but this thread belongs to incident truck Y. Choose a thread on the correct truck.",
+      thread_incident_id, thread_incident_truck_id,
+      source_incident_id, source_incident_truck_id
+    }
+    ```
+  - If `source_incident_id` provided and `thread.incident_id` differs (and no truck constraint matched) → same 422.
+- Log the rejection to `incident_document_audit` with `event_type='send_blocked_wrong_incident'`.
+- Plain user replies (no source ids passed) keep working unchanged.
 
-Revert the prior change:
-- `src/components/messages/AttachmentChip.tsx` — remove the recovery button and its handler.
-- `src/components/messages/MessageBubble.tsx`, `src/pages/ThreadView.tsx` — remove the thread/incident-truck context props that were added only to feed that button.
-- `src/services/shift-tickets.ts` — remove `recoverShiftTicketFromPdfAttachment`.
+**`send-factoring-submission`**:
+- Body already includes `incident_id`. Add a guard at the top: load any thread that would be used, and confirm `incident_id` matches the surviving `incidents` row's org. For factoring there is no thread routing today, so the guard here is simpler: just refuse if the incident is soft-deleted (`deleted_at IS NOT NULL`).
 
-## Part 3 — Safeguards against this happening again
+### Client changes
 
-### 3a. Resource-order uniqueness (primary fix)
-
-Migration adding a partial unique index plus a friendly pre-check:
-
-```text
-unique (organization_id, lower(trim(resource_order_number)))
-where resource_order_number is not null
-on table resource_orders
-```
-
-And a SECURITY DEFINER helper `find_existing_incident_truck_for_ro(org_id, ro_number)` used by the client.
-
-### 3b. UI guard at incident creation
-
-When the user starts a new incident or assigns a truck and enters a Resource Order #:
-1. Call the helper above before insert.
-2. If a match exists, block the create flow with a modal:
-   > "Resource Order #2026-PNW-1234 is already attached to **2026 Long Term Severity → DL62** (opened May 31). Open that incident instead?"
-   Buttons: **Open existing incident** / **Cancel** / *(hidden behind an "Override" link for true edge cases — confirms with a typed reason that's written to `incident_document_audit`).*
-
-### 3c. Cross-incident send guard
-
-In every outbound email composer (shift tickets, OF-286, factoring, demob):
-- Compare the `thread.incident_id` / `thread.incident_truck_id` to the document's `incident_truck_id`.
-- If they differ, refuse to send and surface:
-  > "This document belongs to **Incident A / DL62** but you're sending from a thread in **Incident B**. Pick a thread on the document's incident."
-- Same check server-side in the send edge function as a backstop.
-
-### 3d. Soft-delete for incidents & cascade safety
-
-Migration:
-- Add `deleted_at`, `deleted_by_user_id`, `deleted_reason` to `incidents` and `incident_trucks` (same pattern already on `shift_tickets`).
-- Change the delete UI to soft-delete (30-day window) instead of hard delete; filter `deleted_at IS NULL` everywhere.
-- Hard-delete only via an admin "Permanently delete" action that lists what will be lost (truck count, ticket count, doc count, message count) and requires typing the incident name.
-
-This means even if step 3a–3c are bypassed in the future, nothing is silently lost.
-
----
-
-## Technical notes
-
-- `shift_tickets` already has FK `ON DELETE CASCADE` from `incident_trucks` → that's why the rows vanished. Soft-delete on `incidents`/`incident_trucks` plus filtered selects is the durable fix; we keep the cascade so true hard-deletes still clean up.
-- `resource_orders.resource_order_number` is currently free-text and nullable; the unique index is partial so legacy/blank rows aren't affected.
-- The recovery script uses the service role and is not checked into client bundles; it lives under `scripts/` and is run once.
-- No schema change is needed on `shift_tickets` for Part 1 — we reuse `paper_ticket_photo_url` to point at the original signed PDF.
+- **`src/services/threads.ts → sendReply`**: extend signature to optionally accept `{ sourceIncidentTruckId?, sourceIncidentId?, sourceDocumentLabel? }`. When present, pass through to the edge function.
+- **`SendShiftTicketDialog`** (`src/components/shift-tickets/SendShiftTicketDialog.tsx`): pass the ticket's `incident_truck_id` and a label `"Shift Ticket {date}"`.
+- **`OF286UploadCard`** (`src/components/incidents/OF286UploadCard.tsx`): pass `incident_truck_id` of the OF-286 and label `"OF-286 {file_name}"`.
+- **`FactoringSubmitCard`**: pass `incident_id` to the factoring send.
+- **`NewThreadSheet`**: if it's pre-attaching a document (it can attach files when creating a thread), pass through any source ids it has — for plain new threads with no source doc, no guard fires.
+- **UI affordance**: when the user picks a thread in `SendShiftTicketDialog` / `OF286UploadCard` and the thread's `incident_truck_id` doesn't match the document, disable the **Send** button and show:
+  > "This thread belongs to **{other-incident-name}**. Pick a thread on **{this-incident-name}** or create a new one."
+  with a **Create new thread on this incident** shortcut. The server-side guard is the backstop.
 
 ## Files touched
 
-- New: `scripts/recover-lts-shift-tickets.ts`
-- New migration: resource-order unique index + incident/incident_truck soft-delete columns + helper function
-- Edit: `src/components/messages/AttachmentChip.tsx`, `MessageBubble.tsx`, `src/pages/ThreadView.tsx`, `src/services/shift-tickets.ts` (remove recovery button)
-- Edit: incident-create flow (`src/pages/incidents/NewIncident*.tsx` / truck-assign dialog) — RO duplicate check
-- Edit: outbound send paths (shift ticket / OF-286 / factoring / demob send buttons + corresponding edge functions) — cross-incident guard
-- Edit: incident delete UI + list queries — soft-delete filter
+**Part 1**
+- `src/services/incidents.ts` — `deleteIncident` becomes `softDeleteIncident`, add `restoreIncident`, `hardDeleteIncident`, `fetchTrashedIncidents`. All `fetchIncidents` / `fetchIncident` get `.is("deleted_at", null)`.
+- `src/services/incident-trucks.ts` — same pattern for `incident_trucks`.
+- `src/hooks/useIncidents.ts` — update mutation hook names + add restore/hard-delete hooks.
+- `src/pages/IncidentDetail.tsx` — relabel button, update confirm dialog with counts + Undo toast.
+- `src/pages/Incidents.tsx` (list) and other selects in `src/services/reports/*.ts`, `src/components/messages/NewThreadSheet.tsx`, `src/components/fleet/InspectionDueBanner.tsx` — add `.is("deleted_at", null)` filter on `incidents` selects. Same for `incident_trucks` queries.
+- New: `src/pages/SettingsTrash.tsx` + route `/settings/trash` + entry in Settings.
+
+**Part 2**
+- `supabase/functions/send-thread-reply/index.ts` — accept + validate source ids.
+- `supabase/functions/send-factoring-submission/index.ts` — refuse on soft-deleted incident.
+- `src/services/threads.ts` — extend `sendReply`.
+- `src/components/shift-tickets/SendShiftTicketDialog.tsx` — pass source ids + UI disable on mismatch.
+- `src/components/incidents/OF286UploadCard.tsx` — pass source ids.
+- `src/components/incidents/FactoringSubmitCard.tsx` — pass incident id (already does, just ensure guard in function).
+- `src/components/messages/NewThreadSheet.tsx` — pass source ids when attaching a doc.
 
 ## Out of scope
 
-- Migrating historical free-text RO numbers to a normalized format.
-- Merging duplicate incidents that already exist (manual cleanup if any are found).
+- `pg_cron` auto-purge of rows past 30 days (UI-only purge for now).
+- Soft-delete for `shift_tickets` (already has `deleted_at` — the cascade still hard-deletes them when an `incident_truck` row is hard-deleted, but moving the truck delete to soft-delete fixes that path).
+- Migrating any existing hard-deleted data — unrecoverable.
+- Adding the same cross-incident guard to inbound replies (`incoming-email` function) — inbound mail is already routed by thread_token.
+
+## Testing notes (manual)
+
+1. Soft-delete an incident with trucks/tickets → it disappears from lists, Trash shows it, restore brings it back with all data intact.
+2. Attempt to send a shift ticket via a thread on a different incident → Send button disabled with helpful copy; if forced via API, server returns 422 with `incident_mismatch`.
+3. Send a normal reply (no source ids) → unchanged behavior.
