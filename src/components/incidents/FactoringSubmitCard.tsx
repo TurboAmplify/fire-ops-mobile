@@ -10,6 +10,7 @@ import { getDownloadUrl, getViewableUrl } from "@/lib/storage-url";
 import { buildScheduleOfAccountsPdf } from "@/lib/pdf-schedule-of-accounts";
 import { uploadFactoringSchedulePdf, updateOf286Parsed, type ScheduleLineItem } from "@/services/factoring";
 import { Link } from "react-router-dom";
+import { PdfPreview } from "@/components/ui/PdfPreview";
 
 interface Props {
   incidentId: string;
@@ -534,11 +535,7 @@ export function FactoringSubmitCard({ incidentId }: Props) {
               <X className="h-4 w-4" />
             </button>
           </div>
-          <iframe
-            title={pdfViewer.title}
-            src={pdfViewer.url}
-            className="min-h-0 flex-1 rounded-lg border border-border bg-card"
-          />
+          <PdfPreview url={pdfViewer.url} />
         </div>
       </div>
     )}
