@@ -1,6 +1,12 @@
 import { AppShell } from "@/components/AppShell";
 import { useParams, useNavigate } from "react-router-dom";
-import { useIncident, useUpdateIncident, useDeleteIncident } from "@/hooks/useIncidents";
+import {
+  useIncident,
+  useUpdateIncident,
+  useDeleteIncident,
+  useRestoreIncident,
+  useIncidentImpactCounts,
+} from "@/hooks/useIncidents";
 import { STATUS_LABELS, STATUS_COLORS, TYPE_LABELS } from "@/services/incidents";
 import type { IncidentStatus } from "@/services/incidents";
 import { ArrowLeft, MapPin, Calendar, Flame, TrendingUp, Loader2, Pencil, Trash2, ChevronDown } from "lucide-react";
@@ -18,6 +24,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useOrganization } from "@/hooks/useOrganization";
 
+
 const statusOptions: IncidentStatus[] = ["active", "demob", "closed"];
 
 export default function IncidentDetail() {
@@ -27,10 +34,13 @@ export default function IncidentDetail() {
   const { data: incident, isLoading, error } = useIncident(id);
   const updateMutation = useUpdateIncident();
   const deleteMutation = useDeleteIncident();
+  const restoreMutation = useRestoreIncident();
+  const { data: impact } = useIncidentImpactCounts(confirmDeleteOpen(id) ? id : null);
   const [editingStatus, setEditingStatus] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [tab, setTab] = useState<"overview" | "trucks" | "tickets" | "crew" | "messages">("tickets");
   const { isEngineBoss } = useOrganization();
+
 
   if (isLoading) {
     return (
