@@ -190,6 +190,21 @@ export function AttachmentChip({
           {pill.label}
         </span>
       )}
+      {canRestoreShiftTicket && (
+        <button
+          onClick={restoreAsShiftTicket}
+          disabled={restoring}
+          title="Recreate a draft shift ticket from this PDF"
+          className="inline-flex items-center gap-1 rounded-md bg-secondary/60 px-1.5 py-1 text-[10px] font-semibold text-foreground hover:bg-secondary touch-target disabled:opacity-50"
+        >
+          {restoring ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <FilePlus2 className="h-3 w-3" />
+          )}
+          Restore as shift ticket
+        </button>
+      )}
       {att.auto_classified_as === "of286" && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
