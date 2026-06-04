@@ -53,8 +53,10 @@ export function SendShiftTicketDialog({
     setLoadingContacts(true);
     listIncidentFinanceContacts(incidentId)
       .then((rows) => {
-        setContacts(rows);
-        if (rows[0]) setContactId(rows[0].id);
+        // Only show contacts opted in to receive shift tickets
+        const filtered = rows.filter((r) => r.receives_shift_tickets !== false);
+        setContacts(filtered);
+        if (filtered[0]) setContactId(filtered[0].id);
       })
       .catch(() => setContacts([]))
       .finally(() => setLoadingContacts(false));
