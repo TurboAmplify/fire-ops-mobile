@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { assertOnlineForWrite } from "@/lib/offline-guard";
+import { getViewableUrl } from "@/lib/storage-url";
 
 export interface EquipmentEntry {
   date: string;
