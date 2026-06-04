@@ -80,7 +80,6 @@ export default function ThreadView() {
                 key={m.id}
                 msg={m}
                 attachments={attachmentsByMessage[m.id] ?? []}
-                thread={thread}
               />
             ))
           )}
