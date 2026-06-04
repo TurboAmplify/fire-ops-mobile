@@ -37,6 +37,8 @@ export function FactoringSubmitCard({ incidentId }: Props) {
   const [parsing, setParsing] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // Inline-preview URL — prefer the signed Supabase URL (works in mobile webviews);
+  // falls back to a `blob:` URL if signing fails.
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [pendingPdf, setPendingPdf] = useState<{ url: string; scheduleNumber: number } | null>(null);
 
