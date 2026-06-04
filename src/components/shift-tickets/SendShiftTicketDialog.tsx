@@ -117,6 +117,24 @@ export function SendShiftTicketDialog({
     return set;
   }, [priorSends]);
 
+  const mostRecentSendMs = useMemo(() => {
+    let best = 0;
+    for (const p of priorSends) {
+      if (!p.lastSentAt) continue;
+      const t = new Date(p.lastSentAt).getTime();
+      if (t > best) best = t;
+    }
+    return best;
+  }, [priorSends]);
+
+  const minutesSinceLastSend = useMemo(() => {
+    if (!mostRecentSendMs) return null;
+    return Math.max(0, Math.round((Date.now() - mostRecentSendMs) / 60000));
+  }, [mostRecentSendMs]);
+
+  const recentSendWarning =
+    minutesSinceLastSend !== null && minutesSinceLastSend < 10;
+
   const selectedContacts = useMemo(
     () => contacts.filter((c) => selectedIds.has(c.id)),
     [contacts, selectedIds],
@@ -131,7 +149,8 @@ export function SendShiftTicketDialog({
     [selectedContacts, alreadySentTo],
   );
 
-  const needsResendConfirm = willResendTo.length > 0 && !confirmResend;
+  const needsResendConfirm =
+    (willResendTo.length > 0 || recentSendWarning) && !confirmResend;
 
   function toggle(id: string) {
     setSelectedIds((prev) => {
