@@ -93,43 +93,57 @@ export function FinanceContactsSection({ incidentTruckId, incidentId, organizati
       ) : contacts.length === 0 ? (
         <p className="text-xs text-muted-foreground">No finance contacts yet.</p>
       ) : (
-        <ul className="space-y-1.5">
+        <ul className="space-y-2">
           {contacts.map((c) => (
-            <li key={c.id} className="flex items-start justify-between gap-2 p-2 rounded-md bg-muted/40">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-sm font-medium truncate">{c.display_name}</span>
-                  <Badge variant="secondary" className="text-[10px] h-4">
-                    {c.role === "both" ? "shifts + demob" : c.role.replace("_", " ")}
-                  </Badge>
-                  {!c.finance_officer_id && <Badge variant="outline" className="text-[10px] h-4">one-off</Badge>}
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                  <Mail className="h-3 w-3" />
-                  <span className="truncate">{c.display_email}</span>
-                </div>
-                {c.display_work_phone && (
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Phone className="h-3 w-3" />
-                    <span>{c.display_work_phone}</span>
-                    <span className="text-[10px] uppercase tracking-wide">work</span>
+            <li key={c.id} className="p-2.5 rounded-md bg-muted/40 space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-sm font-medium truncate">{c.display_name}</span>
+                    {!c.finance_officer_id && (
+                      <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded border border-border text-muted-foreground">
+                        one-off
+                      </span>
+                    )}
                   </div>
-                )}
-                {c.display_cell_phone && (
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Phone className="h-3 w-3" />
-                    <span>{c.display_cell_phone}</span>
-                    <span className="text-[10px] uppercase tracking-wide">cell</span>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                    <Mail className="h-3 w-3" />
+                    <span className="truncate">{c.display_email}</span>
                   </div>
-                )}
+                  {c.display_work_phone && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Phone className="h-3 w-3" />
+                      <span>{c.display_work_phone}</span>
+                      <span className="text-[10px] uppercase tracking-wide">work</span>
+                    </div>
+                  )}
+                  {c.display_cell_phone && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Phone className="h-3 w-3" />
+                      <span>{c.display_cell_phone}</span>
+                      <span className="text-[10px] uppercase tracking-wide">cell</span>
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => handleRemove(c.id)}
+                  className="text-muted-foreground hover:text-destructive p-1"
+                  aria-label="Remove"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
               </div>
-              <button
-                onClick={() => handleRemove(c.id)}
-                className="text-muted-foreground hover:text-destructive p-1"
-                aria-label="Remove"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                  Receives
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  <FlagChip label="Shift tickets" active={c.receives_shift_tickets} onClick={() => toggleFlag(c, "receives_shift_tickets")} />
+                  <FlagChip label="Demob" active={c.receives_demob} onClick={() => toggleFlag(c, "receives_demob")} />
+                  <FlagChip label="Red cards" active={c.receives_red_cards} onClick={() => toggleFlag(c, "receives_red_cards")} />
+                  <FlagChip label="OF-286" active={c.receives_of286} onClick={() => toggleFlag(c, "receives_of286")} />
+                </div>
+              </div>
             </li>
           ))}
         </ul>
