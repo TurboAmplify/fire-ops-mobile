@@ -1,85 +1,63 @@
-# Plan — finance contacts & factoring/shift-ticket UX
+## What's actually happening
 
-I already shipped one fix this turn: **the "View PDF" tab was throwing a cross-origin navigation error in the preview iframe.** I rewrote `openPdf` in `FactoringSubmitCard.tsx` to fetch the PDF as a blob and open it via an anchor click, which works inside sandboxed previews, mobile webviews, and on Live. Schedule PDF + OF-286 view buttons should now actually open.
+I pulled the threads for incident `2026 Long Term Severity` and confirmed two separate issues — neither is the edge function sending the same email twice.
 
-Here is the plan for the rest. **Nothing below is built yet** — approve and I'll execute.
+**Issue 1 — duplicate-looking threads, not duplicate emails**
 
----
+For the 2026-06-03 ticket on truck `ed22a43b…` there are **three** shift_ticket threads, each with exactly one outbound message:
 
-## 1. Per-document-type toggles on finance contacts
+| Time | To | Thread |
+|---|---|---|
+| 13:26 | dawn_hernandez@firenet.gov | 5201400b |
+| 14:21 | loren.dragg@bia.gov | a1cdc059 |
+| 14:23 | loren.dragg@bia.gov | 5cc308a0 |
+| 14:25 | loren.dragg@bia.gov | 5687a613 |
 
-**Today:** `incident_truck_finance_contacts.role` is a single enum (`shift_tickets | demob | both`). No way to say "Loren gets shifts + demob + red cards, Dawn gets shifts only, OF-286 only goes back to the sender."
+So one email per thread (no Resend-level dup), but:
+- Picking contacts one at a time creates a new thread per contact (current dialog always calls `createThread` on Send).
+- Three sends to loren within four minutes means the "Already sent" guard wasn't strong enough — it only warns and relies on a checkbox; rapid re-clicks of Send still go through.
 
-**Change:** Replace the single `role` with 4 boolean flags on each contact row:
-- `receives_shift_tickets` (default true)
-- `receives_demob` (default true)
-- `receives_red_cards` (default false)
-- `receives_of286` (default false — OF-286 normally only echoes back to the original sender)
+**Issue 2 — preview shows our own org, not the recipient**
 
-Migration backfills:
-- `role='shift_tickets'` → shift=true, others=false
-- `role='demob'` → demob=true, others=false
-- `role='both'` → shift=true, demob=true, red_cards=false, of286=false
+`listThreads` derives `counterparty_name` / `counterparty_email` from the **last message's `from_email`**. For outbound messages that's our own `email_handle@mail.fireopshq.com`, so the inbox row reads as our own org name instead of "To: dawn@firenet.gov". The `to_emails` array on the message is never read.
 
-Old `role` column stays for one release as a fallback, then is dropped in a follow-up.
+## Fix
 
-**UI in `FinanceContactsSection.tsx`:** Each contact row gets 4 small toggle chips (Shifts / Demob / Red Cards / OF-286). Tap to enable/disable. Replaces the current "shifts + demob" badge.
+### 1. Consolidate shift-ticket threads (one thread per truck + ticket date)
 
-**Send-side filtering** — only show contacts whose flag matches the doc being sent:
-- `SendShiftTicketDialog` → filter `receives_shift_tickets = true`
-- Demob email flow → `receives_demob = true`
-- Red card send → `receives_red_cards = true`
-- OF-286 / factoring submission → `receives_of286 = true` (the existing factoring flow already targets `factor_contact_email` from settings, not these contacts, so this only affects internal OF-286 routing)
+In `SendShiftTicketDialog.handleSend`:
+- Call `findShiftTicketThreads({ incidentTruckId, ticketDate })` and **reuse** the most-recent thread if one exists for this truck+date, instead of always creating a new one.
+- Only create a new thread when none exists.
+- Pass all selected recipients via `to_emails` override (already wired) so a multi-contact send stays one message on one thread, and a later send for the same ticket appends to the same thread.
 
-## 2. Dedup finance officers on an incident
+### 2. Harden the re-send guard
 
-**Today:** Loren Dragg appears multiple times because nothing blocks re-adding the same `finance_officer_id`.
+- Track "last sent at" from `findShiftTicketThreads`. If the most recent send to **any** selected recipient was within the last 10 minutes, show a stronger warning ("Sent X min ago — likely duplicate") and require the existing confirm checkbox.
+- Disable the Send button for the entire async flow (`loading` already guards this — verify there's no path that re-enables it before the await completes; add an immediate `setLoading(true)` at the very top, before the recipient validation toasts).
 
-**Change:**
-- Add a partial unique index: `(incident_id, finance_officer_id) WHERE incident_truck_id IS NULL AND is_active AND finance_officer_id IS NOT NULL`
-- Same for the truck-scoped variant.
-- `FinanceOfficerPicker` already calls add — wrap it to detect 23505 and show "Already added — updated their toggles instead" then merge flags onto the existing row.
-- One-off contacts (no `finance_officer_id`) are still allowed to duplicate by design.
+### 3. Show recipients in the inbox preview
 
-Also: backfill — for the existing 2026 long-term severity incident, soft-delete the duplicate Loren rows, keep the oldest active one.
+Update `listThreads` in `src/services/threads.ts` and `ThreadListItem.tsx`:
+- Also select `to_emails`, `direction` on the last-message lookup.
+- New field `counterparty_label`:
+  - If last message direction = `out` → `"To: <name or email>"` (join up to 2, then `+N more`).
+  - If `in` → keep current `from_name || from_email`.
+- For shift_ticket / demob / of286 threads where multiple recipients exist, prefer the contact display names from `incident_truck_finance_contacts` by joining on email (fallback to the raw email).
+- Render the new label in `ThreadListItem` instead of the current `counterparty_name || counterparty_email`.
 
-## 3. Factoring → "Send to WideQ" visibility
+### Files to touch
 
-The Submit button + review checkbox + confirmation banner shipped in the last turn, but you're not seeing them. Two likely reasons:
-1. The settings gate (`settingsComplete`) hides the submit button when factor email / signer name / signature aren't filled in on Settings → Factoring.
-2. The PDF tab was broken (fixed this turn) — without seeing the PDF, the review checkbox stays unchecked, which keeps Submit disabled.
+- `src/components/shift-tickets/SendShiftTicketDialog.tsx` — reuse-or-create thread, harden guard.
+- `src/services/threads.ts` — extend `ThreadListItem` shape with `counterparty_label`, query `to_emails` + `direction`, optionally join finance contacts for nicer names.
+- `src/components/messages/ThreadListItem.tsx` — render new label, prefix with "To:" for outbound-last threads.
 
-**Change:**
-- When `settingsComplete=false`, render an inline yellow card under the preview: "Finish factoring settings to enable sending → [Open Factoring Settings]" instead of silently hiding Submit.
-- Always render the Submit button (disabled with tooltip explaining why) so it's never invisible.
-- After submit success, scroll the confirmation banner into view and keep it visible for 30s.
+### Out of scope
 
-## 4. Shift-ticket email confirmation
+- No edge-function changes — `send-thread-reply` already de-dupes recipients and persists one message per call. The dup problem is at the thread-creation layer, not the send layer.
+- No schema changes.
 
-**Today:** `SendShiftTicketDialog` toasts "Shift ticket sent" then navigates to the thread. There's no record of what was actually sent.
+## Verification after build
 
-**Change:**
-- Show a confirmation dialog (not just a toast) after success: "Sent to {name} at {email} · Schedule attached as Shift-Ticket-{date}.pdf" with View Thread / Done buttons.
-- Log the send in `email_send_log` (or our equivalent) keyed by ticket id + recipient so it shows up in the truck's history.
-- Add a "Last sent" badge on the shift ticket card (`ShiftTicketLog`) showing date + recipient when one exists.
-
----
-
-## Technical detail
-
-**Files touched:**
-- Migration: alter `incident_truck_finance_contacts` (add 4 bool cols, backfill, partial unique indexes, soft-dedup existing Loren rows)
-- `src/services/incident-truck-finance-contacts.ts` — add `receives_*` flags to type + add/update payloads, expose `updateContactFlags`
-- `src/components/incidents/FinanceContactsSection.tsx` — 4 toggle chips per row
-- `src/components/incidents/FinanceOfficerPicker.tsx` — handle dup conflict, merge flags
-- `src/components/shift-tickets/SendShiftTicketDialog.tsx` — filter by `receives_shift_tickets`, add post-send confirmation dialog
-- `src/components/incidents/FactoringSubmitCard.tsx` — always-visible Submit with disabled reasons; scroll to confirmation
-- Demob / red-card send flows (wherever they live) — filter by the new flags
-- `ShiftTicketLog.tsx` — "Last sent" badge
-
-**Out of scope (ask if you want these too):**
-- Email open/click tracking
-- Per-truck (vs per-incident) finance contact toggles — the toggles apply identically to both scopes
-- Resurrecting deleted duplicate contacts
-
-Approve and I'll start with the migration + dedup, then ship the toggles + send-side filtering + confirmation dialog in one pass.
+- Send the same shift ticket twice to different contacts → expect ONE thread in the inbox with both recipients listed in the preview.
+- Try to re-send within 10 min → expect the stronger warning + required confirm.
+- Inbox row for a sent thread should read `To: Dawn Hernandez` (or `To: Dawn Hernandez +1`), not the org name.
