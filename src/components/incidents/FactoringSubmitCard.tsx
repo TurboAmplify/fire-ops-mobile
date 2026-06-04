@@ -307,29 +307,64 @@ export function FactoringSubmitCard({ incidentId }: Props) {
             </button>
           ) : (
             <div className="space-y-2">
-              <div className="rounded-md border border-border overflow-hidden bg-background">
-                <iframe
-                  src={previewUrl}
-                  title="Schedule of Accounts preview"
-                  className="w-full h-[70vh] bg-white"
-                />
+              <div className="rounded-md border border-border bg-background p-2 space-y-2">
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase">
+                  Ready to send · review before submitting
+                </p>
+                <a
+                  href={previewUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 rounded-md border border-border bg-card px-2 py-1.5 text-xs hover:bg-accent touch-target"
+                >
+                  <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
+                  <span className="flex-1 truncate font-semibold">
+                    Schedule-{pendingPdf?.scheduleNumber}.pdf
+                  </span>
+                  <span className="text-[11px] underline text-primary">Open</span>
+                </a>
+                {financeSigned.length > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-[11px] text-muted-foreground">
+                      Plus {financeSigned.length} signed OF-286
+                      {financeSigned.length === 1 ? "" : "s"} attached:
+                    </p>
+                    {financeSigned.map((d) => (
+                      <button
+                        key={d.id}
+                        type="button"
+                        onClick={async () => {
+                          const url = await getViewableUrl(d.file_url);
+                          if (url) window.open(url, "_blank", "noopener,noreferrer");
+                          else toast.error("Could not open OF-286");
+                        }}
+                        className="flex w-full items-center gap-2 rounded-md border border-border/60 bg-background px-2 py-1 text-left text-[11px] hover:bg-accent touch-target"
+                      >
+                        <FileText className="h-3 w-3 text-muted-foreground shrink-0" />
+                        <span className="flex-1 truncate">{d.file_name}</span>
+                        <span className="underline text-primary">Open</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-              <a
-                href={previewUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block text-center rounded-md bg-secondary py-2 text-xs font-bold text-secondary-foreground touch-target"
-              >
-                Open in new tab
-              </a>
+
               <button
                 onClick={handleSubmit}
-                disabled={submitting}
-                className="flex w-full items-center justify-center gap-1.5 rounded-md bg-primary py-2 text-xs font-bold text-primary-foreground touch-target disabled:opacity-40"
+                disabled={submitting || !settingsComplete}
+                title={!settingsComplete ? "Complete factoring settings first" : undefined}
+                className="flex w-full items-center justify-center gap-1.5 rounded-md bg-primary py-2.5 text-xs font-bold text-primary-foreground touch-target disabled:opacity-40"
               >
                 {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                Submit to {settings?.factor_contact_name || "factor"}
+                Email Schedule + signed OF-286
+                {financeSigned.length === 1 ? "" : "s"} to{" "}
+                {settings?.factor_contact_name || settings?.factor_company_name || "factor"}
               </button>
+              {settings?.factor_contact_email && (
+                <p className="text-[11px] text-muted-foreground text-center">
+                  Sends to {settings.factor_contact_email}. A copy is saved under Submitted below.
+                </p>
+              )}
               <button
                 onClick={() => { setPreviewUrl(null); setPendingPdf(null); }}
                 className="w-full text-[11px] text-muted-foreground touch-target"
