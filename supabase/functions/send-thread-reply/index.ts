@@ -6,6 +6,11 @@ interface ReplyBody {
   thread_id: string;
   body_text: string;
   attachment_paths?: string[]; // storage paths in communication-attachments bucket
+  // Optional explicit recipient override. When provided (and non-empty),
+  // these addresses are used instead of deriving from the thread's
+  // contact_id / finance_officer_id. Lets a single message fan out to
+  // multiple finance officers without creating duplicate threads.
+  to_emails?: string[];
   // Cross-incident send guard: callers attaching a doc that belongs to a
   // specific incident/truck should pass these so we can refuse to send via a
   // thread on the wrong incident.
