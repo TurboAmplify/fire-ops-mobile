@@ -76,7 +76,12 @@ export default function ThreadView() {
             <p className="text-sm text-muted-foreground text-center py-12">No messages in this thread yet.</p>
           ) : (
             messages.map((m) => (
-              <MessageBubble key={m.id} msg={m} attachments={attachmentsByMessage[m.id] ?? []} />
+              <MessageBubble
+                key={m.id}
+                msg={m}
+                attachments={attachmentsByMessage[m.id] ?? []}
+                thread={thread}
+              />
             ))
           )}
           <div ref={bottomRef} />
