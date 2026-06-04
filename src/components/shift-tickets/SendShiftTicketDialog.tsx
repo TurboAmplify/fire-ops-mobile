@@ -72,6 +72,7 @@ export function SendShiftTicketDialog({
     setBody(
       `Hello,\n\nAttached is the OF-297 shift ticket for ${incName}${dateStr ? ` (${dateStr})` : ""}.\n\nPlease let me know if you have any questions.\n\nThanks,`
     );
+    setSent(null);
   }, [open, incidentId, ticket]);
 
   const handleSend = async () => {
