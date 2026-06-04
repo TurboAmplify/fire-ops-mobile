@@ -21,6 +21,7 @@ import { OF286SigningReview } from "@/components/incidents/OF286SigningReview";
 import { stampSignatureOntoPdf, downloadBlob } from "@/lib/pdf-sign";
 import type { BoxRect } from "@/lib/pdf-sign";
 import { getViewableUrl } from "@/lib/storage-url";
+import { PdfPreview } from "@/components/ui/PdfPreview";
 import { supabase } from "@/integrations/supabase/client";
 import {
   AlertTriangle,
@@ -38,6 +39,7 @@ import {
   Send,
   Trash2,
   Upload,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -78,6 +80,13 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
   const [totalDraft, setTotalDraft] = useState("");
   const [showAudit, setShowAudit] = useState(false);
   const [stamping, setStamping] = useState(false);
+  const [reviewPdf, setReviewPdf] = useState<{ title: string; url: string; doc: IncidentDocument } | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (reviewPdf?.url.startsWith("blob:")) URL.revokeObjectURL(reviewPdf.url);
+    };
+  }, [reviewPdf?.url]);
 
   // Group docs by stage; pick the most recent of each.
   const byStage = useMemo(() => {
@@ -299,6 +308,23 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
   };
 
   // ------- Download with audit log -------
+  const handleReviewPdf = async (doc: IncidentDocument) => {
+    const url = await getViewableUrl(doc.file_url);
+    if (!url) {
+      toast.error("Could not open document");
+      return;
+    }
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("fetch failed");
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      setReviewPdf({ title: doc.file_name, url: blobUrl, doc });
+    } catch {
+      setReviewPdf({ title: doc.file_name, url, doc });
+    }
+  };
+
   const handleDownload = async (doc: IncidentDocument) => {
     const url = await getViewableUrl(doc.file_url);
     if (!url) {
@@ -489,14 +515,7 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
                     {stage === "original" && (
                       <>
                         <button
-                          onClick={async () => {
-                            const url = await getViewableUrl(doc.file_url);
-                            if (!url) {
-                              toast.error("Could not open document");
-                              return;
-                            }
-                            window.open(url, "_blank", "noopener,noreferrer");
-                          }}
+                          onClick={() => handleReviewPdf(doc)}
                           className="flex items-center gap-1 rounded-md bg-secondary px-2.5 py-1 text-[11px] font-bold text-secondary-foreground touch-target"
                         >
                           <Eye className="h-3 w-3" />
@@ -707,6 +726,34 @@ export function OF286UploadCard({ incidentId, incidentStatus }: Props) {
         }}
         onComplete={handleSignatureSave}
       />
+
+      {reviewPdf && (
+        <div className="fixed inset-0 z-50 bg-background/95 p-3 sm:p-6">
+          <div className="mx-auto flex h-full max-w-5xl flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-primary shrink-0" />
+              <p className="min-w-0 flex-1 truncate text-sm font-bold">{reviewPdf.title}</p>
+              <button
+                type="button"
+                onClick={() => handleDownload(reviewPdf.doc)}
+                className="flex items-center gap-1 rounded-md border border-border bg-card px-3 py-2 text-xs font-bold touch-target"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Download
+              </button>
+              <button
+                type="button"
+                onClick={() => setReviewPdf(null)}
+                className="rounded-md border border-border bg-card p-2 touch-target"
+                aria-label="Close PDF preview"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <PdfPreview url={reviewPdf.url} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

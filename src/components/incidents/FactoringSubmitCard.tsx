@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Landmark, FileText, Send, Sparkles, AlertTriangle, CheckCircle2, Download, ExternalLink } from "lucide-react";
+import { Loader2, Landmark, FileText, Send, Sparkles, AlertTriangle, CheckCircle2, Download, Eye, X } from "lucide-react";
 import { toast } from "sonner";
 import { useIncidentDocuments } from "@/hooks/useIncidentDocuments";
 import { useFactoringEnabled, useOrgFactoringSettings, useFactoringSubmissions } from "@/hooks/useFactoring";
@@ -10,6 +10,7 @@ import { getDownloadUrl, getViewableUrl } from "@/lib/storage-url";
 import { buildScheduleOfAccountsPdf } from "@/lib/pdf-schedule-of-accounts";
 import { uploadFactoringSchedulePdf, updateOf286Parsed, type ScheduleLineItem } from "@/services/factoring";
 import { Link } from "react-router-dom";
+import { PdfPreview } from "@/components/ui/PdfPreview";
 
 interface Props {
   incidentId: string;
@@ -41,6 +42,7 @@ export function FactoringSubmitCard({ incidentId }: Props) {
   // falls back to a `blob:` URL if signing fails.
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [pendingPdf, setPendingPdf] = useState<{ url: string; scheduleNumber: number } | null>(null);
+  const [pdfViewer, setPdfViewer] = useState<{ title: string; url: string; filename: string } | null>(null);
   const [reviewConfirmed, setReviewConfirmed] = useState(false);
   const [sentConfirmation, setSentConfirmation] = useState<{
     scheduleNumber: number;
@@ -74,6 +76,12 @@ export function FactoringSubmitCard({ incidentId }: Props) {
     if (settings?.reserve_percent != null) setReservePercent(String(settings.reserve_percent));
   }, [settings?.reserve_percent]);
 
+  useEffect(() => {
+    return () => {
+      if (pdfViewer?.url.startsWith("blob:")) URL.revokeObjectURL(pdfViewer.url);
+    };
+  }, [pdfViewer?.url]);
+
   if (!enabled || !isAdmin) return null;
 
   const totals = (() => {
@@ -93,47 +101,46 @@ export function FactoringSubmitCard({ incidentId }: Props) {
     setLines((prev) => prev.map((l) => (l.document_id === id ? { ...l, ...patch } : l)));
   };
 
-  const openPdf = async (url: string | null | undefined, label = "PDF") => {
+  const showPdf = async (url: string | null | undefined, label = "PDF", filename = "document.pdf") => {
     const viewable = await getViewableUrl(url);
     if (!viewable) return toast.error(`${label} not available`);
     try {
-      // Fetch as blob so it opens reliably inside sandboxed preview iframes
-      // and on mobile webviews where signed-URL redirects can be blocked.
+      const res = await fetch(viewable);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      setPdfViewer({ title: label, url: blobUrl, filename });
+    } catch {
+      setPdfViewer({ title: label, url: viewable, filename });
+    }
+  };
+
+  const downloadPdf = async (url: string | null | undefined, filename: string) => {
+    const viewable = await getViewableUrl(url);
+    if (!viewable) return toast.error("Download not available");
+    try {
       const res = await fetch(viewable);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const blob = await res.blob();
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = blobUrl;
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
-      // Revoke after a delay to let the new tab load
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
-    } catch (e) {
-      // Fallback: try a plain anchor to the signed URL
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10_000);
+    } catch {
+      const downloadUrl = await getDownloadUrl(url, filename);
+      if (!downloadUrl) return toast.error("Download not available");
       const a = document.createElement("a");
-      a.href = viewable;
-      a.target = "_blank";
+      a.href = downloadUrl;
+      a.download = filename;
       a.rel = "noopener noreferrer";
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
+      a.remove();
     }
-  };
-
-  const downloadPdf = async (url: string | null | undefined, filename: string) => {
-    const downloadUrl = await getDownloadUrl(url, filename);
-    if (!downloadUrl) return toast.error("Download not available");
-    const a = document.createElement("a");
-    a.href = downloadUrl;
-    a.download = filename;
-    a.rel = "noopener noreferrer";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
   };
 
   const handleAiExtract = async (docId: string) => {
@@ -250,6 +257,7 @@ export function FactoringSubmitCard({ incidentId }: Props) {
     n.toLocaleString("en-US", { style: "currency", currency: "USD" });
 
   return (
+    <>
     <div className="rounded-xl border border-border bg-card p-4 space-y-3 card-shadow">
       <div className="flex items-start gap-2">
         <Landmark className="h-5 w-5 text-primary shrink-0 mt-0.5" />
@@ -389,10 +397,10 @@ export function FactoringSubmitCard({ incidentId }: Props) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => openPdf(pendingPdf?.url, "Schedule PDF")}
+                    onClick={() => showPdf(pendingPdf?.url, "Schedule PDF", `Schedule-${pendingPdf?.scheduleNumber ?? "preview"}.pdf`)}
                     className="flex items-center justify-center gap-1.5 rounded-md bg-secondary px-3 py-2 text-xs font-bold text-secondary-foreground touch-target"
                   >
-                    <ExternalLink className="h-3.5 w-3.5" />
+                    <Eye className="h-3.5 w-3.5" />
                     View Schedule PDF
                   </button>
                   <button
@@ -413,7 +421,7 @@ export function FactoringSubmitCard({ incidentId }: Props) {
                       <button
                         key={d.id}
                         type="button"
-                        onClick={() => openPdf(d.file_url, "OF-286")}
+                        onClick={() => showPdf(d.file_url, "OF-286", d.file_name || "OF-286.pdf")}
                         className="flex w-full items-center gap-2 rounded-md border border-border/60 bg-background px-2 py-1 text-left text-[11px] hover:bg-accent touch-target"
                       >
                         <FileText className="h-3 w-3 text-muted-foreground shrink-0" />
@@ -490,7 +498,7 @@ export function FactoringSubmitCard({ incidentId }: Props) {
               <span className="text-muted-foreground">{fmt(Number(s.total_amount))}</span>
               <button
                 type="button"
-                onClick={() => openPdf(s.pdf_url, "Schedule PDF")}
+                onClick={() => showPdf(s.pdf_url, "Schedule PDF", `Schedule-${s.schedule_number}.pdf`)}
                 className="ml-auto underline text-primary touch-target"
               >
                 View PDF
@@ -503,6 +511,35 @@ export function FactoringSubmitCard({ incidentId }: Props) {
         </div>
       )}
     </div>
+
+    {pdfViewer && (
+      <div className="fixed inset-0 z-50 bg-background/95 p-3 sm:p-6">
+        <div className="mx-auto flex h-full max-w-5xl flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-primary shrink-0" />
+            <p className="min-w-0 flex-1 truncate text-sm font-bold">{pdfViewer.title}</p>
+            <button
+              type="button"
+              onClick={() => downloadPdf(pdfViewer.url, pdfViewer.filename)}
+              className="flex items-center gap-1 rounded-md border border-border bg-card px-3 py-2 text-xs font-bold touch-target"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Download
+            </button>
+            <button
+              type="button"
+              onClick={() => setPdfViewer(null)}
+              className="rounded-md border border-border bg-card p-2 touch-target"
+              aria-label="Close PDF preview"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <PdfPreview url={pdfViewer.url} />
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 
