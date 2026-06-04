@@ -49,44 +49,13 @@ function attachmentStage(att: AttachmentRow): DocStage | null {
 
 export function AttachmentChip({
   att,
-  thread,
 }: {
   att: AttachmentRow;
-  thread?: Pick<ThreadRow, "incident_id" | "incident_truck_id" | "organization_id"> | null;
 }) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [restoring, setRestoring] = useState(false);
   const qc = useQueryClient();
-  const navigate = useNavigate();
   const stage = attachmentStage(att);
-  const isPdf =
-    (att.mime_type ?? "").toLowerCase().includes("pdf") ||
-    att.file_name?.toLowerCase().endsWith(".pdf");
-  const canRestoreShiftTicket =
-    isPdf && !!thread?.incident_truck_id && !!thread?.organization_id;
-
-  const restoreAsShiftTicket = async () => {
-    if (!thread?.incident_truck_id || !thread?.organization_id) return;
-    setRestoring(true);
-    try {
-      const ticket = await recoverShiftTicketFromPdfAttachment({
-        storagePath: att.storage_path,
-        fileName: att.file_name,
-        incidentTruckId: thread.incident_truck_id,
-        organizationId: thread.organization_id,
-      });
-      toast.success("Draft shift ticket created — review and re-sign.");
-      qc.invalidateQueries({ queryKey: ["shift-tickets", thread.incident_truck_id] });
-      qc.invalidateQueries({ queryKey: ["shift-tickets-recent"] });
-      navigate(`/incidents/${thread.incident_id}/trucks/${thread.incident_truck_id}/shift-ticket/${ticket.id}`);
-    } catch (e: any) {
-      console.error(e);
-      toast.error(e?.message || "Could not restore shift ticket");
-    } finally {
-      setRestoring(false);
-    }
-  };
 
   const download = async () => {
     setLoading(true);
