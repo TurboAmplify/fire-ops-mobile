@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { useResourceOrders, useCreateResourceOrder, useUpdateResourceOrderParsed } from "@/hooks/useResourceOrders";
-import { uploadResourceOrderFile, parseResourceOrderAI } from "@/services/resource-orders";
+import {
+  uploadResourceOrderFile,
+  parseResourceOrderAI,
+  findIncidentTruckForResourceOrder,
+} from "@/services/resource-orders";
 import { FileText, Upload, Loader2, ChevronDown, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useOrganization } from "@/hooks/useOrganization";
@@ -38,6 +42,20 @@ export function ResourceOrderSection({ incidentTruckId }: Props) {
         const parsed = await parseResourceOrderAI(fileUrl, file.name);
         await parseMutation.mutateAsync({ id: order.id, parsed });
         toast.success("Resource order parsed successfully");
+
+        // Duplicate-RO safeguard: warn if the same RO# is already on another truck/incident.
+        if (parsed.resource_order_number && membership?.organizationId) {
+          const dup = await findIncidentTruckForResourceOrder(
+            membership.organizationId,
+            String(parsed.resource_order_number),
+          );
+          if (dup && dup.incident_truck_id !== incidentTruckId) {
+            toast.warning(
+              `Heads up: RO #${dup.resource_order_number} is also on "${dup.incident_name}". Make sure this isn't a duplicate incident.`,
+              { duration: 10000 },
+            );
+          }
+        }
       } catch {
         toast.error("AI parsing failed — you can retry later");
       } finally {
