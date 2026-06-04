@@ -434,7 +434,7 @@ export function FactoringSubmitCard({ incidentId }: Props) {
                 </p>
               )}
               <button
-                onClick={() => { setPreviewUrl(null); setPendingPdf(null); }}
+                onClick={() => { setPreviewUrl(null); setPendingPdf(null); setReviewConfirmed(false); }}
                 className="w-full text-[11px] text-muted-foreground touch-target"
               >
                 Discard preview & re-edit
@@ -454,12 +454,7 @@ export function FactoringSubmitCard({ incidentId }: Props) {
               <span className="text-muted-foreground">{fmt(Number(s.total_amount))}</span>
               <button
                 type="button"
-                onClick={async () => {
-                  if (!s.pdf_url) return toast.error("PDF not available");
-                  const url = await getViewableUrl(s.pdf_url);
-                  if (url) window.open(url, "_blank", "noopener,noreferrer");
-                  else toast.error("Could not open PDF");
-                }}
+                onClick={() => openPdf(s.pdf_url, "Schedule PDF")}
                 className="ml-auto underline text-primary touch-target"
               >
                 View PDF
