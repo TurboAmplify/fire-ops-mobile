@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Landmark, FileText, Send, Sparkles, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Loader2, Landmark, FileText, Send, Sparkles, AlertTriangle, CheckCircle2, Download, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { useIncidentDocuments } from "@/hooks/useIncidentDocuments";
 import { useFactoringEnabled, useOrgFactoringSettings, useFactoringSubmissions } from "@/hooks/useFactoring";
 import { useOrganization } from "@/hooks/useOrganization";
-import { getViewableUrl } from "@/lib/storage-url";
+import { getDownloadUrl, getViewableUrl } from "@/lib/storage-url";
 import { buildScheduleOfAccountsPdf } from "@/lib/pdf-schedule-of-accounts";
 import { uploadFactoringSchedulePdf, updateOf286Parsed, type ScheduleLineItem } from "@/services/factoring";
 import { Link } from "react-router-dom";
@@ -41,6 +41,12 @@ export function FactoringSubmitCard({ incidentId }: Props) {
   // falls back to a `blob:` URL if signing fails.
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [pendingPdf, setPendingPdf] = useState<{ url: string; scheduleNumber: number } | null>(null);
+  const [reviewConfirmed, setReviewConfirmed] = useState(false);
+  const [sentConfirmation, setSentConfirmation] = useState<{
+    scheduleNumber: number;
+    documentCount: number;
+    recipient: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!financeSigned.length) {
@@ -87,6 +93,30 @@ export function FactoringSubmitCard({ incidentId }: Props) {
     setLines((prev) => prev.map((l) => (l.document_id === id ? { ...l, ...patch } : l)));
   };
 
+  const openPdf = async (url: string | null | undefined, label = "PDF") => {
+    const opened = window.open("about:blank", "_blank");
+    if (opened) opened.opener = null;
+    const viewable = await getViewableUrl(url);
+    if (!viewable) {
+      opened?.close();
+      return toast.error(`${label} not available`);
+    }
+    if (opened) opened.location.href = viewable;
+    else window.location.href = viewable;
+  };
+
+  const downloadPdf = async (url: string | null | undefined, filename: string) => {
+    const downloadUrl = await getDownloadUrl(url, filename);
+    if (!downloadUrl) return toast.error("Download not available");
+    const a = document.createElement("a");
+    a.href = downloadUrl;
+    a.download = filename;
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
   const handleAiExtract = async (docId: string) => {
     const doc = financeSigned.find((d) => d.id === docId);
     if (!doc) return;
@@ -126,6 +156,8 @@ export function FactoringSubmitCard({ incidentId }: Props) {
       return;
     }
     setGenerating(true);
+    setSentConfirmation(null);
+    setReviewConfirmed(false);
     try {
       const sigBlob = settings.signature_url
         ? await fetchSignatureBlob(settings.signature_url)
@@ -178,7 +210,12 @@ export function FactoringSubmitCard({ incidentId }: Props) {
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
-      toast.success("Submitted to factor");
+      toast.success("Factoring package sent");
+      setSentConfirmation({
+        scheduleNumber: pendingPdf.scheduleNumber,
+        documentCount: financeSigned.length,
+        recipient: settings?.factor_contact_email || "factoring contact",
+      });
       setPreviewUrl(null);
       setPendingPdf(null);
       qc.invalidateQueries({ queryKey: ["factoring-submissions", incidentId] });
@@ -219,6 +256,19 @@ export function FactoringSubmitCard({ incidentId }: Props) {
                 Organization Settings
               </Link>
               .
+            </p>
+          </div>
+        </div>
+      )}
+
+      {sentConfirmation && (
+        <div className="rounded-lg border border-success/30 bg-success/10 p-3 text-xs flex items-start gap-2">
+          <CheckCircle2 className="h-4 w-4 text-success shrink-0 mt-0.5" />
+          <div className="min-w-0 space-y-0.5">
+            <p className="font-bold text-success">Factoring package sent</p>
+            <p className="text-muted-foreground">
+              Schedule #{sentConfirmation.scheduleNumber} and {sentConfirmation.documentCount} dual-signed OF-286
+              {sentConfirmation.documentCount === 1 ? "" : "s"} were emailed to {sentConfirmation.recipient}.
             </p>
           </div>
         </div>
@@ -307,52 +357,70 @@ export function FactoringSubmitCard({ incidentId }: Props) {
             </button>
           ) : (
             <div className="space-y-2">
-              <div className="rounded-md border border-border bg-background p-2 space-y-2">
-                <p className="text-[11px] font-semibold text-muted-foreground uppercase">
-                  Ready to send · review before submitting
-                </p>
-                <a
-                  href={previewUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 rounded-md border border-border bg-card px-2 py-1.5 text-xs hover:bg-accent touch-target"
-                >
-                  <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
-                  <span className="flex-1 truncate font-semibold">
-                    Schedule-{pendingPdf?.scheduleNumber}.pdf
-                  </span>
-                  <span className="text-[11px] underline text-primary">Open</span>
-                </a>
+              <div className="rounded-md border border-primary/30 bg-primary/5 p-3 space-y-3">
+                <div className="flex items-start gap-2">
+                  <FileText className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold">Review the factoring invoice package</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Open or download the Schedule of Accounts, then confirm it looks correct before sending.
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openPdf(pendingPdf?.url, "Schedule PDF")}
+                    className="flex items-center justify-center gap-1.5 rounded-md bg-secondary px-3 py-2 text-xs font-bold text-secondary-foreground touch-target"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    View Schedule PDF
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadPdf(pendingPdf?.url, `Schedule-${pendingPdf?.scheduleNumber ?? "preview"}.pdf`)}
+                    className="flex items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 py-2 text-xs font-bold touch-target"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Download Schedule
+                  </button>
+                </div>
                 {financeSigned.length > 0 && (
                   <div className="space-y-1">
-                    <p className="text-[11px] text-muted-foreground">
-                      Plus {financeSigned.length} signed OF-286
-                      {financeSigned.length === 1 ? "" : "s"} attached:
+                    <p className="text-[11px] font-semibold text-muted-foreground">
+                      Dual-signed OF-286 attachment{financeSigned.length === 1 ? "" : "s"} to send:
                     </p>
                     {financeSigned.map((d) => (
                       <button
                         key={d.id}
                         type="button"
-                        onClick={async () => {
-                          const url = await getViewableUrl(d.file_url);
-                          if (url) window.open(url, "_blank", "noopener,noreferrer");
-                          else toast.error("Could not open OF-286");
-                        }}
+                        onClick={() => openPdf(d.file_url, "OF-286")}
                         className="flex w-full items-center gap-2 rounded-md border border-border/60 bg-background px-2 py-1 text-left text-[11px] hover:bg-accent touch-target"
                       >
                         <FileText className="h-3 w-3 text-muted-foreground shrink-0" />
                         <span className="flex-1 truncate">{d.file_name}</span>
-                        <span className="underline text-primary">Open</span>
+                        <span className="underline text-primary">View</span>
                       </button>
                     ))}
                   </div>
                 )}
+                <label className="flex items-start gap-2 rounded-md border border-border bg-background px-2 py-2 text-[11px] touch-target">
+                  <input
+                    type="checkbox"
+                    checked={reviewConfirmed}
+                    onChange={(e) => setReviewConfirmed(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 accent-primary"
+                  />
+                  <span className="leading-relaxed">
+                    I reviewed the Schedule of Accounts and the dual-signed OF-286 attachment{financeSigned.length === 1 ? "" : "s"}; send this package to {settings?.factor_contact_name || settings?.factor_company_name || "the factor"}.
+                  </span>
+                </label>
               </div>
 
               <button
                 onClick={handleSubmit}
-                disabled={submitting || !settingsComplete}
-                title={!settingsComplete ? "Complete factoring settings first" : undefined}
+                disabled={submitting || !settingsComplete || !reviewConfirmed}
+                title={!settingsComplete ? "Complete factoring settings first" : !reviewConfirmed ? "Review and confirm the package first" : undefined}
                 className="flex w-full items-center justify-center gap-1.5 rounded-md bg-primary py-2.5 text-xs font-bold text-primary-foreground touch-target disabled:opacity-40"
               >
                 {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
@@ -366,7 +434,7 @@ export function FactoringSubmitCard({ incidentId }: Props) {
                 </p>
               )}
               <button
-                onClick={() => { setPreviewUrl(null); setPendingPdf(null); }}
+                onClick={() => { setPreviewUrl(null); setPendingPdf(null); setReviewConfirmed(false); }}
                 className="w-full text-[11px] text-muted-foreground touch-target"
               >
                 Discard preview & re-edit
@@ -386,12 +454,7 @@ export function FactoringSubmitCard({ incidentId }: Props) {
               <span className="text-muted-foreground">{fmt(Number(s.total_amount))}</span>
               <button
                 type="button"
-                onClick={async () => {
-                  if (!s.pdf_url) return toast.error("PDF not available");
-                  const url = await getViewableUrl(s.pdf_url);
-                  if (url) window.open(url, "_blank", "noopener,noreferrer");
-                  else toast.error("Could not open PDF");
-                }}
+                onClick={() => openPdf(s.pdf_url, "Schedule PDF")}
                 className="ml-auto underline text-primary touch-target"
               >
                 View PDF

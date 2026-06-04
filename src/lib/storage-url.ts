@@ -24,6 +24,18 @@ interface CacheEntry {
 const cache = new Map<string, CacheEntry>();
 const inflight = new Map<string, Promise<string | null>>();
 
+function normalizeSignedUrl(signedUrl: string): string {
+  if (/^https?:\/\//i.test(signedUrl)) return signedUrl;
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  if (!supabaseUrl) return signedUrl;
+
+  const normalized = signedUrl.startsWith("/") ? signedUrl : `/${signedUrl}`;
+  if (normalized.startsWith("/object/")) return `${supabaseUrl}/storage/v1${normalized}`;
+  if (normalized.startsWith("/storage/v1/")) return `${supabaseUrl}${normalized}`;
+  return signedUrl;
+}
+
 /** Recognised bucket names. Anything else falls through unchanged. */
 const KNOWN_BUCKETS = new Set([
   "receipts",
@@ -125,15 +137,18 @@ export async function getViewableUrl(
     const { data, error } = await supabase.storage
       .from(parsed.bucket)
       .createSignedUrl(parsed.path, SIGNED_URL_TTL_SECONDS);
-    if (error || !data?.signedUrl) {
+    const rawSignedUrl = (data as { signedUrl?: string; signedURL?: string } | null)?.signedUrl
+      ?? (data as { signedUrl?: string; signedURL?: string } | null)?.signedURL;
+    if (error || !rawSignedUrl) {
       console.warn("Failed to sign storage URL:", parsed.bucket, parsed.path, error?.message);
       return null;
     }
+    const signedUrl = normalizeSignedUrl(rawSignedUrl);
     cache.set(cacheKey, {
-      url: data.signedUrl,
+      url: signedUrl,
       expiresAt: now + SIGNED_URL_TTL_SECONDS * 1000,
     });
-    return data.signedUrl;
+    return signedUrl;
   })();
 
   inflight.set(cacheKey, promise);
@@ -142,6 +157,27 @@ export async function getViewableUrl(
   } finally {
     inflight.delete(cacheKey);
   }
+}
+
+export async function getDownloadUrl(
+  url: string | null | undefined,
+  filename?: string,
+): Promise<string | null> {
+  if (!url) return null;
+
+  const parsed = parseStorageUrl(url) ?? parseBareRedCardPath(url);
+  if (!parsed) return url;
+
+  const { data, error } = await supabase.storage
+    .from(parsed.bucket)
+    .createSignedUrl(parsed.path, SIGNED_URL_TTL_SECONDS, filename ? { download: filename } : { download: true });
+  const rawSignedUrl = (data as { signedUrl?: string; signedURL?: string } | null)?.signedUrl
+    ?? (data as { signedUrl?: string; signedURL?: string } | null)?.signedURL;
+  if (error || !rawSignedUrl) {
+    console.warn("Failed to create download URL:", parsed.bucket, parsed.path, error?.message);
+    return null;
+  }
+  return normalizeSignedUrl(rawSignedUrl);
 }
 
 /** Clear the in-memory signed-URL cache (e.g. on sign-out). */
