@@ -256,6 +256,7 @@ export function FactoringSubmitCard({ incidentId }: Props) {
     n.toLocaleString("en-US", { style: "currency", currency: "USD" });
 
   return (
+    <>
     <div className="rounded-xl border border-border bg-card p-4 space-y-3 card-shadow">
       <div className="flex items-start gap-2">
         <Landmark className="h-5 w-5 text-primary shrink-0 mt-0.5" />
@@ -509,6 +510,39 @@ export function FactoringSubmitCard({ incidentId }: Props) {
         </div>
       )}
     </div>
+
+    {pdfViewer && (
+      <div className="fixed inset-0 z-50 bg-background/95 p-3 sm:p-6">
+        <div className="mx-auto flex h-full max-w-5xl flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-primary shrink-0" />
+            <p className="min-w-0 flex-1 truncate text-sm font-bold">{pdfViewer.title}</p>
+            <button
+              type="button"
+              onClick={() => downloadPdf(pdfViewer.url, pdfViewer.filename)}
+              className="flex items-center gap-1 rounded-md border border-border bg-card px-3 py-2 text-xs font-bold touch-target"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Download
+            </button>
+            <button
+              type="button"
+              onClick={() => setPdfViewer(null)}
+              className="rounded-md border border-border bg-card p-2 touch-target"
+              aria-label="Close PDF preview"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <iframe
+            title={pdfViewer.title}
+            src={pdfViewer.url}
+            className="min-h-0 flex-1 rounded-lg border border-border bg-card"
+          />
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 
