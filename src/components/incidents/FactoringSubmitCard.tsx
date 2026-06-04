@@ -395,10 +395,10 @@ export function FactoringSubmitCard({ incidentId }: Props) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => openPdf(pendingPdf?.url, "Schedule PDF")}
+                    onClick={() => showPdf(pendingPdf?.url, "Schedule PDF", `Schedule-${pendingPdf?.scheduleNumber ?? "preview"}.pdf`)}
                     className="flex items-center justify-center gap-1.5 rounded-md bg-secondary px-3 py-2 text-xs font-bold text-secondary-foreground touch-target"
                   >
-                    <ExternalLink className="h-3.5 w-3.5" />
+                    <Eye className="h-3.5 w-3.5" />
                     View Schedule PDF
                   </button>
                   <button
@@ -419,7 +419,7 @@ export function FactoringSubmitCard({ incidentId }: Props) {
                       <button
                         key={d.id}
                         type="button"
-                        onClick={() => openPdf(d.file_url, "OF-286")}
+                        onClick={() => showPdf(d.file_url, "OF-286", d.file_name || "OF-286.pdf")}
                         className="flex w-full items-center gap-2 rounded-md border border-border/60 bg-background px-2 py-1 text-left text-[11px] hover:bg-accent touch-target"
                       >
                         <FileText className="h-3 w-3 text-muted-foreground shrink-0" />
@@ -496,7 +496,7 @@ export function FactoringSubmitCard({ incidentId }: Props) {
               <span className="text-muted-foreground">{fmt(Number(s.total_amount))}</span>
               <button
                 type="button"
-                onClick={() => openPdf(s.pdf_url, "Schedule PDF")}
+                onClick={() => showPdf(s.pdf_url, "Schedule PDF", `Schedule-${s.schedule_number}.pdf`)}
                 className="ml-auto underline text-primary touch-target"
               >
                 View PDF
