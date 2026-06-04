@@ -318,9 +318,12 @@ export async function buildScheduleOfAccountsPdf(input: ScheduleOfAccountsInput)
   }
   y -= 8;
 
-  const agreementDateStr = input.agreementDate
-    ? new Date(input.agreementDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
-    : "______________________________";
+  // Fall back to the schedule date when no factoring agreement date has been
+  // saved, so the certification paragraph never renders with a blank line.
+  const agreementDateStr = (input.agreementDate
+    ? new Date(input.agreementDate)
+    : input.scheduleDate
+  ).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 
   const numbered: string[] = [
     `He or she is the duly elected, qualified, and acting ${input.signerTitle || "Owner"} of Seller.`,
