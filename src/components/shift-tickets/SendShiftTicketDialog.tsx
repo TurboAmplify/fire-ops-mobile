@@ -165,19 +165,20 @@ export function SendShiftTicketDialog({
 
   const handleSend = async () => {
     if (!ticket?.id) return;
-    if (selectedContacts.length === 0) {
-      toast.error("Pick at least one recipient");
-      return;
-    }
-    const recipients = selectedContacts
-      .map((c) => ({ contact: c, email: contactDisplayEmail(c) }))
-      .filter((r): r is { contact: IncidentTruckFinanceContact; email: string } => !!r.email);
-    if (recipients.length === 0) {
-      toast.error("None of the selected contacts have an email on file");
-      return;
-    }
+    if (loading) return;
     setLoading(true);
     try {
+      if (selectedContacts.length === 0) {
+        toast.error("Pick at least one recipient");
+        return;
+      }
+      const recipients = selectedContacts
+        .map((c) => ({ contact: c, email: contactDisplayEmail(c) }))
+        .filter((r): r is { contact: IncidentTruckFinanceContact; email: string } => !!r.email);
+      if (recipients.length === 0) {
+        toast.error("None of the selected contacts have an email on file");
+        return;
+      }
       // 1. Generate PDF
       const { blob, fileName } = await generateOF297PdfBlob(ticket);
       // 2. Upload to communication-attachments bucket
@@ -187,28 +188,41 @@ export function SendShiftTicketDialog({
         .upload(path, blob, { contentType: "application/pdf", upsert: false });
       if (upErr) throw upErr;
 
-      // 3. One thread per send (no contact_id / FO id — it's multi-recipient).
-      const recipientList = recipients
-        .map((r) => contactDisplayName(r.contact))
-        .join(", ");
+      // 3. Reuse existing shift-ticket thread for this truck+date if one
+      // already exists — otherwise create one. Keeps the inbox clean and
+      // prevents apparent "duplicate" threads when sending to different FOs
+      // at different times for the same ticket.
       const subject = `Shift Ticket — ${ticket.incident_name ?? "Incident"}${ticketDate ? ` ${ticketDate}` : ""} — ${fileName.replace(/\.pdf$/i, "")}`;
-      const thread = await create.mutateAsync({
-        incidentId,
-        incidentTruckId: ticket.incident_truck_id,
-        // Keep the primary contact link if there's only one recipient so
-        // inbound replies still match the contact; for multi-recipient sends
-        // the thread_token in Reply-To handles routing.
-        contactId: recipients.length === 1 ? recipients[0].contact.id : null,
-        financeOfficerId:
-          recipients.length === 1
-            ? recipients[0].contact.finance_officer_id ?? null
-            : null,
-        purpose: "shift_ticket",
-        subject,
-      });
+      let threadId: string;
+      const existing = priorSends[0]?.threadId
+        ? priorSends.slice().sort((a, b) => {
+            const at = a.lastSentAt ? new Date(a.lastSentAt).getTime() : 0;
+            const bt = b.lastSentAt ? new Date(b.lastSentAt).getTime() : 0;
+            return bt - at;
+          })[0]
+        : null;
+      if (existing?.threadId) {
+        threadId = existing.threadId;
+      } else {
+        const thread = await create.mutateAsync({
+          incidentId,
+          incidentTruckId: ticket.incident_truck_id,
+          // Keep the primary contact link if there's only one recipient so
+          // inbound replies still match the contact; for multi-recipient
+          // sends the thread_token in Reply-To handles routing.
+          contactId: recipients.length === 1 ? recipients[0].contact.id : null,
+          financeOfficerId:
+            recipients.length === 1
+              ? recipients[0].contact.finance_officer_id ?? null
+              : null,
+          purpose: "shift_ticket",
+          subject,
+        });
+        threadId = thread.id;
+      }
 
       // 4. Send with explicit multi-recipient override
-      await sendReply(thread.id, body.trim() || "Shift ticket attached.", [path], {
+      await sendReply(threadId, body.trim() || "Shift ticket attached.", [path], {
         incidentId,
         incidentTruckId: ticket.incident_truck_id,
         documentLabel: `Shift Ticket ${ticketDate || ticket.id.slice(0, 8)}`,
@@ -221,7 +235,7 @@ export function SendShiftTicketDialog({
           : `Shift ticket sent to ${recipients.length} recipients`,
       );
       setSent({
-        threadId: thread.id,
+        threadId,
         recipients: recipients.map((r) => ({
           name: contactDisplayName(r.contact),
           email: r.email,
