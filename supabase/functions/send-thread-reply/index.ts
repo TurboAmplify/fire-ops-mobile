@@ -6,7 +6,14 @@ interface ReplyBody {
   thread_id: string;
   body_text: string;
   attachment_paths?: string[]; // storage paths in communication-attachments bucket
+  // Cross-incident send guard: callers attaching a doc that belongs to a
+  // specific incident/truck should pass these so we can refuse to send via a
+  // thread on the wrong incident.
+  source_incident_id?: string;
+  source_incident_truck_id?: string;
+  source_document_label?: string;
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
