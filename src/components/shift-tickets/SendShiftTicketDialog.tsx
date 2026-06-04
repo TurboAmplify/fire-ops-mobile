@@ -110,9 +110,14 @@ export function SendShiftTicketDialog({
         documentLabel: `Shift Ticket ${subjectDate || ticket.id.slice(0, 8)}`,
       });
 
-      toast.success("Shift ticket sent to finance officer");
-      onOpenChange(false);
-      nav(`/messages/${thread.id}`);
+      toast.success("Shift ticket sent");
+      setSent({
+        threadId: thread.id,
+        recipientName: contactDisplayName(contact),
+        recipientEmail: contactDisplayEmail(contact) ?? "",
+        fileName,
+        sentAt: new Date().toLocaleString(),
+      });
     } catch (e) {
       handleMutationError(e, "Could not send shift ticket");
     } finally {
