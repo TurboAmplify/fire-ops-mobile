@@ -291,6 +291,8 @@ export async function sendReply(
     incidentId?: string | null;
     incidentTruckId?: string | null;
     documentLabel?: string;
+    /** Override the recipient list (instead of using the thread's contact/FO). */
+    toEmails?: string[];
   },
 ): Promise<{ message_id: string }> {
   const { data, error } = await supabase.functions.invoke("send-thread-reply", {
@@ -298,6 +300,7 @@ export async function sendReply(
       thread_id: threadId,
       body_text: bodyText,
       attachment_paths: attachmentPaths && attachmentPaths.length ? attachmentPaths : undefined,
+      to_emails: source?.toEmails && source.toEmails.length ? source.toEmails : undefined,
       source_incident_id: source?.incidentId ?? undefined,
       source_incident_truck_id: source?.incidentTruckId ?? undefined,
       source_document_label: source?.documentLabel ?? undefined,
@@ -310,5 +313,43 @@ export async function sendReply(
     throw err;
   }
   return data as { message_id: string };
+}
+
+/**
+ * Look for an existing shift-ticket thread on this incident_truck whose subject
+ * contains the given ticket date. Used to detect re-sends before they happen.
+ */
+export async function findShiftTicketThreads(input: {
+  incidentTruckId: string;
+  ticketDate: string;
+}): Promise<Array<ThreadRow & { to_emails: string[]; last_sent_at: string | null }>> {
+  const { data: threads } = await supabase
+    .from("communication_threads")
+    .select("*")
+    .eq("incident_truck_id", input.incidentTruckId)
+    .eq("purpose", "shift_ticket")
+    .ilike("subject", `%${input.ticketDate}%`);
+  const rows = (threads ?? []) as ThreadRow[];
+  if (rows.length === 0) return [];
+  const ids = rows.map((r) => r.id);
+  const { data: msgs } = await supabase
+    .from("messages")
+    .select("thread_id, to_emails, sent_at, created_at, direction")
+    .in("thread_id", ids)
+    .eq("direction", "out")
+    .order("created_at", { ascending: false });
+  const byThread = new Map<string, { to_emails: string[]; last_sent_at: string | null }>();
+  for (const m of msgs ?? []) {
+    if (byThread.has(m.thread_id)) continue;
+    byThread.set(m.thread_id, {
+      to_emails: (m.to_emails ?? []) as string[],
+      last_sent_at: m.sent_at ?? m.created_at ?? null,
+    });
+  }
+  return rows.map((r) => ({
+    ...r,
+    to_emails: byThread.get(r.id)?.to_emails ?? [],
+    last_sent_at: byThread.get(r.id)?.last_sent_at ?? null,
+  }));
 }
 
