@@ -264,12 +264,27 @@ export default function IncidentDetail() {
                     className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-colors touch-target"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
-                    Delete Incident
+                    Move to Trash
                   </button>
                 ) : (
-                  <div className="w-full space-y-3">
-                    <p className="text-sm text-destructive font-medium">
-                      Are you sure? This cannot be undone.
+                  <div className="w-full space-y-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
+                    <p className="text-sm text-destructive font-semibold">
+                      Move "{incident.name}" to Trash?
+                    </p>
+                    {impact && (
+                      <ul className="text-xs text-muted-foreground space-y-0.5 list-disc pl-4">
+                        {impact.trucks > 0 && <li>{impact.trucks} truck assignment{impact.trucks === 1 ? "" : "s"}</li>}
+                        {impact.tickets > 0 && <li>{impact.tickets} shift ticket{impact.tickets === 1 ? "" : "s"}</li>}
+                        {impact.documents > 0 && <li>{impact.documents} document{impact.documents === 1 ? "" : "s"}</li>}
+                        {impact.expenses > 0 && <li>{impact.expenses} expense{impact.expenses === 1 ? "" : "s"}</li>}
+                        {impact.threads > 0 && <li>{impact.threads} message thread{impact.threads === 1 ? "" : "s"}</li>}
+                        {impact.trucks + impact.tickets + impact.documents + impact.expenses + impact.threads === 0 && (
+                          <li>No attached records</li>
+                        )}
+                      </ul>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Nothing is permanently deleted. Restore from <strong>Settings → Trash</strong> within 30 days.
                     </p>
                     <div className="flex gap-3">
                       <button
@@ -278,11 +293,12 @@ export default function IncidentDetail() {
                         className="flex-1 rounded-xl bg-destructive py-3 text-sm font-bold text-destructive-foreground touch-target flex items-center justify-center gap-2"
                       >
                         {deleteMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                        Yes, Delete
+                        Move to Trash
                       </button>
                       <button
                         onClick={() => setConfirmDelete(false)}
                         className="flex-1 rounded-xl bg-secondary py-3 text-sm font-bold text-secondary-foreground touch-target"
+
                       >
                         Cancel
                       </button>
