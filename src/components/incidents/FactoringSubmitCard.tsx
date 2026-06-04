@@ -37,6 +37,8 @@ export function FactoringSubmitCard({ incidentId }: Props) {
   const [parsing, setParsing] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // Inline-preview URL — prefer the signed Supabase URL (works in mobile webviews);
+  // falls back to a `blob:` URL if signing fails.
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [pendingPdf, setPendingPdf] = useState<{ url: string; scheduleNumber: number } | null>(null);
 
@@ -148,8 +150,10 @@ export function FactoringSubmitCard({ incidentId }: Props) {
         scheduleNumber,
       );
       setPendingPdf({ url, scheduleNumber });
-      const preview = URL.createObjectURL(pdfBlob);
-      setPreviewUrl(preview);
+      // Prefer a signed https URL — works in iOS/Android in-app webviews where
+      // `blob:` previews silently fail. Fall back to blob if signing fails.
+      const signed = await getViewableUrl(url).catch(() => null);
+      setPreviewUrl(signed || URL.createObjectURL(pdfBlob));
     } catch (err: any) {
       toast.error(err?.message || "Failed to generate schedule");
     } finally {
@@ -303,13 +307,20 @@ export function FactoringSubmitCard({ incidentId }: Props) {
             </button>
           ) : (
             <div className="space-y-2">
+              <div className="rounded-md border border-border overflow-hidden bg-background">
+                <iframe
+                  src={previewUrl}
+                  title="Schedule of Accounts preview"
+                  className="w-full h-[70vh] bg-white"
+                />
+              </div>
               <a
                 href={previewUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block text-center rounded-md bg-secondary py-2 text-xs font-bold text-secondary-foreground touch-target"
               >
-                Open preview PDF
+                Open in new tab
               </a>
               <button
                 onClick={handleSubmit}

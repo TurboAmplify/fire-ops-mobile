@@ -1,61 +1,47 @@
-# Fix: Schedule of Accounts PDF doesn't match WideQ template
+## Two problems, two fixes
 
-## Problem
+### 1) Recover the deleted shift tickets for 2026 Long Term Severity
 
-The generated Schedule of Accounts I send to Anita is laid out from scratch (header text, table proportions, certification wording, signature block) — it does not match the WideQ Financial template you originally attached. The OF-286 attachment itself is fine (the finance-signed file is the one being sent); the only fix is the schedule layout/wording.
+What happened in the database:
+- Only one "2026 Long Term Severity" incident exists now (`9b9ca1aa…`). The other was hard‑deleted, which cascaded its `incident_trucks` row and every `shift_tickets` row attached to it — they are gone from the DB (no soft‑deletes, no audit rows).
+- The 3 outbound shift‑ticket emails from those days are still in this incident's message threads with the rendered PDFs attached:
+  - 2026‑06‑02 shift (sent 06‑03)
+  - 2026‑06‑01 shift (sent 06‑02, two versions)
+- The remaining truck on the incident is DL62 → `incident_truck_id = ed22a43b‑a4bf‑472e‑80a9‑dc901f7660ff`.
 
-## Approach
+Because the structured ticket data (equipment entries, crew, times, signatures) was deleted with the truck, the only source of truth left is the PDF in each email. The cleanest recovery path:
 
-Rebuild `src/lib/pdf-schedule-of-accounts.ts` so its output is a 1:1 visual match of Anita's blank template, then re-preview on Ashpole before any send.
+1. **Add a "Restore to shift ticket" action on PDF attachments inside the message thread.** When tapped on a `*.pdf` attachment whose thread is on an incident, it:
+   - Calls the existing `parse-shift-ticket` edge function on the attachment's signed URL.
+   - Creates a new `shift_tickets` row on the thread's incident's remaining `incident_truck` (DL62 for this incident), in `draft` status, pre-filled with the parsed fields (equipment + personnel entries, dates, times, remarks, signatures left blank for re-sign).
+   - Attaches the original PDF reference in `remarks` ("Restored from email PDF on …") so the user can verify.
+   - Toasts with a deep‑link to the new draft for review.
 
-### 1. Re-anchor on the template
+2. **Restore the three Long Term Severity tickets specifically** by running that flow now for those three attachments and pointing the new rows at DL62. The user reviews/edits each in the shift‑ticket editor; nothing is auto‑finalized.
 
-The template was attached as 2 images back in your original factoring request, but I want to be 100% sure I'm matching what Anita actually expects today. I'd like you to re-attach the blank WideQ "Schedule of Accounts" PDF (or a clean screenshot of page 1) in your next message. I'll use it as the visual source of truth.
+Trade‑off the user should know: AI parsing of a rendered PDF won't recover signatures and may be imperfect on crew times — the restored tickets land as **drafts**, ready for review, not as finals. Re‑signing is required.
 
-If you prefer not to re-upload, I'll work from the original attached images — just say so.
+### 2) Make the Schedule of Accounts viewable before sending
 
-### 2. Rewrite the PDF generator
+Symptom: After "Generate Schedule of Accounts," the "Open preview PDF" link uses a `blob:` URL with `target="_blank"`. In the iOS/Android in‑app webview the new tab either fails to open or shows a blank page, so the user can't review before sending.
 
-Replace the current ad-hoc layout in `pdf-schedule-of-accounts.ts` with one that mirrors the template's:
+Fix in `src/components/incidents/FactoringSubmitCard.tsx`:
+- Render the preview **inline** in a fixed‑aspect iframe right in the card (use the already‑uploaded signed URL from Supabase storage via `getViewableUrl(pendingPdf.url)`, not the `blob:` URL — webviews handle the signed https URL reliably).
+- Keep a secondary "Open in new tab" link as a fallback for desktop browsers.
+- Keep the existing flow order: **Generate → Preview (inline) → Submit**. Submit stays disabled until a preview exists (already the case).
+- Also wire the same `getViewableUrl` fallback to the existing "View PDF" button under "Submitted" so previously‑sent schedules open reliably too.
 
-- Title block ("WideQ Financial LLC" branding + "Schedule of Accounts" heading) at the exact position/size used in the template
-- DATE / SCHEDULE NO. row formatted like the template (right-aligned schedule number, same font weight)
-- SELLER line
-- Totals block (Number of Accounts Sold / Total Amount Sold / Reserve %)
-- Accounts table — same column order, widths, header style, and row height as the template
-- Certification paragraphs 1–6 — verbatim wording from the template (currently mine is paraphrased)
-- "IN WITNESS WHEREOF…" closing line with the day/month/year merge fields
-- Signature block: `By: ___` (with embedded signature PNG), `Print Name:`, `Title:` — positioned to match the template
-
-### 3. Keep the existing data wiring intact
-
-No changes to:
-- `FactoringSubmitCard` (line items, totals, preview/submit flow)
-- `send-factoring-submission` edge function (attachments, recipient, email body)
-- `org_factoring_settings` schema
-- The finance-signed OF-286 attachment logic
-
-Only the PDF builder changes.
-
-### 4. Verify before sending
-
-After the rewrite, on the Ashpole incident you'll:
-1. Click **Generate Schedule of Accounts** → opens the new PDF preview
-2. Eyeball it against Anita's template
-3. If good, **Submit**; if not, tell me what's off and I'll iterate
-
-I will NOT auto-send a test to Anita.
+No schema changes. No edits to the PDF generator itself — last loop's layout work stays as is, the user just needs to actually see it.
 
 ## Technical notes
 
-- `pdf-lib` + Helvetica/Helvetica-Bold standard fonts (no new deps)
-- Certification wording will be copied verbatim from the template so the legal language matches what she's expecting
-- The `schedule_number` will continue to draw from `org_factoring_settings.next_schedule_number` (currently 2 for Dry Lightning — the previous Ashpole send already bumped it from 1 to 2)
-- Signature PNG embed logic stays the same (auto-stamps `signature_url` from settings onto the `By:` line)
+- New UI: in `MessageBubble` / `AttachmentChip`, when `mime_type === 'application/pdf'` and the parent thread has `incident_id`, show a small "Restore as shift ticket" menu item next to the existing download. Wire it to a new `recoverShiftTicketFromPdf(attachmentId, incidentTruckId)` helper in `src/services/shift-tickets.ts` that downloads the attachment, calls `supabase.functions.invoke('parse-shift-ticket', { body: { fileUrl } })`, then inserts a `shift_tickets` row.
+- If the incident has >1 active `incident_truck`, prompt for which truck to attach to. For 2026 Long Term Severity there is exactly one (DL62), so it's a one‑tap restore.
+- `parse-shift-ticket` already exists at `supabase/functions/parse-shift-ticket/index.ts`; reuse without changes if its output schema matches `ShiftTicket` fields (verify in the build step and patch the mapping if it returns a slightly different shape).
+- Preview iframe: `<iframe src={signedUrl} className="w-full h-[70vh] rounded-md border" />` inside the existing preview block. `URL.revokeObjectURL` cleanup on the old `blob:` path removed.
 
 ## Out of scope
 
-- OF-286 attachment logic (working correctly — the finance-signed file is what's sent)
-- Email body / subject changes
-- Adding a per-org overridable schedule template
-- Re-sending the existing Ashpole submission (you can regenerate and resubmit after the fix; it'll become Schedule #2)
+- No undelete of the original ticket rows (cascade‑deleted, no backup snapshot to pull from).
+- No change to factoring email content or OF‑286 attachment behavior.
+- No change to the Schedule PDF layout itself.

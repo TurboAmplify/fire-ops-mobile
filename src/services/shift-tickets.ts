@@ -352,3 +352,123 @@ export function enforceLunchDeduction(entries: PersonnelEntry[]): PersonnelEntry
     return e;
   });
 }
+
+/**
+ * Recreate a draft shift ticket from a previously-emailed PDF attachment.
+ * Used to recover tickets after an upstream delete cascaded the original rows.
+ * The AI-parsed result is mapped into our schema; signatures are intentionally
+ * left blank — the user must review and re-sign before finalizing.
+ */
+export async function recoverShiftTicketFromPdfAttachment(input: {
+  storagePath: string;
+  fileName: string;
+  incidentTruckId: string;
+  organizationId: string;
+}): Promise<ShiftTicket> {
+  assertOnlineForWrite();
+
+  // 1) Sign the attachment so the edge function can fetch it.
+  const { data: signed, error: signErr } = await supabase.storage
+    .from("communication-attachments")
+    .createSignedUrl(input.storagePath, 60 * 5);
+  if (signErr || !signed?.signedUrl) {
+    throw new Error("Could not access the attachment to parse it.");
+  }
+
+  // 2) Run the existing OF-297 parser on it.
+  const { data, error } = await supabase.functions.invoke("parse-shift-ticket", {
+    body: { fileUrl: signed.signedUrl, fileName: input.fileName },
+  });
+  if (error) throw error;
+  if ((data as any)?.error) throw new Error((data as any).error);
+  const parsed = ((data as any)?.parsed ?? {}) as Record<string, any>;
+
+  // 3) Map parsed equipment/personnel arrays into our row shape and compute totals.
+  const equipment: EquipmentEntry[] = Array.isArray(parsed.equipment_entries)
+    ? parsed.equipment_entries.map((e: any) => {
+        const start = String(e?.start ?? "");
+        const stop = String(e?.stop ?? "");
+        return {
+          date: String(e?.date ?? ""),
+          start,
+          stop,
+          total: computeHours(start, stop),
+          quantity: String(e?.quantity ?? ""),
+          type: String(e?.type ?? ""),
+          remarks: String(e?.remarks ?? ""),
+        };
+      })
+    : [];
+
+  const personnel: PersonnelEntry[] = Array.isArray(parsed.personnel_entries)
+    ? parsed.personnel_entries.map((p: any) => {
+        const op_start = String(p?.op_start ?? "");
+        const op_stop = String(p?.op_stop ?? "");
+        const sb_start = String(p?.sb_start ?? "");
+        const sb_stop = String(p?.sb_stop ?? "");
+        const total =
+          computeHours(op_start, op_stop) + computeHours(sb_start, sb_stop);
+        const activity_type: "travel" | "work" =
+          p?.activity_type === "travel" ? "travel" : "work";
+        return {
+          date: String(p?.date ?? ""),
+          operator_name: String(p?.operator_name ?? ""),
+          op_start,
+          op_stop,
+          sb_start,
+          sb_stop,
+          total,
+          remarks: String(p?.remarks ?? ""),
+          activity_type,
+          lodging: false,
+          per_diem_b: false,
+          per_diem_l: false,
+          per_diem_d: false,
+        };
+      })
+    : [];
+
+  // 4) Insert a fresh draft. Signatures cleared — must be re-captured.
+  const restoredNote = `Restored from emailed PDF (${input.fileName}) on ${new Date().toISOString().slice(0, 10)}. Verify times and re-sign before finalizing.`;
+  const remarks = parsed.remarks
+    ? `${String(parsed.remarks)}\n\n${restoredNote}`
+    : restoredNote;
+
+  const insertRow = {
+    incident_truck_id: input.incidentTruckId,
+    organization_id: input.organizationId,
+    status: "draft",
+    agreement_number: parsed.agreement_number || null,
+    contractor_name: parsed.contractor_name || null,
+    resource_order_number: parsed.resource_order_number || null,
+    incident_name: parsed.incident_name || null,
+    incident_number: parsed.incident_number || null,
+    financial_code: parsed.financial_code || null,
+    equipment_make_model: parsed.equipment_make_model || null,
+    equipment_type: parsed.equipment_type || null,
+    serial_vin_number: parsed.serial_vin_number || null,
+    license_id_number: parsed.license_id_number || null,
+    transport_retained:
+      typeof parsed.transport_retained === "boolean" ? parsed.transport_retained : null,
+    is_first_last:
+      typeof parsed.is_first_last === "boolean" ? parsed.is_first_last : null,
+    miles: typeof parsed.miles === "number" ? parsed.miles : null,
+    equipment_entries: equipment as any,
+    personnel_entries: personnel as any,
+    remarks,
+    contractor_rep_name: parsed.contractor_rep_name || null,
+    contractor_rep_signature_url: null,
+    contractor_rep_signed_at: null,
+    supervisor_name: parsed.supervisor_name || null,
+    supervisor_signature_url: null,
+    supervisor_signed_at: null,
+  };
+
+  const { data: inserted, error: insErr } = await supabase
+    .from("shift_tickets")
+    .insert(insertRow as any)
+    .select()
+    .single();
+  if (insErr) throw insErr;
+  return inserted as unknown as ShiftTicket;
+}
