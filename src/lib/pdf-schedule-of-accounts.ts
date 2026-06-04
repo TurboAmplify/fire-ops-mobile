@@ -97,7 +97,7 @@ export async function buildScheduleOfAccountsPdf(input: ScheduleOfAccountsInput)
   const drawUnderline = (x: number, yPos: number, w: number, thickness = 0.6) => {
     page.drawLine({
       start: { x, y: yPos - 2 },
-      end: { x + w, y: yPos - 2 },
+      end: { x: x + w, y: yPos - 2 },
       thickness,
       color: black,
     });
