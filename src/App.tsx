@@ -39,6 +39,8 @@ import { PlatformAdminGate } from "@/components/PlatformAdminGate";
 // Lazy-loaded — secondary flows, heavy PDF/xlsx pages, admin & super-admin surfaces.
 // These ship as separate chunks so first paint stays fast.
 const OrgSettings = lazy(() => import("./pages/OrgSettings"));
+const SettingsTrash = lazy(() => import("./pages/SettingsTrash"));
+
 const IncidentCreate = lazy(() => import("./pages/IncidentCreate"));
 const IncidentFromAgreement = lazy(() => import("./pages/IncidentFromAgreement"));
 const IncidentEdit = lazy(() => import("./pages/IncidentEdit"));
@@ -134,6 +136,8 @@ const App = () => (
                     <Route path="/expenses/batch-scan" element={<ProtectedRoute><BatchReceiptScan /></ProtectedRoute>} />
                     <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                     <Route path="/settings/organization" element={<ProtectedRoute><OrgSettings /></ProtectedRoute>} />
+                    <Route path="/settings/trash" element={<ProtectedRoute><SettingsTrash /></ProtectedRoute>} />
+
                     <Route path="/privacy" element={<Privacy />} />
                     <Route path="/terms" element={<Terms />} />
                     <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
