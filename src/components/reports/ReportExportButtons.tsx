@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Loader2, FileText, FileSpreadsheet, FileDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { primeMobileDelivery, clearMobileDelivery } from "@/services/reports/exporters/share";
 
 type Format = "pdf" | "csv" | "excel";
 
@@ -26,10 +27,15 @@ export function ReportExportButtons({ onExport, disabled, className, hide }: Pro
 
   const handle = async (fmt: Format) => {
     if (busy || disabled) return;
+    // iOS Safari kills user-gesture privileges after the first await, which
+    // blocks window.open / navigator.share. Open the delivery tab synchronously
+    // here so the file can be handed off when generation finishes.
+    primeMobileDelivery();
     setBusy(fmt);
     try {
       await onExport(fmt);
     } catch (err) {
+      clearMobileDelivery();
       console.error("Export failed:", err);
       toast({
         title: "Export failed",
