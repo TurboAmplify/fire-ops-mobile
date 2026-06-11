@@ -82,8 +82,51 @@ async function webShareFile(filename: string, blob: Blob, mime: string): Promise
   }
 }
 
+// Pre-opened window for iOS Safari / mobile web: callers (e.g. export buttons)
+// open an empty tab synchronously inside the click handler so we still have
+// user-gesture privileges by the time async PDF/Excel generation finishes.
+let pendingDeliveryWindow: Window | null = null;
+
+export function primeMobileDelivery(): void {
+  if (typeof window === "undefined") return;
+  if (!isMobileWeb() || isNativeCapacitor()) return;
+  try {
+    const w = window.open("about:blank", "_blank");
+    if (w) {
+      try {
+        w.document.write(
+          "<title>Preparing file…</title><body style=\"font-family:-apple-system,sans-serif;padding:24px;color:#444\">Preparing your file…</body>",
+        );
+      } catch {
+        /* cross-origin write may throw; harmless */
+      }
+      pendingDeliveryWindow = w;
+    }
+  } catch {
+    pendingDeliveryWindow = null;
+  }
+}
+
+export function clearMobileDelivery(): void {
+  if (pendingDeliveryWindow && !pendingDeliveryWindow.closed) {
+    try { pendingDeliveryWindow.close(); } catch { /* noop */ }
+  }
+  pendingDeliveryWindow = null;
+}
+
 function openBlobInNewTab(blob: Blob) {
   const url = URL.createObjectURL(blob);
+  const target = pendingDeliveryWindow && !pendingDeliveryWindow.closed ? pendingDeliveryWindow : null;
+  pendingDeliveryWindow = null;
+  if (target) {
+    try {
+      target.location.href = url;
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      return;
+    } catch {
+      /* fall through */
+    }
+  }
   // iOS Safari needs a real navigation, not an anchor click, to render the PDF.
   const win = window.open(url, "_blank");
   if (!win) {
@@ -111,16 +154,21 @@ export async function shareOrDownload(filename: string, data: FileBlob, mime: st
   const blob = toBlob(data, mime);
 
   if (isNativeCapacitor()) {
+    clearMobileDelivery();
     if (await nativeShare(filename, blob, mime)) return;
     // fall through to web fallback
   }
 
   if (isMobileWeb()) {
-    if (await webShareFile(filename, blob, mime)) return;
+    if (await webShareFile(filename, blob, mime)) {
+      clearMobileDelivery();
+      return;
+    }
     openBlobInNewTab(blob);
     return;
   }
 
+  clearMobileDelivery();
   anchorDownload(filename, blob);
 }
 
