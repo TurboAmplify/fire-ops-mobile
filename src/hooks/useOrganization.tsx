@@ -143,16 +143,19 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     }
   }, [user?.id]);
 
-  // Fetch membership only when the signed-in user identity changes. Do NOT
-  // toggle loading=true here — that caused ProtectedRoute to blank to a
-  // spinner every time fetchMembership's identity changed (which happens on
-  // any user object reference change), producing the home-page flicker that
-  // looked like a reload loop.
+  // Fetch membership when the signed-in user identity changes. We DO toggle
+  // loading=true here so there's no window where authLoading=false,
+  // orgLoading=false, and allMemberships=[] are all true at once — that race
+  // let ProtectedRoute resolve before memberships had loaded and bounce
+  // /admin/reports → / → /super-admin for platform admins. The effect is
+  // keyed on user.id (not the user object), so it only re-fires on a real
+  // identity change, which avoids the earlier home-page flicker loop.
   useEffect(() => {
     if (!user?.id) {
       setLoading(false);
       return;
     }
+    setLoading(true);
     fetchMembership();
   }, [user?.id, fetchMembership]);
 
