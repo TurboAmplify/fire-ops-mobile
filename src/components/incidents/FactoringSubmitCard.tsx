@@ -335,12 +335,19 @@ export function FactoringSubmitCard({ incidentId }: Props) {
         </p>
       ) : (
         <div className="space-y-2">
-          {lines.map((li) => (
-            <div key={li.document_id} className="rounded-lg border border-border bg-background/60 p-2 space-y-1.5">
+          {lines.map((li) => {
+            const isDup = duplicateIds.has(li.document_id);
+            return (
+            <div key={li.document_id} className={`rounded-lg border bg-background/60 p-2 space-y-1.5 ${isDup ? "border-amber-500/40 opacity-70" : "border-border"}`}>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                   <span className="text-xs font-medium truncate">{li.fileName}</span>
+                  {isDup && (
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400 shrink-0">
+                      Duplicate · excluded
+                    </span>
+                  )}
                 </div>
                 <button
                   type="button"
