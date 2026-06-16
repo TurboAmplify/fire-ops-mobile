@@ -254,8 +254,8 @@ export function FactoringSubmitCard({ incidentId }: Props) {
       const { data, error } = await supabase.functions.invoke("send-factoring-submission", {
         body: {
           incident_id: incidentId,
-          document_ids: lines.map((l) => l.document_id),
-          line_items: lines.map(({ fileName, ...rest }) => rest),
+          document_ids: effectiveLines.map((l) => l.document_id),
+          line_items: effectiveLines.map(({ fileName, ...rest }) => rest),
           seller,
           reserve_percent: totals.pct,
           schedule_pdf_url: pendingPdf.url,
