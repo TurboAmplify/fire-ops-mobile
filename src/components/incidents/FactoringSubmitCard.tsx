@@ -84,13 +84,41 @@ export function FactoringSubmitCard({ incidentId }: Props) {
 
   if (!enabled || !isAdmin) return null;
 
+  // Dedupe duplicate uploads of the same invoice (e.g. unsigned original +
+  // signed completed copy of the same OF-286). Two lines collapse to one when
+  // they share an invoice number, OR — when invoice numbers are blank — when
+  // they share the same (account_debtor, invoice_amount). The first occurrence
+  // is kept; later ones are flagged as duplicates and excluded from totals and
+  // the schedule submission.
+  const duplicateIds = useMemo(() => {
+    const seen = new Set<string>();
+    const dupes = new Set<string>();
+    for (const li of lines) {
+      const inv = (li.invoice_number || "").trim().toLowerCase();
+      const key = inv
+        ? `inv:${inv}`
+        : `fallback:${(li.account_debtor || "").trim().toLowerCase()}|${Number(li.invoice_amount) || 0}`;
+      // Only treat as duplicate if we have something to key on
+      const hasKey = inv || (li.account_debtor && Number(li.invoice_amount) > 0);
+      if (!hasKey) continue;
+      if (seen.has(key)) dupes.add(li.document_id);
+      else seen.add(key);
+    }
+    return dupes;
+  }, [lines]);
+
+  const effectiveLines = useMemo(
+    () => lines.filter((l) => !duplicateIds.has(l.document_id)),
+    [lines, duplicateIds],
+  );
+
   const totals = (() => {
-    const total = lines.reduce((s, li) => s + (Number(li.invoice_amount) || 0), 0);
+    const total = effectiveLines.reduce((s, li) => s + (Number(li.invoice_amount) || 0), 0);
     const pct = parseFloat(reservePercent) || 0;
-    return { total, reserve: total * (pct / 100), pct, count: lines.length };
+    return { total, reserve: total * (pct / 100), pct, count: effectiveLines.length };
   })();
 
-  const seller = lines.find((l) => l.account_debtor)?.account_debtor || "";
+  const seller = effectiveLines.find((l) => l.account_debtor)?.account_debtor || "";
 
   const settingsComplete =
     !!settings?.factor_contact_email &&
@@ -198,7 +226,7 @@ export function FactoringSubmitCard({ incidentId }: Props) {
         signerTitle: settings.signer_title || "Owner",
         agreementDate: settings.agreement_date,
         reservePercent: totals.pct,
-        lineItems: lines,
+        lineItems: effectiveLines,
         signaturePngBlob: sigBlob,
       });
       const url = await uploadFactoringSchedulePdf(
@@ -226,8 +254,8 @@ export function FactoringSubmitCard({ incidentId }: Props) {
       const { data, error } = await supabase.functions.invoke("send-factoring-submission", {
         body: {
           incident_id: incidentId,
-          document_ids: lines.map((l) => l.document_id),
-          line_items: lines.map(({ fileName, ...rest }) => rest),
+          document_ids: effectiveLines.map((l) => l.document_id),
+          line_items: effectiveLines.map(({ fileName, ...rest }) => rest),
           seller,
           reserve_percent: totals.pct,
           schedule_pdf_url: pendingPdf.url,
@@ -239,7 +267,7 @@ export function FactoringSubmitCard({ incidentId }: Props) {
       toast.success("Factoring package sent");
       setSentConfirmation({
         scheduleNumber: pendingPdf.scheduleNumber,
-        documentCount: financeSigned.length,
+        documentCount: effectiveLines.length,
         recipient: settings?.factor_contact_email || "factoring contact",
       });
       setPreviewUrl(null);
@@ -307,12 +335,19 @@ export function FactoringSubmitCard({ incidentId }: Props) {
         </p>
       ) : (
         <div className="space-y-2">
-          {lines.map((li) => (
-            <div key={li.document_id} className="rounded-lg border border-border bg-background/60 p-2 space-y-1.5">
+          {lines.map((li) => {
+            const isDup = duplicateIds.has(li.document_id);
+            return (
+            <div key={li.document_id} className={`rounded-lg border bg-background/60 p-2 space-y-1.5 ${isDup ? "border-amber-500/40 opacity-70" : "border-border"}`}>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                   <span className="text-xs font-medium truncate">{li.fileName}</span>
+                  {isDup && (
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400 shrink-0">
+                      Duplicate · excluded
+                    </span>
+                  )}
                 </div>
                 <button
                   type="button"
@@ -355,7 +390,8 @@ export function FactoringSubmitCard({ incidentId }: Props) {
                 />
               </div>
             </div>
-          ))}
+            );
+          })}
 
           <div className="flex items-center gap-2">
             <label className="text-xs text-muted-foreground">Reserve %</label>
