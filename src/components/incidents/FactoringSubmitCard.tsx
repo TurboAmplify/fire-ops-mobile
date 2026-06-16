@@ -390,7 +390,8 @@ export function FactoringSubmitCard({ incidentId }: Props) {
                 />
               </div>
             </div>
-          ))}
+            );
+          })}
 
           <div className="flex items-center gap-2">
             <label className="text-xs text-muted-foreground">Reserve %</label>
