@@ -82,8 +82,6 @@ export function FactoringSubmitCard({ incidentId }: Props) {
     };
   }, [pdfViewer?.url]);
 
-  if (!enabled || !isAdmin) return null;
-
   // Dedupe duplicate uploads of the same invoice (e.g. unsigned original +
   // signed completed copy of the same OF-286). Two lines collapse to one when
   // they share an invoice number, OR — when invoice numbers are blank — when
@@ -111,6 +109,11 @@ export function FactoringSubmitCard({ incidentId }: Props) {
     () => lines.filter((l) => !duplicateIds.has(l.document_id)),
     [lines, duplicateIds],
   );
+
+  // IMPORTANT: gating runs AFTER all hooks above, otherwise React throws
+  // "Rendered more hooks than during the previous render" when `enabled`
+  // flips from undefined → true on first load.
+  if (!enabled || !isAdmin) return null;
 
   const totals = (() => {
     const total = effectiveLines.reduce((s, li) => s + (Number(li.invoice_amount) || 0), 0);

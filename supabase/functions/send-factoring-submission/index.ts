@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "../_shared/cors.ts";
-import { sendEmail, buildFromAddress, MAIL_DOMAIN } from "../_shared/resend.ts";
+import { sendEmail, buildFromAddress, buildReplyToAddress, MAIL_DOMAIN } from "../_shared/resend.ts";
 
 interface LineItem {
   document_id: string;
@@ -195,11 +195,54 @@ ${org?.name ?? "FireOps HQ"}`;
       <p>Thanks,<br/>${escapeHtml(org?.name ?? "FireOps HQ")}</p>
     </div>`;
 
+    // ----- Find or create a communication thread for this incident+factor -----
+    // Schedule sends are grouped per incident + factor recipient so replies
+    // from the factor stay attached to one conversation per incident. We use
+    // purpose='general' since the thread carries the schedule package, not the
+    // raw OF-286 itself.
+    const threadSubjectBase = `Factoring — ${incident.name ?? "Incident"} — ${factorCompany}`;
+    let { data: thread } = await service
+      .from("communication_threads")
+      .select("id, thread_token, subject")
+      .eq("organization_id", incident.organization_id)
+      .eq("incident_id", body.incident_id)
+      .eq("purpose", "general")
+      .ilike("subject", `Factoring — %`)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!thread) {
+      const threadToken = crypto.randomUUID().replace(/-/g, "");
+      const { data: newThread, error: tErr } = await service
+        .from("communication_threads")
+        .insert({
+          organization_id: incident.organization_id,
+          incident_id: body.incident_id,
+          purpose: "general",
+          subject: threadSubjectBase,
+          thread_token: threadToken,
+          status: "open",
+          created_by_user_id: userId,
+        })
+        .select("id, thread_token, subject")
+        .single();
+      if (tErr || !newThread) {
+        console.error("thread create error:", tErr);
+      } else {
+        thread = newThread;
+      }
+    }
+
+    const replyTo = thread ? buildReplyToAddress(thread.thread_token) : undefined;
+
     let resendId: string | null = null;
+    let sendError: string | null = null;
     try {
       const r = await sendEmail({
         from,
         to: [recipient],
+        reply_to: replyTo,
         subject,
         text: textBody,
         html: htmlBody,
@@ -208,8 +251,97 @@ ${org?.name ?? "FireOps HQ"}`;
       resendId = r.id;
     } catch (sendErr) {
       console.error("Resend send failed:", sendErr);
-      return json({ error: sendErr instanceof Error ? sendErr.message : "Send failed" }, 502);
+      sendError = sendErr instanceof Error ? sendErr.message : "Send failed";
     }
+
+    // Persist message + attachments into the thread so it shows up in the
+    // incident Messages inbox alongside shift tickets / OF-286 / demob threads.
+    let messageId: string | null = null;
+    if (thread) {
+      const { data: msg, error: msgErr } = await service
+        .from("messages")
+        .insert({
+          thread_id: thread.id,
+          organization_id: incident.organization_id,
+          direction: "out",
+          from_email: `${org?.email_handle ?? "noreply"}@${MAIL_DOMAIN}`,
+          from_name: org?.name ?? null,
+          to_emails: [recipient],
+          subject,
+          body_text: textBody,
+          body_html_sanitized: htmlBody,
+          resend_message_id: resendId,
+          sent_by_user_id: userId,
+          send_status: sendError ? "failed" : "sent",
+          send_error: sendError,
+          sent_at: sendError ? null : new Date().toISOString(),
+        })
+        .select("id")
+        .single();
+      if (msgErr) {
+        console.error("message insert error:", msgErr);
+      } else if (msg) {
+        messageId = msg.id;
+
+        // Copy attachments into communication-attachments bucket so the
+        // existing AttachmentChip UI can fetch + sign them.
+        const attachmentRows: Array<{
+          message_id: string;
+          organization_id: string;
+          storage_path: string;
+          file_name: string;
+          mime_type: string;
+          size_bytes: number;
+        }> = [];
+
+        const uploadAndRecord = async (
+          filename: string,
+          bytes: Uint8Array,
+          subdir: string,
+        ) => {
+          const path = `${incident.organization_id}/factoring/${msg.id}/${subdir}/${filename}`;
+          const { error: upErr } = await service.storage
+            .from("communication-attachments")
+            .upload(path, bytes, { contentType: "application/pdf", upsert: true });
+          if (upErr) {
+            console.warn("attachment upload failed:", filename, upErr);
+            return;
+          }
+          attachmentRows.push({
+            message_id: msg.id,
+            organization_id: incident.organization_id,
+            storage_path: path,
+            file_name: filename,
+            mime_type: "application/pdf",
+            size_bytes: bytes.byteLength,
+          });
+        };
+
+        await uploadAndRecord(`Schedule-${body.schedule_number}.pdf`, scheduleBytes, "schedule");
+        for (const d of orgDocs) {
+          const bytes = await downloadFromPublicUrl(d.file_url);
+          if (!bytes) continue;
+          await uploadAndRecord(d.file_name || `OF-286-${d.id}.pdf`, bytes, "of286");
+        }
+
+        if (attachmentRows.length) {
+          const { error: aErr } = await service
+            .from("message_attachments")
+            .insert(attachmentRows);
+          if (aErr) console.warn("message_attachments insert error:", aErr);
+        }
+
+        await service
+          .from("communication_threads")
+          .update({
+            last_message_at: new Date().toISOString(),
+            last_message_direction: "out",
+          })
+          .eq("id", thread.id);
+      }
+    }
+
+    if (sendError) return json({ error: sendError, message_id: messageId }, 502);
 
     // Record the submission and bump next_schedule_number
     const { data: inserted, error: insErr } = await service
@@ -245,7 +377,7 @@ ${org?.name ?? "FireOps HQ"}`;
       .update({ next_schedule_number: body.schedule_number + 1 })
       .eq("organization_id", incident.organization_id);
 
-    return json({ ok: true, submission: inserted, message_id: resendId });
+    return json({ ok: true, submission: inserted, message_id: resendId, thread_id: thread?.id ?? null });
   } catch (e) {
     console.error("send-factoring-submission error:", e);
     return json({ error: e instanceof Error ? e.message : "Internal error" }, 500);
