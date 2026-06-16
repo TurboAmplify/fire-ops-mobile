@@ -477,8 +477,12 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
       if (!withinRange(pe.date, rangeStart, rangeEnd)) return;
       const cm = nameMap.get(pe.operator_name.toLowerCase().trim());
       if (!cm) return;
-      const hours = Number(pe.total) || 0;
-      if (hours <= 0) return;
+      const hours = Math.max(0, Number(pe.total) || 0);
+      // NOTE: We intentionally do NOT skip rows where hours === 0. For daily-rate
+      // crew the date itself is what drives pay (shift count × daily rate), so a
+      // ticket that lists the person on a working day with hours not yet filled
+      // in still counts as one shift. For hourly crew, 0 hours contributes $0,
+      // so allowing the row through is harmless.
 
       let wkMap = buckets.get(cm.id);
       if (!wkMap) {
