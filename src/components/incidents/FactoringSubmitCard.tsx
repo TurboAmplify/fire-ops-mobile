@@ -226,7 +226,7 @@ export function FactoringSubmitCard({ incidentId }: Props) {
         signerTitle: settings.signer_title || "Owner",
         agreementDate: settings.agreement_date,
         reservePercent: totals.pct,
-        lineItems: lines,
+        lineItems: effectiveLines,
         signaturePngBlob: sigBlob,
       });
       const url = await uploadFactoringSchedulePdf(
