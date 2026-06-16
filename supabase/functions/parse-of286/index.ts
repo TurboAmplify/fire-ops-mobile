@@ -133,7 +133,9 @@ If any field is illegible or absent, return an empty string (or 0 for amounts). 
                   dispatch_office: { type: "string" },
                   account_debtor: { type: "string" },
                   invoice_number: { type: "string" },
-                  invoice_amount: { type: "number" },
+                  invoice_amount: { type: "number", description: "Single grand total from the form. Never a sum of subtotals." },
+                  invoice_amount_source_text: { type: "string", description: "Exact label next to the grand total on the form." },
+
                   invoice_date: { type: "string", description: "YYYY-MM-DD" },
                   agreement_number: { type: "string" },
                   resource_order_number: { type: "string" },
