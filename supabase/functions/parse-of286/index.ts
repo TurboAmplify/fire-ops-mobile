@@ -85,14 +85,18 @@ Return:
 - dispatch_office: The hiring/dispatch office that issued the resource order (e.g. "Bureau of Land Management", "Bureau of Indian Affairs", "U.S. Forest Service"). This becomes the SELLER on the Schedule.
 - account_debtor: The paying federal/state agency. Usually the same as dispatch_office; if the form lists a separate paying agency, prefer that.
 - invoice_number: The OF-286 invoice number. If absent, use the Resource Order Number, then the Agreement Number.
-- invoice_amount: The dollar total billed on this OF-286. Numeric value only (no $ or commas).
+- invoice_amount: The SINGLE GRAND TOTAL dollar amount billed on this OF-286. This is the final "Total" / "Grand Total" / "Total Amount Due" / "Amount Claimed" value, usually in the bottom-right summary box, on the Finance Officer certification line, or in Block 28. It is ONE number that appears verbatim on the form. DO NOT add subtotals, daily totals, line-item totals, or page totals together. DO NOT sum anything. If the form shows both a subtotal and a grand total, always take the GRAND TOTAL. Numeric value only (no $ or commas).
+- invoice_amount_source_text: The exact text/label next to the grand total on the form (e.g. "TOTAL AMOUNT CLAIMED", "Grand Total", "Total Due"). Used to verify you read the right field. Empty string if you cannot identify it.
 - invoice_date: Date the OF-286 was signed/finalized (YYYY-MM-DD). Use the Finance Officer signature date if present, otherwise the contractor signature date, otherwise the document date.
 - agreement_number: The contract/agreement number on the OF-286.
 - resource_order_number: The resource order number.
 - incident_name: Incident name.
 - incident_number: Incident number.
 
-If any field is illegible or absent, return an empty string. Never invent data.`;
+CRITICAL: invoice_amount must be a value that appears verbatim on the document as the single final total. Never compute, never sum, never combine two numbers. If you cannot find a clearly-labeled grand total, return 0.
+
+If any field is illegible or absent, return an empty string (or 0 for amounts). Never invent data.`;
+
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
