@@ -938,8 +938,9 @@ function SourceRowsDebug({
         if (isNaN(dt.getTime())) return;
         if (rangeStart && dt < rangeStart) return;
         if (rangeEnd && dt > rangeEnd) return;
-        const hours = Number(pe.total) || 0;
-        if (hours <= 0) return;
+        const hours = Math.max(0, Number(pe.total) || 0);
+        // Allow 0-hour rows through — they still represent a worked date
+        // (matters for daily-rate crew and for spotting missing time entries).
         out.push({
           ticketId: st.id,
           date: pe.date,
