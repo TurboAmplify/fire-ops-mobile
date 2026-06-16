@@ -267,7 +267,7 @@ export function FactoringSubmitCard({ incidentId }: Props) {
       toast.success("Factoring package sent");
       setSentConfirmation({
         scheduleNumber: pendingPdf.scheduleNumber,
-        documentCount: financeSigned.length,
+        documentCount: effectiveLines.length,
         recipient: settings?.factor_contact_email || "factoring contact",
       });
       setPreviewUrl(null);
