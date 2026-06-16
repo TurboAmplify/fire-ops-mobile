@@ -84,13 +84,41 @@ export function FactoringSubmitCard({ incidentId }: Props) {
 
   if (!enabled || !isAdmin) return null;
 
+  // Dedupe duplicate uploads of the same invoice (e.g. unsigned original +
+  // signed completed copy of the same OF-286). Two lines collapse to one when
+  // they share an invoice number, OR — when invoice numbers are blank — when
+  // they share the same (account_debtor, invoice_amount). The first occurrence
+  // is kept; later ones are flagged as duplicates and excluded from totals and
+  // the schedule submission.
+  const duplicateIds = useMemo(() => {
+    const seen = new Set<string>();
+    const dupes = new Set<string>();
+    for (const li of lines) {
+      const inv = (li.invoice_number || "").trim().toLowerCase();
+      const key = inv
+        ? `inv:${inv}`
+        : `fallback:${(li.account_debtor || "").trim().toLowerCase()}|${Number(li.invoice_amount) || 0}`;
+      // Only treat as duplicate if we have something to key on
+      const hasKey = inv || (li.account_debtor && Number(li.invoice_amount) > 0);
+      if (!hasKey) continue;
+      if (seen.has(key)) dupes.add(li.document_id);
+      else seen.add(key);
+    }
+    return dupes;
+  }, [lines]);
+
+  const effectiveLines = useMemo(
+    () => lines.filter((l) => !duplicateIds.has(l.document_id)),
+    [lines, duplicateIds],
+  );
+
   const totals = (() => {
-    const total = lines.reduce((s, li) => s + (Number(li.invoice_amount) || 0), 0);
+    const total = effectiveLines.reduce((s, li) => s + (Number(li.invoice_amount) || 0), 0);
     const pct = parseFloat(reservePercent) || 0;
-    return { total, reserve: total * (pct / 100), pct, count: lines.length };
+    return { total, reserve: total * (pct / 100), pct, count: effectiveLines.length };
   })();
 
-  const seller = lines.find((l) => l.account_debtor)?.account_debtor || "";
+  const seller = effectiveLines.find((l) => l.account_debtor)?.account_debtor || "";
 
   const settingsComplete =
     !!settings?.factor_contact_email &&
