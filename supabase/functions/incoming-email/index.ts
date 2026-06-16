@@ -128,18 +128,118 @@ Deno.serve(async (req) => {
           const fromAddr =
             extractEmail(payload.from ?? "")?.toLowerCase() ?? "unknown";
           const subj = (payload.subject ?? "(no subject)").trim();
-          // Try to reuse a recent general inbox thread on same subject; else open new.
-          const { data: existing } = await supabase
-            .from("communication_threads")
-            .select("id, organization_id, subject, incident_truck_id, incident_id, purpose")
-            .eq("organization_id", org.id)
-            .eq("purpose", "general")
-            .eq("subject", subj)
-            .order("last_message_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
+
+          // Try to map the sender to an active finance contact in this org.
+          // FOs don't reply with our reply+token address, so identify them
+          // by their email. If they're an active contact on an incident,
+          // bind the inbound thread to that incident/truck so OF-286 docs
+          // and notifications auto-attach.
+          let boundIncidentId: string | null = null;
+          let boundIncidentTruckId: string | null = null;
+          if (fromAddr && fromAddr !== "unknown") {
+            const { data: contacts } = await supabase
+              .from("incident_truck_finance_contacts")
+              .select(
+                "incident_id, incident_truck_id, email_override, is_active, updated_at, finance_officers(email)"
+              )
+              .eq("organization_id", org.id)
+              .eq("is_active", true);
+            const matches = (contacts ?? []).filter((c: any) => {
+              const e1 = (c.email_override ?? "").toLowerCase();
+              const e2 = (c.finance_officers?.email ?? "").toLowerCase();
+              return e1 === fromAddr || e2 === fromAddr;
+            });
+            if (matches.length > 0) {
+              const incidentIds = Array.from(
+                new Set(matches.map((m: any) => m.incident_id).filter(Boolean))
+              ) as string[];
+              let activeIds = new Set<string>();
+              if (incidentIds.length > 0) {
+                const { data: incs } = await supabase
+                  .from("incidents")
+                  .select("id, status")
+                  .in("id", incidentIds);
+                activeIds = new Set(
+                  (incs ?? [])
+                    .filter((i: any) => i.status === "active")
+                    .map((i: any) => i.id as string)
+                );
+              }
+              const ranked = matches
+                .filter((m: any) => m.incident_id)
+                .sort((a: any, b: any) => {
+                  const aA = activeIds.has(a.incident_id) ? 1 : 0;
+                  const bA = activeIds.has(b.incident_id) ? 1 : 0;
+                  if (aA !== bA) return bA - aA;
+                  return (
+                    new Date(b.updated_at).getTime() -
+                    new Date(a.updated_at).getTime()
+                  );
+                });
+              const chosen = ranked[0];
+              if (chosen) {
+                boundIncidentId = chosen.incident_id ?? null;
+                boundIncidentTruckId = chosen.incident_truck_id ?? null;
+              }
+            }
+          }
+
+          // Reuse an existing thread when possible: incident_truck+subject,
+          // then incident+subject, then generic inbox+subject.
+          let existing: any = null;
+          if (boundIncidentTruckId) {
+            const { data } = await supabase
+              .from("communication_threads")
+              .select("id, organization_id, subject, incident_truck_id, incident_id, purpose")
+              .eq("organization_id", org.id)
+              .eq("incident_truck_id", boundIncidentTruckId)
+              .eq("subject", subj)
+              .order("last_message_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            existing = data ?? null;
+          }
+          if (!existing && boundIncidentId) {
+            const { data } = await supabase
+              .from("communication_threads")
+              .select("id, organization_id, subject, incident_truck_id, incident_id, purpose")
+              .eq("organization_id", org.id)
+              .eq("incident_id", boundIncidentId)
+              .eq("subject", subj)
+              .order("last_message_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            existing = data ?? null;
+          }
+          if (!existing) {
+            let q = supabase
+              .from("communication_threads")
+              .select("id, organization_id, subject, incident_truck_id, incident_id, purpose")
+              .eq("organization_id", org.id)
+              .eq("purpose", "general")
+              .eq("subject", subj);
+            q = boundIncidentId ? q.eq("incident_id", boundIncidentId) : q.is("incident_id", null);
+            const { data } = await q
+              .order("last_message_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            existing = data ?? null;
+          }
 
           if (existing) {
+            // Patch existing thread with newly-resolved bindings.
+            const patch: Record<string, unknown> = {};
+            if (boundIncidentId && !existing.incident_id)
+              patch.incident_id = boundIncidentId;
+            if (boundIncidentTruckId && !existing.incident_truck_id)
+              patch.incident_truck_id = boundIncidentTruckId;
+            if (Object.keys(patch).length > 0) {
+              await supabase
+                .from("communication_threads")
+                .update(patch)
+                .eq("id", existing.id);
+              existing = { ...existing, ...patch };
+            }
             thread = existing;
           } else {
             const newToken = crypto.randomUUID().replace(/-/g, "");
@@ -154,6 +254,8 @@ Deno.serve(async (req) => {
                 last_message_at: new Date().toISOString(),
                 last_message_direction: "in",
                 unread_count: 0,
+                incident_id: boundIncidentId,
+                incident_truck_id: boundIncidentTruckId,
               })
               .select("id, organization_id, subject, incident_truck_id, incident_id, purpose")
               .single();
@@ -163,7 +265,7 @@ Deno.serve(async (req) => {
             thread = created ?? null;
           }
           console.log(
-            `incoming-email: routed by handle ${org.email_handle} from ${fromAddr}`,
+            `incoming-email: routed by handle ${org.email_handle} from ${fromAddr} incident=${boundIncidentId} truck=${boundIncidentTruckId}`,
           );
         }
       }
