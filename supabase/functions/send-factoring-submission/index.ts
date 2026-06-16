@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "../_shared/cors.ts";
-import { sendEmail, buildFromAddress, MAIL_DOMAIN } from "../_shared/resend.ts";
+import { sendEmail, buildFromAddress, buildReplyToAddress, MAIL_DOMAIN } from "../_shared/resend.ts";
 
 interface LineItem {
   document_id: string;
