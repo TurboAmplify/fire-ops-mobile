@@ -25,6 +25,19 @@ const loginPasswordSchema = z.string().min(1, "Enter your password").max(72, "Pa
 const GENERIC_AUTH_ERROR =
   "We couldn't sign you in. If you don't have an account, please contact your team administrator.";
 
+const isExistingAccountError = (error: any, data?: any) => {
+  const message = String(error?.message ?? "").toLowerCase();
+  const code = String(error?.code ?? "").toLowerCase();
+  return (
+    code === "user_already_exists" ||
+    message.includes("already registered") ||
+    message.includes("already exists") ||
+    // Supabase may return a user with no identities instead of an explicit
+    // error when sign-up is attempted for an existing email.
+    (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0)
+  );
+};
+
 export default function Login() {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
@@ -133,13 +146,44 @@ export default function Login() {
             data: { invite_code: normalizedCode },
           },
         });
+
+        const signInAndAcceptExistingInvite = async () => {
+          const { error: signInError } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
+          if (signInError) {
+            const signInMessage = String(signInError.message ?? "").toLowerCase();
+            if (signInMessage.includes("confirm")) {
+              throw new Error("This email already has an account. Please verify the email first, then sign in.");
+            }
+            throw new Error("This email already has an account. Sign in with that password, or use Forgot password to reset it.");
+          }
+
+          const { error: rpcError } = await supabase.rpc(
+            "accept_invite_by_code" as any,
+            { _code: normalizedCode } as any,
+          );
+          if (rpcError) {
+            throw new Error("You signed in, but the invite could not be attached. Please contact support.");
+          }
+          toast({ title: "Welcome aboard", description: "You've joined your team." });
+          window.location.assign("/");
+        };
+
         if (error) {
+          if (isExistingAccountError(error)) {
+            await signInAndAcceptExistingInvite();
+            return;
+          }
           if ((error as any).code === "weak_password" || (error as any).message?.toLowerCase?.().includes("weak")) {
             throw new Error("Please choose a stronger password that you haven't used elsewhere.");
           }
           // The DB trigger raises "Signup blocked" with a clear message;
           // surface a generic message to keep things Apple-safe.
           throw new Error(GENERIC_AUTH_ERROR);
+        }
+
+        if (isExistingAccountError(null, signUpData)) {
+          await signInAndAcceptExistingInvite();
+          return;
         }
 
         if (signUpData.session) {
