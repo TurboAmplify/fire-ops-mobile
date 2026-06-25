@@ -80,7 +80,10 @@ export default function OrgSetup() {
           .from("organization_invites")
           .select("id, organization_id, role, invite_code, invitee_name, organizations(name)")
           .eq("email", user.email ?? "")
-          .eq("status", "pending")
+          .in("status", ["pending", "accepted"])
+          .gt("expires_at", new Date().toISOString())
+          .order("created_at", { ascending: false })
+          .limit(1)
           .maybeSingle();
         if (cancelled) return;
         if (invite) {
