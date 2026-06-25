@@ -113,7 +113,13 @@ export default function Login() {
         const { data: signUpData, error } = await supabase.auth.signUp({
           email: cleanEmail,
           password,
-          options: { emailRedirectTo: window.location.origin },
+          options: {
+            emailRedirectTo: window.location.origin,
+            // Pass the invite code in user metadata so the DB signup-gate
+            // trigger can accept code-based signups (email doesn't need to
+            // match a pre-listed invite).
+            data: { invite_code: normalizedCode },
+          },
         });
         if (error) {
           // The DB trigger raises "Signup blocked" with a clear message;
