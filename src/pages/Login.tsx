@@ -110,6 +110,18 @@ export default function Login() {
           throw new Error("Enter the invite code your team admin gave you.");
         }
 
+        // Register this invite code against the user's email before auth
+        // signup. This makes the flow resilient on mobile/webviews even if the
+        // auth client drops metadata, because the backend signup gate can still
+        // find an email-specific invite.
+        const { error: prepareError } = await supabase.rpc(
+          "prepare_invite_signup" as any,
+          { _code: normalizedCode, _email: cleanEmail } as any,
+        );
+        if (prepareError) {
+          throw new Error("That invite code is invalid or expired. Please ask your team admin for a new code.");
+        }
+
         const { data: signUpData, error } = await supabase.auth.signUp({
           email: cleanEmail,
           password,
@@ -122,6 +134,9 @@ export default function Login() {
           },
         });
         if (error) {
+          if ((error as any).code === "weak_password" || (error as any).message?.toLowerCase?.().includes("weak")) {
+            throw new Error("Please choose a stronger password that you haven't used elsewhere.");
+          }
           // The DB trigger raises "Signup blocked" with a clear message;
           // surface a generic message to keep things Apple-safe.
           throw new Error(GENERIC_AUTH_ERROR);
@@ -192,7 +207,7 @@ export default function Login() {
             </p>
           </div>
 
-          {mode !== "forgot" && showAppleSignIn && (
+          {mode === "login" && showAppleSignIn && (
             <>
               <Button
                 type="button"
@@ -218,7 +233,7 @@ export default function Login() {
             </>
           )}
 
-          {mode !== "forgot" && !showAppleSignIn && (
+          {mode === "login" && !showAppleSignIn && (
             <p className="text-xs text-center text-muted-foreground -mt-2">
               Sign in with Apple is coming soon to the app — please use your email and password.
             </p>
