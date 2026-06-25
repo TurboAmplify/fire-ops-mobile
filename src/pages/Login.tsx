@@ -134,6 +134,7 @@ export default function Login() {
           );
           if (rpcError) throw rpcError;
           toast({ title: "Welcome aboard", description: "You've joined your team." });
+          window.location.assign("/");
           return;
         }
 

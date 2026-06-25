@@ -3556,6 +3556,14 @@ export type Database = {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
       }
+      link_profile_to_invited_crew_member: {
+        Args: {
+          _invitee_name: string
+          _organization_id: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
       list_org_members_with_identity: {
         Args: { _org_id: string }
         Returns: {
@@ -3567,6 +3575,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      normalize_org_member_role: { Args: { _role: string }; Returns: string }
       org_effective_status: { Args: { _org_id: string }; Returns: string }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }

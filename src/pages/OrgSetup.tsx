@@ -9,6 +9,13 @@ import { Loader2, Flame, ArrowRight, Users, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Navigate } from "react-router-dom";
 
+const normalizeInviteRole = (role: string | null | undefined) => {
+  if (role === "crew" || role === "member") return "crew_member";
+  if (role === "crew_boss") return "engine_boss";
+  if (role === "owner") return "admin";
+  return role ?? "crew_member";
+};
+
 /**
  * OrgSetup is now invite-only inside the iOS app.
  *
@@ -31,6 +38,7 @@ export default function OrgSetup() {
     id: string;
     organization_id: string;
     role: string;
+    invite_code?: string | null;
     orgName?: string;
     invitee_name?: string | null;
   } | null>(null);
@@ -54,9 +62,23 @@ export default function OrgSetup() {
     let cancelled = false;
     (async () => {
       try {
+        const metadataCode = String((user.user_metadata as any)?.invite_code ?? "")
+          .toUpperCase()
+          .replace(/[^A-Z0-9]/g, "");
+        if (metadataCode.length >= 6) {
+          const { error } = await supabase.rpc("accept_invite_by_code" as any, { _code: metadataCode } as any);
+          if (!error) {
+            if (!cancelled) {
+              toast({ title: "Joined organization", description: "You've been added to your team." });
+              await refetch();
+            }
+            return;
+          }
+        }
+
         const { data: invite } = await supabase
           .from("organization_invites")
-          .select("id, organization_id, role, invitee_name, organizations(name)")
+          .select("id, organization_id, role, invite_code, invitee_name, organizations(name)")
           .eq("email", user.email ?? "")
           .eq("status", "pending")
           .maybeSingle();
@@ -66,6 +88,7 @@ export default function OrgSetup() {
             id: invite.id,
             organization_id: invite.organization_id,
             role: invite.role,
+            invite_code: (invite as any).invite_code ?? null,
             invitee_name: (invite as any).invitee_name ?? null,
             orgName: (invite as any).organizations?.name,
           });
@@ -79,7 +102,7 @@ export default function OrgSetup() {
     return () => {
       cancelled = true;
     };
-  }, [user?.id, membership, authLoading, orgLoading, paLoading, impersonationLoading]);
+  }, [user?.id, membership, authLoading, orgLoading, paLoading, impersonationLoading, refetch, toast]);
 
   if (authLoading || orgLoading || paLoading || impersonationLoading || checkingInvite) {
     return (
@@ -99,23 +122,31 @@ export default function OrgSetup() {
     if (!pendingInvite || !user) return;
     setSubmitting(true);
     try {
-      const { error: memberError } = await supabase.from("organization_members").insert({
-        organization_id: pendingInvite.organization_id,
-        user_id: user.id,
-        role: pendingInvite.role,
-      });
-      if (memberError) throw memberError;
-      await supabase.from("organization_invites").update({ status: "accepted" }).eq("id", pendingInvite.id);
+      const { error } = await supabase.rpc("accept_invite_by_code" as any, {
+        _code: pendingInvite.invite_code ?? (user.user_metadata as any)?.invite_code ?? "",
+      } as any);
 
-      const inviteName = pendingInvite.invitee_name?.trim();
-      if (inviteName) {
-        const { data: prof } = await supabase
-          .from("profiles")
-          .select("full_name")
-          .eq("id", user.id)
-          .maybeSingle();
-        if (!prof?.full_name || prof.full_name.trim().length === 0) {
-          await supabase.from("profiles").update({ full_name: inviteName }).eq("id", user.id);
+      // If this is an older email-matched invite with no metadata code, fall
+      // back to the same normalized membership insert used by the RPC.
+      if (error) {
+        const { error: memberError } = await supabase.from("organization_members").insert({
+          organization_id: pendingInvite.organization_id,
+          user_id: user.id,
+          role: normalizeInviteRole(pendingInvite.role),
+        });
+        if (memberError) throw memberError;
+        await supabase.from("organization_invites").update({ status: "accepted" }).eq("id", pendingInvite.id);
+
+        const inviteName = pendingInvite.invitee_name?.trim();
+        if (inviteName) {
+          const { data: prof } = await supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("id", user.id)
+            .maybeSingle();
+          if (!prof?.full_name || prof.full_name.trim().length === 0) {
+            await supabase.from("profiles").update({ full_name: inviteName }).eq("id", user.id);
+          }
         }
       }
 

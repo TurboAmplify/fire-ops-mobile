@@ -49,11 +49,16 @@ import { FactoringSettingsCard } from "@/components/settings/FactoringSettingsCa
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "Admin",
+  engine_boss: "Engine Boss",
+  crew_member: "Crew",
+  // Legacy invite/member rows from before role normalization.
   crew: "Crew",
 };
 
 const ROLE_ICONS: Record<string, React.ElementType> = {
   admin: Shield,
+  engine_boss: Flame,
+  crew_member: Wrench,
   crew: Wrench,
 };
 
@@ -74,7 +79,7 @@ export default function OrgSettings() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
-  const [inviteRole, setInviteRole] = useState("crew");
+  const [inviteRole, setInviteRole] = useState("crew_member");
   const [editingName, setEditingName] = useState(false);
   const [orgName, setOrgName] = useState("");
   const [editingHandle, setEditingHandle] = useState(false);
@@ -259,7 +264,7 @@ export default function OrgSettings() {
       });
       setInviteEmail("");
       setInviteName("");
-      setInviteRole("crew");
+      setInviteRole("crew_member");
       setInviteOpen(false);
       queryClient.invalidateQueries({ queryKey: ["org-invites", orgId] });
       refetchOrg();
@@ -634,13 +639,16 @@ export default function OrgSettings() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="crew">Crew</SelectItem>
+                      <SelectItem value="engine_boss">Engine Boss</SelectItem>
+                      <SelectItem value="crew_member">Crew</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
                     {inviteRole === "admin"
                       ? "Full access to manage everything in the organization."
-                      : "Restricted to trucks an admin grants them access to."}
+                      : inviteRole === "engine_boss"
+                        ? "Can manage incidents, trucks, crew assignments, and shift tickets."
+                        : "Restricted to trucks an admin grants them access to."}
                   </p>
                 </div>
                 <Button
