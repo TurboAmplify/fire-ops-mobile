@@ -221,10 +221,7 @@ export function RedCardEditor({ crewMemberId, memberName, onClose }: Props) {
                   onChange={(e) => setForm({ ...form, rt130_includes_190: e.target.checked })} />
                 Includes 190 module
               </label>
-              <div className="grid grid-cols-2 gap-2">
-                <Input label="Date" type="date" value={form.rt130_date} onChange={(v) => setForm({ ...form, rt130_date: v })} />
-                <Input label="Expiration" type="date" value={form.rt130_expiration_date} onChange={(v) => setForm({ ...form, rt130_expiration_date: v })} />
-              </div>
+              <Input label="Expiration" type="date" value={form.rt130_expiration_date} onChange={(v) => setForm({ ...form, rt130_expiration_date: v })} />
             </Section>
 
             <Section title="Validity">
