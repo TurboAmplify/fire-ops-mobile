@@ -143,16 +143,21 @@ html.capacitor-native {
     @apply border-border;
   }
 
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
   html {
     overflow-x: hidden;
     overflow-y: auto;
   }
 
   body {
+    min-height: 100vh;
     overflow-x: hidden;
-  }
-
-  body {
+    overflow-y: auto;
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     -webkit-tap-highlight-color: transparent;

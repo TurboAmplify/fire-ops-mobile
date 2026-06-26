@@ -26,7 +26,7 @@ export function AppShell({ children, title, headerRight, showBack, onBack }: App
   const showBackdrop = variant !== "hero";
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-background">
+    <div className="relative flex min-h-dvh flex-col bg-background">
       {showBackdrop && (
         <div
           aria-hidden
@@ -34,7 +34,7 @@ export function AppShell({ children, title, headerRight, showBack, onBack }: App
           style={{ backgroundImage: `url(${bgSrc})` }}
         />
       )}
-      <div className="relative z-10 flex min-h-screen flex-col">
+      <div className="relative z-10 flex min-h-dvh flex-col">
       {title ? (
         <>
           <header className={`fixed top-0 left-0 right-0 z-50 pt-[var(--app-safe-top)] ${
@@ -74,7 +74,9 @@ export function AppShell({ children, title, headerRight, showBack, onBack }: App
       )}
       <OfflineBanner />
       <TrialStatusBanner />
-      <main className="flex-1 pb-20">{children}</main>
+      <main className="flex-1 pb-24">
+        {children}
+      </main>
       <BottomNav />
       </div>
     </div>

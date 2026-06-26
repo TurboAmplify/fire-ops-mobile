@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { X, Pencil, Phone, User, StickyNote, Loader2, Maximize2 } from "lucide-react";
 import { useCrewMember } from "@/hooks/useCrewMembers";
 import { useOrganization } from "@/hooks/useOrganization";
@@ -30,16 +30,6 @@ export function CrewMemberDetail({ memberId, onClose, onEdit }: Props) {
   const { data: card } = useRedCardByMember(redCardsEnabled ? memberId : null);
   const [zoomed, setZoomed] = useState(false);
 
-
-  // Lock body scroll while sheet is open
-  useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, []);
-
   const photoUrl = (member as any)?.profile_photo_url as string | null | undefined;
   const phone = member?.phone ?? null;
   const notes = (member as any)?.notes as string | null | undefined;
@@ -50,7 +40,7 @@ export function CrewMemberDetail({ memberId, onClose, onEdit }: Props) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg max-h-[92vh] rounded-t-2xl bg-background animate-in slide-in-from-bottom flex flex-col"
+        className="w-full max-w-lg max-h-[92vh] rounded-t-2xl bg-background animate-in slide-in-from-bottom flex min-h-0 flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -79,7 +69,7 @@ export function CrewMemberDetail({ memberId, onClose, onEdit }: Props) {
 
         {/* Body */}
         <div
-          className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
+          className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4"
           style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
         >
           {isLoading || !member ? (
