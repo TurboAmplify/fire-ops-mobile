@@ -19,6 +19,7 @@ const passwordSchema = z
   .min(8, "Password must be at least 8 characters")
   .max(72, "Password too long");
 const loginPasswordSchema = z.string().min(1, "Enter your password").max(72, "Password too long");
+const fullNameSchema = z.string().trim().min(2, "Enter your first and last name").max(120, "Name too long");
 
 // Generic error copy — never references billing, marketing, or external sites.
 // Apple-safe: app shows no path to create a paid account.
@@ -46,6 +47,7 @@ export default function Login() {
   // There is intentionally no "create new organization" path in the app.
   const [mode, setMode] = useState<"login" | "join" | "forgot">("login");
   const [inviteCode, setInviteCode] = useState("");
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -107,6 +109,13 @@ export default function Login() {
         }
       }
 
+      const cleanFullName = (() => {
+        if (mode !== "join") return "";
+        const result = fullNameSchema.safeParse(fullName);
+        if (!result.success) throw new Error(result.error.issues[0]?.message ?? "Enter your name");
+        return result.data;
+      })();
+
       if (mode === "forgot") {
         const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
           redirectTo: `${window.location.origin}/reset-password`,
@@ -129,7 +138,7 @@ export default function Login() {
         // find an email-specific invite.
         const { error: prepareError } = await supabase.rpc(
           "prepare_invite_signup" as any,
-          { _code: normalizedCode, _email: cleanEmail } as any,
+          { _code: normalizedCode, _email: cleanEmail, _invitee_name: cleanFullName } as any,
         );
         if (prepareError) {
           throw new Error("That invite code is invalid or expired. Please ask your team admin for a new code.");
@@ -144,6 +153,8 @@ export default function Login() {
             // trigger can accept code-based signups (email doesn't need to
             // match a pre-listed invite).
             data: {
+              full_name: cleanFullName,
+              name: cleanFullName,
               invite_code: normalizedCode,
               inviteCode: normalizedCode,
               code: normalizedCode,
@@ -314,6 +325,21 @@ export default function Login() {
                   required
                   minLength={mode === "join" ? 8 : 1}
                   autoComplete={mode === "join" ? "new-password" : "current-password"}
+                  className="h-12 rounded-xl bg-secondary border-border text-[15px] placeholder:text-muted-foreground/50"
+                />
+              </div>
+            )}
+
+            {mode === "join" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="full-name" className="text-xs font-medium text-muted-foreground">Full Name</Label>
+                <Input
+                  id="full-name"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="First Last"
+                  required
+                  autoComplete="name"
                   className="h-12 rounded-xl bg-secondary border-border text-[15px] placeholder:text-muted-foreground/50"
                 />
               </div>
