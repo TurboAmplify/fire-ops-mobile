@@ -58,7 +58,7 @@ export function RedCardCard({ card, memberName }: Props) {
 
           <dl className="grid grid-cols-1 gap-y-1.5 text-[12px] sm:text-sm">
             <Field label="Name" value={memberName} />
-            <Field label="Certifying Entity" value={card.card_id} />
+            <Field label="Certifying Entity" value={card.card_id || card.agency} />
             <Field label="Primary Position" value={card.primary_position} />
           </dl>
         </div>
