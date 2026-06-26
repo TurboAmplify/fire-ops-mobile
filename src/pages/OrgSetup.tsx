@@ -87,6 +87,20 @@ export default function OrgSetup() {
           .maybeSingle();
         if (cancelled) return;
         if (invite) {
+          const code = String((invite as any).invite_code ?? "")
+            .toUpperCase()
+            .replace(/[^A-Z0-9]/g, "");
+          if (code.length >= 6) {
+            const { error } = await supabase.rpc("accept_invite_by_code" as any, { _code: code } as any);
+            if (!error) {
+              if (!cancelled) {
+                toast({ title: "Joined organization", description: "You've been added to your team." });
+                await refetch();
+              }
+              return;
+            }
+          }
+
           setPendingInvite({
             id: invite.id,
             organization_id: invite.organization_id,
