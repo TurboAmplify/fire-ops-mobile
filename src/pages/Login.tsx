@@ -143,7 +143,11 @@ export default function Login() {
             // Pass the invite code in user metadata so the DB signup-gate
             // trigger can accept code-based signups (email doesn't need to
             // match a pre-listed invite).
-            data: { invite_code: normalizedCode },
+            data: {
+              invite_code: normalizedCode,
+              inviteCode: normalizedCode,
+              code: normalizedCode,
+            },
           },
         });
 

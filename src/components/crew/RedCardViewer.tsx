@@ -14,23 +14,20 @@ interface Props {
  * returns the user to the crew profile, not all the way back to the list.
  */
 export function RedCardViewer({ card, memberName, onClose }: Props) {
-  // Lock scroll + Esc to close
+  // Esc to close
   useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => {
-      document.body.style.overflow = prev;
       window.removeEventListener("keydown", onKey);
     };
   }, [onClose]);
 
   return (
     <div
-      className="fixed inset-0 z-[70] bg-background flex flex-col animate-in fade-in"
+      className="fixed inset-0 z-[70] bg-background flex min-h-0 flex-col animate-in fade-in"
       role="dialog"
       aria-modal="true"
       aria-label={`${memberName} Red Card`}
@@ -62,7 +59,7 @@ export function RedCardViewer({ card, memberName, onClose }: Props) {
 
       {/* Body */}
       <div
-        className="flex-1 overflow-y-auto"
+        className="flex-1 min-h-0 overflow-y-auto"
         style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
       >
         <div className="mx-auto w-full max-w-lg p-4">
