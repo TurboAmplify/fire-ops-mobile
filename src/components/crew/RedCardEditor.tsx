@@ -205,12 +205,23 @@ export function RedCardEditor({ crewMemberId, memberName, onClose }: Props) {
               <Input label="Primary Position" value={form.primary_position} onChange={(v) => setForm({ ...form, primary_position: v })} />
             </Section>
 
-            <Section title="Fitness">
-              <Select label="Work Capacity Test" value={form.work_capacity_test} options={WORK_CAPACITY_OPTIONS}
-                onChange={(v) => setForm({ ...form, work_capacity_test: v })} />
-              <Input label="Fitness Test Date" type="date" value={form.fitness_test_date} onChange={(v) => setForm({ ...form, fitness_test_date: v })} />
-              <Select label="RT-130 Refresher" value={form.rt130_refresher_status} options={RT130_STATUS_OPTIONS}
-                onChange={(v) => setForm({ ...form, rt130_refresher_status: v })} />
+            <Section title="Fitness/Pack Test">
+              <div className="grid grid-cols-2 gap-2">
+                <Input label="Date" type="date" value={form.fitness_test_date} onChange={(v) => setForm({ ...form, fitness_test_date: v })} />
+                <Input label="Expiration" type="date" value={form.fitness_test_expiration_date} onChange={(v) => setForm({ ...form, fitness_test_expiration_date: v })} />
+              </div>
+            </Section>
+
+            <Section title={form.rt130_includes_190 ? "RT-130/190" : "RT-130 Refresher"}>
+              <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                <input type="checkbox" checked={form.rt130_includes_190}
+                  onChange={(e) => setForm({ ...form, rt130_includes_190: e.target.checked })} />
+                Includes 190 module
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <Input label="Date" type="date" value={form.rt130_date} onChange={(v) => setForm({ ...form, rt130_date: v })} />
+                <Input label="Expiration" type="date" value={form.rt130_expiration_date} onChange={(v) => setForm({ ...form, rt130_expiration_date: v })} />
+              </div>
             </Section>
 
             <Section title="Validity">
