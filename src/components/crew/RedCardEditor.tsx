@@ -142,6 +142,9 @@ export function RedCardEditor({ crewMemberId, memberName, onClose }: Props) {
         ...form,
         // empty-string dates → null
         fitness_test_date: form.fitness_test_date || null,
+        fitness_test_expiration_date: form.fitness_test_expiration_date || null,
+        rt130_date: form.rt130_date || null,
+        rt130_expiration_date: form.rt130_expiration_date || null,
         issue_date: form.issue_date || null,
         review_expiration_date: form.review_expiration_date || null,
         qualifications: quals as any,
