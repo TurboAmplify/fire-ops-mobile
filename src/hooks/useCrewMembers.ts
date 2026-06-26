@@ -18,7 +18,9 @@ export function useCrewMembers() {
     queryKey: ["crew_members", orgId],
     queryFn: () => fetchCrewMembers(orgId),
     enabled: !!orgId,
-    staleTime: 1000 * 60 * 10, // 10 min — Phase 1 cache extension
+    staleTime: 1000 * 30,
+    refetchOnMount: "always",
+    refetchOnReconnect: "always",
     gcTime: 1000 * 60 * 60 * 24 * 7, // 7 days — survive multi-day offline
   });
 }
@@ -28,7 +30,9 @@ export function useCrewMember(id: string) {
     queryKey: ["crew_members", id],
     queryFn: () => fetchCrewMember(id),
     enabled: !!id,
-    staleTime: 1000 * 60 * 10,
+    staleTime: 1000 * 30,
+    refetchOnMount: "always",
+    refetchOnReconnect: "always",
     gcTime: 1000 * 60 * 60 * 24 * 7,
   });
 }
