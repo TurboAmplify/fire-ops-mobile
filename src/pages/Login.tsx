@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { logError } from "@/lib/error-tracking";
 
 import { useAppBackground } from "@/hooks/useAppBackground";
 
@@ -224,6 +225,13 @@ export default function Login() {
         }
       }
     } catch (err: any) {
+      if (mode === "join") {
+        void logError({
+          route: "/login:join",
+          message: `Invite join failed: ${err?.message ?? "Unknown error"}`,
+          stack: err?.stack ?? null,
+        });
+      }
       toast({
         title: "Sign in",
         description: err.message || GENERIC_AUTH_ERROR,
