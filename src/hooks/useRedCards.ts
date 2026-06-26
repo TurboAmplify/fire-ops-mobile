@@ -23,6 +23,9 @@ export function useRedCardByMember(crewMemberId: string | null | undefined) {
     queryKey: ["red_cards", "by_member", crewMemberId],
     queryFn: () => fetchRedCardByMember(crewMemberId!),
     enabled: !!crewMemberId,
+    staleTime: 1000 * 30,
+    refetchOnMount: "always",
+    refetchOnReconnect: "always",
   });
 }
 
@@ -32,6 +35,9 @@ export function useMyRedCard() {
     queryKey: ["red_cards", "mine", user?.id],
     queryFn: () => fetchRedCardForUser(user!.id),
     enabled: !!user?.id,
+    staleTime: 1000 * 30,
+    refetchOnMount: "always",
+    refetchOnReconnect: "always",
   });
 }
 
