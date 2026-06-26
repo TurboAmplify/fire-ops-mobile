@@ -3,7 +3,7 @@ import { Loader2, X, Camera, FileText, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useUpsertRedCard, useDeleteRedCard, useRedCardByMember } from "@/hooks/useRedCards";
-import { uploadRedCardFile, type Qualification, WORK_CAPACITY_OPTIONS, RT130_STATUS_OPTIONS } from "@/services/red-cards";
+import { uploadRedCardFile, type Qualification } from "@/services/red-cards";
 import { parseRedCardAI } from "@/services/ai-parsing";
 
 interface Props {
