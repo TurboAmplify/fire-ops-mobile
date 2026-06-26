@@ -126,7 +126,6 @@ export async function generateRedCardsPdfBlob(
     const gridFields: [string, string][] = [
       ["Fitness/Pack Test Date", fmtDate(card.fitness_test_date)],
       ["Fitness/Pack Expiration", fmtDate((card as any).fitness_test_expiration_date)],
-      [`${rt130Label} Date`, fmtDate((card as any).rt130_date)],
       [`${rt130Label} Expiration`, fmtDate((card as any).rt130_expiration_date)],
       ["Issue Date", fmtDate(card.issue_date)],
       ["Review / Expiration", fmtDate(card.review_expiration_date)],
