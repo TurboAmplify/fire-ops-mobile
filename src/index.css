@@ -143,7 +143,12 @@ html.capacitor-native {
     @apply border-border;
   }
 
-  html, body {
+  html {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  body {
     overflow-x: hidden;
   }
 
