@@ -2417,6 +2417,7 @@ export type Database = {
           emergency_contact_phone: string | null
           emergency_contact_relation: string | null
           fitness_test_date: string | null
+          fitness_test_expiration_date: string | null
           id: string
           issue_date: string | null
           organization_id: string
@@ -2426,6 +2427,9 @@ export type Database = {
           restrictions_notes: string | null
           return_address: string | null
           review_expiration_date: string | null
+          rt130_date: string | null
+          rt130_expiration_date: string | null
+          rt130_includes_190: boolean
           rt130_refresher_status: string | null
           signer_name: string | null
           signer_title: string | null
@@ -2442,6 +2446,7 @@ export type Database = {
           emergency_contact_phone?: string | null
           emergency_contact_relation?: string | null
           fitness_test_date?: string | null
+          fitness_test_expiration_date?: string | null
           id?: string
           issue_date?: string | null
           organization_id: string
@@ -2451,6 +2456,9 @@ export type Database = {
           restrictions_notes?: string | null
           return_address?: string | null
           review_expiration_date?: string | null
+          rt130_date?: string | null
+          rt130_expiration_date?: string | null
+          rt130_includes_190?: boolean
           rt130_refresher_status?: string | null
           signer_name?: string | null
           signer_title?: string | null
@@ -2467,6 +2475,7 @@ export type Database = {
           emergency_contact_phone?: string | null
           emergency_contact_relation?: string | null
           fitness_test_date?: string | null
+          fitness_test_expiration_date?: string | null
           id?: string
           issue_date?: string | null
           organization_id?: string
@@ -2476,6 +2485,9 @@ export type Database = {
           restrictions_notes?: string | null
           return_address?: string | null
           review_expiration_date?: string | null
+          rt130_date?: string | null
+          rt130_expiration_date?: string | null
+          rt130_includes_190?: boolean
           rt130_refresher_status?: string | null
           signer_name?: string | null
           signer_title?: string | null

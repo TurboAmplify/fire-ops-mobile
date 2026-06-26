@@ -67,9 +67,10 @@ export function RedCardCard({ card, memberName }: Props) {
         <div className="mx-3 border-t border-[hsl(var(--red-card-accent))]/40 sm:mx-4" />
 
         <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 p-3 text-[12px] sm:text-sm sm:p-4">
-          <Field label="Work Capacity Test" value={card.work_capacity_test} />
-          <Field label="Fitness Test Date" value={formatDate(card.fitness_test_date)} />
-          <Field label="RT-130 Refresher" value={card.rt130_refresher_status} />
+          <Field label="Fitness/Pack Test Date" value={formatDate(card.fitness_test_date)} />
+          <Field label="Fitness/Pack Expiration" value={formatDate((card as any).fitness_test_expiration_date)} />
+          <Field label={(card as any).rt130_includes_190 ? "RT-130/190 Date" : "RT-130 Refresher Date"} value={formatDate((card as any).rt130_date)} />
+          <Field label={(card as any).rt130_includes_190 ? "RT-130/190 Expiration" : "RT-130 Refresher Expiration"} value={formatDate((card as any).rt130_expiration_date)} />
           <Field label="Issue Date" value={formatDate(card.issue_date)} />
           <Field label="Review / Expiration" value={formatDate(card.review_expiration_date)} />
         </dl>

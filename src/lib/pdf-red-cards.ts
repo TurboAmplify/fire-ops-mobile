@@ -122,10 +122,12 @@ export async function generateRedCardsPdfBlob(
     // Lower 2-col grid
     let gy = y + photoH + 22;
     const colW = contentW / 2;
+    const rt130Label = (card as any).rt130_includes_190 ? "RT-130/190" : "RT-130 Refresher";
     const gridFields: [string, string][] = [
-      ["Work Capacity Test", card.work_capacity_test || "—"],
-      ["Fitness Test Date", fmtDate(card.fitness_test_date)],
-      ["RT-130 Refresher", card.rt130_refresher_status || "—"],
+      ["Fitness/Pack Test Date", fmtDate(card.fitness_test_date)],
+      ["Fitness/Pack Expiration", fmtDate((card as any).fitness_test_expiration_date)],
+      [`${rt130Label} Date`, fmtDate((card as any).rt130_date)],
+      [`${rt130Label} Expiration`, fmtDate((card as any).rt130_expiration_date)],
       ["Issue Date", fmtDate(card.issue_date)],
       ["Review / Expiration", fmtDate(card.review_expiration_date)],
     ];
