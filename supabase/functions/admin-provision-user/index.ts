@@ -20,28 +20,28 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Try create first
+    // Check existence first (admin updates bypass HIBP; admin creates do not in some configs)
+    const { data: list, error: listErr } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    if (listErr) throw listErr;
+    const existing = list.users.find((u) => (u.email ?? "").toLowerCase() === String(email).toLowerCase());
+
+    if (existing) {
+      const { data: updated, error: updErr } = await supabase.auth.admin.updateUserById(existing.id, {
+        password,
+        email_confirm: true,
+        user_metadata: full_name ? { ...(existing.user_metadata ?? {}), full_name, name: full_name } : existing.user_metadata,
+      });
+      if (updErr) throw updErr;
+      return new Response(JSON.stringify({ ok: true, mode: "updated", user: { id: updated.user?.id, email: updated.user?.email } }), { headers: corsHeaders });
+    }
+
     const { data: created, error: createErr } = await supabase.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
       user_metadata: full_name ? { full_name, name: full_name } : undefined,
     });
-
-    if (createErr) {
-      // If already exists, look up and update password
-      const { data: list, error: listErr } = await supabase.auth.admin.listUsers();
-      if (listErr) throw listErr;
-      const existing = list.users.find((u) => (u.email ?? "").toLowerCase() === String(email).toLowerCase());
-      if (!existing) throw createErr;
-      const { data: updated, error: updErr } = await supabase.auth.admin.updateUserById(existing.id, {
-        password,
-        email_confirm: true,
-      });
-      if (updErr) throw updErr;
-      return new Response(JSON.stringify({ ok: true, mode: "updated", user: { id: updated.user?.id, email: updated.user?.email } }), { headers: corsHeaders });
-    }
-
+    if (createErr) throw createErr;
     return new Response(JSON.stringify({ ok: true, mode: "created", user: { id: created.user?.id, email: created.user?.email } }), { headers: corsHeaders });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: corsHeaders });
