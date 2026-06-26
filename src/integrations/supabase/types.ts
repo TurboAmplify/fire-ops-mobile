@@ -3589,10 +3589,12 @@ export type Database = {
       }
       normalize_org_member_role: { Args: { _role: string }; Returns: string }
       org_effective_status: { Args: { _org_id: string }; Returns: string }
-      prepare_invite_signup: {
-        Args: { _code: string; _email: string }
-        Returns: string
-      }
+      prepare_invite_signup:
+        | { Args: { _code: string; _email: string }; Returns: string }
+        | {
+            Args: { _code: string; _email: string; _invitee_name: string }
+            Returns: string
+          }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       suggest_org_email_handle: { Args: { _name: string }; Returns: string }
