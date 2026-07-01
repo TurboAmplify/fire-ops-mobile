@@ -54,27 +54,27 @@ export function useFactoringDashboard() {
     enabled: !!orgId,
     staleTime: 30_000,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("factoring_submissions" as any)
-        .select(
-          "id, incident_id, schedule_number, total_amount, reserve_amount, account_count, submitted_at, reserve_released_at",
-        )
-        .eq("organization_id", orgId!)
-        .order("submitted_at", { ascending: false });
-      if (error) throw error;
-
-      const raw = (data as any[]) ?? [];
-      const incidentIds = Array.from(new Set(raw.map((r) => r.incident_id).filter(Boolean)));
-      const incidentMap = new Map<string, { name: string; start_date: string | null }>();
-      if (incidentIds.length) {
-        const { data: incData, error: incErr } = await supabase
+      const [{ data, error }, { data: allIncidents, error: incAllErr }] = await Promise.all([
+        supabase
+          .from("factoring_submissions" as any)
+          .select(
+            "id, incident_id, schedule_number, total_amount, reserve_amount, account_count, submitted_at, reserve_released_at",
+          )
+          .eq("organization_id", orgId!)
+          .order("submitted_at", { ascending: false }),
+        supabase
           .from("incidents")
           .select("id, name, start_date")
-          .in("id", incidentIds);
-        if (incErr) throw incErr;
-        for (const i of (incData as any[]) ?? []) {
-          incidentMap.set(i.id, { name: i.name, start_date: i.start_date ?? null });
-        }
+          .eq("organization_id", orgId!)
+          .order("start_date", { ascending: false, nullsFirst: false }),
+      ]);
+      if (error) throw error;
+      if (incAllErr) throw incAllErr;
+
+      const raw = (data as any[]) ?? [];
+      const incidentMap = new Map<string, { name: string; start_date: string | null }>();
+      for (const i of (allIncidents as any[]) ?? []) {
+        incidentMap.set(i.id, { name: i.name, start_date: i.start_date ?? null });
       }
 
       const rows: DashboardSubmission[] = raw.map((r) => {
@@ -97,8 +97,18 @@ export function useFactoringDashboard() {
         };
       });
 
-      // Group by incident
+      // Seed every org incident so admin sees full status
       const byIncident = new Map<string, IncidentGroup>();
+      for (const [id, inc] of incidentMap.entries()) {
+        byIncident.set(id, {
+          incident_id: id,
+          incident_name: inc.name,
+          incident_start_date: inc.start_date,
+          incident_end_date: null,
+          submissions: [],
+          totals: { submitted: 0, advanced: 0, reserveHeld: 0, released: 0, count: 0 },
+        });
+      }
       for (const s of rows) {
         let g = byIncident.get(s.incident_id);
         if (!g) {
@@ -120,9 +130,17 @@ export function useFactoringDashboard() {
         else g.totals.reserveHeld += s.reserve_amount;
       }
 
-      const groups = Array.from(byIncident.values()).sort(
-        (a, b) => b.totals.submitted - a.totals.submitted,
-      );
+      const groups = Array.from(byIncident.values()).sort((a, b) => {
+        // Incidents with submissions first (by total desc), then by start date desc
+        if (a.totals.count !== b.totals.count) {
+          if (a.totals.count === 0) return 1;
+          if (b.totals.count === 0) return -1;
+        }
+        if (a.totals.submitted !== b.totals.submitted) return b.totals.submitted - a.totals.submitted;
+        const ad = a.incident_start_date ? Date.parse(a.incident_start_date) : 0;
+        const bd = b.incident_start_date ? Date.parse(b.incident_start_date) : 0;
+        return bd - ad;
+      });
 
       const totals = rows.reduce(
         (acc, s) => {
