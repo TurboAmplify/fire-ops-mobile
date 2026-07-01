@@ -65,9 +65,9 @@ export default function FactoringDashboard() {
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/15">
                 <Receipt className="h-5 w-5 text-primary" />
               </div>
-              <p className="mt-3 text-sm font-medium">No factoring submissions yet</p>
+              <p className="mt-3 text-sm font-medium">No incidents yet</p>
               <p className="mt-1 text-[12px] text-muted-foreground">
-                Submit a Schedule of Accounts from an incident to see it here.
+                Create an incident to start tracking factoring status.
               </p>
               <Button size="sm" variant="outline" className="mt-4" onClick={() => navigate("/incidents")}>
                 Go to Incidents
