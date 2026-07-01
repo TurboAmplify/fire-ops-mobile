@@ -57,7 +57,7 @@ export function useFactoringDashboard() {
       const { data, error } = await supabase
         .from("factoring_submissions" as any)
         .select(
-          "id, incident_id, schedule_number, total_amount, reserve_amount, account_count, submitted_at, reserve_released_at, incidents:incident_id(name, start_date, end_date)",
+          "id, incident_id, schedule_number, total_amount, reserve_amount, account_count, submitted_at, reserve_released_at, incidents:incident_id(name, start_date)",
         )
         .eq("organization_id", orgId!)
         .order("submitted_at", { ascending: false });
@@ -71,7 +71,7 @@ export function useFactoringDashboard() {
           incident_id: r.incident_id,
           incident_name: r.incidents?.name ?? "Unknown incident",
           incident_start_date: r.incidents?.start_date ?? null,
-          incident_end_date: r.incidents?.end_date ?? null,
+          incident_end_date: null,
           schedule_number: r.schedule_number,
           total_amount: total,
           reserve_amount: reserve,
