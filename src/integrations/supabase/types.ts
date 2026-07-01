@@ -806,6 +806,8 @@ export type Database = {
           recipient_name: string | null
           reserve_amount: number
           reserve_percent: number
+          reserve_released_at: string | null
+          reserve_released_by: string | null
           schedule_number: number
           seller: string | null
           submitted_at: string
@@ -828,6 +830,8 @@ export type Database = {
           recipient_name?: string | null
           reserve_amount?: number
           reserve_percent?: number
+          reserve_released_at?: string | null
+          reserve_released_by?: string | null
           schedule_number: number
           seller?: string | null
           submitted_at?: string
@@ -850,6 +854,8 @@ export type Database = {
           recipient_name?: string | null
           reserve_amount?: number
           reserve_percent?: number
+          reserve_released_at?: string | null
+          reserve_released_by?: string | null
           schedule_number?: number
           seller?: string | null
           submitted_at?: string

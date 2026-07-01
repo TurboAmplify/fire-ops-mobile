@@ -1,12 +1,13 @@
 import { AppShell } from "@/components/AppShell";
 import { useNavigate } from "react-router-dom";
-import { Settings, ChevronRight, Shield, BarChart3, ClipboardList, ShieldCheck, FileBarChart, CircleDollarSign, Mail, IdCard } from "lucide-react";
+import { Settings, ChevronRight, Shield, BarChart3, ClipboardList, ShieldCheck, FileBarChart, CircleDollarSign, Mail, IdCard, Receipt } from "lucide-react";
 import { useUnreadTotal } from "@/hooks/useThreads";
 import { ALL_NAV_OPTIONS, getSelectedTabKeys, filterNavByMode } from "@/components/settings/NavBarCustomizer";
 import { useOrganization } from "@/hooks/useOrganization";
 import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
 import { useAppMode } from "@/lib/app-mode";
 import { useRedCardsEnabled } from "@/hooks/useRedCards";
+import { useFactoringEnabled } from "@/hooks/useFactoring";
 import { useEffect, useState } from "react";
 
 export default function More() {
@@ -15,6 +16,7 @@ export default function More() {
   const { isPlatformAdmin } = usePlatformAdmin();
   const { modules } = useAppMode();
   const redCardsEnabled = useRedCardsEnabled();
+  const { data: factoringEnabled } = useFactoringEnabled();
   const { data: unread } = useUnreadTotal();
   const [bump, setBump] = useState(0);
 
@@ -175,6 +177,21 @@ export default function More() {
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
               </button>
+              {factoringEnabled && (
+                <button
+                  onClick={() => navigate("/factoring")}
+                  className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors active:bg-secondary/50 touch-target"
+                >
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 shrink-0">
+                    <Receipt className="h-[18px] w-[18px] text-primary" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium">Factoring</p>
+                    <p className="text-[11px] text-muted-foreground">Submitted, advanced, reserve held by incident</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
+                </button>
+              )}
               <button
                 onClick={() => navigate("/admin/logs")}
                 className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors active:bg-secondary/50 touch-target"
