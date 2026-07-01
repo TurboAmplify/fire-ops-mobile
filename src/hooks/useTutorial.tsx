@@ -248,9 +248,12 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
   }, [user?.id]);
 
   // Auto-start runs from the provider so it fires once per session,
-  // regardless of which route the user lands on first.
+  // but only when the user is actually on the Dashboard. Auto-opening on
+  // arbitrary routes hides content behind a bottom sheet whose scroll lock
+  // freezes the whole page.
   useEffect(() => {
     if (isSuperAdminRoute) return;
+    if (location.pathname !== "/") return;
     if (!user?.id) return;
     if (orgLoading) return;
     if (!membership?.organizationId) return;
@@ -261,7 +264,21 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
         autoOpenTimerRef.current = null;
       }
     };
-  }, [user?.id, orgLoading, membership?.organizationId, runAutoStartCheck, isSuperAdminRoute]);
+  }, [user?.id, orgLoading, membership?.organizationId, runAutoStartCheck, isSuperAdminRoute, location.pathname]);
+
+  // Safety net: if the user navigates away while the sheet is open, minimize
+  // it. Radix's scroll lock stays active as long as `open` is true, which
+  // would leave every other page unscrollable.
+  const lastPathRef = useRef(location.pathname);
+  useEffect(() => {
+    if (lastPathRef.current !== location.pathname) {
+      if (isOpen) {
+        setIsOpen(false);
+        setIsMinimized(true);
+      }
+      lastPathRef.current = location.pathname;
+    }
+  }, [location.pathname, isOpen]);
 
   // Backward-compat no-op (Dashboard used to call this).
   const maybeAutoStart = useCallback(() => {
