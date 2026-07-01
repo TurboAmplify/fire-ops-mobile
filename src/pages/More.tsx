@@ -1,12 +1,13 @@
 import { AppShell } from "@/components/AppShell";
 import { useNavigate } from "react-router-dom";
-import { Settings, ChevronRight, Shield, BarChart3, ClipboardList, ShieldCheck, FileBarChart, CircleDollarSign, Mail, IdCard } from "lucide-react";
+import { Settings, ChevronRight, Shield, BarChart3, ClipboardList, ShieldCheck, FileBarChart, CircleDollarSign, Mail, IdCard, Receipt } from "lucide-react";
 import { useUnreadTotal } from "@/hooks/useThreads";
 import { ALL_NAV_OPTIONS, getSelectedTabKeys, filterNavByMode } from "@/components/settings/NavBarCustomizer";
 import { useOrganization } from "@/hooks/useOrganization";
 import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
 import { useAppMode } from "@/lib/app-mode";
 import { useRedCardsEnabled } from "@/hooks/useRedCards";
+import { useFactoringEnabled } from "@/hooks/useFactoring";
 import { useEffect, useState } from "react";
 
 export default function More() {
@@ -15,6 +16,7 @@ export default function More() {
   const { isPlatformAdmin } = usePlatformAdmin();
   const { modules } = useAppMode();
   const redCardsEnabled = useRedCardsEnabled();
+  const { data: factoringEnabled } = useFactoringEnabled();
   const { data: unread } = useUnreadTotal();
   const [bump, setBump] = useState(0);
 

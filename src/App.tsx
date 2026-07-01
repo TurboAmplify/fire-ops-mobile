@@ -64,6 +64,7 @@ const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
 const Support = lazy(() => import("./pages/Support"));
 const Payroll = lazy(() => import("./pages/Payroll"));
+const FactoringDashboard = lazy(() => import("./pages/FactoringDashboard"));
 const NeedsList = lazy(() => import("./pages/NeedsList"));
 const Training = lazy(() => import("./pages/Training"));
 const AdminLogs = lazy(() => import("./pages/AdminLogs"));
@@ -142,6 +143,7 @@ const App = () => (
                     <Route path="/terms" element={<Terms />} />
                     <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
                     <Route path="/payroll" element={<ProtectedRoute><AdminGate><ModuleGate module="payroll"><Payroll /></ModuleGate></AdminGate></ProtectedRoute>} />
+                    <Route path="/factoring" element={<ProtectedRoute><AdminGate><FactoringDashboard /></AdminGate></ProtectedRoute>} />
                     <Route path="/more" element={<ProtectedRoute><More /></ProtectedRoute>} />
                     <Route path="/messages" element={<ProtectedRoute><MessagesInbox /></ProtectedRoute>} />
                     <Route path="/messages/:threadId" element={<ProtectedRoute><ThreadView /></ProtectedRoute>} />
