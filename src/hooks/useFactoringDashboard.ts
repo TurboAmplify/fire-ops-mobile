@@ -57,20 +57,35 @@ export function useFactoringDashboard() {
       const { data, error } = await supabase
         .from("factoring_submissions" as any)
         .select(
-          "id, incident_id, schedule_number, total_amount, reserve_amount, account_count, submitted_at, reserve_released_at, incidents:incident_id(name, start_date)",
+          "id, incident_id, schedule_number, total_amount, reserve_amount, account_count, submitted_at, reserve_released_at",
         )
         .eq("organization_id", orgId!)
         .order("submitted_at", { ascending: false });
       if (error) throw error;
 
-      const rows: DashboardSubmission[] = ((data as any[]) ?? []).map((r) => {
+      const raw = (data as any[]) ?? [];
+      const incidentIds = Array.from(new Set(raw.map((r) => r.incident_id).filter(Boolean)));
+      const incidentMap = new Map<string, { name: string; start_date: string | null }>();
+      if (incidentIds.length) {
+        const { data: incData, error: incErr } = await supabase
+          .from("incidents")
+          .select("id, name, start_date")
+          .in("id", incidentIds);
+        if (incErr) throw incErr;
+        for (const i of (incData as any[]) ?? []) {
+          incidentMap.set(i.id, { name: i.name, start_date: i.start_date ?? null });
+        }
+      }
+
+      const rows: DashboardSubmission[] = raw.map((r) => {
         const total = Number(r.total_amount) || 0;
         const reserve = Number(r.reserve_amount) || 0;
+        const inc = incidentMap.get(r.incident_id);
         return {
           id: r.id,
           incident_id: r.incident_id,
-          incident_name: r.incidents?.name ?? "Unknown incident",
-          incident_start_date: r.incidents?.start_date ?? null,
+          incident_name: inc?.name ?? "Unknown incident",
+          incident_start_date: inc?.start_date ?? null,
           incident_end_date: null,
           schedule_number: r.schedule_number,
           total_amount: total,
