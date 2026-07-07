@@ -72,15 +72,22 @@ export async function assignCrewToTruck(incidentTruckId: string, crewMemberId: s
 }
 
 export async function releaseCrewFromTruck(id: string) {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("incident_truck_crew")
     .update({
       is_active: false,
       released_at: new Date().toISOString(),
     })
-    .eq("id", id);
+    .eq("id", id)
+    .select("id");
   if (error) throw error;
+  if (!data || data.length === 0) {
+    throw new Error(
+      "Release blocked: you don't have permission to change crew on this truck. Ask an admin/engine boss to release them."
+    );
+  }
 }
+
 
 /**
  * Sync the operator names from a shift ticket back into the incident_truck_crew
