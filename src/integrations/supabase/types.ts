@@ -3608,6 +3608,10 @@ export type Database = {
         Args: { _truck_id: string; _user_id: string }
         Returns: boolean
       }
+      user_can_manage_incident_truck_crew: {
+        Args: { _incident_truck_id: string; _user_id: string }
+        Returns: boolean
+      }
       user_can_view_crew_member: {
         Args: { _crew_member_id: string; _user_id: string }
         Returns: boolean
