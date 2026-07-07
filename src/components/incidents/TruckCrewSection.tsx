@@ -38,8 +38,8 @@ export function TruckCrewSection({ incidentTruckId, autoOpen = false, organizati
       await assignMutation.mutateAsync({ crewMemberId });
       toast.success("Crew member assigned");
       setShowAssign(false);
-    } catch {
-      toast.error("Failed to assign crew member");
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to assign crew member");
     }
   };
 
@@ -48,12 +48,13 @@ export function TruckCrewSection({ incidentTruckId, autoOpen = false, organizati
     try {
       await releaseMutation.mutateAsync(releaseTarget.id);
       toast.success(`${releaseTarget.name} released`);
-    } catch {
-      toast.error("Failed to release crew member");
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to release crew member");
     } finally {
       setReleaseTarget(null);
     }
   };
+
 
   return (
     <div className="space-y-2">
