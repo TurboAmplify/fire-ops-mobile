@@ -181,7 +181,8 @@ async function findOf286GridAnchors(
   };
 
   const xInset = Math.max(4, width * 0.004);
-  const sigFieldTop = sigTop + sigRowH * 0.45;
+  const sigFieldTop = sigTop + sigRowH * 0.18;
+  const dateFieldTop = sigTop + sigRowH * 0.45;
   const nameFieldTop = nameTop + nameRowH * 0.45;
 
   return {
@@ -196,9 +197,9 @@ async function findOf286GridAnchors(
     }),
     dateBox: toPdfBoxFromPixels({
       x: sigDateSplit + xInset,
-      y: sigFieldTop,
+      y: dateFieldTop,
       w: dateOfficerSplit - sigDateSplit - xInset * 2,
-      h: Math.max(renderScale * 9, Math.min(renderScale * 14, nameTop - sigFieldTop - renderScale * 4)),
+      h: Math.max(renderScale * 9, Math.min(renderScale * 14, nameTop - dateFieldTop - renderScale * 4)),
     }),
     nameBox: toPdfBoxFromPixels({
       x: formLeft + xInset,
