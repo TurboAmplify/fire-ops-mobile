@@ -27,39 +27,43 @@ export function getOf286FallbackFields(
   pageWidth: number,
   pageHeight: number,
 ): PageAnchors {
-  const formLeft = pageWidth * 0.045;
-  const signatureW = pageWidth * 0.32;
-  const dateX = pageWidth * 0.37;
-  const dateW = pageWidth * 0.145;
-  const nameW = pageWidth * 0.48;
+  // Standard OF-286 contractor signing block sits just above the printed
+  // footer. These fractions come from the actual grid lines, not from the
+  // remarks/payment rows above it:
+  //   [30. CONTRACTOR SIGNATURE | 31. DATE | 32... | 33...]
+  //   [34. PRINT NAME AND TITLE | 35...]
+  const formLeft = pageWidth * 0.033;
+  const dateX = pageWidth * 0.346;
+  const officerX = pageWidth * 0.496;
+  const signatureW = dateX - formLeft;
+  const dateW = officerX - dateX;
+  const nameW = officerX - formLeft;
 
-  // Standard OF-286 has a footer below the signature block. Keep the fields
-  // above the footer, not down at the page edge.
-  const nameRowBottom = Math.max(54, pageHeight * 0.115);
-  const nameRowH = Math.max(26, pageHeight * 0.055);
+  const nameRowBottom = Math.max(28, pageHeight * 0.05);
+  const nameRowH = Math.max(22, pageHeight * 0.035);
   const sigRowBottom = nameRowBottom + nameRowH;
-  const sigRowH = Math.max(28, pageHeight * 0.062);
+  const sigRowH = Math.max(22, pageHeight * 0.035);
 
   return {
     pageIndex,
     pageWidth,
     pageHeight,
     signatureBox: {
-      x: formLeft + 4,
+      x: formLeft + 3,
       y: sigRowBottom + 3,
-      w: signatureW - 8,
+      w: signatureW - 6,
       h: sigRowH - 6,
     },
     dateBox: {
       x: dateX + 4,
-      y: sigRowBottom + 9,
+      y: sigRowBottom + 8,
       w: dateW - 8,
-      h: 14,
+      h: 13,
     },
     nameBox: {
-      x: formLeft + 4,
+      x: formLeft + 3,
       y: nameRowBottom + 7,
-      w: nameW - 8,
+      w: nameW - 6,
       h: 14,
     },
   };
