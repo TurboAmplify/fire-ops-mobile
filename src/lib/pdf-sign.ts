@@ -157,6 +157,34 @@ export async function findOf286Anchors(pdfBytes: Uint8Array): Promise<PageAnchor
       pageHeight: ph,
     };
 
+    // Sanity checks — on a real OF-286, the "30. CONTRACTOR SIGNATURE" /
+    // "31. DATE" / "32. RECEIVING OFFICER" labels sit on the SAME baseline
+    // near the BOTTOM of the page, with "34. PRINT NAME" one row directly
+    // below. Some PDFs (form-flattened, OCR'd, or with duplicated hidden
+    // text) return text items for "30./34." in the wrong spot — reject
+    // those and let the layout-based fallback take over.
+    const looksLikeSignatureRow = (() => {
+      if (!labelSig || !labelName) return false;
+      // Signature row must be in the bottom ~35% of the page.
+      if (labelSig.y > ph * 0.35) return false;
+      // Name row must be BELOW signature row (smaller y in PDF space).
+      if (labelName.y >= labelSig.y) return false;
+      // Rows should be close together (< 12% of page height apart).
+      if (labelSig.y - labelName.y > ph * 0.12) return false;
+      // If we found 31/32, they should share the signature row's baseline.
+      if (labelDate && Math.abs(labelDate.y - labelSig.y) > 6) return false;
+      if (labelRecv && Math.abs(labelRecv.y - labelSig.y) > 6) return false;
+      // 32 should be to the RIGHT of 30.
+      if (labelRecv && labelRecv.x <= labelSig.x) return false;
+      return true;
+    })();
+
+    if (!looksLikeSignatureRow) {
+      // Force layout-based fallback for this page.
+      results.push(getOf286FallbackFields(p, pw, ph));
+      continue;
+    }
+
     // pdfjs `y` is the text BASELINE in PDF user-space (origin = bottom-left).
     // The text bbox extends roughly from `y` (baseline) up to `y + h` (cap top)
     // and a small descender below `y`.
@@ -164,24 +192,19 @@ export async function findOf286Anchors(pdfBytes: Uint8Array): Promise<PageAnchor
     // Find the item directly below #34 (the footer) so we can clamp the name
     // cell. Page items with the smallest y > 0 are the footer line.
     let footerTop = 0;
-    if (labelName) {
-      for (const it of items) {
-        if (it.y < labelName.y - 5 && it.y > footerTop) {
-          // Top of footer text = baseline + cap height
-          footerTop = it.y + it.h;
-        }
+    for (const it of items) {
+      if (it.y < labelName!.y - 5 && it.y > footerTop) {
+        footerTop = it.y + it.h;
       }
     }
 
-    if (labelSig) {
-      // Signature cell: from #30 label baseline DOWN to the top of #34's
-      // label cell (or a sensible fallback if #34 is missing).
-      const right = labelDate ? labelDate.x - 4 : labelSig.x + 200;
-      const top = labelSig.y - 2; // just under the "30. CONTRACTOR SIGNATURE" label
-      const cellBottom = labelName
-        ? labelName.y + labelName.h + 1 // top of #34 label
-        : top - 18;
-      const x = labelSig.x;
+    // Signature cell: from #30 label baseline DOWN to the top of #34's
+    // label cell.
+    {
+      const right = labelDate ? labelDate.x - 4 : labelSig!.x + 200;
+      const top = labelSig!.y - 2;
+      const cellBottom = labelName!.y + labelName!.h + 1;
+      const x = labelSig!.x;
       const w = Math.max(40, right - x);
       const h = Math.max(10, top - cellBottom);
       anchors.signatureBox = { x, y: cellBottom, w, h };
@@ -200,19 +223,18 @@ export async function findOf286Anchors(pdfBytes: Uint8Array): Promise<PageAnchor
       };
     }
 
-    if (labelName) {
+    {
       // Print name cell: from just under the "34. PRINT NAME AND TITLE"
       // label DOWN to either the page footer or the bottom of the page.
-      // Width: from #34 to start of #35 (or #31 column edge).
       const right =
-        (labelRecvName?.x ?? labelDate?.x ?? labelName.x + 200) - 4;
-      const top = labelName.y - 2;
+        (labelRecvName?.x ?? labelDate?.x ?? labelName!.x + 200) - 4;
+      const top = labelName!.y - 2;
       const floor = Math.max(footerTop + 4, 6);
       const bottom = Math.max(top - 26, floor);
       anchors.nameBox = {
-        x: labelName.x,
+        x: labelName!.x,
         y: bottom,
-        w: Math.max(60, right - labelName.x),
+        w: Math.max(60, right - labelName!.x),
         h: Math.max(10, top - bottom),
       };
     }
@@ -222,6 +244,7 @@ export async function findOf286Anchors(pdfBytes: Uint8Array): Promise<PageAnchor
 
   return results;
 }
+
 
 export async function getOf286PageAnchorsFromUrl(sourceUrl: string): Promise<PageAnchors[]> {
   const sourceRes = await fetch(sourceUrl);
