@@ -181,7 +181,7 @@ async function findOf286GridAnchors(
   };
 
   const xInset = Math.max(4, width * 0.004);
-  const sigFieldTop = sigTop + sigRowH * 0.18;
+  const sigFieldTop = sigTop + sigRowH * 0.34;
   const dateFieldTop = sigTop + sigRowH * 0.45;
   const nameFieldTop = nameTop + nameRowH * 0.45;
 
