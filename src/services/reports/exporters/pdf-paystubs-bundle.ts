@@ -150,27 +150,47 @@ function renderPaystub(doc: any, line: CrewPayrollLine, organizationName: string
     doc.setFontSize(9);
   }
 
-  // Hours / pay by incident (when this paystub spans more than one fire)
-  if (line.byIncident.length > 1) {
+  // Hours / pay by incident — always show so paystub clearly lists where the pay came from
+  if (line.byIncident.length > 0) {
     y += 4;
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8);
     doc.setTextColor(100);
-    doc.text("BY INCIDENT", margin + 4, y);
+    doc.text("INCIDENT", margin + 4, y);
+    doc.text("SHIFTS", pageW - margin - 200, y, { align: "right" });
+    doc.text("HOURS", pageW - margin - 100, y, { align: "right" });
+    doc.text("PAY", pageW - margin - 4, y, { align: "right" });
     doc.setTextColor(0);
     y += 11;
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     line.byIncident.forEach((inc) => {
-      const detail = isDaily && line.dailyRate
-        ? `${Math.round(inc.grossPay / line.dailyRate)} shifts`
-        : `${inc.totalHours.toFixed(2)} hrs`;
       doc.text(inc.incidentName, margin + 4, y);
-      doc.text(detail, pageW - margin - 100, y, { align: "right" });
+      doc.text(String(inc.shiftCount), pageW - margin - 200, y, { align: "right" });
+      doc.text(inc.totalHours.toFixed(2), pageW - margin - 100, y, { align: "right" });
       doc.text(`$${fmt(inc.grossPay)}`, pageW - margin - 4, y, { align: "right" });
-      y += 12;
+      y += 11;
+      if (inc.dates && inc.dates.length > 0) {
+        doc.setFontSize(7);
+        doc.setTextColor(120);
+        const dateStr = inc.dates
+          .map((d) => {
+            const dt = new Date(d + "T00:00:00");
+            return isNaN(dt.getTime()) ? d : dt.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+          })
+          .join(", ");
+        const wrapped = doc.splitTextToSize(dateStr, pageW - margin * 2 - 8) as string[];
+        wrapped.forEach((ln) => {
+          doc.text(ln, margin + 8, y);
+          y += 9;
+        });
+        doc.setTextColor(0);
+        doc.setFontSize(9);
+        y += 2;
+      }
     });
   }
+
 
   // Adjustments
   if (line.adjustments.length > 0) {
