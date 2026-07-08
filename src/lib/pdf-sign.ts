@@ -545,16 +545,17 @@ export async function stampSignatureOntoPdf(opts: {
     const aspect = sigImage.width / sigImage.height;
     // Use nearly the full cell; tiny inset just to avoid touching the borders.
     const maxW = Math.max(20, box.w - 2);
-    const maxH = Math.max(10, box.h - 1);
+    const maxH = Math.max(10, box.h + 10);
     let w = maxW;
     let h = w / aspect;
     if (h > maxH) {
       h = maxH;
       w = h * aspect;
     }
+    const visualYOffset = Math.min(5, Math.max(0, box.h - h) / 2);
     return {
       x: box.x + 1,
-      y: box.y + 0.5,
+      y: box.y + visualYOffset,
       w,
       h,
     };
