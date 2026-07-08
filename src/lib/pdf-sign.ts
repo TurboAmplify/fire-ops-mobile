@@ -27,39 +27,43 @@ export function getOf286FallbackFields(
   pageWidth: number,
   pageHeight: number,
 ): PageAnchors {
-  const formLeft = pageWidth * 0.045;
-  const signatureW = pageWidth * 0.32;
-  const dateX = pageWidth * 0.37;
-  const dateW = pageWidth * 0.145;
-  const nameW = pageWidth * 0.48;
+  // Standard OF-286 contractor signing block sits just above the printed
+  // footer. These fractions come from the actual grid lines, not from the
+  // remarks/payment rows above it:
+  //   [30. CONTRACTOR SIGNATURE | 31. DATE | 32... | 33...]
+  //   [34. PRINT NAME AND TITLE | 35...]
+  const formLeft = pageWidth * 0.033;
+  const dateX = pageWidth * 0.346;
+  const officerX = pageWidth * 0.496;
+  const signatureW = dateX - formLeft;
+  const dateW = officerX - dateX;
+  const nameW = officerX - formLeft;
 
-  // Standard OF-286 has a footer below the signature block. Keep the fields
-  // above the footer, not down at the page edge.
-  const nameRowBottom = Math.max(54, pageHeight * 0.115);
-  const nameRowH = Math.max(26, pageHeight * 0.055);
+  const nameRowBottom = Math.max(28, pageHeight * 0.05);
+  const nameRowH = Math.max(22, pageHeight * 0.035);
   const sigRowBottom = nameRowBottom + nameRowH;
-  const sigRowH = Math.max(28, pageHeight * 0.062);
+  const sigRowH = Math.max(22, pageHeight * 0.035);
 
   return {
     pageIndex,
     pageWidth,
     pageHeight,
     signatureBox: {
-      x: formLeft + 4,
+      x: formLeft + 3,
       y: sigRowBottom + 3,
-      w: signatureW - 8,
+      w: signatureW - 6,
       h: sigRowH - 6,
     },
     dateBox: {
       x: dateX + 4,
-      y: sigRowBottom + 9,
+      y: sigRowBottom + 8,
       w: dateW - 8,
-      h: 14,
+      h: 13,
     },
     nameBox: {
-      x: formLeft + 4,
+      x: formLeft + 3,
       y: nameRowBottom + 7,
-      w: nameW - 8,
+      w: nameW - 6,
       h: 14,
     },
   };
@@ -76,6 +80,133 @@ function withFallbackFields(anchors: PageAnchors): PageAnchors {
     signatureBox: anchors.signatureBox ?? fallback.signatureBox,
     dateBox: anchors.dateBox ?? fallback.dateBox,
     nameBox: anchors.nameBox ?? fallback.nameBox,
+  };
+}
+
+async function findOf286GridAnchors(
+  page: any,
+  pageIndex: number,
+  baseViewport: any,
+): Promise<PageAnchors | null> {
+  if (typeof document === "undefined") return null;
+
+  const mapProto = Map.prototype as any;
+  if (!mapProto.getOrInsertComputed) {
+    mapProto.getOrInsertComputed = function getOrInsertComputed(key: unknown, compute: (key: unknown) => unknown) {
+      if (!this.has(key)) this.set(key, compute(key));
+      return this.get(key);
+    };
+  }
+
+  const renderScale = 2;
+  const viewport = page.getViewport({ scale: renderScale });
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.ceil(viewport.width);
+  canvas.height = Math.ceil(viewport.height);
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) return null;
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  await page.render({ canvasContext: ctx, viewport }).promise;
+
+  const { width, height } = canvas;
+  const pixels = ctx.getImageData(0, 0, width, height).data;
+  const isDark = (x: number, y: number) => {
+    const idx = (y * width + x) * 4;
+    return pixels[idx] + pixels[idx + 1] + pixels[idx + 2] < 390;
+  };
+
+  const groupCenters = (values: number[]) => {
+    const groups: number[][] = [];
+    for (const value of values) {
+      if (!groups.length || value > groups[groups.length - 1][groups[groups.length - 1].length - 1] + 1) {
+        groups.push([]);
+      }
+      groups[groups.length - 1].push(value);
+    }
+    return groups.map((group) => (group[0] + group[group.length - 1]) / 2);
+  };
+
+  const horizontalRows: number[] = [];
+  for (let y = Math.floor(height * 0.55); y < Math.floor(height * 0.97); y++) {
+    let dark = 0;
+    for (let x = 0; x < width; x++) if (isDark(x, y)) dark++;
+    if (dark > width * 0.45) horizontalRows.push(y);
+  }
+
+  const horizontal = groupCenters(horizontalRows)
+    .filter((y, idx, arr) => idx === 0 || y - arr[idx - 1] > height * 0.018)
+    .sort((a, b) => a - b);
+  if (horizontal.length < 3) return null;
+
+  const [sigTop, nameTop, nameBottom] = horizontal.slice(-3);
+  const sigRowH = nameTop - sigTop;
+  const nameRowH = nameBottom - nameTop;
+  if (sigRowH < height * 0.018 || nameRowH < height * 0.018) return null;
+
+  const verticalCols: number[] = [];
+  const y1 = Math.max(0, Math.floor(sigTop) + 1);
+  const y2 = Math.min(height - 1, Math.floor(nameTop) - 1);
+  for (let x = 0; x < width; x++) {
+    let dark = 0;
+    for (let y = y1; y <= y2; y++) if (isDark(x, y)) dark++;
+    if (dark > (y2 - y1) * 0.4) verticalCols.push(x);
+  }
+
+  const vertical = groupCenters(verticalCols).sort((a, b) => a - b);
+  if (vertical.length < 4) return null;
+
+  const formLeft = vertical[0];
+  const sigDateSplit = vertical[1];
+  const dateOfficerSplit = vertical[2];
+  if (sigDateSplit - formLeft < width * 0.18 || dateOfficerSplit - sigDateSplit < width * 0.07) {
+    return null;
+  }
+
+  const toPdfBoxFromPixels = (box: BoxRect): BoxRect => {
+    const viewportBox = {
+      x: box.x / renderScale,
+      y: box.y / renderScale,
+      w: box.w / renderScale,
+      h: box.h / renderScale,
+    };
+    const [x1, y1p] = baseViewport.convertToPdfPoint(viewportBox.x, viewportBox.y);
+    const [x2, y2p] = baseViewport.convertToPdfPoint(viewportBox.x + viewportBox.w, viewportBox.y + viewportBox.h);
+    return {
+      x: Math.min(x1, x2),
+      y: Math.min(y1p, y2p),
+      w: Math.abs(x2 - x1),
+      h: Math.abs(y2p - y1p),
+    };
+  };
+
+  const xInset = Math.max(4, width * 0.004);
+  const sigFieldTop = sigTop + sigRowH * 0.34;
+  const dateFieldTop = sigTop + sigRowH * 0.45;
+  const nameFieldTop = nameTop + nameRowH * 0.45;
+
+  return {
+    pageIndex,
+    pageWidth: baseViewport.width,
+    pageHeight: baseViewport.height,
+    signatureBox: toPdfBoxFromPixels({
+      x: formLeft + xInset,
+      y: sigFieldTop,
+      w: sigDateSplit - formLeft - xInset * 2,
+      h: Math.max(renderScale * 10, nameTop - sigFieldTop - renderScale * 3),
+    }),
+    dateBox: toPdfBoxFromPixels({
+      x: sigDateSplit + xInset,
+      y: dateFieldTop,
+      w: dateOfficerSplit - sigDateSplit - xInset * 2,
+      h: Math.max(renderScale * 9, Math.min(renderScale * 14, nameTop - dateFieldTop - renderScale * 4)),
+    }),
+    nameBox: toPdfBoxFromPixels({
+      x: formLeft + xInset,
+      y: nameFieldTop,
+      w: dateOfficerSplit - formLeft - xInset * 2,
+      h: Math.max(renderScale * 9, nameBottom - nameFieldTop - renderScale * 3),
+    }),
   };
 }
 
@@ -101,29 +232,43 @@ export async function findOf286Anchors(pdfBytes: Uint8Array): Promise<PageAnchor
     const ph = viewport.height;
     const textContent = await page.getTextContent();
 
-    // Each item has transform [a,b,c,d,e,f] where (e,f) is the position in
-    // PDF user-space (origin bottom-left). `str` is the text.
+    // Convert every text item into PDF.js viewport space (origin top-left).
+    // Building the boxes in the same space as the rendered preview avoids the
+    // vertical mirroring that happens on rotated / landscape OF-286 variants.
     type Item = { str: string; x: number; y: number; w: number; h: number };
     const items: Item[] = [];
     for (const it of textContent.items as any[]) {
-      const t = it.transform;
+      const t = (pdfjsLib as any).Util.transform(viewport.transform, it.transform);
       const x = t[4];
       const y = t[5];
-      const h = it.height ?? Math.abs(t[3]) ?? 10;
-      const w = it.width ?? 0;
+      const h = Math.max(1, Math.abs(it.height ?? t[3] ?? 10));
+      const w = Math.max(0, Math.abs(it.width ?? 0));
       const s = String(it.str ?? "").trim();
       if (s) items.push({ str: s, x, y, w, h });
     }
 
-    const findFirst = (re: RegExp) => items.find((i) => re.test(i.str));
+    const toPdfBox = (box: BoxRect): BoxRect => {
+      const [x1, y1] = viewport.convertToPdfPoint(box.x, box.y);
+      const [x2, y2] = viewport.convertToPdfPoint(box.x + box.w, box.y + box.h);
+      return {
+        x: Math.min(x1, x2),
+        y: Math.min(y1, y2),
+        w: Math.abs(x2 - x1),
+        h: Math.abs(y2 - y1),
+      };
+    };
 
     // Concatenate adjacent items so multi-fragment labels still match.
     // pdfjs commonly splits "30. CONTRACTOR SIGNATURE" into three runs
     // (["30.", "CONTRACTOR", "SIGNATURE"]), so we slide windows of up to
-    // 5 adjacent items.
-    const findCompound = (re: RegExp) => {
-      const single = findFirst(re);
-      if (single) return single;
+    // 5 adjacent items. Some agency PDFs also contain duplicate / hidden text
+    // for these labels. Return ALL candidates and choose the bottom signature
+    // block by geometry instead of trusting the first match in PDF text order.
+    const collectCompound = (re: RegExp) => {
+      const found: Item[] = [];
+      for (const single of items) {
+        if (re.test(single.str)) found.push(single);
+      }
       for (let win = 2; win <= 5; win++) {
         for (let i = 0; i <= items.length - win; i++) {
           const slice = items.slice(i, i + win);
@@ -133,23 +278,72 @@ export async function findOf286Anchors(pdfBytes: Uint8Array): Promise<PageAnchor
           const merged = slice.map((s) => s.str).join(" ");
           if (re.test(merged)) {
             const last = slice[slice.length - 1];
-            return {
+            found.push({
               ...slice[0],
               str: merged,
               w: last.x + last.w - slice[0].x,
-            };
+            });
           }
         }
       }
-      return undefined;
+      return found;
     };
 
+    const sigCandidates = collectCompound(/^30\.?\s*CONTRACTOR\s*SIGNATURE/i);
+    const dateCandidates = collectCompound(/^31\.?\s*DATE/i);
+    const recvCandidates = collectCompound(/^32\.?\s*RECEIVING\s*OFFICER/i);
+    const nameCandidates = collectCompound(/^34\.?\s*PRINT\s*NAME/i);
+    const recvNameCandidates = collectCompound(/^35\.?\s*PRINT\s*NAME/i);
 
-    const labelSig = findCompound(/^30\.?\s*CONTRACTOR\s*SIGNATURE/i);
-    const labelDate = findCompound(/^31\.?\s*DATE/i);
-    const labelRecv = findCompound(/^32\.?\s*RECEIVING\s*OFFICER/i);
-    const labelName = findCompound(/^34\.?\s*PRINT\s*NAME/i);
-    const labelRecvName = findCompound(/^35\.?\s*PRINT\s*NAME/i);
+    type SignatureLayout = {
+      labelSig: Item;
+      labelDate?: Item;
+      labelRecv?: Item;
+      labelName: Item;
+      labelRecvName?: Item;
+      score: number;
+    };
+
+    let layout: SignatureLayout | undefined;
+    for (const labelSig of sigCandidates) {
+      for (const labelName of nameCandidates) {
+        // Signature row must be below the form body in viewport space.
+        if (labelSig.y < ph * 0.5) continue;
+        // #34 must be directly below #30.
+        if (labelName.y <= labelSig.y) continue;
+        const rowGap = labelName.y - labelSig.y;
+        if (rowGap < ph * 0.02 || rowGap > ph * 0.16) continue;
+        if (Math.abs(labelName.x - labelSig.x) > pw * 0.08) continue;
+
+        const labelDate = dateCandidates
+          .filter((d) => d.x > labelSig.x && Math.abs(d.y - labelSig.y) <= Math.max(7, ph * 0.012))
+          .sort((a, b) => a.x - b.x)[0];
+        const labelRecv = recvCandidates
+          .filter((r) => r.x > (labelDate?.x ?? labelSig.x) && Math.abs(r.y - labelSig.y) <= Math.max(7, ph * 0.012))
+          .sort((a, b) => a.x - b.x)[0];
+        const labelRecvName = recvNameCandidates
+          .filter((n) => n.x > labelName.x && Math.abs(n.y - labelName.y) <= Math.max(7, ph * 0.012))
+          .sort((a, b) => a.x - b.x)[0];
+
+        // Prefer layouts that have #31, then the lowest valid #30/#34 pair in
+        // viewport space. This avoids hidden duplicate labels above the true
+        // contractor block.
+        const score =
+          (labelDate ? 1000 : 0) +
+          (labelRecv ? 100 : 0) +
+          (labelRecvName ? 50 : 0) +
+          labelSig.y;
+        if (!layout || score > layout.score) {
+          layout = { labelSig, labelDate, labelRecv, labelName, labelRecvName, score };
+        }
+      }
+    }
+
+    const labelSig = layout?.labelSig;
+    const labelDate = layout?.labelDate;
+    const labelRecv = layout?.labelRecv;
+    const labelName = layout?.labelName;
+    const labelRecvName = layout?.labelRecvName;
 
     const anchors: PageAnchors = {
       pageIndex: p,
@@ -157,86 +351,58 @@ export async function findOf286Anchors(pdfBytes: Uint8Array): Promise<PageAnchor
       pageHeight: ph,
     };
 
-    // Sanity checks — on a real OF-286, the "30. CONTRACTOR SIGNATURE" /
-    // "31. DATE" / "32. RECEIVING OFFICER" labels sit on the SAME baseline
-    // near the BOTTOM of the page, with "34. PRINT NAME" one row directly
-    // below. Some PDFs (form-flattened, OCR'd, or with duplicated hidden
-    // text) return text items for "30./34." in the wrong spot — reject
-    // those and let the layout-based fallback take over.
-    const looksLikeSignatureRow = (() => {
-      if (!labelSig || !labelName) return false;
-      // Signature row must be in the bottom ~35% of the page.
-      if (labelSig.y > ph * 0.35) return false;
-      // Name row must be BELOW signature row (smaller y in PDF space).
-      if (labelName.y >= labelSig.y) return false;
-      // Rows should be close together (< 12% of page height apart).
-      if (labelSig.y - labelName.y > ph * 0.12) return false;
-      // If we found 31/32, they should share the signature row's baseline.
-      if (labelDate && Math.abs(labelDate.y - labelSig.y) > 6) return false;
-      if (labelRecv && Math.abs(labelRecv.y - labelSig.y) > 6) return false;
-      // 32 should be to the RIGHT of 30.
-      if (labelRecv && labelRecv.x <= labelSig.x) return false;
-      return true;
-    })();
-
-    if (!looksLikeSignatureRow) {
-      // Force layout-based fallback for this page.
-      results.push(getOf286FallbackFields(p, pw, ph));
+    if (!labelSig || !labelName) {
+      const gridAnchors = await findOf286GridAnchors(page, p, viewport);
+      results.push(gridAnchors ?? getOf286FallbackFields(p, pw, ph));
       continue;
     }
 
-    // pdfjs `y` is the text BASELINE in PDF user-space (origin = bottom-left).
-    // The text bbox extends roughly from `y` (baseline) up to `y + h` (cap top)
-    // and a small descender below `y`.
-
-    // Find the item directly below #34 (the footer) so we can clamp the name
-    // cell. Page items with the smallest y > 0 are the footer line.
-    let footerTop = 0;
+    // Find the first text item below #34 (usually the printed/footer line) so
+    // we can keep block 34 out of the footer.
+    let footerY = ph;
     for (const it of items) {
-      if (it.y < labelName!.y - 5 && it.y > footerTop) {
-        footerTop = it.y + it.h;
+      if (it.y > labelName!.y + 5 && it.y < footerY) {
+        footerY = it.y;
       }
     }
 
-    // Signature cell: from #30 label baseline DOWN to the top of #34's
-    // label cell.
+    // Signature cell: below the #30 label and above the #34 row.
     {
       const right = labelDate ? labelDate.x - 4 : labelSig!.x + 200;
-      const top = labelSig!.y - 2;
-      const cellBottom = labelName!.y + labelName!.h + 1;
+      const top = labelSig!.y + labelSig!.h + 2;
+      const cellBottom = labelName!.y - 4;
       const x = labelSig!.x;
       const w = Math.max(40, right - x);
-      const h = Math.max(10, top - cellBottom);
-      anchors.signatureBox = { x, y: cellBottom, w, h };
+      const h = Math.max(10, cellBottom - top);
+      anchors.signatureBox = toPdfBox({ x, y: top, w, h });
     }
 
     if (labelDate) {
-      // Date sits just below the "31. DATE" label, inside the same cell as
-      // the signature row. Baseline ≈ label baseline minus one text line.
+      // Date sits just below the "31. DATE" label in contractor block 31.
       const right = labelRecv ? labelRecv.x - 4 : labelDate.x + 90;
-      const baselineY = labelDate.y - labelDate.h - 2;
-      anchors.dateBox = {
+      const top = labelDate.y + labelDate.h + 2;
+      const bottom = labelName!.y - 4;
+      anchors.dateBox = toPdfBox({
         x: labelDate.x,
-        y: baselineY,
+        y: top,
         w: Math.max(30, right - labelDate.x),
-        h: labelDate.h,
-      };
+        h: Math.max(10, Math.min(16, bottom - top)),
+      });
     }
 
     {
-      // Print name cell: from just under the "34. PRINT NAME AND TITLE"
-      // label DOWN to either the page footer or the bottom of the page.
+      // Print name cell: just under the "34. PRINT NAME AND TITLE" label,
+      // clamped before the footer.
       const right =
         (labelRecvName?.x ?? labelDate?.x ?? labelName!.x + 200) - 4;
-      const top = labelName!.y - 2;
-      const floor = Math.max(footerTop + 4, 6);
-      const bottom = Math.max(top - 26, floor);
-      anchors.nameBox = {
+      const top = labelName!.y + labelName!.h + 2;
+      const h = Math.max(10, Math.min(26, footerY - top - 4));
+      anchors.nameBox = toPdfBox({
         x: labelName!.x,
-        y: bottom,
+        y: top,
         w: Math.max(60, right - labelName!.x),
-        h: Math.max(10, top - bottom),
-      };
+        h,
+      });
     }
 
     results.push(withFallbackFields(anchors));
