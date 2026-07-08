@@ -139,28 +139,45 @@ export async function generatePaystubPdf({ line, organizationName, periodLabel }
   }
   y += 8;
 
-  // By incident
-  if (line.byIncident.length > 1) {
+  // By incident — always show so it's clear which fires this paystub covers
+  if (line.byIncident.length > 0) {
     doc.setFontSize(9);
     doc.setTextColor(100);
-    doc.text("HOURS BY INCIDENT", margin, y);
+    doc.text("INCIDENTS WORKED", margin, y);
     doc.setTextColor(0);
     y += 12;
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     line.byIncident.forEach((inc) => {
       doc.text(inc.incidentName, col1, y);
-      if (isDaily && line.dailyRate) {
-        const incShifts = Math.round(inc.grossPay / line.dailyRate);
-        doc.text(`${incShifts} ${incShifts === 1 ? "shift" : "shifts"}`, col3, y, { align: "right" });
-      } else {
-        doc.text(`${inc.totalHours.toFixed(2)} hrs`, col3, y, { align: "right" });
-      }
+      const detail = isDaily && line.dailyRate
+        ? `${inc.shiftCount} ${inc.shiftCount === 1 ? "shift" : "shifts"}`
+        : `${inc.shiftCount} ${inc.shiftCount === 1 ? "shift" : "shifts"} · ${inc.totalHours.toFixed(2)} hrs`;
+      doc.text(detail, col3, y, { align: "right" });
       doc.text(`$${fmt(inc.grossPay)}`, col4, y, { align: "right" });
-      y += 12;
+      y += 11;
+      if (inc.dates && inc.dates.length > 0) {
+        doc.setFontSize(7);
+        doc.setTextColor(120);
+        const dateStr = inc.dates
+          .map((d) => {
+            const dt = new Date(d + "T00:00:00");
+            return isNaN(dt.getTime()) ? d : dt.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+          })
+          .join(", ");
+        const wrapped = doc.splitTextToSize(dateStr, col4 - col1 - 4) as string[];
+        wrapped.forEach((ln) => {
+          doc.text(ln, col1 + 6, y);
+          y += 9;
+        });
+        doc.setTextColor(0);
+        doc.setFontSize(9);
+        y += 2;
+      }
     });
-    y += 8;
+    y += 6;
   }
+
 
   // Deductions
   const ded = line.deductions;

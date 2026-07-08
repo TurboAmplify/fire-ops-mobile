@@ -245,7 +245,10 @@ export interface IncidentBreakdown {
   hwPay: number;
   overtimePay: number;
   grossPay: number;
+  shiftCount: number;
+  dates: string[];
 }
+
 
 export interface PayrollAdjustmentLite {
   id: string;
@@ -616,7 +619,10 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
         hwPay: incHwPay,
         overtimePay: incOTPay,
         grossPay: incGross,
+        shiftCount: agg.dates.size,
+        dates: Array.from(agg.dates).sort(),
       });
+
     });
     byIncident.sort((a, b) => b.grossPay - a.grossPay);
 

@@ -129,15 +129,31 @@ export function Paystub({ line, organizationName, periodLabel, payDate = new Dat
           </tbody>
         </table>
       )}
-      {line.byIncident.length > 1 && (
+      {line.byIncident.length > 0 && (
         <div className="mb-4">
-          <p className="text-xs uppercase font-bold text-gray-600 mb-1">Hours by Incident</p>
+          <p className="text-xs uppercase font-bold text-gray-600 mb-1">Incidents Worked</p>
           <table className="w-full text-xs border-collapse">
+            <thead>
+              <tr className="border-b border-gray-400 text-gray-600">
+                <th className="text-left py-1 font-semibold">Incident</th>
+                <th className="text-right py-1 font-semibold">Shifts</th>
+                <th className="text-right py-1 font-semibold">Hours</th>
+                <th className="text-right py-1 font-semibold">Pay</th>
+              </tr>
+            </thead>
             <tbody>
               {line.byIncident.map((inc) => (
-                <tr key={(inc.incidentId ?? "_un") + inc.incidentName} className="border-b border-gray-200">
-                  <td className="py-1">{inc.incidentName}</td>
-                  <td className="text-right py-1">{inc.totalHours.toFixed(2)} hrs</td>
+                <tr key={(inc.incidentId ?? "_un") + inc.incidentName} className="border-b border-gray-200 align-top">
+                  <td className="py-1">
+                    <div className="font-medium">{inc.incidentName}</div>
+                    {inc.dates && inc.dates.length > 0 && (
+                      <div className="text-[10px] text-gray-500">
+                        {inc.dates.map((d) => format(new Date(d + "T00:00:00"), "MMM d")).join(", ")}
+                      </div>
+                    )}
+                  </td>
+                  <td className="text-right py-1">{inc.shiftCount}</td>
+                  <td className="text-right py-1">{inc.totalHours.toFixed(2)}</td>
                   <td className="text-right py-1">${fmt(inc.grossPay)}</td>
                 </tr>
               ))}
@@ -145,6 +161,7 @@ export function Paystub({ line, organizationName, periodLabel, payDate = new Dat
           </table>
         </div>
       )}
+
 
       {ded && (
         <table className="w-full mb-4 text-sm border-collapse">
