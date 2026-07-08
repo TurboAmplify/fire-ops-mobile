@@ -245,7 +245,10 @@ export interface IncidentBreakdown {
   hwPay: number;
   overtimePay: number;
   grossPay: number;
+  shiftCount: number;
+  dates: string[];
 }
+
 
 export interface PayrollAdjustmentLite {
   id: string;
