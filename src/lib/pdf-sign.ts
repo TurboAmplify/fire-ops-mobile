@@ -83,6 +83,132 @@ function withFallbackFields(anchors: PageAnchors): PageAnchors {
   };
 }
 
+async function findOf286GridAnchors(
+  page: any,
+  pageIndex: number,
+  baseViewport: any,
+): Promise<PageAnchors | null> {
+  if (typeof document === "undefined") return null;
+
+  const mapProto = Map.prototype as any;
+  if (!mapProto.getOrInsertComputed) {
+    mapProto.getOrInsertComputed = function getOrInsertComputed(key: unknown, compute: (key: unknown) => unknown) {
+      if (!this.has(key)) this.set(key, compute(key));
+      return this.get(key);
+    };
+  }
+
+  const renderScale = 2;
+  const viewport = page.getViewport({ scale: renderScale });
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.ceil(viewport.width);
+  canvas.height = Math.ceil(viewport.height);
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) return null;
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  await page.render({ canvasContext: ctx, viewport }).promise;
+
+  const { width, height } = canvas;
+  const pixels = ctx.getImageData(0, 0, width, height).data;
+  const isDark = (x: number, y: number) => {
+    const idx = (y * width + x) * 4;
+    return pixels[idx] + pixels[idx + 1] + pixels[idx + 2] < 390;
+  };
+
+  const groupCenters = (values: number[]) => {
+    const groups: number[][] = [];
+    for (const value of values) {
+      if (!groups.length || value > groups[groups.length - 1][groups[groups.length - 1].length - 1] + 1) {
+        groups.push([]);
+      }
+      groups[groups.length - 1].push(value);
+    }
+    return groups.map((group) => (group[0] + group[group.length - 1]) / 2);
+  };
+
+  const horizontalRows: number[] = [];
+  for (let y = Math.floor(height * 0.55); y < Math.floor(height * 0.97); y++) {
+    let dark = 0;
+    for (let x = 0; x < width; x++) if (isDark(x, y)) dark++;
+    if (dark > width * 0.45) horizontalRows.push(y);
+  }
+
+  const horizontal = groupCenters(horizontalRows)
+    .filter((y, idx, arr) => idx === 0 || y - arr[idx - 1] > height * 0.018)
+    .sort((a, b) => a - b);
+  if (horizontal.length < 3) return null;
+
+  const [sigTop, nameTop, nameBottom] = horizontal.slice(-3);
+  const sigRowH = nameTop - sigTop;
+  const nameRowH = nameBottom - nameTop;
+  if (sigRowH < height * 0.018 || nameRowH < height * 0.018) return null;
+
+  const verticalCols: number[] = [];
+  const y1 = Math.max(0, Math.floor(sigTop) + 1);
+  const y2 = Math.min(height - 1, Math.floor(nameTop) - 1);
+  for (let x = 0; x < width; x++) {
+    let dark = 0;
+    for (let y = y1; y <= y2; y++) if (isDark(x, y)) dark++;
+    if (dark > (y2 - y1) * 0.4) verticalCols.push(x);
+  }
+
+  const vertical = groupCenters(verticalCols).sort((a, b) => a - b);
+  if (vertical.length < 4) return null;
+
+  const formLeft = vertical[0];
+  const sigDateSplit = vertical[1];
+  const dateOfficerSplit = vertical[2];
+  if (sigDateSplit - formLeft < width * 0.18 || dateOfficerSplit - sigDateSplit < width * 0.07) {
+    return null;
+  }
+
+  const toPdfBoxFromPixels = (box: BoxRect): BoxRect => {
+    const viewportBox = {
+      x: box.x / renderScale,
+      y: box.y / renderScale,
+      w: box.w / renderScale,
+      h: box.h / renderScale,
+    };
+    const [x1, y1p] = baseViewport.convertToPdfPoint(viewportBox.x, viewportBox.y);
+    const [x2, y2p] = baseViewport.convertToPdfPoint(viewportBox.x + viewportBox.w, viewportBox.y + viewportBox.h);
+    return {
+      x: Math.min(x1, x2),
+      y: Math.min(y1p, y2p),
+      w: Math.abs(x2 - x1),
+      h: Math.abs(y2p - y1p),
+    };
+  };
+
+  const xInset = Math.max(4, width * 0.004);
+  const sigFieldTop = sigTop + sigRowH * 0.45;
+  const nameFieldTop = nameTop + nameRowH * 0.45;
+
+  return {
+    pageIndex,
+    pageWidth: baseViewport.width,
+    pageHeight: baseViewport.height,
+    signatureBox: toPdfBoxFromPixels({
+      x: formLeft + xInset,
+      y: sigFieldTop,
+      w: sigDateSplit - formLeft - xInset * 2,
+      h: Math.max(renderScale * 10, nameTop - sigFieldTop - renderScale * 3),
+    }),
+    dateBox: toPdfBoxFromPixels({
+      x: sigDateSplit + xInset,
+      y: sigFieldTop,
+      w: dateOfficerSplit - sigDateSplit - xInset * 2,
+      h: Math.max(renderScale * 9, Math.min(renderScale * 14, nameTop - sigFieldTop - renderScale * 4)),
+    }),
+    nameBox: toPdfBoxFromPixels({
+      x: formLeft + xInset,
+      y: nameFieldTop,
+      w: dateOfficerSplit - formLeft - xInset * 2,
+      h: Math.max(renderScale * 9, nameBottom - nameFieldTop - renderScale * 3),
+    }),
+  };
+}
+
 /**
  * Scan every page of the PDF for the OF-286 signature row labels and return
  * the rectangles where we should stamp the signature, date, and printed name.
@@ -225,8 +351,8 @@ export async function findOf286Anchors(pdfBytes: Uint8Array): Promise<PageAnchor
     };
 
     if (!labelSig || !labelName) {
-      // Force layout-based fallback for this page.
-      results.push(getOf286FallbackFields(p, pw, ph));
+      const gridAnchors = await findOf286GridAnchors(page, p, viewport);
+      results.push(gridAnchors ?? getOf286FallbackFields(p, pw, ph));
       continue;
     }
 
