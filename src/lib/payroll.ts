@@ -619,7 +619,10 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
         hwPay: incHwPay,
         overtimePay: incOTPay,
         grossPay: incGross,
+        shiftCount: agg.dates.size,
+        dates: Array.from(agg.dates).sort(),
       });
+
     });
     byIncident.sort((a, b) => b.grossPay - a.grossPay);
 
