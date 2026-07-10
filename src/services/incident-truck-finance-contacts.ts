@@ -95,13 +95,17 @@ export async function addTruckFinanceContact(input: {
 }): Promise<IncidentTruckFinanceContact> {
   const { data: { user } } = await supabase.auth.getUser();
   // Reactivate-or-insert: if this finance_officer is already attached, just reactivate.
+  // Use limit(1) + order instead of maybeSingle() so legacy duplicate rows
+  // don't throw "multiple rows returned" — pick the most recent and reactivate it.
   if (input.finance_officer_id) {
-    const { data: existing } = await supabase
+    const { data: existingRows } = await supabase
       .from("incident_truck_finance_contacts")
       .select("*")
       .eq("incident_truck_id", input.incident_truck_id)
       .eq("finance_officer_id", input.finance_officer_id)
-      .maybeSingle();
+      .order("selected_at", { ascending: false })
+      .limit(1);
+    const existing = existingRows?.[0];
     if (existing) {
       const { data: updated, error } = await supabase
         .from("incident_truck_finance_contacts")
