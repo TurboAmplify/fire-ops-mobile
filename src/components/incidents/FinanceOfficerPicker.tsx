@@ -260,7 +260,7 @@ export function FinanceOfficerPicker({
           <DialogTitle>Add finance contact</DialogTitle>
         </DialogHeader>
 
-        <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)} className="px-4 pb-4">
+        <Tabs value={tab} onValueChange={handleTabChange} className="px-4 pb-4">
           <TabsList className="w-full grid grid-cols-3 h-10">
             <TabsTrigger value="directory">Directory</TabsTrigger>
             <TabsTrigger value="new">New officer</TabsTrigger>
