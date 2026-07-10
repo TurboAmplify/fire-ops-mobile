@@ -18,6 +18,15 @@ import {
   type GaccRegion,
 } from "@/services/finance-officers";
 import { addTruckFinanceContact, addIncidentFinanceContact } from "@/services/incident-truck-finance-contacts";
+import { supabase } from "@/integrations/supabase/client";
+import { logError } from "@/lib/error-tracking";
+
+// Matches the DB CHECK constraint on finance_officers.email
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+function errText(e: unknown): string {
+  return e instanceof Error ? e.message : String(e ?? "Unknown error");
+}
 
 interface Props {
   open: boolean;
@@ -61,6 +70,15 @@ export function FinanceOfficerPicker({
   const [saving, setSaving] = useState(false);
   const [pickingId, setPickingId] = useState<string | null>(null);
   const [editing, setEditing] = useState<FinanceOfficer | null>(null);
+  const [errors, setErrors] = useState<{
+    newName?: string;
+    newEmail?: string;
+    oneOffEmail?: string;
+  }>({});
+  // When a New Officer save collides with an existing active directory entry,
+  // stash it here so Les can attach the existing officer with one tap instead
+  // of getting a raw Postgres unique-violation toast.
+  const [existingMatch, setExistingMatch] = useState<FinanceOfficer | null>(null);
 
   // New officer form
   const [form, setForm] = useState({
@@ -83,6 +101,15 @@ export function FinanceOfficerPicker({
     setRegionId(defaultRegionId || null);
   }, [open, defaultRegionId]);
 
+  // Reset validation state whenever the dialog closes so a stale error
+  // doesn't reappear next time.
+  useEffect(() => {
+    if (!open) {
+      setErrors({});
+      setExistingMatch(null);
+    }
+  }, [open]);
+
   useEffect(() => {
     if (!open || tab !== "directory") return;
     setLoading(true);
@@ -96,6 +123,20 @@ export function FinanceOfficerPicker({
       .finally(() => setLoading(false));
   }, [open, tab, regionId, search, sort]);
 
+  // Seed the New Officer name from whatever the user typed into directory
+  // search, so switching tabs doesn't feel like starting over.
+  const handleTabChange = (v: string) => {
+    setTab(v as typeof tab);
+    setErrors({});
+    setExistingMatch(null);
+    if (v === "new" && !form.name.trim() && search.trim()) {
+      setForm((f) => ({ ...f, name: search.trim() }));
+    }
+    if (v === "oneoff" && !oneOff.name.trim() && search.trim()) {
+      setOneOff((o) => ({ ...o, name: search.trim() }));
+    }
+  };
+
   const handlePick = async (o: FinanceOfficer) => {
     setSaving(true);
     setPickingId(o.id);
@@ -106,20 +147,45 @@ export function FinanceOfficerPicker({
       onAdded?.();
       onOpenChange(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to add contact");
+      const msg = errText(e);
+      toast.error(msg);
+      logError({ message: `finance-contact-add (pick): ${msg}`, stack: e instanceof Error ? e.stack : null, organizationId });
     } finally {
       setSaving(false);
       setPickingId(null);
     }
   };
 
+  const validateNew = (): boolean => {
+    const next: typeof errors = {};
+    if (!form.name.trim()) next.newName = "Name required";
+    const email = form.email.trim();
+    if (!email) next.newEmail = "Email required";
+    else if (!EMAIL_RE.test(email)) next.newEmail = "Enter a valid email (e.g. name@agency.gov)";
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  };
+
   const handleCreateNew = async () => {
-    if (!form.name.trim() || !form.email.trim()) {
-      toast.error("Name and email required");
-      return;
-    }
+    setExistingMatch(null);
+    if (!validateNew()) return;
+    const cleanEmail = form.email.trim().toLowerCase();
     setSaving(true);
     try {
+      // Pre-check for an existing active officer with the same email — the
+      // finance_officers table has UNIQUE (lower(email)) WHERE is_active,
+      // which would otherwise surface as a cryptic 23505 error.
+      const { data: existing } = await supabase
+        .from("finance_officers")
+        .select("id, name, email, phone, work_phone, cell_phone, dispatch_office, region_id, agency, notes, is_active, verified_at, last_used_at, use_count")
+        .ilike("email", cleanEmail)
+        .eq("is_active", true)
+        .limit(1)
+        .maybeSingle();
+      if (existing) {
+        setExistingMatch(existing as FinanceOfficer);
+        return;
+      }
       const officer = await createFinanceOfficer({
         ...form,
         region_id: form.region_id || null,
@@ -130,22 +196,44 @@ export function FinanceOfficerPicker({
       onAdded?.();
       onOpenChange(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to create officer");
+      const msg = errText(e);
+      toast.error(msg);
+      logError({ message: `finance-contact-add (new): ${msg}`, stack: e instanceof Error ? e.stack : null, organizationId });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUseExisting = async () => {
+    if (!existingMatch) return;
+    setSaving(true);
+    try {
+      await addContact({ finance_officer_id: existingMatch.id, role: defaultRole });
+      recordOfficerUse(existingMatch.id).catch(() => {});
+      toast.success(`${existingMatch.name} added as finance contact`);
+      onAdded?.();
+      onOpenChange(false);
+    } catch (e) {
+      const msg = errText(e);
+      toast.error(msg);
+      logError({ message: `finance-contact-add (reuse): ${msg}`, stack: e instanceof Error ? e.stack : null, organizationId });
     } finally {
       setSaving(false);
     }
   };
 
   const handleOneOff = async () => {
-    if (!oneOff.email.trim()) {
-      toast.error("Email required");
-      return;
-    }
+    const email = oneOff.email.trim();
+    const next: typeof errors = {};
+    if (!email) next.oneOffEmail = "Email required";
+    else if (!EMAIL_RE.test(email)) next.oneOffEmail = "Enter a valid email (e.g. name@agency.gov)";
+    setErrors(next);
+    if (Object.keys(next).length) return;
     setSaving(true);
     try {
       await addContact({
         name_override: oneOff.name || undefined,
-        email_override: oneOff.email,
+        email_override: email,
         work_phone_override: oneOff.work_phone || undefined,
         cell_phone_override: oneOff.cell_phone || undefined,
         role: defaultRole,
@@ -154,11 +242,14 @@ export function FinanceOfficerPicker({
       onAdded?.();
       onOpenChange(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to add contact");
+      const msg = errText(e);
+      toast.error(msg);
+      logError({ message: `finance-contact-add (oneoff): ${msg}`, stack: e instanceof Error ? e.stack : null, organizationId });
     } finally {
       setSaving(false);
     }
   };
+
 
   const regionOptions = useMemo(() => regions, [regions]);
 
@@ -169,7 +260,7 @@ export function FinanceOfficerPicker({
           <DialogTitle>Add finance contact</DialogTitle>
         </DialogHeader>
 
-        <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)} className="px-4 pb-4">
+        <Tabs value={tab} onValueChange={handleTabChange} className="px-4 pb-4">
           <TabsList className="w-full grid grid-cols-3 h-10">
             <TabsTrigger value="directory">Directory</TabsTrigger>
             <TabsTrigger value="new">New officer</TabsTrigger>
@@ -226,7 +317,7 @@ export function FinanceOfficerPicker({
                   <p className="text-sm text-muted-foreground mb-3">
                     No officers match your search.
                   </p>
-                  <Button size="sm" variant="outline" onClick={() => setTab("new")}>
+                  <Button size="sm" variant="outline" onClick={() => handleTabChange("new")}>
                     <Plus className="h-4 w-4 mr-1" /> Add new officer
                   </Button>
                 </div>
@@ -301,17 +392,66 @@ export function FinanceOfficerPicker({
             <p className="text-xs text-muted-foreground">
               Adds to the shared directory — visible to all crews.
             </p>
-            <Field label="Name *"><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
-            <Field label="Email *"><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></Field>
+            <Field label="Name *" error={errors.newName}>
+              <Input
+                value={form.name}
+                aria-invalid={!!errors.newName}
+                onChange={(e) => {
+                  setForm({ ...form, name: e.target.value });
+                  if (errors.newName) setErrors((x) => ({ ...x, newName: undefined }));
+                }}
+              />
+            </Field>
+            <Field label="Email *" error={errors.newEmail}>
+              <Input
+                type="email"
+                inputMode="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                value={form.email}
+                aria-invalid={!!errors.newEmail}
+                onChange={(e) => {
+                  setForm({ ...form, email: e.target.value });
+                  if (errors.newEmail) setErrors((x) => ({ ...x, newEmail: undefined }));
+                  if (existingMatch) setExistingMatch(null);
+                }}
+              />
+            </Field>
+            {existingMatch && (
+              <div className="rounded-md border border-amber-500/50 bg-amber-500/10 p-2.5 text-xs space-y-2">
+                <p>
+                  <span className="font-semibold">{existingMatch.name}</span> is already in the
+                  directory ({existingMatch.email}). Attach the existing entry to this incident?
+                </p>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={handleUseExisting} disabled={saving} className="h-9">
+                    {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Attach existing"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setExistingMatch(null)}
+                    disabled={saving}
+                    className="h-9"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-2">
               <Field label="Work phone"><Input type="tel" inputMode="tel" value={form.work_phone} onChange={(e) => setForm({ ...form, work_phone: e.target.value })} /></Field>
               <Field label="Cell phone"><Input type="tel" inputMode="tel" value={form.cell_phone} onChange={(e) => setForm({ ...form, cell_phone: e.target.value })} /></Field>
             </div>
             <Field label="Dispatch office"><Input value={form.dispatch_office} onChange={(e) => setForm({ ...form, dispatch_office: e.target.value })} /></Field>
             <Field label="Region">
-              <Select value={form.region_id} onValueChange={(v) => setForm({ ...form, region_id: v })}>
+              <Select
+                value={form.region_id || "none"}
+                onValueChange={(v) => setForm({ ...form, region_id: v === "none" ? "" : v })}
+              >
                 <SelectTrigger><SelectValue placeholder="Pick region" /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">No region</SelectItem>
                   {regions.map((r) => (
                     <SelectItem key={r.id} value={r.id}>{r.id} — {r.name}</SelectItem>
                   ))}
@@ -330,7 +470,20 @@ export function FinanceOfficerPicker({
               Use only for one-time contacts (not saved to directory).
             </p>
             <Field label="Name"><Input value={oneOff.name} onChange={(e) => setOneOff({ ...oneOff, name: e.target.value })} /></Field>
-            <Field label="Email *"><Input type="email" value={oneOff.email} onChange={(e) => setOneOff({ ...oneOff, email: e.target.value })} /></Field>
+            <Field label="Email *" error={errors.oneOffEmail}>
+              <Input
+                type="email"
+                inputMode="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                value={oneOff.email}
+                aria-invalid={!!errors.oneOffEmail}
+                onChange={(e) => {
+                  setOneOff({ ...oneOff, email: e.target.value });
+                  if (errors.oneOffEmail) setErrors((x) => ({ ...x, oneOffEmail: undefined }));
+                }}
+              />
+            </Field>
             <div className="grid grid-cols-2 gap-2">
               <Field label="Work phone"><Input type="tel" inputMode="tel" value={oneOff.work_phone} onChange={(e) => setOneOff({ ...oneOff, work_phone: e.target.value })} /></Field>
               <Field label="Cell phone"><Input type="tel" inputMode="tel" value={oneOff.cell_phone} onChange={(e) => setOneOff({ ...oneOff, cell_phone: e.target.value })} /></Field>
@@ -458,11 +611,12 @@ function EditFinanceOfficerDialog({
 }
 
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children, error }: { label: string; children: React.ReactNode; error?: string }) {
   return (
     <div className="space-y-1">
       <Label className="text-xs">{label}</Label>
       {children}
+      {error && <p className="text-[11px] text-destructive">{error}</p>}
     </div>
   );
 }
