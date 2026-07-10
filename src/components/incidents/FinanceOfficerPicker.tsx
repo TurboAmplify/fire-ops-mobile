@@ -317,7 +317,7 @@ export function FinanceOfficerPicker({
                   <p className="text-sm text-muted-foreground mb-3">
                     No officers match your search.
                   </p>
-                  <Button size="sm" variant="outline" onClick={() => setTab("new")}>
+                  <Button size="sm" variant="outline" onClick={() => handleTabChange("new")}>
                     <Plus className="h-4 w-4 mr-1" /> Add new officer
                   </Button>
                 </div>
