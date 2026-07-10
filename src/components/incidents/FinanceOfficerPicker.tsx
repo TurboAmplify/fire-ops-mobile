@@ -70,6 +70,15 @@ export function FinanceOfficerPicker({
   const [saving, setSaving] = useState(false);
   const [pickingId, setPickingId] = useState<string | null>(null);
   const [editing, setEditing] = useState<FinanceOfficer | null>(null);
+  const [errors, setErrors] = useState<{
+    newName?: string;
+    newEmail?: string;
+    oneOffEmail?: string;
+  }>({});
+  // When a New Officer save collides with an existing active directory entry,
+  // stash it here so Les can attach the existing officer with one tap instead
+  // of getting a raw Postgres unique-violation toast.
+  const [existingMatch, setExistingMatch] = useState<FinanceOfficer | null>(null);
 
   // New officer form
   const [form, setForm] = useState({
@@ -92,6 +101,15 @@ export function FinanceOfficerPicker({
     setRegionId(defaultRegionId || null);
   }, [open, defaultRegionId]);
 
+  // Reset validation state whenever the dialog closes so a stale error
+  // doesn't reappear next time.
+  useEffect(() => {
+    if (!open) {
+      setErrors({});
+      setExistingMatch(null);
+    }
+  }, [open]);
+
   useEffect(() => {
     if (!open || tab !== "directory") return;
     setLoading(true);
@@ -105,6 +123,20 @@ export function FinanceOfficerPicker({
       .finally(() => setLoading(false));
   }, [open, tab, regionId, search, sort]);
 
+  // Seed the New Officer name from whatever the user typed into directory
+  // search, so switching tabs doesn't feel like starting over.
+  const handleTabChange = (v: string) => {
+    setTab(v as typeof tab);
+    setErrors({});
+    setExistingMatch(null);
+    if (v === "new" && !form.name.trim() && search.trim()) {
+      setForm((f) => ({ ...f, name: search.trim() }));
+    }
+    if (v === "oneoff" && !oneOff.name.trim() && search.trim()) {
+      setOneOff((o) => ({ ...o, name: search.trim() }));
+    }
+  };
+
   const handlePick = async (o: FinanceOfficer) => {
     setSaving(true);
     setPickingId(o.id);
@@ -115,20 +147,45 @@ export function FinanceOfficerPicker({
       onAdded?.();
       onOpenChange(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to add contact");
+      const msg = errText(e);
+      toast.error(msg);
+      logError({ message: `finance-contact-add (pick): ${msg}`, stack: e instanceof Error ? e.stack : null, organizationId });
     } finally {
       setSaving(false);
       setPickingId(null);
     }
   };
 
+  const validateNew = (): boolean => {
+    const next: typeof errors = {};
+    if (!form.name.trim()) next.newName = "Name required";
+    const email = form.email.trim();
+    if (!email) next.newEmail = "Email required";
+    else if (!EMAIL_RE.test(email)) next.newEmail = "Enter a valid email (e.g. name@agency.gov)";
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  };
+
   const handleCreateNew = async () => {
-    if (!form.name.trim() || !form.email.trim()) {
-      toast.error("Name and email required");
-      return;
-    }
+    setExistingMatch(null);
+    if (!validateNew()) return;
+    const cleanEmail = form.email.trim().toLowerCase();
     setSaving(true);
     try {
+      // Pre-check for an existing active officer with the same email — the
+      // finance_officers table has UNIQUE (lower(email)) WHERE is_active,
+      // which would otherwise surface as a cryptic 23505 error.
+      const { data: existing } = await supabase
+        .from("finance_officers")
+        .select("id, name, email, phone, work_phone, cell_phone, dispatch_office, region_id, agency, notes, is_active, verified_at, last_used_at, use_count")
+        .ilike("email", cleanEmail)
+        .eq("is_active", true)
+        .limit(1)
+        .maybeSingle();
+      if (existing) {
+        setExistingMatch(existing as FinanceOfficer);
+        return;
+      }
       const officer = await createFinanceOfficer({
         ...form,
         region_id: form.region_id || null,
@@ -139,22 +196,44 @@ export function FinanceOfficerPicker({
       onAdded?.();
       onOpenChange(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to create officer");
+      const msg = errText(e);
+      toast.error(msg);
+      logError({ message: `finance-contact-add (new): ${msg}`, stack: e instanceof Error ? e.stack : null, organizationId });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUseExisting = async () => {
+    if (!existingMatch) return;
+    setSaving(true);
+    try {
+      await addContact({ finance_officer_id: existingMatch.id, role: defaultRole });
+      recordOfficerUse(existingMatch.id).catch(() => {});
+      toast.success(`${existingMatch.name} added as finance contact`);
+      onAdded?.();
+      onOpenChange(false);
+    } catch (e) {
+      const msg = errText(e);
+      toast.error(msg);
+      logError({ message: `finance-contact-add (reuse): ${msg}`, stack: e instanceof Error ? e.stack : null, organizationId });
     } finally {
       setSaving(false);
     }
   };
 
   const handleOneOff = async () => {
-    if (!oneOff.email.trim()) {
-      toast.error("Email required");
-      return;
-    }
+    const email = oneOff.email.trim();
+    const next: typeof errors = {};
+    if (!email) next.oneOffEmail = "Email required";
+    else if (!EMAIL_RE.test(email)) next.oneOffEmail = "Enter a valid email (e.g. name@agency.gov)";
+    setErrors(next);
+    if (Object.keys(next).length) return;
     setSaving(true);
     try {
       await addContact({
         name_override: oneOff.name || undefined,
-        email_override: oneOff.email,
+        email_override: email,
         work_phone_override: oneOff.work_phone || undefined,
         cell_phone_override: oneOff.cell_phone || undefined,
         role: defaultRole,
@@ -163,11 +242,14 @@ export function FinanceOfficerPicker({
       onAdded?.();
       onOpenChange(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to add contact");
+      const msg = errText(e);
+      toast.error(msg);
+      logError({ message: `finance-contact-add (oneoff): ${msg}`, stack: e instanceof Error ? e.stack : null, organizationId });
     } finally {
       setSaving(false);
     }
   };
+
 
   const regionOptions = useMemo(() => regions, [regions]);
 
