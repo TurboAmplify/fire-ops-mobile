@@ -611,11 +611,12 @@ function EditFinanceOfficerDialog({
 }
 
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children, error }: { label: string; children: React.ReactNode; error?: string }) {
   return (
     <div className="space-y-1">
       <Label className="text-xs">{label}</Label>
       {children}
+      {error && <p className="text-[11px] text-destructive">{error}</p>}
     </div>
   );
 }
