@@ -18,6 +18,15 @@ import {
   type GaccRegion,
 } from "@/services/finance-officers";
 import { addTruckFinanceContact, addIncidentFinanceContact } from "@/services/incident-truck-finance-contacts";
+import { supabase } from "@/integrations/supabase/client";
+import { logError } from "@/lib/error-tracking";
+
+// Matches the DB CHECK constraint on finance_officers.email
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+function errText(e: unknown): string {
+  return e instanceof Error ? e.message : String(e ?? "Unknown error");
+}
 
 interface Props {
   open: boolean;
