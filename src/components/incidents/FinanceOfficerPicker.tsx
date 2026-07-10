@@ -392,17 +392,66 @@ export function FinanceOfficerPicker({
             <p className="text-xs text-muted-foreground">
               Adds to the shared directory — visible to all crews.
             </p>
-            <Field label="Name *"><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
-            <Field label="Email *"><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></Field>
+            <Field label="Name *" error={errors.newName}>
+              <Input
+                value={form.name}
+                aria-invalid={!!errors.newName}
+                onChange={(e) => {
+                  setForm({ ...form, name: e.target.value });
+                  if (errors.newName) setErrors((x) => ({ ...x, newName: undefined }));
+                }}
+              />
+            </Field>
+            <Field label="Email *" error={errors.newEmail}>
+              <Input
+                type="email"
+                inputMode="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                value={form.email}
+                aria-invalid={!!errors.newEmail}
+                onChange={(e) => {
+                  setForm({ ...form, email: e.target.value });
+                  if (errors.newEmail) setErrors((x) => ({ ...x, newEmail: undefined }));
+                  if (existingMatch) setExistingMatch(null);
+                }}
+              />
+            </Field>
+            {existingMatch && (
+              <div className="rounded-md border border-amber-500/50 bg-amber-500/10 p-2.5 text-xs space-y-2">
+                <p>
+                  <span className="font-semibold">{existingMatch.name}</span> is already in the
+                  directory ({existingMatch.email}). Attach the existing entry to this incident?
+                </p>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={handleUseExisting} disabled={saving} className="h-9">
+                    {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Attach existing"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setExistingMatch(null)}
+                    disabled={saving}
+                    className="h-9"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-2">
               <Field label="Work phone"><Input type="tel" inputMode="tel" value={form.work_phone} onChange={(e) => setForm({ ...form, work_phone: e.target.value })} /></Field>
               <Field label="Cell phone"><Input type="tel" inputMode="tel" value={form.cell_phone} onChange={(e) => setForm({ ...form, cell_phone: e.target.value })} /></Field>
             </div>
             <Field label="Dispatch office"><Input value={form.dispatch_office} onChange={(e) => setForm({ ...form, dispatch_office: e.target.value })} /></Field>
             <Field label="Region">
-              <Select value={form.region_id} onValueChange={(v) => setForm({ ...form, region_id: v })}>
+              <Select
+                value={form.region_id || "none"}
+                onValueChange={(v) => setForm({ ...form, region_id: v === "none" ? "" : v })}
+              >
                 <SelectTrigger><SelectValue placeholder="Pick region" /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">No region</SelectItem>
                   {regions.map((r) => (
                     <SelectItem key={r.id} value={r.id}>{r.id} — {r.name}</SelectItem>
                   ))}
@@ -421,7 +470,20 @@ export function FinanceOfficerPicker({
               Use only for one-time contacts (not saved to directory).
             </p>
             <Field label="Name"><Input value={oneOff.name} onChange={(e) => setOneOff({ ...oneOff, name: e.target.value })} /></Field>
-            <Field label="Email *"><Input type="email" value={oneOff.email} onChange={(e) => setOneOff({ ...oneOff, email: e.target.value })} /></Field>
+            <Field label="Email *" error={errors.oneOffEmail}>
+              <Input
+                type="email"
+                inputMode="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                value={oneOff.email}
+                aria-invalid={!!errors.oneOffEmail}
+                onChange={(e) => {
+                  setOneOff({ ...oneOff, email: e.target.value });
+                  if (errors.oneOffEmail) setErrors((x) => ({ ...x, oneOffEmail: undefined }));
+                }}
+              />
+            </Field>
             <div className="grid grid-cols-2 gap-2">
               <Field label="Work phone"><Input type="tel" inputMode="tel" value={oneOff.work_phone} onChange={(e) => setOneOff({ ...oneOff, work_phone: e.target.value })} /></Field>
               <Field label="Cell phone"><Input type="tel" inputMode="tel" value={oneOff.cell_phone} onChange={(e) => setOneOff({ ...oneOff, cell_phone: e.target.value })} /></Field>
