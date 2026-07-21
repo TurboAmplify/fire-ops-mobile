@@ -167,7 +167,10 @@ export function IncidentTruckList({ incidentId, incidentName, organizationId }: 
           removing={removeMutation.isPending && confirmRemoveId === it.id}
           promptRo={promptRoFor === it.id}
           onDismissRoPrompt={() => setPromptRoFor(null)}
+          onStartNewPart={() => handleStartNewPart(it)}
+          startingNewPart={newPartMutation.isPending}
         />
+
       ))}
     </section>
   );
