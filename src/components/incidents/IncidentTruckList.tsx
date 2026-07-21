@@ -75,6 +75,20 @@ export function IncidentTruckList({ incidentId, incidentName, organizationId }: 
     }
   };
 
+  const handleStartNewPart = async (it: IncidentTruckWithTruck) => {
+    try {
+      const created = await newPartMutation.mutateAsync(it.id);
+      toast.success(`New part started for ${it.trucks.name}`, {
+        description: "Upload the new resource order and add crew to this part.",
+      });
+      setExpandedTruck(created.id);
+      setPromptRoFor(created.id);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to start new part");
+    }
+  };
+
+
 
   return (
     <section className="space-y-3">
