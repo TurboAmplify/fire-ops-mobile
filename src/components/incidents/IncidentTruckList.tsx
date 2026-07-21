@@ -1,4 +1,4 @@
-import { useIncidentTrucks, useAvailableTrucks, useAssignTruck, useUpdateTruckStatus, useRemoveTruck } from "@/hooks/useIncidentTrucks";
+import { useIncidentTrucks, useAvailableTrucks, useAssignTruck, useUpdateTruckStatus, useRemoveTruck, useStartNewTruckPart } from "@/hooks/useIncidentTrucks";
 import { useIncidentTruckCrew } from "@/hooks/useIncidentTruckCrew";
 import { useShiftTickets } from "@/hooks/useShiftTickets";
 import { TRUCK_STATUS_LABELS } from "@/services/incident-trucks";
