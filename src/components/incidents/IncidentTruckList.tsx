@@ -192,6 +192,8 @@ function TruckCard({
   removing,
   promptRo,
   onDismissRoPrompt,
+  onStartNewPart,
+  startingNewPart,
 }: {
   it: IncidentTruckWithTruck;
   isExpanded: boolean;
@@ -208,6 +210,9 @@ function TruckCard({
   removing: boolean;
   promptRo?: boolean;
   onDismissRoPrompt?: () => void;
+  onStartNewPart: () => void;
+  startingNewPart: boolean;
+
 }) {
   // Always fetch crew so we can show summary + warning on collapsed card
   const { data: crew } = useIncidentTruckCrew(it.id);
