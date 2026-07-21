@@ -1,4 +1,4 @@
-import { useIncidentTrucks, useAvailableTrucks, useAssignTruck, useUpdateTruckStatus, useRemoveTruck } from "@/hooks/useIncidentTrucks";
+import { useIncidentTrucks, useAvailableTrucks, useAssignTruck, useUpdateTruckStatus, useRemoveTruck, useStartNewTruckPart } from "@/hooks/useIncidentTrucks";
 import { useIncidentTruckCrew } from "@/hooks/useIncidentTruckCrew";
 import { useShiftTickets } from "@/hooks/useShiftTickets";
 import { TRUCK_STATUS_LABELS } from "@/services/incident-trucks";
@@ -28,6 +28,8 @@ export function IncidentTruckList({ incidentId, incidentName, organizationId }: 
   const assignMutation = useAssignTruck(incidentId);
   const statusMutation = useUpdateTruckStatus(incidentId);
   const removeMutation = useRemoveTruck(incidentId);
+  const newPartMutation = useStartNewTruckPart(incidentId);
+
   const [showAssign, setShowAssign] = useState(false);
   const [expandedTruck, setExpandedTruck] = useState<string | null>(null);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
@@ -72,6 +74,20 @@ export function IncidentTruckList({ incidentId, incidentName, organizationId }: 
       toast.error(err?.message || "Failed to remove truck from incident");
     }
   };
+
+  const handleStartNewPart = async (it: IncidentTruckWithTruck) => {
+    try {
+      const created = await newPartMutation.mutateAsync(it.id);
+      toast.success(`New part started for ${it.trucks.name}`, {
+        description: "Upload the new resource order and add crew to this part.",
+      });
+      setExpandedTruck(created.id);
+      setPromptRoFor(created.id);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to start new part");
+    }
+  };
+
 
 
   return (
@@ -151,7 +167,10 @@ export function IncidentTruckList({ incidentId, incidentName, organizationId }: 
           removing={removeMutation.isPending && confirmRemoveId === it.id}
           promptRo={promptRoFor === it.id}
           onDismissRoPrompt={() => setPromptRoFor(null)}
+          onStartNewPart={() => handleStartNewPart(it)}
+          startingNewPart={newPartMutation.isPending}
         />
+
       ))}
     </section>
   );
@@ -173,6 +192,8 @@ function TruckCard({
   removing,
   promptRo,
   onDismissRoPrompt,
+  onStartNewPart,
+  startingNewPart,
 }: {
   it: IncidentTruckWithTruck;
   isExpanded: boolean;
@@ -189,6 +210,9 @@ function TruckCard({
   removing: boolean;
   promptRo?: boolean;
   onDismissRoPrompt?: () => void;
+  onStartNewPart: () => void;
+  startingNewPart: boolean;
+
 }) {
   // Always fetch crew so we can show summary + warning on collapsed card
   const { data: crew } = useIncidentTruckCrew(it.id);
@@ -220,8 +244,13 @@ function TruckCard({
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <TruckIcon className="h-5 w-5 text-muted-foreground shrink-0" />
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <p className="font-semibold truncate">{it.trucks.name}</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-semibold truncate">
+                {it.trucks.name}
+                {((it as any).part_number ?? 1) > 1 && (
+                  <span className="ml-1.5 text-primary">· Part {(it as any).part_number}</span>
+                )}
+              </p>
               <StatusBadge status={it.status as IncidentTruckStatus} />
               {noCrewAssigned && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">
@@ -230,6 +259,7 @@ function TruckCard({
                 </span>
               )}
             </div>
+
             <p className="text-xs text-muted-foreground mt-0.5 truncate">{summary}</p>
           </div>
         </div>
@@ -342,16 +372,30 @@ function TruckCard({
                 <ChevronRight className={`h-3.5 w-3.5 transition-transform ${showMore ? "rotate-90" : ""}`} />
               </button>
 
-              {!confirmRemove && (
-                <button
-                  onClick={onConfirmRemove}
-                  className="flex items-center gap-1.5 rounded-lg px-2 py-2 text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-colors touch-target"
-                >
-                  <X className="h-3.5 w-3.5" />
-                  Remove
-                </button>
-              )}
+              <div className="flex items-center gap-1">
+                {!confirmRemove && (
+                  <button
+                    onClick={onStartNewPart}
+                    disabled={startingNewPart}
+                    className="flex items-center gap-1.5 rounded-lg px-2 py-2 text-xs font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors touch-target disabled:opacity-50"
+                    title="New resource order for this truck (crew swap, rotation, etc.)"
+                  >
+                    {startingNewPart ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                    New part
+                  </button>
+                )}
+                {!confirmRemove && (
+                  <button
+                    onClick={onConfirmRemove}
+                    className="flex items-center gap-1.5 rounded-lg px-2 py-2 text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-colors touch-target"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Remove
+                  </button>
+                )}
+              </div>
             </div>
+
 
             {showMore && (
               <div className="mt-3 space-y-4 animate-fade-in">

@@ -5,9 +5,24 @@ import {
   assignTruckToIncident,
   updateIncidentTruckStatus,
   removeTruckFromIncident,
+  startNewTruckPart,
 } from "@/services/incident-trucks";
 import type { IncidentTruckStatus } from "@/services/incident-trucks";
 import { assertOnlineForWrite } from "@/lib/offline-guard";
+
+export function useStartNewTruckPart(incidentId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (incidentTruckId: string) => {
+      assertOnlineForWrite();
+      return startNewTruckPart(incidentTruckId);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["incident-trucks", incidentId] });
+    },
+  });
+}
+
 
 export function useIncidentTrucks(incidentId: string) {
   return useQuery({
