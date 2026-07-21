@@ -28,6 +28,8 @@ export function IncidentTruckList({ incidentId, incidentName, organizationId }: 
   const assignMutation = useAssignTruck(incidentId);
   const statusMutation = useUpdateTruckStatus(incidentId);
   const removeMutation = useRemoveTruck(incidentId);
+  const newPartMutation = useStartNewTruckPart(incidentId);
+
   const [showAssign, setShowAssign] = useState(false);
   const [expandedTruck, setExpandedTruck] = useState<string | null>(null);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
