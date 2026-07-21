@@ -244,8 +244,13 @@ function TruckCard({
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <TruckIcon className="h-5 w-5 text-muted-foreground shrink-0" />
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <p className="font-semibold truncate">{it.trucks.name}</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-semibold truncate">
+                {it.trucks.name}
+                {((it as any).part_number ?? 1) > 1 && (
+                  <span className="ml-1.5 text-primary">· Part {(it as any).part_number}</span>
+                )}
+              </p>
               <StatusBadge status={it.status as IncidentTruckStatus} />
               {noCrewAssigned && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">
@@ -254,6 +259,7 @@ function TruckCard({
                 </span>
               )}
             </div>
+
             <p className="text-xs text-muted-foreground mt-0.5 truncate">{summary}</p>
           </div>
         </div>
