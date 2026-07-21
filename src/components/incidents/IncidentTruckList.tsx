@@ -372,16 +372,30 @@ function TruckCard({
                 <ChevronRight className={`h-3.5 w-3.5 transition-transform ${showMore ? "rotate-90" : ""}`} />
               </button>
 
-              {!confirmRemove && (
-                <button
-                  onClick={onConfirmRemove}
-                  className="flex items-center gap-1.5 rounded-lg px-2 py-2 text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-colors touch-target"
-                >
-                  <X className="h-3.5 w-3.5" />
-                  Remove
-                </button>
-              )}
+              <div className="flex items-center gap-1">
+                {!confirmRemove && (
+                  <button
+                    onClick={onStartNewPart}
+                    disabled={startingNewPart}
+                    className="flex items-center gap-1.5 rounded-lg px-2 py-2 text-xs font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors touch-target disabled:opacity-50"
+                    title="New resource order for this truck (crew swap, rotation, etc.)"
+                  >
+                    {startingNewPart ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                    New part
+                  </button>
+                )}
+                {!confirmRemove && (
+                  <button
+                    onClick={onConfirmRemove}
+                    className="flex items-center gap-1.5 rounded-lg px-2 py-2 text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-colors touch-target"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Remove
+                  </button>
+                )}
+              </div>
             </div>
+
 
             {showMore && (
               <div className="mt-3 space-y-4 animate-fade-in">
