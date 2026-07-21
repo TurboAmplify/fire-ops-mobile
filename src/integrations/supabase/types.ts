@@ -1346,8 +1346,12 @@ export type Database = {
           deleted_at: string | null
           deleted_by_user_id: string | null
           deleted_reason: string | null
+          end_date: string | null
           id: string
           incident_id: string
+          part_label: string | null
+          part_number: number
+          start_date: string | null
           status: string
           truck_id: string
         }
@@ -1356,8 +1360,12 @@ export type Database = {
           deleted_at?: string | null
           deleted_by_user_id?: string | null
           deleted_reason?: string | null
+          end_date?: string | null
           id?: string
           incident_id: string
+          part_label?: string | null
+          part_number?: number
+          start_date?: string | null
           status?: string
           truck_id: string
         }
@@ -1366,8 +1374,12 @@ export type Database = {
           deleted_at?: string | null
           deleted_by_user_id?: string | null
           deleted_reason?: string | null
+          end_date?: string | null
           id?: string
           incident_id?: string
+          part_label?: string | null
+          part_number?: number
+          start_date?: string | null
           status?: string
           truck_id?: string
         }
