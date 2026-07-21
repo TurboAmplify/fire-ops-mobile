@@ -26,8 +26,55 @@ export async function fetchIncidentTrucks(incidentId: string) {
     .is("deleted_at", null)
     .order("assigned_at", { ascending: true });
   if (error) throw error;
-  return data as IncidentTruckWithTruck[];
+  const rows = (data ?? []) as IncidentTruckWithTruck[];
+  // Stable order: group by truck name, then by part number.
+  rows.sort((a, b) => {
+    const nameCmp = (a.trucks.name ?? "").localeCompare(b.trucks.name ?? "");
+    if (nameCmp !== 0) return nameCmp;
+    return ((a as any).part_number ?? 1) - ((b as any).part_number ?? 1);
+  });
+  return rows;
 }
+
+/**
+ * Start a new "part" for an existing truck assignment on an incident.
+ * Used when a truck gets a second resource order (crew swap, rotation, etc.)
+ * so that Part 1 keeps its own shift tickets / RO / OF-286 and Part 2 starts fresh.
+ */
+export async function startNewTruckPart(incidentTruckId: string): Promise<IncidentTruck> {
+  const { data: current, error: curErr } = await supabase
+    .from("incident_trucks")
+    .select("incident_id, truck_id")
+    .eq("id", incidentTruckId)
+    .single();
+  if (curErr) throw curErr;
+
+  // Find highest existing part_number for this (incident, truck), including trashed rows
+  // so we don't collide with a soft-deleted part.
+  const { data: existing, error: exErr } = await supabase
+    .from("incident_trucks")
+    .select("part_number")
+    .eq("incident_id", current.incident_id)
+    .eq("truck_id", current.truck_id);
+  if (exErr) throw exErr;
+  const maxPart = (existing ?? []).reduce(
+    (m: number, r: any) => Math.max(m, r.part_number ?? 1),
+    0,
+  );
+
+  const { data: inserted, error: insErr } = await supabase
+    .from("incident_trucks")
+    .insert({
+      incident_id: current.incident_id,
+      truck_id: current.truck_id,
+      part_number: maxPart + 1,
+    })
+    .select()
+    .single();
+  if (insErr) throw insErr;
+  return inserted as IncidentTruck;
+}
+
 
 export async function fetchAvailableTrucks(organizationId?: string) {
   let query = supabase.from("trucks").select("*").order("name");
