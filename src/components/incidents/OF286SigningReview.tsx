@@ -98,6 +98,15 @@ export function OF286SigningReview({
   const [activeField, setActiveField] = useState<FieldKey | null>(null);
   const [signatureOpen, setSignatureOpen] = useState(false);
   const [metadata, setMetadata] = useState<SignatureMetadata>({ method: "typed", name: defaultName });
+  // Per-page, per-field CSS-pixel drag offsets applied on top of detected anchors.
+  type Offset = { dx: number; dy: number };
+  type PageOffsets = { signature: Offset; date: Offset; name: Offset };
+  const emptyPageOffsets = (): PageOffsets => ({
+    signature: { dx: 0, dy: 0 },
+    date: { dx: 0, dy: 0 },
+    name: { dx: 0, dy: 0 },
+  });
+  const [offsets, setOffsets] = useState<Record<number, PageOffsets>>({});
 
   useEffect(() => {
     if (!open) return;
@@ -107,6 +116,7 @@ export function OF286SigningReview({
     setSignatureUrl(null);
     setActiveField(null);
     setMetadata({ method: "typed", name: defaultName });
+    setOffsets({});
   }, [open, defaultName]);
 
   // Auto-generate a typed signature from the printed name. The user can still
