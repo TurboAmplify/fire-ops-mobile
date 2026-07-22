@@ -89,8 +89,7 @@ export function SignaturePicker({ open, onClose, onSave, title, defaultName = ""
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        ctx.fillStyle = "hsl(0 0% 100%)";
-        ctx.fillRect(0, 0, rect.width, rect.height);
+        ctx.clearRect(0, 0, rect.width, rect.height);
         ctx.fillStyle = "hsl(222 47% 11%)";
 
         // Dynamic font sizing to fit the canvas width with padding
