@@ -447,6 +447,18 @@ export function OF286SigningReview({
             {dateText.trim() ? `✓ ${dateText}` : "3. Tap date box"}
           </span>
         </div>
+        <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+          <span>Drag any box to nudge placement.</span>
+          {Object.keys(offsets).length > 0 && (
+            <button
+              type="button"
+              onClick={resetPlacements}
+              className="rounded-md px-2 py-1 text-primary font-semibold active:bg-accent/30"
+            >
+              Reset placement
+            </button>
+          )}
+        </div>
         <button
           onClick={handleComplete}
           disabled={!allFilled}
