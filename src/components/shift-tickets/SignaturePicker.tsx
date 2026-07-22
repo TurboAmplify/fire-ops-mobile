@@ -124,8 +124,7 @@ export function SignaturePicker({ open, onClose, onSave, title, defaultName = ""
       const ctx = canvas.getContext("2d");
       if (ctx) {
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        ctx.fillStyle = "hsl(0 0% 100%)";
-        ctx.fillRect(0, 0, rect.width, rect.height);
+        ctx.clearRect(0, 0, rect.width, rect.height);
         ctx.strokeStyle = "hsl(222 47% 11%)";
         ctx.lineWidth = 2.5;
         ctx.lineCap = "round";
