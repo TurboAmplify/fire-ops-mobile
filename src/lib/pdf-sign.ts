@@ -547,8 +547,8 @@ export async function stampSignatureOntoPdf(opts: {
     const aspect = sigImage.width / sigImage.height;
     // Use nearly the full cell; tiny inset just to avoid touching the borders.
     // Cap height so a wide-aspect PNG can't spill into the row above (block 34).
-    const maxW = Math.max(20, box.w - 2);
-    const maxH = Math.max(14, box.h * 0.98);
+    const maxW = Math.max(20, box.w - 1);
+    const maxH = Math.max(18, box.h * 1.18);
     let w = maxW;
     let h = w / aspect;
     if (h > maxH) {
