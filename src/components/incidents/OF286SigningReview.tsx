@@ -292,7 +292,7 @@ export function OF286SigningReview({
               off: Offset;
               onTap: () => void;
               className: string;
-              content: React.ReactNode;
+              content: ReactNode;
             };
 
             const fields: FieldConfig[] = [
