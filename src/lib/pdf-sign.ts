@@ -544,17 +544,19 @@ export async function stampSignatureOntoPdf(opts: {
   const fitImage = (box: BoxRect) => {
     const aspect = sigImage.width / sigImage.height;
     // Use nearly the full cell; tiny inset just to avoid touching the borders.
+    // Cap height so a wide-aspect PNG can't spill into the row above (block 34).
     const maxW = Math.max(20, box.w - 2);
-    const maxH = Math.max(10, box.h - 1);
+    const maxH = Math.max(10, box.h * 0.9);
     let w = maxW;
     let h = w / aspect;
     if (h > maxH) {
       h = maxH;
       w = h * aspect;
     }
+    // Anchor to the bottom of the cell so the signature sits on the line.
     return {
       x: box.x + 1,
-      y: box.y + 0.5,
+      y: box.y + 1,
       w,
       h,
     };

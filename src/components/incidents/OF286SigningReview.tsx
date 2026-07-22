@@ -1,5 +1,5 @@
 import "@fontsource/dancing-script/700.css";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import * as pdfjsLib from "pdfjs-dist";
 import { Check, Loader2, PenLine, Send, X } from "lucide-react";
 import { SignaturePicker, type SignatureMetadata } from "@/components/shift-tickets/SignaturePicker";
@@ -98,6 +98,15 @@ export function OF286SigningReview({
   const [activeField, setActiveField] = useState<FieldKey | null>(null);
   const [signatureOpen, setSignatureOpen] = useState(false);
   const [metadata, setMetadata] = useState<SignatureMetadata>({ method: "typed", name: defaultName });
+  // Per-page, per-field CSS-pixel drag offsets applied on top of detected anchors.
+  type Offset = { dx: number; dy: number };
+  type PageOffsets = { signature: Offset; date: Offset; name: Offset };
+  const emptyPageOffsets = (): PageOffsets => ({
+    signature: { dx: 0, dy: 0 },
+    date: { dx: 0, dy: 0 },
+    name: { dx: 0, dy: 0 },
+  });
+  const [offsets, setOffsets] = useState<Record<number, PageOffsets>>({});
 
   useEffect(() => {
     if (!open) return;
@@ -107,6 +116,7 @@ export function OF286SigningReview({
     setSignatureUrl(null);
     setActiveField(null);
     setMetadata({ method: "typed", name: defaultName });
+    setOffsets({});
   }, [open, defaultName]);
 
   // Auto-generate a typed signature from the printed name. The user can still
@@ -204,24 +214,45 @@ export function OF286SigningReview({
     setActiveField(null);
   };
 
+  const applyOffset = (box: BoxRect, off: Offset, scale: number): BoxRect => {
+    if (!scale) return box;
+    return {
+      x: box.x + off.dx / scale,
+      y: box.y - off.dy / scale, // DOM y-down → PDF y-up
+      w: box.w,
+      h: box.h,
+    };
+  };
+
+  const getPageOffsets = (pageIndex: number): PageOffsets =>
+    offsets[pageIndex] ?? emptyPageOffsets();
+
+  const resetPlacements = () => setOffsets({});
+
   const handleComplete = () => {
     if (!signatureBlob || !firstPage?.signatureBox || !firstPage.dateBox || !firstPage.nameBox) return;
     const placementsByPage = anchors
       .filter((page) => page.signatureBox && page.dateBox && page.nameBox)
-      .map((page) => ({
-        signatureBox: page.signatureBox!,
-        dateBox: page.dateBox!,
-        nameBox: page.nameBox!,
-      }));
+      .map((page) => {
+        const scale = scales[page.pageIndex] ?? 1;
+        const off = getPageOffsets(page.pageIndex);
+        return {
+          signatureBox: applyOffset(page.signatureBox!, off.signature, scale),
+          dateBox: applyOffset(page.dateBox!, off.date, scale),
+          nameBox: applyOffset(page.nameBox!, off.name, scale),
+        };
+      });
+    const firstScale = scales[firstPage.pageIndex] ?? 1;
+    const firstOff = getPageOffsets(firstPage.pageIndex);
     onComplete({
       signatureBlob,
       metadata,
       signerName: signerName.trim(),
       dateText: dateText.trim(),
       placements: {
-        signatureBox: firstPage.signatureBox,
-        dateBox: firstPage.dateBox,
-        nameBox: firstPage.nameBox,
+        signatureBox: applyOffset(firstPage.signatureBox, firstOff.signature, firstScale),
+        dateBox: applyOffset(firstPage.dateBox, firstOff.date, firstScale),
+        nameBox: applyOffset(firstPage.nameBox, firstOff.name, firstScale),
       },
       placementsByPage,
     });
@@ -253,54 +284,126 @@ export function OF286SigningReview({
         <div className="mx-auto space-y-4">
           {(anchors.length > 0 ? anchors : [{ pageIndex: 0, pageWidth: 612, pageHeight: 792 } as PageAnchors]).map((page) => {
             const scale = scales[page.pageIndex] ?? 1;
+            const pageOff = getPageOffsets(page.pageIndex);
+
+            type FieldConfig = {
+              key: FieldKey;
+              box?: BoxRect;
+              off: Offset;
+              onTap: () => void;
+              className: string;
+              content: ReactNode;
+            };
+
+            const fields: FieldConfig[] = [
+              {
+                key: "signature",
+                box: page.signatureBox,
+                off: pageOff.signature,
+                onTap: () => {
+                  setActiveField("signature");
+                  setSignatureOpen(true);
+                },
+                className: "text-left",
+                content: signatureUrl ? (
+                  <img
+                    src={signatureUrl}
+                    alt="Signature preview"
+                    draggable={false}
+                    className="h-full w-full object-contain pointer-events-none select-none"
+                  />
+                ) : (
+                  <span className="flex h-full items-center justify-center gap-1 text-[10px] font-bold text-primary pointer-events-none">
+                    <PenLine className="h-3 w-3" /> Tap to change style
+                  </span>
+                ),
+              },
+              {
+                key: "date",
+                box: page.dateBox,
+                off: pageOff.date,
+                onTap: () => setActiveField("date"),
+                className: "px-1 text-[11px] font-semibold text-slate-900",
+                content: dateText || "Date",
+              },
+              {
+                key: "name",
+                box: page.nameBox,
+                off: pageOff.name,
+                onTap: () => setActiveField("name"),
+                className: "px-1 text-[11px] font-semibold text-slate-900",
+                content: signerName || (
+                  <span className="text-primary">Tap to type name &amp; title</span>
+                ),
+              },
+            ];
+
+            const handlePointerDown = (field: FieldConfig) => (e: React.PointerEvent<HTMLDivElement>) => {
+              if (!field.box) return;
+              const target = e.currentTarget;
+              target.setPointerCapture(e.pointerId);
+              const startX = e.clientX;
+              const startY = e.clientY;
+              const startOff = { ...field.off };
+              let moved = false;
+
+              const onMove = (ev: PointerEvent) => {
+                const dx = ev.clientX - startX;
+                const dy = ev.clientY - startY;
+                if (!moved && Math.hypot(dx, dy) < 4) return;
+                moved = true;
+                setOffsets((prev) => ({
+                  ...prev,
+                  [page.pageIndex]: {
+                    ...(prev[page.pageIndex] ?? emptyPageOffsets()),
+                    [field.key]: { dx: startOff.dx + dx, dy: startOff.dy + dy },
+                  },
+                }));
+              };
+              const onUp = (ev: PointerEvent) => {
+                target.removeEventListener("pointermove", onMove);
+                target.removeEventListener("pointerup", onUp);
+                target.removeEventListener("pointercancel", onUp);
+                try { target.releasePointerCapture(ev.pointerId); } catch { /* ignore */ }
+                if (!moved) field.onTap();
+              };
+              target.addEventListener("pointermove", onMove);
+              target.addEventListener("pointerup", onUp);
+              target.addEventListener("pointercancel", onUp);
+            };
+
             return (
               <div key={page.pageIndex} className="mx-auto w-fit overflow-hidden rounded-sm bg-card shadow-lg">
                 <div className="relative">
                   <canvas ref={(el) => { canvasRefs.current[page.pageIndex] = el; }} className="block bg-card" />
 
-                  {page.signatureBox && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveField("signature");
-                        setSignatureOpen(true);
-                      }}
-                      className={`absolute border-2 border-primary bg-primary/10 text-left active:bg-primary/20 ${activeField === "signature" ? "ring-2 ring-primary" : ""}`}
-                      style={overlayStyle(page.signatureBox, page, scale)}
-                    >
-                      {signatureUrl ? (
-                        <img src={signatureUrl} alt="Signature preview" className="h-full w-full object-contain" />
-                      ) : (
-                        <span className="flex h-full items-center justify-center gap-1 text-[10px] font-bold text-primary">
-                          <PenLine className="h-3 w-3" /> Tap to change style
-                        </span>
-                      )}
-                    </button>
-                  )}
-
-                  {page.dateBox && (
-                    <button
-                      type="button"
-                      onClick={() => setActiveField("date")}
-                      className={`absolute border-2 border-primary bg-primary/10 px-1 text-left text-[11px] font-semibold text-slate-900 active:bg-primary/20 ${activeField === "date" ? "ring-2 ring-primary" : ""}`}
-                      style={overlayStyle(page.dateBox, page, scale)}
-                    >
-                      {dateText || "Date"}
-                    </button>
-                  )}
-
-                  {page.nameBox && (
-                    <button
-                      type="button"
-                      onClick={() => setActiveField("name")}
-                      className={`absolute border-2 border-primary bg-primary/10 px-1 text-left text-[11px] font-semibold text-slate-900 active:bg-primary/20 ${activeField === "name" ? "ring-2 ring-primary" : ""}`}
-                      style={overlayStyle(page.nameBox, page, scale)}
-                    >
-                      {signerName || (
-                        <span className="text-primary">Tap to type name &amp; title</span>
-                      )}
-                    </button>
-                  )}
+                  {fields.map((field) => {
+                    if (!field.box) return null;
+                    const base = overlayStyle(field.box, page, scale);
+                    return (
+                      <div
+                        key={field.key}
+                        role="button"
+                        tabIndex={0}
+                        onPointerDown={handlePointerDown(field)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            field.onTap();
+                          }
+                        }}
+                        className={`absolute border-2 border-primary bg-primary/10 touch-none cursor-move active:bg-primary/20 ${activeField === field.key ? "ring-2 ring-primary" : ""} ${field.className}`}
+                        style={{
+                          left: (base.left as number) + field.off.dx,
+                          top: (base.top as number) + field.off.dy,
+                          width: base.width,
+                          height: base.height,
+                        }}
+                      >
+                        {field.content}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );
@@ -343,6 +446,18 @@ export function OF286SigningReview({
           <span className={dateText.trim() ? "text-foreground font-semibold" : ""}>
             {dateText.trim() ? `✓ ${dateText}` : "3. Tap date box"}
           </span>
+        </div>
+        <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+          <span>Drag any box to nudge placement.</span>
+          {Object.keys(offsets).length > 0 && (
+            <button
+              type="button"
+              onClick={resetPlacements}
+              className="rounded-md px-2 py-1 text-primary font-semibold active:bg-accent/30"
+            >
+              Reset placement
+            </button>
+          )}
         </div>
         <button
           onClick={handleComplete}
