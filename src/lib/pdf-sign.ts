@@ -50,19 +50,19 @@ export function getOf286FallbackFields(
     pageHeight,
     signatureBox: {
       x: formLeft + 3,
-      y: sigRowBottom + 3,
+      y: sigRowBottom + sigRowH * 0.32,
       w: signatureW - 6,
-      h: sigRowH - 6,
+      h: sigRowH * 0.58,
     },
     dateBox: {
       x: dateX + 4,
-      y: sigRowBottom + 8,
+      y: sigRowBottom + sigRowH * 0.42,
       w: dateW - 8,
       h: 13,
     },
     nameBox: {
       x: formLeft + 3,
-      y: nameRowBottom + 7,
+      y: nameRowBottom + nameRowH * 0.44,
       w: nameW - 6,
       h: 14,
     },
@@ -181,9 +181,9 @@ async function findOf286GridAnchors(
   };
 
   const xInset = Math.max(4, width * 0.004);
-  const sigFieldTop = sigTop + sigRowH * 0.34;
-  const dateFieldTop = sigTop + sigRowH * 0.45;
-  const nameFieldTop = nameTop + nameRowH * 0.45;
+  const sigFieldTop = sigTop + sigRowH * 0.16;
+  const dateFieldTop = sigTop + sigRowH * 0.28;
+  const nameFieldTop = nameTop + nameRowH * 0.26;
 
   return {
     pageIndex,
@@ -193,19 +193,19 @@ async function findOf286GridAnchors(
       x: formLeft + xInset,
       y: sigFieldTop,
       w: sigDateSplit - formLeft - xInset * 2,
-      h: Math.max(renderScale * 10, nameTop - sigFieldTop - renderScale * 3),
+      h: Math.max(renderScale * 10, Math.min(sigRowH * 0.68, nameTop - sigFieldTop - renderScale * 5)),
     }),
     dateBox: toPdfBoxFromPixels({
       x: sigDateSplit + xInset,
       y: dateFieldTop,
       w: dateOfficerSplit - sigDateSplit - xInset * 2,
-      h: Math.max(renderScale * 9, Math.min(renderScale * 14, nameTop - dateFieldTop - renderScale * 4)),
+      h: Math.max(renderScale * 9, Math.min(renderScale * 14, nameTop - dateFieldTop - renderScale * 7)),
     }),
     nameBox: toPdfBoxFromPixels({
       x: formLeft + xInset,
       y: nameFieldTop,
       w: dateOfficerSplit - formLeft - xInset * 2,
-      h: Math.max(renderScale * 9, nameBottom - nameFieldTop - renderScale * 3),
+      h: Math.max(renderScale * 9, Math.min(nameRowH * 0.5, nameBottom - nameFieldTop - renderScale * 6)),
     }),
   };
 }
@@ -369,19 +369,21 @@ export async function findOf286Anchors(pdfBytes: Uint8Array): Promise<PageAnchor
     // Signature cell: below the #30 label and above the #34 row.
     {
       const right = labelDate ? labelDate.x - 4 : labelSig!.x + 200;
-      const top = labelSig!.y + labelSig!.h + 2;
-      const cellBottom = labelName!.y - 4;
+      const cellTop = labelSig!.y + labelSig!.h + 1;
+      const cellBottom = labelName!.y - 5;
       const x = labelSig!.x;
       const w = Math.max(40, right - x);
-      const h = Math.max(10, cellBottom - top);
+      const cellH = Math.max(10, cellBottom - cellTop);
+      const top = cellTop;
+      const h = Math.max(10, cellH * 0.7);
       anchors.signatureBox = toPdfBox({ x, y: top, w, h });
     }
 
     if (labelDate) {
       // Date sits just below the "31. DATE" label in contractor block 31.
       const right = labelRecv ? labelRecv.x - 4 : labelDate.x + 90;
-      const top = labelDate.y + labelDate.h + 2;
-      const bottom = labelName!.y - 4;
+      const top = labelDate.y + labelDate.h + 1;
+      const bottom = labelName!.y - 7;
       anchors.dateBox = toPdfBox({
         x: labelDate.x,
         y: top,
@@ -395,8 +397,8 @@ export async function findOf286Anchors(pdfBytes: Uint8Array): Promise<PageAnchor
       // clamped before the footer.
       const right =
         (labelRecvName?.x ?? labelDate?.x ?? labelName!.x + 200) - 4;
-      const top = labelName!.y + labelName!.h + 2;
-      const h = Math.max(10, Math.min(26, footerY - top - 4));
+      const top = labelName!.y + labelName!.h + 1;
+      const h = Math.max(10, Math.min(18, footerY - top - 8));
       anchors.nameBox = toPdfBox({
         x: labelName!.x,
         y: top,
@@ -553,10 +555,10 @@ export async function stampSignatureOntoPdf(opts: {
       h = maxH;
       w = h * aspect;
     }
-    // Anchor to the bottom of the cell so the signature sits on the line.
+    // Lift the signature inside the cell so it does not hug or cross the lower grid line.
     return {
       x: box.x + 1,
-      y: box.y + 1,
+      y: box.y + Math.max(2, (box.h - h) * 0.55),
       w,
       h,
     };
