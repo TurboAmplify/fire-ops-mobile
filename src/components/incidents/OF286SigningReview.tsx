@@ -1,5 +1,5 @@
 import "@fontsource/dancing-script/700.css";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import * as pdfjsLib from "pdfjs-dist";
 import { Check, Loader2, PenLine, Send, X } from "lucide-react";
 import { SignaturePicker, type SignatureMetadata } from "@/components/shift-tickets/SignaturePicker";
