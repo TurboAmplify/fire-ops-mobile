@@ -12,6 +12,49 @@ const FONT_OPTIONS = [
   { family: "Pacifico", label: "Bold", weight: 400 },
 ] as const;
 
+type FontOption = (typeof FONT_OPTIONS)[number];
+
+async function renderTightTypedSignatureBlob(name: string, font: FontOption): Promise<Blob | null> {
+  const trimmed = name.trim();
+  if (!trimmed) return null;
+
+  try {
+    await document.fonts.load(`${font.weight} 96px "${font.family}"`, trimmed);
+  } catch {
+    // fallback cursive font will be used
+  }
+
+  const measure = document.createElement("canvas").getContext("2d");
+  if (!measure) return null;
+
+  const fontSize = 96;
+  measure.font = `${font.weight} ${fontSize}px "${font.family}", cursive`;
+  const metrics = measure.measureText(trimmed);
+  const ascent = metrics.actualBoundingBoxAscent || fontSize * 0.85;
+  const descent = metrics.actualBoundingBoxDescent || fontSize * 0.25;
+  const left = Math.abs(metrics.actualBoundingBoxLeft || 0);
+  const right = metrics.actualBoundingBoxRight || metrics.width;
+  const padX = 10;
+  const padY = 6;
+  const displayW = Math.ceil(left + right + padX * 2);
+  const displayH = Math.ceil(ascent + descent + padY * 2);
+  const dpr = window.devicePixelRatio || 1;
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.ceil(displayW * dpr));
+  canvas.height = Math.max(1, Math.ceil(displayH * dpr));
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, displayW, displayH);
+  ctx.fillStyle = "hsl(222 47% 11%)";
+  ctx.font = `${font.weight} ${fontSize}px "${font.family}", cursive`;
+  ctx.textBaseline = "alphabetic";
+  ctx.fillText(trimmed, padX + left, padY + ascent);
+
+  return await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+}
+
 export interface SignatureMetadata {
   method: "typed" | "drawn" | "auto";
   font?: string;
@@ -84,26 +127,28 @@ export function SignaturePicker({ open, onClose, onSave, title, defaultName = ""
         if (!canvas) return;
         const dpr = window.devicePixelRatio || 1;
         const rect = canvas.getBoundingClientRect();
-        canvas.width = rect.width * dpr;
-        canvas.height = rect.height * dpr;
+        const displayWidth = Math.max(260, rect.width || canvas.clientWidth || 320);
+        const displayHeight = Math.max(72, rect.height || canvas.clientHeight || 80);
+        canvas.width = Math.ceil(displayWidth * dpr);
+        canvas.height = Math.ceil(displayHeight * dpr);
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        ctx.clearRect(0, 0, rect.width, rect.height);
+        ctx.clearRect(0, 0, displayWidth, displayHeight);
         ctx.fillStyle = "hsl(222 47% 11%)";
 
         // Dynamic font sizing to fit the canvas width with padding
-        const maxWidth = rect.width * 0.85;
-        let fontSize = 42;
+        const maxWidth = displayWidth * 0.86;
+        let fontSize = 48;
         ctx.font = `${font.weight} ${fontSize}px "${font.family}", cursive`;
-        while (fontSize > 16 && ctx.measureText(name.trim()).width > maxWidth) {
+        while (fontSize > 20 && ctx.measureText(name.trim()).width > maxWidth) {
           fontSize -= 2;
           ctx.font = `${font.weight} ${fontSize}px "${font.family}", cursive`;
         }
 
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(name.trim(), rect.width / 2, rect.height / 2);
+        ctx.fillText(name.trim(), displayWidth / 2, displayHeight / 2);
       });
     }, 100);
 
@@ -186,13 +231,12 @@ export function SignaturePicker({ open, onClose, onSave, title, defaultName = ""
     setSelectedFont(fontFamily);
   };
 
-  const handleConfirmTyped = () => {
+  const handleConfirmTyped = async () => {
     if (!selectedFont) return;
-    const canvas = canvasRefs.current[selectedFont];
-    if (!canvas) return;
-    canvas.toBlob((blob) => {
-      if (blob) onSave(blob, { method: "typed", font: selectedFont, name: name.trim() });
-    }, "image/png");
+    const font = FONT_OPTIONS.find((option) => option.family === selectedFont);
+    if (!font) return;
+    const blob = await renderTightTypedSignatureBlob(name, font);
+    if (blob) onSave(blob, { method: "typed", font: selectedFont, name: name.trim() });
   };
 
   const handleConfirmDrawn = () => {
@@ -267,7 +311,7 @@ export function SignaturePicker({ open, onClose, onSave, title, defaultName = ""
                     <canvas
                       ref={(el) => { canvasRefs.current[font.family] = el; }}
                       className="w-full rounded-lg bg-card"
-                      style={{ height: 80 }}
+                      style={{ height: 80, backgroundColor: "#ffffff" }}
                     />
                   </button>
                 ))}
