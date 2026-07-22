@@ -214,24 +214,45 @@ export function OF286SigningReview({
     setActiveField(null);
   };
 
+  const applyOffset = (box: BoxRect, off: Offset, scale: number): BoxRect => {
+    if (!scale) return box;
+    return {
+      x: box.x + off.dx / scale,
+      y: box.y - off.dy / scale, // DOM y-down → PDF y-up
+      w: box.w,
+      h: box.h,
+    };
+  };
+
+  const getPageOffsets = (pageIndex: number): PageOffsets =>
+    offsets[pageIndex] ?? emptyPageOffsets();
+
+  const resetPlacements = () => setOffsets({});
+
   const handleComplete = () => {
     if (!signatureBlob || !firstPage?.signatureBox || !firstPage.dateBox || !firstPage.nameBox) return;
     const placementsByPage = anchors
       .filter((page) => page.signatureBox && page.dateBox && page.nameBox)
-      .map((page) => ({
-        signatureBox: page.signatureBox!,
-        dateBox: page.dateBox!,
-        nameBox: page.nameBox!,
-      }));
+      .map((page) => {
+        const scale = scales[page.pageIndex] ?? 1;
+        const off = getPageOffsets(page.pageIndex);
+        return {
+          signatureBox: applyOffset(page.signatureBox!, off.signature, scale),
+          dateBox: applyOffset(page.dateBox!, off.date, scale),
+          nameBox: applyOffset(page.nameBox!, off.name, scale),
+        };
+      });
+    const firstScale = scales[firstPage.pageIndex] ?? 1;
+    const firstOff = getPageOffsets(firstPage.pageIndex);
     onComplete({
       signatureBlob,
       metadata,
       signerName: signerName.trim(),
       dateText: dateText.trim(),
       placements: {
-        signatureBox: firstPage.signatureBox,
-        dateBox: firstPage.dateBox,
-        nameBox: firstPage.nameBox,
+        signatureBox: applyOffset(firstPage.signatureBox, firstOff.signature, firstScale),
+        dateBox: applyOffset(firstPage.dateBox, firstOff.date, firstScale),
+        nameBox: applyOffset(firstPage.nameBox, firstOff.name, firstScale),
       },
       placementsByPage,
     });
