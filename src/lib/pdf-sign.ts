@@ -50,9 +50,9 @@ export function getOf286FallbackFields(
     pageHeight,
     signatureBox: {
       x: formLeft + 3,
-      y: sigRowBottom + sigRowH * 0.32,
+      y: sigRowBottom + 3,
       w: signatureW - 6,
-      h: sigRowH * 0.58,
+      h: sigRowH - 8,
     },
     dateBox: {
       x: dateX + 4,
@@ -193,7 +193,7 @@ async function findOf286GridAnchors(
       x: formLeft + xInset,
       y: sigFieldTop,
       w: sigDateSplit - formLeft - xInset * 2,
-      h: Math.max(renderScale * 10, Math.min(sigRowH * 0.68, nameTop - sigFieldTop - renderScale * 5)),
+      h: Math.max(renderScale * 14, nameTop - sigFieldTop - renderScale * 4),
     }),
     dateBox: toPdfBoxFromPixels({
       x: sigDateSplit + xInset,
@@ -375,7 +375,7 @@ export async function findOf286Anchors(pdfBytes: Uint8Array): Promise<PageAnchor
       const w = Math.max(40, right - x);
       const cellH = Math.max(10, cellBottom - cellTop);
       const top = cellTop;
-      const h = Math.max(10, cellH * 0.7);
+      const h = Math.max(12, cellH - 2);
       anchors.signatureBox = toPdfBox({ x, y: top, w, h });
     }
 
@@ -548,7 +548,7 @@ export async function stampSignatureOntoPdf(opts: {
     // Use nearly the full cell; tiny inset just to avoid touching the borders.
     // Cap height so a wide-aspect PNG can't spill into the row above (block 34).
     const maxW = Math.max(20, box.w - 2);
-    const maxH = Math.max(10, box.h * 0.9);
+    const maxH = Math.max(14, box.h * 0.98);
     let w = maxW;
     let h = w / aspect;
     if (h > maxH) {
@@ -558,7 +558,7 @@ export async function stampSignatureOntoPdf(opts: {
     // Lift the signature inside the cell so it does not hug or cross the lower grid line.
     return {
       x: box.x + 1,
-      y: box.y + Math.max(2, (box.h - h) * 0.55),
+      y: box.y + Math.max(1, (box.h - h) * 0.72),
       w,
       h,
     };
