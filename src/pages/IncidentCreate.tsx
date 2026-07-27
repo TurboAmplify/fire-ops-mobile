@@ -319,6 +319,14 @@ export default function IncidentCreate() {
               >
                 Open existing incident
               </button>
+              <button
+                type="button"
+                onClick={() => setDuplicateRO(null)}
+                className="w-full rounded-lg bg-secondary text-secondary-foreground px-3 py-2 text-sm font-semibold touch-target"
+              >
+                Different fire — create new incident
+              </button>
+
             </div>
           )}
 
