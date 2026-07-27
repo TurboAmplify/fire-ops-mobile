@@ -109,16 +109,21 @@ export default function IncidentCreate() {
       setSuggestedTruckId(suggestion);
       setSelectedTruckId(suggestion);
 
-      // Duplicate-RO safeguard: warn if this RO# is already on another incident.
+      // Duplicate-RO safeguard: only warn if the SAME RO# AND a matching incident
+      // name already exist. A reused order number on a different fire (e.g. "E-1"
+      // on War Bonnet vs. an older incident) is a brand new incident.
       if (parsed.resource_order_number && membership?.organizationId) {
         const dup = await findIncidentTruckForResourceOrder(
           membership.organizationId,
           String(parsed.resource_order_number),
         );
-        setDuplicateRO(dup);
+        const sameIncident =
+          !!dup && !!parsed.incident_name && namesMatch(String(parsed.incident_name), dup.incident_name);
+        setDuplicateRO(sameIncident ? dup : null);
       } else {
         setDuplicateRO(null);
       }
+
 
       toast.success("Resource order parsed — review and confirm");
       setStep("form");
