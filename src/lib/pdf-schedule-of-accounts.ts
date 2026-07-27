@@ -190,13 +190,19 @@ export async function buildScheduleOfAccountsPdf(input: ScheduleOfAccountsInput)
   const sellerFillW = Math.max(80, boxX - sellerFillX - 14);
   let sellerText = input.seller || "";
   const sellerMaxW = sellerFillW - 8;
-  while (sellerText && serif.widthOfTextAtSize(sellerText, fillSize) > sellerMaxW && sellerText.length > 1) {
+  // Shrink the seller name to fit before resorting to truncation.
+  let sellerSize = fillSize;
+  while (sellerSize > 7.5 && serif.widthOfTextAtSize(sellerText, sellerSize) > sellerMaxW) {
+    sellerSize -= 0.25;
+  }
+  while (sellerText && serif.widthOfTextAtSize(sellerText, sellerSize) > sellerMaxW && sellerText.length > 1) {
     sellerText = sellerText.slice(0, -1);
   }
   if (sellerText !== (input.seller || "") && sellerText.length > 1) {
     sellerText = sellerText.slice(0, -1) + "…";
   }
-  drawText(sellerText, sellerFillX + 4, y, { font: serif, size: fillSize });
+  drawText(sellerText, sellerFillX + 4, y, { font: serif, size: sellerSize });
+
   drawUnderline(sellerFillX, y, sellerFillW);
 
   // advance below the taller of (seller row, box)
@@ -292,10 +298,14 @@ export async function buildScheduleOfAccountsPdf(input: ScheduleOfAccountsInput)
       const isPlaceholder =
         cells[i] === "See attached listing of Accounts";
       const font = isPlaceholder ? serifBold : serif;
-      const size = 10.5;
-      // simple truncation with ellipsis
       let text = cells[i];
-      const maxW = colWs[i] - 12;
+      const maxW = colWs[i] - 10;
+      // Shrink to fit first (invoice numbers must stay readable in full),
+      // only truncate as a last resort.
+      let size = 10.5;
+      while (size > 7 && font.widthOfTextAtSize(text, size) > maxW) {
+        size -= 0.25;
+      }
       while (font.widthOfTextAtSize(text, size) > maxW && text.length > 1) {
         text = text.slice(0, -1);
       }
@@ -305,7 +315,13 @@ export async function buildScheduleOfAccountsPdf(input: ScheduleOfAccountsInput)
       cellX += colWs[i];
     }
   }
-  y = tableTopY - tableHeight - 28;
+  // Tighten the block spacing when the table carries more than the
+  // template's three rows so the signature block still fits on page one.
+  const extraRows = Math.max(0, renderedRows.length - 3);
+  const lineH = extraRows > 0 ? 12 : 13;
+  const itemGap = extraRows > 0 ? 3 : 6;
+  y = tableTopY - tableHeight - (extraRows > 0 ? 18 : 28);
+
 
   // ---------------- Certification ----------------
   const certIntro =
@@ -314,9 +330,9 @@ export async function buildScheduleOfAccountsPdf(input: ScheduleOfAccountsInput)
   const certWidth = pw - margin * 2;
   for (const line of wrapText(certIntro, serif, certSize, certWidth)) {
     drawText(line, margin, y, { font: serif, size: certSize });
-    y -= 13;
+    y -= lineH;
   }
-  y -= 8;
+  y -= itemGap + 2;
 
   // Fall back to the schedule date when no factoring agreement date has been
   // saved, so the certification paragraph never renders with a blank line.
@@ -341,12 +357,12 @@ export async function buildScheduleOfAccountsPdf(input: ScheduleOfAccountsInput)
     const lines = wrapText(numbered[i], serif, certSize, certWidth - numberIndent);
     for (let j = 0; j < lines.length; j++) {
       drawText(lines[j], margin + numberIndent, y, { font: serif, size: certSize });
-      y -= 13;
+      y -= lineH;
     }
-    y -= 6;
+    y -= itemGap;
   }
 
-  y -= 8;
+  y -= itemGap + 2;
 
   // IN WITNESS WHEREOF line
   const today = input.scheduleDate;
@@ -356,11 +372,11 @@ export async function buildScheduleOfAccountsPdf(input: ScheduleOfAccountsInput)
   const witness = `IN WITNESS WHEREOF, this instrument is executed by the undersigned as of the ${dayStr} day of ${monthStr}, 20${yearShort}.`;
   for (const line of wrapText(witness, serif, certSize, certWidth)) {
     drawText(line, margin, y, { font: serif, size: certSize });
-    y -= 13;
+    y -= lineH;
   }
 
   // ---------------- Signature block (centered, like template) ----------------
-  y -= 30;
+  y -= extraRows > 0 ? 22 : 30;
   const sigBlockX = pw / 2 - 40; // labels start a bit left of center
   const sigLineW = 240;
   const sigLineX = sigBlockX + 60;
@@ -386,13 +402,13 @@ export async function buildScheduleOfAccountsPdf(input: ScheduleOfAccountsInput)
       console.warn("Could not embed signature:", e);
     }
   }
-  y -= 36;
+  y -= extraRows > 0 ? 32 : 36;
 
   // Print Name:
   drawText("Print Name:", sigBlockX, y, { font: serif, size: 11 });
   drawUnderline(sigLineX, y, sigLineW);
   drawText(input.signerName || "", sigLineX + 4, y, { font: serif, size: 11 });
-  y -= 30;
+  y -= extraRows > 0 ? 26 : 30;
 
   // Title:
   drawText("Title:", sigBlockX, y, { font: serif, size: 11 });
