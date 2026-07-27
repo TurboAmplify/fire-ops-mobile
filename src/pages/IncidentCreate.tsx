@@ -22,6 +22,18 @@ import { toast } from "sonner";
 
 type Step = "choose" | "parsing" | "form";
 
+/** Loose incident-name comparison so "War Bonnet" never matches "Old Strike". */
+const normalizeIncidentName = (v: string) =>
+  v.toLowerCase().replace(/\b(fire|incident|complex)\b/g, "").replace(/[^a-z0-9]/g, "").trim();
+
+function namesMatch(a: string, b: string) {
+  const na = normalizeIncidentName(a);
+  const nb = normalizeIncidentName(b);
+  if (!na || !nb) return false;
+  return na === nb || na.includes(nb) || nb.includes(na);
+}
+
+
 export default function IncidentCreate() {
   const navigate = useNavigate();
   const createMutation = useCreateIncident();
