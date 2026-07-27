@@ -2276,6 +2276,62 @@ export type Database = {
         }
         Relationships: []
       }
+      payroll_payments: {
+        Row: {
+          amount: number | null
+          created_at: string
+          crew_member_id: string
+          id: string
+          marked_by_user_id: string | null
+          notes: string | null
+          organization_id: string
+          paid_at: string
+          pay_method: string | null
+          paystub_sent_via: string | null
+          period_end: string
+          period_start: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          crew_member_id: string
+          id?: string
+          marked_by_user_id?: string | null
+          notes?: string | null
+          organization_id: string
+          paid_at?: string
+          pay_method?: string | null
+          paystub_sent_via?: string | null
+          period_end: string
+          period_start: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          crew_member_id?: string
+          id?: string
+          marked_by_user_id?: string | null
+          notes?: string | null
+          organization_id?: string
+          paid_at?: string
+          pay_method?: string | null
+          paystub_sent_via?: string | null
+          period_end?: string
+          period_start?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_payments_crew_member_id_fkey"
+            columns: ["crew_member_id"]
+            isOneToOne: false
+            referencedRelation: "crew_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_admin_audit: {
         Row: {
           action: string
