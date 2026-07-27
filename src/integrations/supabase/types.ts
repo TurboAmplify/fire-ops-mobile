@@ -396,10 +396,12 @@ export type Database = {
           active: boolean
           created_at: string
           crew_id: string | null
+          email: string | null
           id: string
           name: string
           notes: string | null
           organization_id: string | null
+          paystub_delivery: string
           phone: string | null
           profile_photo_url: string | null
           qualifications: Json
@@ -409,10 +411,12 @@ export type Database = {
           active?: boolean
           created_at?: string
           crew_id?: string | null
+          email?: string | null
           id?: string
           name: string
           notes?: string | null
           organization_id?: string | null
+          paystub_delivery?: string
           phone?: string | null
           profile_photo_url?: string | null
           qualifications?: Json
@@ -422,10 +426,12 @@ export type Database = {
           active?: boolean
           created_at?: string
           crew_id?: string | null
+          email?: string | null
           id?: string
           name?: string
           notes?: string | null
           organization_id?: string | null
+          paystub_delivery?: string
           phone?: string | null
           profile_photo_url?: string | null
           qualifications?: Json
