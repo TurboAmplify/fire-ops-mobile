@@ -166,7 +166,35 @@ export function CrewMemberDetail({ memberId, onClose, onEdit }: Props) {
                 ) : (
                   <Row icon={<Phone className="h-4 w-4" />} label="Phone" value="—" muted />
                 )}
+                {(member as any).email ? (
+                  <a
+                    href={`mailto:${(member as any).email}`}
+                    className="flex items-center gap-3 rounded-xl bg-card p-3 touch-target active:scale-[0.98] transition-transform"
+                  >
+                    <User className="h-4 w-4 text-primary shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Email
+                      </p>
+                      <p className="text-sm font-medium text-primary truncate">{(member as any).email}</p>
+                    </div>
+                  </a>
+                ) : (
+                  <Row icon={<User className="h-4 w-4" />} label="Email" value="—" muted />
+                )}
+                <Row
+                  icon={<StickyNote className="h-4 w-4" />}
+                  label="Paystub delivery"
+                  value={
+                    (member as any).paystub_delivery === "text"
+                      ? "Text"
+                      : (member as any).paystub_delivery === "none"
+                      ? "None"
+                      : "Email"
+                  }
+                />
               </section>
+
 
               {/* Notes */}
               {notes && (
