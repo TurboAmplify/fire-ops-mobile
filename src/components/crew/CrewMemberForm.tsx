@@ -33,6 +33,13 @@ const crewMemberSubmitSchema = z.object({
   name: personNameSchema,
   role: shortTextSchema({ min: 1, max: 60, label: "Role" }),
   phone: optionalPhoneSchema,
+  email: z
+    .string()
+    .trim()
+    .max(255, { message: "Email must be less than 255 characters" })
+    .email({ message: "Enter a valid email" })
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
   notes: optionalLongTextSchema({ max: 2000, label: "Notes" }),
 });
 
@@ -53,6 +60,8 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
   const [role, setRole] = useState("");
   const [roleSelection, setRoleSelection] = useState<string>("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [paystubDelivery, setPaystubDelivery] = useState<"email" | "text" | "none">("email");
   const [active, setActive] = useState(true);
   const [notes, setNotes] = useState("");
   const [payMethod, setPayMethod] = useState<"hourly" | "daily">("hourly");
@@ -89,6 +98,8 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
       const matched = (CREW_ROLES as readonly string[]).includes(existing.role) ? existing.role : "Other";
       setRoleSelection(matched);
       setPhone(existing.phone || "");
+      setEmail((existing as any).email || "");
+      setPaystubDelivery(((existing as any).paystub_delivery as any) || "email");
       setActive(existing.active);
       setNotes((existing as any).notes || "");
     }
@@ -124,12 +135,14 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
         name !== (existing.name || "") ||
         role !== (existing.role || "") ||
         phone !== (existing.phone || "") ||
+        email !== ((existing as any).email || "") ||
+        paystubDelivery !== (((existing as any).paystub_delivery as any) || "email") ||
         active !== existing.active ||
         notes !== ((existing as any).notes || "") ||
         (isAdmin && hourlyRate !== (comp?.hourly_rate != null ? String(comp.hourly_rate) : "")) ||
         (isAdmin && hwRate !== (comp?.hw_rate != null ? String(comp.hw_rate) : ""))
       )
-    : !!(name || role || phone || notes || hourlyRate || hwRate);
+    : !!(name || role || phone || email || notes || hourlyRate || hwRate);
 
   const handleAttemptClose = () => {
     if (hasChanges && !isPending) {
@@ -147,6 +160,7 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
       name,
       role,
       phone,
+      email,
       notes,
     });
     if (!parsed) return;
@@ -155,6 +169,8 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
       name: parsed.name,
       role: parsed.role,
       phone: parsed.phone,
+      email: parsed.email ?? null,
+      paystub_delivery: paystubDelivery,
       active,
       notes: parsed.notes,
     };
@@ -284,6 +300,39 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
               <div className="space-y-1">
                 <label className="text-sm font-medium text-muted-foreground">Phone</label>
                 <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className={inputClass} placeholder="555-123-4567" inputMode="tel" />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-muted-foreground">Email</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={inputClass}
+                  placeholder="name@example.com"
+                  inputMode="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-muted-foreground">Paystub Delivery</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(["email", "text", "none"] as const).map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => setPaystubDelivery(opt)}
+                      className={`touch-target rounded-xl py-3 text-sm font-bold transition-colors ${
+                        paystubDelivery === opt ? "bg-primary text-primary-foreground" : "bg-card border text-foreground"
+                      }`}
+                    >
+                      {opt === "email" ? "Email" : opt === "text" ? "Text" : "None"}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted-foreground">How this person prefers to receive paystubs.</p>
               </div>
 
               {isAdmin && (

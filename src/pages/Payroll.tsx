@@ -26,6 +26,8 @@ import { RoleDefaultRatesCard } from "@/components/payroll/RoleDefaultRatesCard"
 import { PayrollAcknowledgmentDialog } from "@/components/payroll/PayrollAcknowledgmentDialog";
 import { AdjustmentSheet } from "@/components/payroll/AdjustmentSheet";
 import { usePayrollAdjustments, useDeletePayrollAdjustment } from "@/hooks/usePayrollAdjustments";
+import { usePayrollPayments, useTogglePayrollPaid } from "@/hooks/usePayrollPayments";
+
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -234,6 +236,23 @@ export default function Payroll() {
       rangeSubLabel: "Mon - Sun",
     };
   }, [viewRange, weekStart, weekEnd, periodStart, periodEnd]);
+
+  // --- Paid tracking (per crew member, per pay period) ---
+  const paidPeriodStart = rangeStart ? format(rangeStart, "yyyy-MM-dd") : null;
+  const paidPeriodEnd = rangeEnd ? format(rangeEnd, "yyyy-MM-dd") : null;
+  const { data: payments } = usePayrollPayments(paidPeriodStart, paidPeriodEnd);
+  const togglePaid = useTogglePayrollPaid();
+  const paidMap = useMemo(() => {
+    const m = new Map<string, { id: string; paid_at: string }>();
+    (payments ?? []).forEach((p) => m.set(p.crew_member_id, { id: p.id, paid_at: p.paid_at }));
+    return m;
+  }, [payments]);
+  const crewPrefMap = useMemo(() => {
+    const m = new Map<string, string>();
+    (crewMembers ?? []).forEach((c: any) => m.set(c.id, c.paystub_delivery ?? "email"));
+    return m;
+  }, [crewMembers]);
+
 
   const normalizedTickets: ShiftTicketLite[] = useMemo(() => {
     if (!shiftTickets) return [];
@@ -725,6 +744,61 @@ export default function Payroll() {
                       <p className="text-[10px] font-medium text-success/80">Net Pay</p>
                       <p className="text-2xl font-extrabold text-success">${(line.netPay ?? line.grossPay).toFixed(2)}</p>
                     </div>
+
+                    {/* Paid marker for this pay period */}
+                    {paidPeriodStart && paidPeriodEnd ? (
+                      (() => {
+                        const paid = paidMap.get(line.crewMemberId);
+                        const pref = crewPrefMap.get(line.crewMemberId) ?? "email";
+                        return (
+                          <div className="rounded-lg border border-border/60 bg-secondary/30 p-3 space-y-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold">{paid ? "Paid" : "Not paid yet"}</p>
+                                <p className="text-[11px] text-muted-foreground">
+                                  {paid
+                                    ? `Marked ${format(parseISO(paid.paid_at), "M/d/yy")} · ${rangeLabel}`
+                                    : `Paystub preference: ${pref === "text" ? "Text" : pref === "none" ? "No delivery" : "Email"}`}
+                                </p>
+                              </div>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await togglePaid.mutateAsync({
+                                      existingId: paid?.id ?? null,
+                                      crewMemberId: line.crewMemberId,
+                                      periodStart: paidPeriodStart,
+                                      periodEnd: paidPeriodEnd,
+                                      amount: line.netPay ?? line.grossPay,
+                                      paystubSentVia: pref,
+                                    });
+                                    toast({ title: paid ? "Marked unpaid" : `${line.name} marked paid` });
+                                  } catch (err) {
+                                    toast({
+                                      title: "Failed to update",
+                                      description: err instanceof Error ? err.message : "Try again.",
+                                      variant: "destructive",
+                                    });
+                                  }
+                                }}
+                                disabled={togglePaid.isPending}
+                                className={`shrink-0 rounded-lg px-3 py-2.5 text-xs font-bold touch-target active:scale-[0.98] ${
+                                  paid ? "bg-secondary text-secondary-foreground" : "bg-success text-success-foreground"
+                                }`}
+                              >
+                                {paid ? "Undo" : "Mark Paid"}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })()
+                    ) : (
+                      <p className="text-[11px] text-muted-foreground text-center">
+                        Switch to This Week or Pay Period to mark this crew member paid.
+                      </p>
+                    )}
+
+
 
                     <div className="grid grid-cols-2 gap-2">
                       <button
