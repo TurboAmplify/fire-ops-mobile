@@ -235,6 +235,23 @@ export default function Payroll() {
     };
   }, [viewRange, weekStart, weekEnd, periodStart, periodEnd]);
 
+  // --- Paid tracking (per crew member, per pay period) ---
+  const paidPeriodStart = rangeStart ? format(rangeStart, "yyyy-MM-dd") : null;
+  const paidPeriodEnd = rangeEnd ? format(rangeEnd, "yyyy-MM-dd") : null;
+  const { data: payments } = usePayrollPayments(paidPeriodStart, paidPeriodEnd);
+  const togglePaid = useTogglePayrollPaid();
+  const paidMap = useMemo(() => {
+    const m = new Map<string, { id: string; paid_at: string }>();
+    (payments ?? []).forEach((p) => m.set(p.crew_member_id, { id: p.id, paid_at: p.paid_at }));
+    return m;
+  }, [payments]);
+  const crewPrefMap = useMemo(() => {
+    const m = new Map<string, string>();
+    (crewMembers ?? []).forEach((c: any) => m.set(c.id, c.paystub_delivery ?? "email"));
+    return m;
+  }, [crewMembers]);
+
+
   const normalizedTickets: ShiftTicketLite[] = useMemo(() => {
     if (!shiftTickets) return [];
     return shiftTickets.map((st) => ({
