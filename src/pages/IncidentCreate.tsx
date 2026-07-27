@@ -22,6 +22,18 @@ import { toast } from "sonner";
 
 type Step = "choose" | "parsing" | "form";
 
+/** Loose incident-name comparison so "War Bonnet" never matches "Old Strike". */
+const normalizeIncidentName = (v: string) =>
+  v.toLowerCase().replace(/\b(fire|incident|complex)\b/g, "").replace(/[^a-z0-9]/g, "").trim();
+
+function namesMatch(a: string, b: string) {
+  const na = normalizeIncidentName(a);
+  const nb = normalizeIncidentName(b);
+  if (!na || !nb) return false;
+  return na === nb || na.includes(nb) || nb.includes(na);
+}
+
+
 export default function IncidentCreate() {
   const navigate = useNavigate();
   const createMutation = useCreateIncident();
@@ -109,16 +121,21 @@ export default function IncidentCreate() {
       setSuggestedTruckId(suggestion);
       setSelectedTruckId(suggestion);
 
-      // Duplicate-RO safeguard: warn if this RO# is already on another incident.
+      // Duplicate-RO safeguard: only warn if the SAME RO# AND a matching incident
+      // name already exist. A reused order number on a different fire (e.g. "E-1"
+      // on War Bonnet vs. an older incident) is a brand new incident.
       if (parsed.resource_order_number && membership?.organizationId) {
         const dup = await findIncidentTruckForResourceOrder(
           membership.organizationId,
           String(parsed.resource_order_number),
         );
-        setDuplicateRO(dup);
+        const sameIncident =
+          !!dup && !!parsed.incident_name && namesMatch(String(parsed.incident_name), dup.incident_name);
+        setDuplicateRO(sameIncident ? dup : null);
       } else {
         setDuplicateRO(null);
       }
+
 
       toast.success("Resource order parsed — review and confirm");
       setStep("form");
@@ -302,6 +319,14 @@ export default function IncidentCreate() {
               >
                 Open existing incident
               </button>
+              <button
+                type="button"
+                onClick={() => setDuplicateRO(null)}
+                className="w-full rounded-lg bg-secondary text-secondary-foreground px-3 py-2 text-sm font-semibold touch-target"
+              >
+                Different fire — create new incident
+              </button>
+
             </div>
           )}
 
