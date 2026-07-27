@@ -190,13 +190,19 @@ export async function buildScheduleOfAccountsPdf(input: ScheduleOfAccountsInput)
   const sellerFillW = Math.max(80, boxX - sellerFillX - 14);
   let sellerText = input.seller || "";
   const sellerMaxW = sellerFillW - 8;
-  while (sellerText && serif.widthOfTextAtSize(sellerText, fillSize) > sellerMaxW && sellerText.length > 1) {
+  // Shrink the seller name to fit before resorting to truncation.
+  let sellerSize = fillSize;
+  while (sellerSize > 7.5 && serif.widthOfTextAtSize(sellerText, sellerSize) > sellerMaxW) {
+    sellerSize -= 0.25;
+  }
+  while (sellerText && serif.widthOfTextAtSize(sellerText, sellerSize) > sellerMaxW && sellerText.length > 1) {
     sellerText = sellerText.slice(0, -1);
   }
   if (sellerText !== (input.seller || "") && sellerText.length > 1) {
     sellerText = sellerText.slice(0, -1) + "…";
   }
-  drawText(sellerText, sellerFillX + 4, y, { font: serif, size: fillSize });
+  drawText(sellerText, sellerFillX + 4, y, { font: serif, size: sellerSize });
+
   drawUnderline(sellerFillX, y, sellerFillW);
 
   // advance below the taller of (seller row, box)
