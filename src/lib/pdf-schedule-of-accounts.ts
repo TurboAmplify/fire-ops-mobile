@@ -292,10 +292,14 @@ export async function buildScheduleOfAccountsPdf(input: ScheduleOfAccountsInput)
       const isPlaceholder =
         cells[i] === "See attached listing of Accounts";
       const font = isPlaceholder ? serifBold : serif;
-      const size = 10.5;
-      // simple truncation with ellipsis
       let text = cells[i];
-      const maxW = colWs[i] - 12;
+      const maxW = colWs[i] - 10;
+      // Shrink to fit first (invoice numbers must stay readable in full),
+      // only truncate as a last resort.
+      let size = 10.5;
+      while (size > 7 && font.widthOfTextAtSize(text, size) > maxW) {
+        size -= 0.25;
+      }
       while (font.widthOfTextAtSize(text, size) > maxW && text.length > 1) {
         text = text.slice(0, -1);
       }
@@ -305,7 +309,13 @@ export async function buildScheduleOfAccountsPdf(input: ScheduleOfAccountsInput)
       cellX += colWs[i];
     }
   }
-  y = tableTopY - tableHeight - 28;
+  // Tighten the block spacing when the table carries more than the
+  // template's three rows so the signature block still fits on page one.
+  const extraRows = Math.max(0, renderedRows.length - 3);
+  const lineH = extraRows > 0 ? 12 : 13;
+  const itemGap = extraRows > 0 ? 3 : 6;
+  y = tableTopY - tableHeight - (extraRows > 0 ? 18 : 28);
+
 
   // ---------------- Certification ----------------
   const certIntro =
