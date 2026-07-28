@@ -223,8 +223,64 @@ export default function Payroll() {
   const isLoading = loadingTickets || loadingCrew;
   const loadError = ticketsError || crewError;
 
+  const normalizedTickets: ShiftTicketLite[] = useMemo(() => {
+    if (!shiftTickets) return [];
+    return shiftTickets.map((st) => ({
+      id: st.id,
+      personnel_entries: st.personnel_entries,
+      incident_id: st.incident_trucks?.incidents?.id ?? null,
+      incident_name: st.incident_trucks?.incidents?.name ?? "Unassigned",
+    }));
+  }, [shiftTickets]);
+
+  const incidentNamesMap = useMemo(() => {
+    const m = new Map<string, string>();
+    (incidents ?? []).forEach((i) => m.set(i.id, i.name));
+    return m;
+  }, [incidents]);
+
+  // Earliest/latest worked date per incident (shift tickets + adjustments), so
+  // the "By Fire" range can span however many weeks the assignment ran.
+  const incidentSpans = useMemo(() => {
+    const m = new Map<string, { min: string; max: string }>();
+    const add = (id: string | null, date?: string | null) => {
+      if (!id || !date) return;
+      const cur = m.get(id);
+      if (!cur) m.set(id, { min: date, max: date });
+      else m.set(id, { min: date < cur.min ? date : cur.min, max: date > cur.max ? date : cur.max });
+    };
+    normalizedTickets.forEach((st) => {
+      const entries = Array.isArray(st.personnel_entries) ? st.personnel_entries : [];
+      entries.forEach((pe: any) => add(st.incident_id, pe?.date));
+    });
+    (adjustments ?? []).forEach((a) => add(a.incident_id ?? null, a.adjustment_date));
+    return m;
+  }, [normalizedTickets, adjustments]);
+
+  // Incidents that actually have payroll activity, most recent first.
+  const incidentsWithActivity = useMemo(() => {
+    return Array.from(incidentSpans.entries())
+      .map(([id, span]) => ({ id, name: incidentNamesMap.get(id) ?? "Unknown fire", ...span }))
+      .sort((a, b) => (a.max < b.max ? 1 : -1));
+  }, [incidentSpans, incidentNamesMap]);
+
+  const selectedIncidentSpan = incidentFilter !== "all" ? incidentSpans.get(incidentFilter) ?? null : null;
+
   const { rangeStart, rangeEnd, rangeLabel, rangeSubLabel } = useMemo(() => {
     if (viewRange === "all") return { rangeStart: null as Date | null, rangeEnd: null as Date | null, rangeLabel: "All Time", rangeSubLabel: "Season to date" };
+    if (viewRange === "incident") {
+      const name = incidentFilter !== "all" ? incidentNamesMap.get(incidentFilter) ?? "Fire" : null;
+      if (!name || !selectedIncidentSpan) {
+        return { rangeStart: null as Date | null, rangeEnd: null as Date | null, rangeLabel: name ?? "Pick a fire", rangeSubLabel: "No logged activity yet" };
+      }
+      const s = parseISO(selectedIncidentSpan.min);
+      const e = parseISO(selectedIncidentSpan.max);
+      return {
+        rangeStart: s, rangeEnd: e,
+        rangeLabel: name,
+        rangeSubLabel: `${format(s, "MMM d")} – ${format(e, "MMM d, yyyy")}`,
+      };
+    }
     if (viewRange === "period") return {
       rangeStart: periodStart, rangeEnd: periodEnd,
       rangeLabel: `${format(periodStart, "MMM d")} - ${format(periodEnd, "MMM d, yyyy")}`,
@@ -235,7 +291,11 @@ export default function Payroll() {
       rangeLabel: `${format(weekStart, "MMM d")} - ${format(weekEnd, "MMM d, yyyy")}`,
       rangeSubLabel: "Mon - Sun",
     };
-  }, [viewRange, weekStart, weekEnd, periodStart, periodEnd]);
+  }, [viewRange, weekStart, weekEnd, periodStart, periodEnd, incidentFilter, incidentNamesMap, selectedIncidentSpan]);
+
+  const activeIncidentName = viewRange === "incident" && incidentFilter !== "all"
+    ? incidentNamesMap.get(incidentFilter) ?? null
+    : null;
 
   // --- Paid tracking (per crew member, per pay period) ---
   const paidPeriodStart = rangeStart ? format(rangeStart, "yyyy-MM-dd") : null;
@@ -253,22 +313,6 @@ export default function Payroll() {
     return m;
   }, [crewMembers]);
 
-
-  const normalizedTickets: ShiftTicketLite[] = useMemo(() => {
-    if (!shiftTickets) return [];
-    return shiftTickets.map((st) => ({
-      id: st.id,
-      personnel_entries: st.personnel_entries,
-      incident_id: st.incident_trucks?.incidents?.id ?? null,
-      incident_name: st.incident_trucks?.incidents?.name ?? "Unassigned",
-    }));
-  }, [shiftTickets]);
-
-  const incidentNamesMap = useMemo(() => {
-    const m = new Map<string, string>();
-    (incidents ?? []).forEach((i) => m.set(i.id, i.name));
-    return m;
-  }, [incidents]);
 
   const crewLines: CrewPayrollLine[] = useMemo(() => {
     if (!crewMembers) return [];
