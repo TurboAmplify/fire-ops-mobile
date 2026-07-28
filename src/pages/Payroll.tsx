@@ -848,7 +848,7 @@ export default function Payroll() {
                                 <p className="text-xs font-bold">{paid ? "Paid" : "Not paid yet"}</p>
                                 <p className="text-[11px] text-muted-foreground">
                                   {paid
-                                    ? `Marked ${format(parseISO(paid.paid_at), "M/d/yy")} · ${rangeLabel}`
+                                    ? `Marked ${format(parseISO(paid.paid_at), "M/d/yy")} · ${activeIncidentName ? `${activeIncidentName} (${rangeSubLabel})` : rangeLabel}`
                                     : `Paystub preference: ${pref === "text" ? "Text" : pref === "none" ? "No delivery" : "Email"}`}
                                 </p>
                               </div>
