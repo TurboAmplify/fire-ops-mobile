@@ -5,6 +5,7 @@ interface Props {
   line: CrewPayrollLine;
   organizationName: string;
   periodLabel: string;
+  incidentName?: string | null;
   payDate?: Date;
 }
 
@@ -12,7 +13,7 @@ function fmt(n: number) {
   return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export function Paystub({ line, organizationName, periodLabel, payDate = new Date() }: Props) {
+export function Paystub({ line, organizationName, periodLabel, incidentName, payDate = new Date() }: Props) {
   const ded = line.deductions;
   const net = line.netPay ?? line.grossPay;
 
@@ -33,8 +34,15 @@ export function Paystub({ line, organizationName, periodLabel, payDate = new Dat
           <p className="text-xs uppercase font-bold text-gray-600">Pay Period</p>
           <p className="font-semibold">{periodLabel}</p>
           <p className="text-xs">Pay Date: {format(payDate, "MMM d, yyyy")}</p>
+          {incidentName && (
+            <>
+              <p className="text-xs uppercase font-bold text-gray-600 mt-1.5">Incident</p>
+              <p className="font-semibold">{incidentName}</p>
+            </>
+          )}
         </div>
       </div>
+
 
       {line.payMethod === "daily" && line.dailyRate ? (
         <>
