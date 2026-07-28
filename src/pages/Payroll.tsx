@@ -535,7 +535,9 @@ export default function Payroll() {
 
 
         {/* Jump to week with activity */}
+        {viewRange !== "incident" && (
         <Sheet open={weekPickerOpen} onOpenChange={setWeekPickerOpen}>
+
           <SheetTrigger asChild>
             <button
               type="button"
