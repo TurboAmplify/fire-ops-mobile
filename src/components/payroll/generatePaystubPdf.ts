@@ -5,13 +5,16 @@ interface Args {
   line: CrewPayrollLine;
   organizationName: string;
   periodLabel: string;
+  /** Optional fire name — shown when the paystub covers a single incident. */
+  incidentName?: string | null;
 }
 
 function fmt(n: number) {
   return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export async function generatePaystubPdf({ line, organizationName, periodLabel }: Args): Promise<void> {
+export async function generatePaystubPdf({ line, organizationName, periodLabel, incidentName }: Args): Promise<void> {
+
   const { default: jsPDF } = await import("jspdf");
 
   const doc = new jsPDF({ unit: "pt", format: "letter" });
