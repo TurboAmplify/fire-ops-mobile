@@ -586,6 +586,8 @@ export default function Payroll() {
             </div>
           </SheetContent>
         </Sheet>
+        )}
+
 
         <Tabs value={viewMode} onValueChange={(v) => { setViewMode(v as ViewMode); setExpandedId(null); }}>
           <TabsList className="grid w-full grid-cols-2 h-11">
