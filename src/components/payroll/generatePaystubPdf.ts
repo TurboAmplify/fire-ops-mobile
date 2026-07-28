@@ -252,7 +252,8 @@ export async function generatePaystubPdf({ line, organizationName, periodLabel, 
   doc.text(wrapped, pageW / 2, y, { align: "center" });
 
   const safeName = line.name.replace(/[^a-z0-9]/gi, "_");
-  const safePeriod = periodLabel.replace(/[^a-z0-9]/gi, "_");
+  const safePeriod = (incidentName || periodLabel).replace(/[^a-z0-9]/gi, "_");
   const blob = doc.output("blob");
   await shareOrDownload(`paystub_${safeName}_${safePeriod}.pdf`, blob, "application/pdf");
+
 }
