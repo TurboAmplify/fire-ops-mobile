@@ -429,9 +429,14 @@ export default function Payroll() {
   }
 
   const handleDownloadPdf = (line: CrewPayrollLine) => {
-    generatePaystubPdf({ line, organizationName: orgName, periodLabel: rangeLabel })
-      .catch(() => {/* silent */});
+    generatePaystubPdf({
+      line,
+      organizationName: orgName,
+      periodLabel: activeIncidentName ? rangeSubLabel : rangeLabel,
+      incidentName: activeIncidentName,
+    }).catch(() => {/* silent */});
   };
+
 
   return (
     <AppShell title="Payroll">
