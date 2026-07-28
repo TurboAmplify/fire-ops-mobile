@@ -1019,7 +1019,12 @@ export default function Payroll() {
               </div>
             </div>
             <div className="flex-1 p-3" onClick={(e) => e.stopPropagation()}>
-              <Paystub line={paystubFor} organizationName={orgName} periodLabel={rangeLabel} />
+              <Paystub
+                line={paystubFor}
+                organizationName={orgName}
+                periodLabel={activeIncidentName ? rangeSubLabel : rangeLabel}
+                incidentName={activeIncidentName}
+              />
             </div>
           </div>
         </div>
