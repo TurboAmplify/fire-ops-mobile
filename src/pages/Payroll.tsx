@@ -57,7 +57,7 @@ function useAllShiftTickets() {
   });
 }
 
-type ViewRange = "week" | "period" | "all";
+type ViewRange = "week" | "period" | "incident" | "all";
 type ViewMode = "crew" | "fire";
 
 export default function Payroll() {
