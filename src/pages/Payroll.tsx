@@ -466,15 +466,28 @@ export default function Payroll() {
         )}
 
         {/* Range tabs */}
-        <Tabs value={viewRange} onValueChange={(v) => setViewRange(v as ViewRange)}>
-          <TabsList className="grid w-full grid-cols-3 h-11">
-            <TabsTrigger value="week" className="text-xs">This Week</TabsTrigger>
-            <TabsTrigger value="period" className="text-xs">Pay Period</TabsTrigger>
-            <TabsTrigger value="all" className="text-xs">All Time</TabsTrigger>
+        <Tabs
+          value={viewRange}
+          onValueChange={(v) => {
+            const next = v as ViewRange;
+            setViewRange(next);
+            if (next === "incident") {
+              setViewMode("crew");
+              if (incidentFilter === "all" && incidentsWithActivity.length > 0) {
+                setIncidentFilter(incidentsWithActivity[0].id);
+              }
+            }
+          }}
+        >
+          <TabsList className="grid w-full grid-cols-4 h-11">
+            <TabsTrigger value="week" className="text-[11px] px-1">Week</TabsTrigger>
+            <TabsTrigger value="period" className="text-[11px] px-1">Period</TabsTrigger>
+            <TabsTrigger value="incident" className="text-[11px] px-1">By Fire</TabsTrigger>
+            <TabsTrigger value="all" className="text-[11px] px-1">All Time</TabsTrigger>
           </TabsList>
         </Tabs>
 
-        {viewRange !== "all" && (
+        {(viewRange === "week" || viewRange === "period") && (
           <div className="flex items-center justify-between rounded-xl bg-card p-3 card-shadow">
             <button onClick={viewRange === "week" ? prevWeek : prevPeriod} className="touch-target p-2 rounded-full active:bg-secondary/50" aria-label="Previous">
               <ChevronLeft className="h-5 w-5" />
@@ -489,12 +502,37 @@ export default function Payroll() {
           </div>
         )}
 
+        {viewRange === "incident" && (
+          <div className="space-y-2">
+            <div className="rounded-xl bg-card p-3 card-shadow text-center">
+              <p className="text-sm font-bold flex items-center justify-center gap-1.5">
+                <Flame className="h-4 w-4 text-primary" /> {rangeLabel}
+              </p>
+              <p className="text-[11px] text-muted-foreground">{rangeSubLabel}</p>
+            </div>
+            <select
+              value={incidentFilter}
+              onChange={(e) => setIncidentFilter(e.target.value)}
+              className="w-full rounded-xl border bg-card px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-ring touch-target"
+            >
+              <option value="all">Pick a fire…</option>
+              {incidentsWithActivity.map((inc) => (
+                <option key={inc.id} value={inc.id}>{inc.name}</option>
+              ))}
+            </select>
+            <p className="text-[11px] text-muted-foreground text-center">
+              Covers the full assignment, even if it spans several weeks.
+            </p>
+          </div>
+        )}
+
         {viewRange === "all" && (
           <div className="rounded-xl bg-card p-3 card-shadow text-center">
             <p className="text-sm font-bold">{rangeLabel}</p>
             <p className="text-[11px] text-muted-foreground">{rangeSubLabel}</p>
           </div>
         )}
+
 
         {/* Jump to week with activity */}
         <Sheet open={weekPickerOpen} onOpenChange={setWeekPickerOpen}>
