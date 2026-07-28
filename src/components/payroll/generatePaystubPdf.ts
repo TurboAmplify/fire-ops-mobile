@@ -48,7 +48,18 @@ export async function generatePaystubPdf({ line, organizationName, periodLabel }
   doc.setFontSize(9);
   doc.text(line.role, margin, y);
   doc.text(`Pay Date: ${new Date().toLocaleDateString()}`, pageW - margin, y, { align: "right" });
-  y += 24;
+  y += 12;
+  if (incidentName) {
+    doc.setTextColor(100);
+    doc.text("INCIDENT", margin, y);
+    doc.setTextColor(0);
+    doc.setFont("helvetica", "bold");
+    doc.text(incidentName, pageW - margin, y, { align: "right" });
+    doc.setFont("helvetica", "normal");
+    y += 12;
+  }
+  y += 12;
+
 
   // Earnings table
   const col1 = margin;
