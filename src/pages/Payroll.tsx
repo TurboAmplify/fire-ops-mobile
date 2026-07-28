@@ -885,8 +885,9 @@ export default function Payroll() {
                       })()
                     ) : (
                       <p className="text-[11px] text-muted-foreground text-center">
-                        Switch to This Week or Pay Period to mark this crew member paid.
+                        Switch to Week, Period, or By Fire to mark this crew member paid.
                       </p>
+
                     )}
 
 
