@@ -5,13 +5,16 @@ interface Args {
   line: CrewPayrollLine;
   organizationName: string;
   periodLabel: string;
+  /** Optional fire name — shown when the paystub covers a single incident. */
+  incidentName?: string | null;
 }
 
 function fmt(n: number) {
   return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export async function generatePaystubPdf({ line, organizationName, periodLabel }: Args): Promise<void> {
+export async function generatePaystubPdf({ line, organizationName, periodLabel, incidentName }: Args): Promise<void> {
+
   const { default: jsPDF } = await import("jspdf");
 
   const doc = new jsPDF({ unit: "pt", format: "letter" });
@@ -48,7 +51,18 @@ export async function generatePaystubPdf({ line, organizationName, periodLabel }
   doc.setFontSize(9);
   doc.text(line.role, margin, y);
   doc.text(`Pay Date: ${new Date().toLocaleDateString()}`, pageW - margin, y, { align: "right" });
-  y += 24;
+  y += 12;
+  if (incidentName) {
+    doc.setTextColor(100);
+    doc.text("INCIDENT", margin, y);
+    doc.setTextColor(0);
+    doc.setFont("helvetica", "bold");
+    doc.text(incidentName, pageW - margin, y, { align: "right" });
+    doc.setFont("helvetica", "normal");
+    y += 12;
+  }
+  y += 12;
+
 
   // Earnings table
   const col1 = margin;
@@ -238,7 +252,8 @@ export async function generatePaystubPdf({ line, organizationName, periodLabel }
   doc.text(wrapped, pageW / 2, y, { align: "center" });
 
   const safeName = line.name.replace(/[^a-z0-9]/gi, "_");
-  const safePeriod = periodLabel.replace(/[^a-z0-9]/gi, "_");
+  const safePeriod = (incidentName || periodLabel).replace(/[^a-z0-9]/gi, "_");
   const blob = doc.output("blob");
   await shareOrDownload(`paystub_${safeName}_${safePeriod}.pdf`, blob, "application/pdf");
+
 }

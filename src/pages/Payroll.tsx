@@ -57,7 +57,7 @@ function useAllShiftTickets() {
   });
 }
 
-type ViewRange = "week" | "period" | "all";
+type ViewRange = "week" | "period" | "incident" | "all";
 type ViewMode = "crew" | "fire";
 
 export default function Payroll() {
@@ -223,8 +223,64 @@ export default function Payroll() {
   const isLoading = loadingTickets || loadingCrew;
   const loadError = ticketsError || crewError;
 
+  const normalizedTickets: ShiftTicketLite[] = useMemo(() => {
+    if (!shiftTickets) return [];
+    return shiftTickets.map((st) => ({
+      id: st.id,
+      personnel_entries: st.personnel_entries,
+      incident_id: st.incident_trucks?.incidents?.id ?? null,
+      incident_name: st.incident_trucks?.incidents?.name ?? "Unassigned",
+    }));
+  }, [shiftTickets]);
+
+  const incidentNamesMap = useMemo(() => {
+    const m = new Map<string, string>();
+    (incidents ?? []).forEach((i) => m.set(i.id, i.name));
+    return m;
+  }, [incidents]);
+
+  // Earliest/latest worked date per incident (shift tickets + adjustments), so
+  // the "By Fire" range can span however many weeks the assignment ran.
+  const incidentSpans = useMemo(() => {
+    const m = new Map<string, { min: string; max: string }>();
+    const add = (id: string | null, date?: string | null) => {
+      if (!id || !date) return;
+      const cur = m.get(id);
+      if (!cur) m.set(id, { min: date, max: date });
+      else m.set(id, { min: date < cur.min ? date : cur.min, max: date > cur.max ? date : cur.max });
+    };
+    normalizedTickets.forEach((st) => {
+      const entries = Array.isArray(st.personnel_entries) ? st.personnel_entries : [];
+      entries.forEach((pe: any) => add(st.incident_id, pe?.date));
+    });
+    (adjustments ?? []).forEach((a) => add(a.incident_id ?? null, a.adjustment_date));
+    return m;
+  }, [normalizedTickets, adjustments]);
+
+  // Incidents that actually have payroll activity, most recent first.
+  const incidentsWithActivity = useMemo(() => {
+    return Array.from(incidentSpans.entries())
+      .map(([id, span]) => ({ id, name: incidentNamesMap.get(id) ?? "Unknown fire", ...span }))
+      .sort((a, b) => (a.max < b.max ? 1 : -1));
+  }, [incidentSpans, incidentNamesMap]);
+
+  const selectedIncidentSpan = incidentFilter !== "all" ? incidentSpans.get(incidentFilter) ?? null : null;
+
   const { rangeStart, rangeEnd, rangeLabel, rangeSubLabel } = useMemo(() => {
     if (viewRange === "all") return { rangeStart: null as Date | null, rangeEnd: null as Date | null, rangeLabel: "All Time", rangeSubLabel: "Season to date" };
+    if (viewRange === "incident") {
+      const name = incidentFilter !== "all" ? incidentNamesMap.get(incidentFilter) ?? "Fire" : null;
+      if (!name || !selectedIncidentSpan) {
+        return { rangeStart: null as Date | null, rangeEnd: null as Date | null, rangeLabel: name ?? "Pick a fire", rangeSubLabel: "No logged activity yet" };
+      }
+      const s = parseISO(selectedIncidentSpan.min);
+      const e = parseISO(selectedIncidentSpan.max);
+      return {
+        rangeStart: s, rangeEnd: e,
+        rangeLabel: name,
+        rangeSubLabel: `${format(s, "MMM d")} – ${format(e, "MMM d, yyyy")}`,
+      };
+    }
     if (viewRange === "period") return {
       rangeStart: periodStart, rangeEnd: periodEnd,
       rangeLabel: `${format(periodStart, "MMM d")} - ${format(periodEnd, "MMM d, yyyy")}`,
@@ -235,7 +291,11 @@ export default function Payroll() {
       rangeLabel: `${format(weekStart, "MMM d")} - ${format(weekEnd, "MMM d, yyyy")}`,
       rangeSubLabel: "Mon - Sun",
     };
-  }, [viewRange, weekStart, weekEnd, periodStart, periodEnd]);
+  }, [viewRange, weekStart, weekEnd, periodStart, periodEnd, incidentFilter, incidentNamesMap, selectedIncidentSpan]);
+
+  const activeIncidentName = viewRange === "incident" && incidentFilter !== "all"
+    ? incidentNamesMap.get(incidentFilter) ?? null
+    : null;
 
   // --- Paid tracking (per crew member, per pay period) ---
   const paidPeriodStart = rangeStart ? format(rangeStart, "yyyy-MM-dd") : null;
@@ -253,22 +313,6 @@ export default function Payroll() {
     return m;
   }, [crewMembers]);
 
-
-  const normalizedTickets: ShiftTicketLite[] = useMemo(() => {
-    if (!shiftTickets) return [];
-    return shiftTickets.map((st) => ({
-      id: st.id,
-      personnel_entries: st.personnel_entries,
-      incident_id: st.incident_trucks?.incidents?.id ?? null,
-      incident_name: st.incident_trucks?.incidents?.name ?? "Unassigned",
-    }));
-  }, [shiftTickets]);
-
-  const incidentNamesMap = useMemo(() => {
-    const m = new Map<string, string>();
-    (incidents ?? []).forEach((i) => m.set(i.id, i.name));
-    return m;
-  }, [incidents]);
 
   const crewLines: CrewPayrollLine[] = useMemo(() => {
     if (!crewMembers) return [];
@@ -385,9 +429,14 @@ export default function Payroll() {
   }
 
   const handleDownloadPdf = (line: CrewPayrollLine) => {
-    generatePaystubPdf({ line, organizationName: orgName, periodLabel: rangeLabel })
-      .catch(() => {/* silent */});
+    generatePaystubPdf({
+      line,
+      organizationName: orgName,
+      periodLabel: activeIncidentName ? rangeSubLabel : rangeLabel,
+      incidentName: activeIncidentName,
+    }).catch(() => {/* silent */});
   };
+
 
   return (
     <AppShell title="Payroll">
@@ -422,15 +471,28 @@ export default function Payroll() {
         )}
 
         {/* Range tabs */}
-        <Tabs value={viewRange} onValueChange={(v) => setViewRange(v as ViewRange)}>
-          <TabsList className="grid w-full grid-cols-3 h-11">
-            <TabsTrigger value="week" className="text-xs">This Week</TabsTrigger>
-            <TabsTrigger value="period" className="text-xs">Pay Period</TabsTrigger>
-            <TabsTrigger value="all" className="text-xs">All Time</TabsTrigger>
+        <Tabs
+          value={viewRange}
+          onValueChange={(v) => {
+            const next = v as ViewRange;
+            setViewRange(next);
+            if (next === "incident") {
+              setViewMode("crew");
+              if (incidentFilter === "all" && incidentsWithActivity.length > 0) {
+                setIncidentFilter(incidentsWithActivity[0].id);
+              }
+            }
+          }}
+        >
+          <TabsList className="grid w-full grid-cols-4 h-11">
+            <TabsTrigger value="week" className="text-[11px] px-1">Week</TabsTrigger>
+            <TabsTrigger value="period" className="text-[11px] px-1">Period</TabsTrigger>
+            <TabsTrigger value="incident" className="text-[11px] px-1">By Fire</TabsTrigger>
+            <TabsTrigger value="all" className="text-[11px] px-1">All Time</TabsTrigger>
           </TabsList>
         </Tabs>
 
-        {viewRange !== "all" && (
+        {(viewRange === "week" || viewRange === "period") && (
           <div className="flex items-center justify-between rounded-xl bg-card p-3 card-shadow">
             <button onClick={viewRange === "week" ? prevWeek : prevPeriod} className="touch-target p-2 rounded-full active:bg-secondary/50" aria-label="Previous">
               <ChevronLeft className="h-5 w-5" />
@@ -445,6 +507,30 @@ export default function Payroll() {
           </div>
         )}
 
+        {viewRange === "incident" && (
+          <div className="space-y-2">
+            <div className="rounded-xl bg-card p-3 card-shadow text-center">
+              <p className="text-sm font-bold flex items-center justify-center gap-1.5">
+                <Flame className="h-4 w-4 text-primary" /> {rangeLabel}
+              </p>
+              <p className="text-[11px] text-muted-foreground">{rangeSubLabel}</p>
+            </div>
+            <select
+              value={incidentFilter}
+              onChange={(e) => setIncidentFilter(e.target.value)}
+              className="w-full rounded-xl border bg-card px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-ring touch-target"
+            >
+              <option value="all">Pick a fire…</option>
+              {incidentsWithActivity.map((inc) => (
+                <option key={inc.id} value={inc.id}>{inc.name}</option>
+              ))}
+            </select>
+            <p className="text-[11px] text-muted-foreground text-center">
+              Covers the full assignment, even if it spans several weeks.
+            </p>
+          </div>
+        )}
+
         {viewRange === "all" && (
           <div className="rounded-xl bg-card p-3 card-shadow text-center">
             <p className="text-sm font-bold">{rangeLabel}</p>
@@ -452,8 +538,11 @@ export default function Payroll() {
           </div>
         )}
 
+
         {/* Jump to week with activity */}
+        {viewRange !== "incident" && (
         <Sheet open={weekPickerOpen} onOpenChange={setWeekPickerOpen}>
+
           <SheetTrigger asChild>
             <button
               type="button"
@@ -502,6 +591,8 @@ export default function Payroll() {
             </div>
           </SheetContent>
         </Sheet>
+        )}
+
 
         <Tabs value={viewMode} onValueChange={(v) => { setViewMode(v as ViewMode); setExpandedId(null); }}>
           <TabsList className="grid w-full grid-cols-2 h-11">
@@ -757,7 +848,7 @@ export default function Payroll() {
                                 <p className="text-xs font-bold">{paid ? "Paid" : "Not paid yet"}</p>
                                 <p className="text-[11px] text-muted-foreground">
                                   {paid
-                                    ? `Marked ${format(parseISO(paid.paid_at), "M/d/yy")} · ${rangeLabel}`
+                                    ? `Marked ${format(parseISO(paid.paid_at), "M/d/yy")} · ${activeIncidentName ? `${activeIncidentName} (${rangeSubLabel})` : rangeLabel}`
                                     : `Paystub preference: ${pref === "text" ? "Text" : pref === "none" ? "No delivery" : "Email"}`}
                                 </p>
                               </div>
@@ -794,8 +885,9 @@ export default function Payroll() {
                       })()
                     ) : (
                       <p className="text-[11px] text-muted-foreground text-center">
-                        Switch to This Week or Pay Period to mark this crew member paid.
+                        Switch to Week, Period, or By Fire to mark this crew member paid.
                       </p>
+
                     )}
 
 
@@ -927,7 +1019,12 @@ export default function Payroll() {
               </div>
             </div>
             <div className="flex-1 p-3" onClick={(e) => e.stopPropagation()}>
-              <Paystub line={paystubFor} organizationName={orgName} periodLabel={rangeLabel} />
+              <Paystub
+                line={paystubFor}
+                organizationName={orgName}
+                periodLabel={activeIncidentName ? rangeSubLabel : rangeLabel}
+                incidentName={activeIncidentName}
+              />
             </div>
           </div>
         </div>
