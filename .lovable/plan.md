@@ -1,25 +1,42 @@
-## Goal
-One combined Schedule of Accounts covering all five fires, reusing the number already used for the 79 Fire (**#9**), delivered as a downloadable PDF, and set the org's next schedule number to **10**.
+## Problem
 
-## Line items (from the submitted OF-286 invoices)
-| Account debtor | Invoice # | Amount | Invoice date |
-|---|---|---|---|
-| SD Division of Wildland Fire (79 Fire) | F-2026-SD-CUX-260232-0013A | $8,000.00 | 07/24/2026 |
-| BIA/OCFO Div of Acct Ops (Stick) | F-2026-SD-PRA-000054-0001A | $22,205.00 | 07/25/2026 |
-| BIA/OCFO Div of Acct Ops (Ironwood) | F-2026-SD-RBA-000068-0001A | $8,876.00 | 07/25/2026 |
-| BIA/OCFO Div of Acct Ops (Old Strike) | F-2026-SD-RBA-000070-0001B | $8,958.00 | 07/25/2026 |
-| BIA/OCFO Div of Acct Ops (Willow) | F-2026-SD-RBA-000067-0001A | $26,713.00 | 07/25/2026 |
+Payroll today only works in three ranges: This Week, Pay Period (2 weeks), and All Time. When a crew's assignment spans more than two weeks (e.g. Stick Fire), there is no single view that captures the whole incident — so you can't mark them paid for the fire, and the paystub is labeled by week instead of by incident.
 
-**Total: $74,752.00** — 5 accounts sold; reserve at the org's saved reserve %.
+## What to build
 
-## Exact format match
-1. Download the stored PDF for schedule **#9 (79 Fire)** from your factoring documents and render it to images — this is the reference.
-2. Generate the combined document with the **same code the app uses** (`src/lib/pdf-schedule-of-accounts.ts`), run headlessly with schedule number 9 and the five line items, pulling live values from Dry Lightning's factoring settings (factor company, seller, agreement date, reserve %, signer name/title, stored signature).
-3. Render the new PDF to images and compare side-by-side against the reference — title block, DATE / SCHEDULE NO. row, totals box, SELLER line, 4-column table, the six numbered certification points, IN WITNESS WHEREOF line, and the By / Print Name / Title signature block. Any difference in wording, position, or styling gets corrected until it matches; the only intended differences are the extra table rows and the new totals.
-4. Save the verified file to your documents as `Schedule-of-Accounts-9.pdf` for download.
+**1. A fourth view: "By Fire"**
 
-## Backend cleanup (data only, no schema change)
-- Re-point the four separate submissions (#10–#13) onto schedule **#9** so the Factoring Dashboard shows one schedule for this batch, each incident keeping its own amount.
-- Set Dry Lightning's `next_schedule_number` to **10**.
+Add an `incident` option to the Payroll view tabs. When selected:
+- You pick the fire (reuses the existing incident selector).
+- The date range is computed automatically from that crew's actual activity on that fire — earliest to latest shift-ticket date, extended to include any payroll adjustments tied to the incident (so the 7/07 drive-time day is included).
+- The header shows `Stick Fire` with the resolved span underneath (e.g. `Jul 5 – Jul 7, 2026`), instead of "Mon - Sun".
+- Week navigation arrows and the "jump to week" sheet are hidden in this mode.
 
-No app UI changes in this pass — one-off document plus the numbering fix.
+**2. Mark Paid works per incident**
+
+Mark Paid currently only appears for Week/Pay Period. In By Fire mode it becomes available using the incident's resolved start/end dates as the payment period, with the net pay amount and paystub delivery preference stored the same way as today. Because paid records are keyed on exact start/end dates, an incident payment won't collide with weekly payments.
+
+The paid label reads "Marked 7/28/26 · Stick Fire (Jul 5 – Jul 7)".
+
+**3. Paystub reflects the incident**
+
+The paystub PDF gains an optional incident label. In By Fire mode the header shows:
+- `PAY PERIOD: Jul 5 – Jul 7, 2026`
+- a new line `INCIDENT: Stick Fire`
+- filename becomes `Paystub-ChaseAlexander-StickFire.pdf`
+
+In Week/Pay Period mode nothing changes.
+
+## Technical notes
+
+- `src/pages/Payroll.tsx`: extend `ViewRange` to `"week" | "period" | "incident" | "all"`; derive `rangeStart`/`rangeEnd` for the incident case from `normalizedTickets` + `adjustments` filtered by `incidentFilter`; gate the week nav UI on view mode; force `incidentFilter !== "all"` when the incident tab is chosen (default to the most recent incident with hours).
+- `src/components/payroll/generatePaystubPdf.ts`: add optional `incidentName` arg, render the extra line, adjust filename.
+- `src/hooks/usePayrollPayments.ts` and `payroll_payments`: no schema change — existing `period_start`/`period_end` columns hold the incident span.
+- No changes to `src/lib/payroll.ts` calculation logic.
+
+## What to test
+
+- Payroll → By Fire → Stick Fire shows Chase, Sheldon, John with all their Stick Fire days (5 days spanning two weeks) plus the 7/07 drive-time adjustments.
+- Mark Paid works there and shows the fire name; Undo removes it.
+- Downloaded paystub shows the incident name and full span.
+- This Week / Pay Period / All Time behave exactly as before.
