@@ -1,42 +1,21 @@
-## Problem
+## Current state (verified)
 
-Payroll today only works in three ranges: This Week, Pay Period (2 weeks), and All Time. When a crew's assignment spans more than two weeks (e.g. Stick Fire), there is no single view that captures the whole incident — so you can't mark them paid for the fire, and the paystub is labeled by week instead of by incident.
+David Allen Morgan already has a Red Card record in Dry Lightning:
+- Position: FF2, role FF 2
+- Pack test: 7/06/2026, expires 7/06/2027 (Arduous)
+- RT-130/190: 7/03/2026, expires 7/03/2027
 
-## What to build
+What's missing: **his photo**. Both `crew_members.profile_photo_url` and `red_cards.photo_url` are empty (same gap Bryce and Arnie have; Kaylee and Stacey have theirs).
 
-**1. A fourth view: "By Fire"**
+## What I'll do
 
-Add an `incident` option to the Payroll view tabs. When selected:
-- You pick the fire (reuses the existing incident selector).
-- The date range is computed automatically from that crew's actual activity on that fire — earliest to latest shift-ticket date, extended to include any payroll adjustments tied to the incident (so the 7/07 drive-time day is included).
-- The header shows `Stick Fire` with the resolved span underneath (e.g. `Jul 5 – Jul 7, 2026`), instead of "Mon - Sun".
-- Week navigation arrows and the "jump to week" sheet are hidden in this mode.
+1. Upload the photo you just sent to the `crew-photos` bucket under Dry Lightning / David's crew member folder (same path convention used for Kaylee and Stacey).
+2. Set `red_cards.photo_url` to the storage path so it renders on his Red Card.
+3. Set `crew_members.profile_photo_url` to the public URL so his crew profile shows the same photo.
+4. Verify by loading his Red Card and confirming photo + FF2 + both cert lines render correctly with expiration dates.
 
-**2. Mark Paid works per incident**
+No code changes — data and storage only.
 
-Mark Paid currently only appears for Week/Pay Period. In By Fire mode it becomes available using the incident's resolved start/end dates as the payment period, with the net pay amount and paystub delivery preference stored the same way as today. Because paid records are keyed on exact start/end dates, an incident payment won't collide with weekly payments.
+## Note
 
-The paid label reads "Marked 7/28/26 · Stick Fire (Jul 5 – Jul 7)".
-
-**3. Paystub reflects the incident**
-
-The paystub PDF gains an optional incident label. In By Fire mode the header shows:
-- `PAY PERIOD: Jul 5 – Jul 7, 2026`
-- a new line `INCIDENT: Stick Fire`
-- filename becomes `Paystub-ChaseAlexander-StickFire.pdf`
-
-In Week/Pay Period mode nothing changes.
-
-## Technical notes
-
-- `src/pages/Payroll.tsx`: extend `ViewRange` to `"week" | "period" | "incident" | "all"`; derive `rangeStart`/`rangeEnd` for the incident case from `normalizedTickets` + `adjustments` filtered by `incidentFilter`; gate the week nav UI on view mode; force `incidentFilter !== "all"` when the incident tab is chosen (default to the most recent incident with hours).
-- `src/components/payroll/generatePaystubPdf.ts`: add optional `incidentName` arg, render the extra line, adjust filename.
-- `src/hooks/usePayrollPayments.ts` and `payroll_payments`: no schema change — existing `period_start`/`period_end` columns hold the incident span.
-- No changes to `src/lib/payroll.ts` calculation logic.
-
-## What to test
-
-- Payroll → By Fire → Stick Fire shows Chase, Sheldon, John with all their Stick Fire days (5 days spanning two weeks) plus the 7/07 drive-time adjustments.
-- Mark Paid works there and shows the fire name; Undo removes it.
-- Downloaded paystub shows the incident name and full span.
-- This Week / Pay Period / All Time behave exactly as before.
+The photo you uploaded is assumed to be David Allen Morgan. If that's actually someone else, tell me and I'll retarget it. Bryce Dougherty and Arnie Phipps are still missing photos too — send those and I'll add them the same way.
