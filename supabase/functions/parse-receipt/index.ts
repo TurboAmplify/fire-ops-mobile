@@ -34,7 +34,9 @@ function isAllowedFileUrl(fileUrl: string): boolean {
     const u = new URL(fileUrl);
     if (u.protocol !== "https:" && u.protocol !== "http:") return false;
     if (u.host !== allowedHost) return false;
-    return u.pathname.startsWith("/storage/v1/");
+    if (!u.pathname.startsWith("/storage/v1/")) return false;
+    // Scope to the receipts bucket so this endpoint can't be repurposed for other docs.
+    return u.pathname.includes("/receipts/");
   } catch {
     return false;
   }
