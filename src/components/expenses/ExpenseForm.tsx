@@ -6,6 +6,7 @@ import type { ExpenseCategory, ExpenseInsert, Expense, FuelType, ExpenseType, At
 import type { ParsedReceipt } from "@/services/ai-parsing";
 import { parseReceiptAI } from "@/services/ai-parsing";
 import { FuelTypeModal } from "./FuelTypeModal";
+import { ReceiptParseButton } from "./ReceiptParseButton";
 import { MealComplianceFields } from "./MealComplianceFields";
 import { IncidentAttachSheet } from "./IncidentAttachSheet";
 import { useState, useMemo } from "react";
@@ -319,6 +320,9 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
             ) : (
               <SignedImage src={previewSrc} alt="Receipt preview" className="w-full max-h-40 object-contain rounded-lg bg-secondary" />
             )
+          )}
+          {!!receiptUrl && !parsing && (
+            <ReceiptParseButton receiptUrl={receiptUrl} onApply={applyParsedData} />
           )}
           {parsing && (
             <div className="flex items-center gap-2 rounded-xl bg-primary/5 border border-primary/20 p-3">

@@ -18,8 +18,9 @@ export function ReceiptParseButton({ receiptUrl, onApply }: Props) {
       const parsed = await parseReceiptAI(receiptUrl);
       setResult(parsed);
       toast.success("Receipt analyzed");
-    } catch {
-      toast.error("Failed to analyze receipt");
+    } catch (err) {
+      console.error("Receipt re-parse failed:", err);
+      toast.error(err instanceof Error && err.message ? err.message : "Failed to analyze receipt");
     } finally {
       setParsing(false);
     }
