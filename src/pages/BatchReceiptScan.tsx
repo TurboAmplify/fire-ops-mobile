@@ -52,23 +52,58 @@ export default function BatchReceiptScan() {
   const pendingItems = queue.filter((q) => q.status === "pending");
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const input = e.target;
+    const file = input.files?.[0];
+    // Reset so re-picking the same photo after a failure still fires onChange.
+    input.value = "";
     if (!file) return;
+    if (!membership?.organizationId) {
+      setError("Organization not loaded yet — try again in a moment.");
+      return;
+    }
     setError(null);
     setPhase("analyzing");
 
+    let compressed: Blob;
     try {
-      // Compress on client
-      const compressed = await compressImageForReceipt(file);
+      // Compress on client (also converts HEIC -> JPEG so the AI can read it)
+      compressed = await compressImageForReceipt(file);
+    } catch (err) {
+      console.error("Receipt compression failed:", err);
+      setError(err instanceof Error ? err.message : "Couldn't read that photo. Try again.");
+      setPhase("capture");
+      return;
+    }
+
+    try {
       const dataUrl = await blobToDataUrl(compressed);
 
-      // Run upload + AI parse in parallel
-      const [url, receipts] = await Promise.all([
-        uploadReceipt(compressed, membership?.organizationId ?? undefined, file.name),
+      // Upload and parse fail independently — a parse failure must not orphan
+      // a successful upload (or make the user reshoot a good photo).
+      const [uploadResult, parseResult] = await Promise.allSettled([
+        uploadReceipt(compressed, membership.organizationId, file.name),
         parseBatchReceiptsAI({ imageDataUrl: dataUrl }),
       ]);
-      setReceiptUrl(url);
 
+      if (uploadResult.status === "fulfilled") {
+        setReceiptUrl(uploadResult.value);
+      } else {
+        console.error("Receipt upload failed:", uploadResult.reason);
+        toast.error("Receipt photo didn't upload — details below can still be saved.");
+      }
+
+      if (parseResult.status === "rejected") {
+        console.error("Batch parse failed:", parseResult.reason);
+        setError(
+          parseResult.reason instanceof Error && parseResult.reason.message
+            ? parseResult.reason.message
+            : "Failed to analyze receipts"
+        );
+        setPhase("capture");
+        return;
+      }
+
+      const receipts = parseResult.value;
       if (!receipts.length) {
         setError("No receipts detected in the image. Try again with a clearer photo.");
         setPhase("capture");
@@ -89,6 +124,7 @@ export default function BatchReceiptScan() {
       setPhase("capture");
     }
   };
+
 
   const approveItem = async (id: string) => {
     const item = queue.find((q) => q.id === id);
