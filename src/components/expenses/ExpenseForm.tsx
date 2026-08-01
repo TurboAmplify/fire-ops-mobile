@@ -311,7 +311,7 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
                 ? "Change photo"
                 : "Take or attach receipt photo"}
             </span>
-            <input type="file" accept="image/*" capture="environment" onChange={handlePhoto} className="hidden" />
+            <input type="file" accept="image/*,.heic,.heif" onChange={handlePhoto} className="hidden" />
           </label>
           {previewSrc && (
             localThumb ? (

@@ -225,8 +225,7 @@ export default function BatchReceiptScan() {
             <input
               ref={fileRef}
               type="file"
-              accept="image/*"
-              capture="environment"
+              accept="image/*,.heic,.heif"
               className="hidden"
               onChange={handleFileChange}
             />
