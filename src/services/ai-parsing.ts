@@ -25,13 +25,35 @@ async function buildBody(opts: ParseOptions) {
   return { imageUrl: resolved };
 }
 
+/**
+ * supabase-js wraps non-2xx responses in a FunctionsHttpError whose message is
+ * a generic "Edge Function returned a non-2xx status code". The useful message
+ * (rate limit, credits exhausted, timeout) is in the response body, so pull it
+ * out and rethrow something the user can act on.
+ */
+async function toReadableError(error: unknown, fallback: string): Promise<Error> {
+  const ctx = (error as { context?: Response })?.context;
+  if (ctx && typeof ctx.json === "function") {
+    try {
+      const body = await ctx.clone().json();
+      if (body?.error) return new Error(String(body.error));
+    } catch {
+      // ignore — body wasn't JSON
+    }
+  }
+  const msg = error instanceof Error ? error.message : "";
+  if (msg && !/non-2xx/i.test(msg)) return new Error(msg);
+  return new Error(fallback);
+}
+
 export async function parseReceiptAI(
   imageOrOpts: string | ParseOptions
 ): Promise<ParsedReceipt> {
   const opts: ParseOptions = typeof imageOrOpts === "string" ? { imageUrl: imageOrOpts } : imageOrOpts;
   const body = await buildBody(opts);
   const { data, error } = await supabase.functions.invoke("parse-receipt", { body });
-  if (error) throw error;
+  if (error) throw await toReadableError(error, "Couldn't analyze the receipt. Enter the details manually.");
+  if (data?.error) throw new Error(String(data.error));
   return data?.parsed || {};
 }
 
@@ -41,9 +63,11 @@ export async function parseBatchReceiptsAI(
   const opts: ParseOptions = typeof imageOrOpts === "string" ? { imageUrl: imageOrOpts } : imageOrOpts;
   const body = await buildBody(opts);
   const { data, error } = await supabase.functions.invoke("parse-batch-receipts", { body });
-  if (error) throw error;
+  if (error) throw await toReadableError(error, "Couldn't analyze the receipts. Try a clearer photo.");
+  if (data?.error) throw new Error(String(data.error));
   return Array.isArray(data?.receipts) ? data.receipts : [];
 }
+
 
 export interface ParsedRedCard {
   card_id?: string;

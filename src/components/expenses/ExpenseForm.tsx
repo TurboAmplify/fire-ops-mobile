@@ -6,6 +6,7 @@ import type { ExpenseCategory, ExpenseInsert, Expense, FuelType, ExpenseType, At
 import type { ParsedReceipt } from "@/services/ai-parsing";
 import { parseReceiptAI } from "@/services/ai-parsing";
 import { FuelTypeModal } from "./FuelTypeModal";
+import { ReceiptParseButton } from "./ReceiptParseButton";
 import { MealComplianceFields } from "./MealComplianceFields";
 import { IncidentAttachSheet } from "./IncidentAttachSheet";
 import { useState, useMemo } from "react";
@@ -125,8 +126,16 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
     : null;
 
   const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const input = e.target;
+    const file = input.files?.[0];
+    // Always clear the input so re-picking the SAME photo after a failure still fires onChange.
+    input.value = "";
     if (!file) return;
+
+    if (!membership?.organizationId) {
+      toast.error("Organization not loaded yet — try again in a moment");
+      return;
+    }
 
     // Immediately show local thumbnail
     const thumb = URL.createObjectURL(file);
@@ -136,30 +145,57 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
     setParsing(true);
     setParseStep("reading");
 
+    let compressed: Blob;
     try {
-      // Compress on client
-      const compressed = await compressImageForReceipt(file);
-      // Convert to base64 for inline AI call
+      // Compress on client (also converts HEIC -> JPEG so the AI can read it)
+      compressed = await compressImageForReceipt(file);
+    } catch (err) {
+      console.error("Receipt compression failed:", err);
+      toast.error(err instanceof Error ? err.message : "Couldn't read that photo. Try again.");
+      setUploading(false);
+      setParsing(false);
+      URL.revokeObjectURL(thumb);
+      setLocalThumb(null);
+      return;
+    }
+
+    let uploadedUrl: string | null = null;
+    try {
       const dataUrl = await blobToDataUrl(compressed);
       setParseStep("extracting");
 
-      // Run upload + AI parse in parallel
-      const [url, parsed] = await Promise.all([
-        uploadReceipt(compressed, membership?.organizationId, file.name),
-        parseReceiptAI({ imageDataUrl: dataUrl }).catch(() => null),
+      // Upload and AI parse run in parallel but fail independently: a failed
+      // parse must never throw away a good upload.
+      const [uploadResult, parseResult] = await Promise.allSettled([
+        uploadReceipt(compressed, membership.organizationId, file.name),
+        parseReceiptAI({ imageDataUrl: dataUrl }),
       ]);
 
-      setReceiptUrl(url);
+      if (uploadResult.status === "fulfilled") {
+        uploadedUrl = uploadResult.value;
+        setReceiptUrl(uploadedUrl);
+      } else {
+        console.error("Receipt upload failed:", uploadResult.reason);
+        toast.error(
+          navigator.onLine === false
+            ? "You're offline — reconnect to upload the receipt photo."
+            : "Failed to upload receipt photo. You can still save the expense."
+        );
+      }
       setUploading(false);
 
-      if (parsed) {
-        applyParsedData(parsed);
+      if (parseResult.status === "fulfilled") {
+        applyParsedData(parseResult.value);
         if (!isEditing && !incidentId) setShowAttachSheet(true);
       } else {
-        toast.error("Could not analyze receipt - fill in manually");
+        console.error("Receipt parse failed:", parseResult.reason);
+        const msg =
+          parseResult.reason instanceof Error ? parseResult.reason.message : "";
+        toast.error(msg || "Could not analyze receipt - fill in manually");
       }
-    } catch {
-      toast.error("Failed to upload receipt");
+    } catch (err) {
+      console.error("Receipt capture failed:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to upload receipt");
     } finally {
       setUploading(false);
       setParsing(false);
@@ -167,6 +203,7 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
       setTimeout(() => { URL.revokeObjectURL(thumb); setLocalThumb(null); }, 2000);
     }
   };
+
 
   const applyParsedData = (parsed: ParsedReceipt) => {
     if (parsed.amount != null) setAmount(String(parsed.amount));
@@ -275,7 +312,7 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
                 ? "Change photo"
                 : "Take or attach receipt photo"}
             </span>
-            <input type="file" accept="image/*" capture="environment" onChange={handlePhoto} className="hidden" />
+            <input type="file" accept="image/*,.heic,.heif" onChange={handlePhoto} className="hidden" />
           </label>
           {previewSrc && (
             localThumb ? (
@@ -283,6 +320,9 @@ export function ExpenseForm({ initial, onSubmit, isPending, submitLabel }: Props
             ) : (
               <SignedImage src={previewSrc} alt="Receipt preview" className="w-full max-h-40 object-contain rounded-lg bg-secondary" />
             )
+          )}
+          {!!receiptUrl && !parsing && (
+            <ReceiptParseButton receiptUrl={receiptUrl} onApply={applyParsedData} />
           )}
           {parsing && (
             <div className="flex items-center gap-2 rounded-xl bg-primary/5 border border-primary/20 p-3">
