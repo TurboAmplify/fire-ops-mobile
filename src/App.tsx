@@ -115,7 +115,7 @@ const App = () => (
                     <Route path="/account-unavailable" element={<AccountUnavailable />} />
                     <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                     <Route path="/incidents" element={<ProtectedRoute><Incidents /></ProtectedRoute>} />
-                    <Route path="/incidents/new" element={<ProtectedRoute><EngineBossGate><IncidentCreate /></EngineBossGate></ProtectedRoute>} />
+                    <Route path="/incidents/new" element={<ProtectedRoute><IncidentCreate /></ProtectedRoute>} />
                     <Route path="/incidents/from-agreement" element={<ProtectedRoute><EngineBossGate><IncidentFromAgreement /></EngineBossGate></ProtectedRoute>} />
                     <Route path="/incidents/:incidentId" element={<ProtectedRoute><IncidentDetail /></ProtectedRoute>} />
                     <Route path="/incidents/:incidentId/edit" element={<ProtectedRoute><EngineBossGate><IncidentEdit /></EngineBossGate></ProtectedRoute>} />
