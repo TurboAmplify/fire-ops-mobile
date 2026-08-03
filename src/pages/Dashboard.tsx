@@ -20,7 +20,6 @@ import type { LucideIcon } from "lucide-react";
 export default function Dashboard() {
   const [showTickets, setShowTickets] = useState(false);
   const navigate = useNavigate();
-  const { isEngineBoss } = useOrganization();
   const { data: incidents, isLoading: loadingIncidents, error: incidentsError } = useIncidents();
   const { data: trucks, isLoading: loadingTrucks, error: trucksError } = useTrucks();
   const { data: crew, isLoading: loadingCrew, error: crewError } = useCrewMembers();
@@ -158,11 +157,7 @@ export default function Dashboard() {
           <div className="grid grid-cols-3 gap-3">
             <QuickAction icon={ClipboardList} label="Shift Ticket" iconBg="bg-blue-500/15" iconColor="text-blue-500" onClick={() => setShowTickets(true)} />
             <QuickAction icon={ScanLine} label="Scan Receipt" iconBg="bg-emerald-500/15" iconColor="text-emerald-500" onClick={() => navigate("/expenses/batch-scan")} />
-            {isEngineBoss ? (
-              <QuickAction icon={Plus} label="New Incident" iconBg="bg-destructive/15" iconColor="text-destructive" onClick={() => navigate("/incidents/new")} />
-            ) : (
-              <QuickAction icon={Plus} label="Add Expense" iconBg="bg-destructive/15" iconColor="text-destructive" onClick={() => navigate("/expenses/new")} />
-            )}
+            <QuickAction icon={Plus} label="New Incident" iconBg="bg-destructive/15" iconColor="text-destructive" onClick={() => navigate("/incidents/new")} />
           </div>
         </section>
 
