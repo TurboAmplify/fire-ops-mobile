@@ -244,7 +244,17 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   );
 
   const effectiveLoading = loading || (isImpersonating && !!target && !impersonatedMembership);
-  const role = membership?.role ?? null;
+  const rawRole = membership?.role ?? null;
+  // Accept legacy role names while older memberships finish migrating. The
+  // database remains the authority for write permissions; this only prevents
+  // valid operators from losing their UI actions because of a stale label.
+  const role = rawRole === "owner"
+    ? "admin"
+    : rawRole === "crew_boss"
+      ? "engine_boss"
+      : rawRole === "crew"
+        ? "crew_member"
+        : rawRole;
   const isAdmin = role === "admin";
   const isEngineBoss = role === "admin" || role === "engine_boss";
   const isCrewMember = role === "crew_member";
