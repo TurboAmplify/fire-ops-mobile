@@ -1,21 +1,51 @@
-## Current state (verified)
+# Crew Rotation Schedule (downloadable)
 
-David Allen Morgan already has a Red Card record in Dry Lightning:
-- Position: FF2, role FF 2
-- Pack test: 7/06/2026, expires 7/06/2027 (Arduous)
-- RT-130/190: 7/03/2026, expires 7/03/2027
+## What the data shows right now
 
-What's missing: **his photo**. Both `crew_members.profile_photo_url` and `red_cards.photo_url` are empty (same gap Bryce and Arnie have; Kaylee and Stacey have theirs).
+Pulled from every 2026 shift ticket for Dry Lightning (personnel entries by date). Sorted by who has been off the longest — that is the rotation order.
 
-## What I'll do
+| Crew member | Last day worked | Days off as of 8/3 | Days worked 2026 | Last incident(s) |
+|---|---|---|---|---|
+| Justin Richardson | 3/25 | 131 | 7 | early season only |
+| John Webber | 4/16 | 109 | 6 | — |
+| Brandon Aldrich | 4/28 | 97 | 23 | — |
+| Gabriel Beck | 6/13 | 51 | 23 | — |
+| Landon Heisler | 6/13 | 51 | 22 | — |
+| Bobby Bales | 7/02 | 32 | 32 | Ash Pole |
+| Nevaeh Smith | 7/02 | 32 | 31 | Ash Pole |
+| Chase Alexander | 7/06 | 28 | 17 | Stick Fire |
+| Sheldon Sundstrom | 7/06 | 28 | 43 | Stick Fire |
+| Bryce Dougherty | 7/20 | 14 | 14 | Hihanni Sica |
+| Arnold "Arnie" Phipps | 7/20 | 14 | 14 | Hihanni Sica |
+| Kaylee Aldrich | 8/01 | 2 | 9 | War Bonnet |
+| Stacey Flute | 8/01 | 2 | 9 | War Bonnet |
 
-1. Upload the photo you just sent to the `crew-photos` bucket under Dry Lightning / David's crew member folder (same path convention used for Kaylee and Stacey).
-2. Set `red_cards.photo_url` to the storage path so it renders on his Red Card.
-3. Set `crew_members.profile_photo_url` to the public URL so his crew profile shows the same photo.
-4. Verify by loading his Red Card and confirming photo + FF2 + both cert lines render correctly with expiration dates.
+Engine bosses (Dustin Aldrich, Les Madsen) excluded from the rotation list as requested.
 
-No code changes — data and storage only.
+**Next up after Bobby / Nevaeh / Justin roll on tomorrow:** Chase Alexander and Sheldon Sundstrom, then Bryce Dougherty and Arnie Phipps.
 
-## Note
+Note: a few name variants exist in older tickets ("Les Madison", "Les Muse") that don't match roster records; they're ignored here.
 
-The photo you uploaded is assumed to be David Allen Morgan. If that's actually someone else, tell me and I'll retarget it. Bryce Dougherty and Arnie Phipps are still missing photos too — send those and I'll add them the same way.
+## What to build
+
+A **Crew Rotation** report, mobile-first, under Reports (and linked from More).
+
+Screen:
+- Org-wide rotation table, one row per active crew member, sorted longest-rested first.
+- Columns: Name, Role, Last day worked, Days off, Days worked (season), Last incident.
+- Rows for anyone currently assigned to an active incident show an "On assignment" badge instead of a days-off count.
+- Toggle: include/exclude engine bosses (default excluded).
+- Loading, empty, and error states.
+
+Export:
+- PDF (table exporter already in place) and CSV, both via the existing share/download helper so it works on iOS and Android.
+- Header: org name, "Crew Rotation — as of <date>".
+
+## Technical notes
+
+- New service `src/services/reports/rotation-report.ts`: reads `shift_tickets.personnel_entries` (name + date per entry), matches names case-insensitively against `crew_members` for the org, aggregates last worked day, distinct days worked, and last incident.
+- Current assignment status from `incident_truck_crew` where `is_active = true` joined to non-demobed `incident_trucks`.
+- New page `src/pages/CrewRotation.tsx` + route in `src/App.tsx`, entry point on `src/pages/More.tsx`.
+- Reuse `downloadTablePdf` (`src/services/reports/exporters/pdf-table.ts`) and `downloadCsv`; no new deps.
+- Unmatched ticket names are collected and shown as a small "unmatched names" footnote so bad data is visible instead of silently dropped.
+- No schema changes.
