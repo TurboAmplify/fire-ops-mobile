@@ -1,51 +1,35 @@
-# Crew Rotation Schedule (downloadable)
+# Verify the YTD payroll tax number
 
-## What the data shows right now
+## What's likely going on
 
-Pulled from every 2026 shift ticket for Dry Lightning (personnel entries by date). Sorted by who has been off the longest — that is the rotation order.
+The $47,147.91 figure I gave was **total 941 liability** — that number mixes two very different things:
 
-| Crew member | Last day worked | Days off as of 8/3 | Days worked 2026 | Last incident(s) |
-|---|---|---|---|---|
-| Justin Richardson | 3/25 | 131 | 7 | early season only |
-| John Webber | 4/16 | 109 | 6 | — |
-| Brandon Aldrich | 4/28 | 97 | 23 | — |
-| Gabriel Beck | 6/13 | 51 | 23 | — |
-| Landon Heisler | 6/13 | 51 | 22 | — |
-| Bobby Bales | 7/02 | 32 | 32 | Ash Pole |
-| Nevaeh Smith | 7/02 | 32 | 31 | Ash Pole |
-| Chase Alexander | 7/06 | 28 | 17 | Stick Fire |
-| Sheldon Sundstrom | 7/06 | 28 | 43 | Stick Fire |
-| Bryce Dougherty | 7/20 | 14 | 14 | Hihanni Sica |
-| Arnold "Arnie" Phipps | 7/20 | 14 | 14 | Hihanni Sica |
-| Kaylee Aldrich | 8/01 | 2 | 9 | War Bonnet |
-| Stacey Flute | 8/01 | 2 | 9 | War Bonnet |
+| Piece | Amount | Who actually pays it |
+|---|---|---|
+| Federal income tax withheld | ~$17,043 | The employee — deducted from their gross pay |
+| Social Security + Medicare withheld (6.2% + 1.45%) | ~$15,053 | The employee — deducted from their gross pay |
+| Employer FICA match (6.2% + 1.45%) | ~$15,053 | **The company — real extra cost** |
+| Total remitted to IRS | ~$47,148 | Company writes the check, but only 1/3 is company expense |
 
-Engine bosses (Dustin Aldrich, Les Madsen) excluded from the rotation list as requested.
+Only the **employer match (~$15,053)** is money the company loses on top of wages. The other ~$32,095 already came out of crew paychecks — it was never company profit. So payroll tax is not eating half the profit; it's the gross wages (~$196,765) that are the large number, and those are already counted as cost in the P&L.
 
-**Next up after Bobby / Nevaeh / Justin roll on tomorrow:** Chase Alexander and Sheldon Sundstrom, then Bryce Dougherty and Arnie Phipps.
+Separately, workers comp is set at 16% (~$31,482 YTD) and was **not** included in the $47k — that one is a genuine company cost.
 
-Note: a few name variants exist in older tickets ("Les Madison", "Les Muse") that don't match roster records; they're ignored here.
+This explanation is based on the rate settings I confirmed (Federal 11%, SS 6.2%, Medicare 1.45%, State off, Workers Comp 16%). The gross-wage total itself came from an ad-hoc aggregation, not from the app's payroll engine, so it should be re-verified before you rely on it for filing.
 
-## What to build
+## Plan
 
-A **Crew Rotation** report, mobile-first, under Reports (and linked from More).
-
-Screen:
-- Org-wide rotation table, one row per active crew member, sorted longest-rested first.
-- Columns: Name, Role, Last day worked, Days off, Days worked (season), Last incident.
-- Rows for anyone currently assigned to an active incident show an "On assignment" badge instead of a days-off count.
-- Toggle: include/exclude engine bosses (default excluded).
-- Loading, empty, and error states.
-
-Export:
-- PDF (table exporter already in place) and CSV, both via the existing share/download helper so it works on iOS and Android.
-- Header: org name, "Crew Rotation — as of <date>".
+1. **Re-verify gross YTD** by running the app's own payroll aggregation (`src/lib/payroll.ts`, same code the Payroll page and paystubs use) across all 2026 shift tickets, including manual adjustments and advances — instead of the one-off query I ran. Reconcile against the sum of issued paystubs.
+2. **Build a YTD Payroll Tax Liability report** in Reports:
+   - Split clearly into **Withheld from employees** vs **Employer-paid (company cost)** vs **Total remitted**.
+   - Rows: Federal income tax, Social Security (ee/er), Medicare (ee/er), State (currently off), Workers Comp shown separately as insurance, not tax.
+   - Breakdown by quarter (Q1–Q4) for 941 filing, plus a per-employee detail table.
+   - Honors per-employee overrides (e.g. John Orban's 0% federal) rather than a flat percentage.
+3. **Tie it into P&L language** — add a note on the report that only employer-paid amounts are incremental cost above gross wages, so the number can't be misread as a profit drain again.
+4. PDF + CSV export using the existing report exporters, mobile-first layout matching the other reports.
 
 ## Technical notes
 
-- New service `src/services/reports/rotation-report.ts`: reads `shift_tickets.personnel_entries` (name + date per entry), matches names case-insensitively against `crew_members` for the org, aggregates last worked day, distinct days worked, and last incident.
-- Current assignment status from `incident_truck_crew` where `is_active = true` joined to non-demobed `incident_trucks`.
-- New page `src/pages/CrewRotation.tsx` + route in `src/App.tsx`, entry point on `src/pages/More.tsx`.
-- Reuse `downloadTablePdf` (`src/services/reports/exporters/pdf-table.ts`) and `downloadCsv`; no new deps.
-- Unmatched ticket names are collected and shown as a small "unmatched names" footnote so bad data is visible instead of silently dropped.
-- No schema changes.
+- New service `src/services/reports/payroll-tax-report.ts`, reusing `fetchPayrollReport` so numbers tie exactly to the Payroll Summary and paystubs.
+- Quarter bucketing off shift-ticket personnel entry dates (same date source as `pl-report.ts`).
+- Admin-gated, behind the existing payroll module gate.
