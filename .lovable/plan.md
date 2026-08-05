@@ -1,35 +1,50 @@
-# Verify the YTD payroll tax number
+# Signed Shift Ticket Packet — Dry Lightning, 7/22 – 8/03
 
-## What's likely going on
+Produce one combined PDF containing the signed OF-297 shift tickets for the requested days, and clean up the duplicate tickets in the app first so the packet and payroll/billing agree.
 
-The $47,147.91 figure I gave was **total 941 liability** — that number mixes two very different things:
+## Step 1 — Fix the ticket data
 
-| Piece | Amount | Who actually pays it |
+**Re-date the 7/31 duplicate to 7/30**
+There are two identical War Bonnet tickets dated 7/31 (07:00–19:00, 12h, 3 crew). One of them was meant to be 7/30. The earlier-created one gets moved to 7/30 (equipment and all personnel rows), so the run reads 7/29, 7/30, 7/31 with no gap.
+
+**Remove exact duplicates on 8/03**
+8/03 currently has five tickets:
+
+```text
+270 Fire   07:00–16:00  9.0h    x2  -> keep 1, delete 1
+270 Fire   16:01–20:30  4.5h    x2  -> keep 1, delete 1   (Travel)
+War Bonnet 16:01–20:30  4.5h    x1  -> delete (same travel, wrong incident)
+```
+
+The 16:01–20:30 travel block was logged three times across two incidents. Keeping the 270 Fire copy (travel home off the last fire) and deleting the other two. Deletions use the existing soft-delete path with a reason of "Duplicate entry — removed during 7/22–8/03 packet review", so nothing is lost from the audit history.
+
+**Note on 7/22**
+That ticket's equipment row is dated 7/22 but its crew rows are dated 7/24. The crew rows will be corrected to 7/22 to match.
+
+## Step 2 — Build the packet
+
+Final contents, one OF-297 page per ticket, in date order:
+
+| Date | Incident | Hours |
 |---|---|---|
-| Federal income tax withheld | ~$17,043 | The employee — deducted from their gross pay |
-| Social Security + Medicare withheld (6.2% + 1.45%) | ~$15,053 | The employee — deducted from their gross pay |
-| Employer FICA match (6.2% + 1.45%) | ~$15,053 | **The company — real extra cost** |
-| Total remitted to IRS | ~$47,148 | Company writes the check, but only 1/3 is company expense |
+| 7/22 | Hihanni Sica | per ticket |
+| 7/28 | War Bonnet | per ticket |
+| 7/29 | War Bonnet | per ticket |
+| 7/30 | War Bonnet | 12.0 |
+| 7/31 | War Bonnet | 12.0 |
+| 8/01 | War Bonnet | per ticket |
+| 8/02 | War Bonnet | per ticket |
+| 8/03 | 270 Fire | 9.0 |
+| 8/03 | 270 Fire (travel) | 4.5 |
 
-Only the **employer match (~$15,053)** is money the company loses on top of wages. The other ~$32,095 already came out of crew paychecks — it was never company profit. So payroll tax is not eating half the profit; it's the gross wages (~$196,765) that are the large number, and those are already counted as cost in the P&L.
+Every one of these is `final` with both the contractor rep and the government supervisor signature on file, and both signature images are drawn into the PDF exactly as they appear in the app.
 
-Separately, workers comp is set at 16% (~$31,482 YTD) and was **not** included in the $47k — that one is a genuine company cost.
+The PDF is rendered with the same OF-297 layout the app already uses for single-ticket export — same header auto-fill, equipment block, personnel block, remarks, and signature blocks — so the pages are identical to what a finance officer would receive one at a time.
 
-This explanation is based on the rate settings I confirmed (Federal 11%, SS 6.2%, Medicare 1.45%, State off, Workers Comp 16%). The gross-wage total itself came from an ad-hoc aggregation, not from the app's payroll engine, so it should be re-verified before you rely on it for filing.
-
-## Plan
-
-1. **Re-verify gross YTD** by running the app's own payroll aggregation (`src/lib/payroll.ts`, same code the Payroll page and paystubs use) across all 2026 shift tickets, including manual adjustments and advances — instead of the one-off query I ran. Reconcile against the sum of issued paystubs.
-2. **Build a YTD Payroll Tax Liability report** in Reports:
-   - Split clearly into **Withheld from employees** vs **Employer-paid (company cost)** vs **Total remitted**.
-   - Rows: Federal income tax, Social Security (ee/er), Medicare (ee/er), State (currently off), Workers Comp shown separately as insurance, not tax.
-   - Breakdown by quarter (Q1–Q4) for 941 filing, plus a per-employee detail table.
-   - Honors per-employee overrides (e.g. John Orban's 0% federal) rather than a flat percentage.
-3. **Tie it into P&L language** — add a note on the report that only employer-paid amounts are incremental cost above gross wages, so the number can't be misread as a profit drain again.
-4. PDF + CSV export using the existing report exporters, mobile-first layout matching the other reports.
+Delivered as a single downloadable file, `dry-lightning-shift-tickets-2026-07-22-to-08-03.pdf`, and visually checked page by page before handing it over.
 
 ## Technical notes
 
-- New service `src/services/reports/payroll-tax-report.ts`, reusing `fetchPayrollReport` so numbers tie exactly to the Payroll Summary and paystubs.
-- Quarter bucketing off shift-ticket personnel entry dates (same date source as `pl-report.ts`).
-- Admin-gated, behind the existing payroll module gate.
+- Data fixes run as one migration: an `UPDATE` re-dating the 7/30 ticket's `equipment_entries` / `personnel_entries` JSON, an `UPDATE` correcting the 7/22 personnel dates, and soft-delete `UPDATE`s (`deleted_at`, `deleted_by_user_id`, `deleted_reason`) on the three duplicate rows. No schema changes.
+- The packet is generated in the sandbox from the corrected rows, reusing the layout logic in `src/components/shift-tickets/generateOF297Pdf.ts`, with signature PNGs pulled from the `signatures` bucket and composited on white so they don't render as black boxes.
+- No app UI changes. This is a one-off export plus a data correction; if you also want a "download date range" button inside the app later, that's a separate piece of work.
