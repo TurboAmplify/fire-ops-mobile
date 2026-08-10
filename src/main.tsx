@@ -1,10 +1,17 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
+import PublicFormApp from "./PublicFormApp.tsx";
 import "./index.css";
 import { Capacitor } from "@capacitor/core";
 import { StatusBar, Style } from "@capacitor/status-bar";
 
+// Public, no-login routes skip the full app shell (auth, org, query cache,
+// router, tutorial) so they paint fast on poor connections.
+const isPublicForm =
+  typeof window !== "undefined" && window.location.pathname.replace(/\/+$/, "") === "/training-form";
+
 const isNative = Capacitor.isNativePlatform();
+
 
 if (isNative) {
   // On native iOS/Android, prevent the WebView from drawing under the status
@@ -36,4 +43,4 @@ if (isNative) {
   }
 }
 
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(isPublicForm ? <PublicFormApp /> : <App />);
