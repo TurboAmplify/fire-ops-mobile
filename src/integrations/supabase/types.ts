@@ -1018,6 +1018,99 @@ export type Database = {
         }
         Relationships: []
       }
+      ibpa_collection_settings: {
+        Row: {
+          created_at: string
+          is_open: boolean
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          is_open?: boolean
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          is_open?: boolean
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ibpa_submit_log: {
+        Row: {
+          client_key: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          client_key: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          client_key?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      ibpa_training_responses: {
+        Row: {
+          agreement_categories: Json
+          courses: Json
+          created_at: string
+          crew_member_id: string
+          crew_member_name: string
+          id: string
+          identity: Json
+          needs_review: boolean
+          organization_id: string
+          recorded_qualifications: Json
+          recorded_role: string | null
+          role_confirmation: Json
+          submitted_at: string
+          unknown_fields: Json
+          updated_at: string
+        }
+        Insert: {
+          agreement_categories?: Json
+          courses?: Json
+          created_at?: string
+          crew_member_id: string
+          crew_member_name: string
+          id?: string
+          identity?: Json
+          needs_review?: boolean
+          organization_id: string
+          recorded_qualifications?: Json
+          recorded_role?: string | null
+          role_confirmation?: Json
+          submitted_at?: string
+          unknown_fields?: Json
+          updated_at?: string
+        }
+        Update: {
+          agreement_categories?: Json
+          courses?: Json
+          created_at?: string
+          crew_member_id?: string
+          crew_member_name?: string
+          id?: string
+          identity?: Json
+          needs_review?: boolean
+          organization_id?: string
+          recorded_qualifications?: Json
+          recorded_role?: string | null
+          role_confirmation?: Json
+          submitted_at?: string
+          unknown_fields?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       incident_crews: {
         Row: {
           assigned_at: string
