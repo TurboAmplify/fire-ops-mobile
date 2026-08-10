@@ -9,6 +9,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { TruckCrewSection } from "./TruckCrewSection";
 import { ResourceOrderSection } from "./ResourceOrderSection";
+import { AddResourceOrderSheet } from "./AddResourceOrderSheet";
+
 
 import { ShiftTicketSection } from "@/components/shift-tickets/ShiftTicketSection";
 import { SignedImage } from "@/components/ui/SignedImage";
@@ -31,6 +33,8 @@ export function IncidentTruckList({ incidentId, incidentName, organizationId }: 
   const newPartMutation = useStartNewTruckPart(incidentId);
 
   const [showAssign, setShowAssign] = useState(false);
+  const [showAddRo, setShowAddRo] = useState(false);
+
   const [expandedTruck, setExpandedTruck] = useState<string | null>(null);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
   // Track incident_truck.id of a truck just added, so we can prompt for its RO.
@@ -92,18 +96,37 @@ export function IncidentTruckList({ incidentId, incidentName, organizationId }: 
 
   return (
     <section className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
           Assigned Trucks
         </h3>
-        <button
-          onClick={() => setShowAssign(!showAssign)}
-          className="flex items-center gap-1 text-sm font-medium text-primary touch-target"
-        >
-          <Plus className="h-4 w-4" />
-          Assign
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowAddRo(true)}
+            className="flex items-center gap-1 text-sm font-medium text-primary touch-target"
+          >
+            <FileText className="h-4 w-4" />
+            Add RO
+          </button>
+          <button
+            onClick={() => setShowAssign(!showAssign)}
+            className="flex items-center gap-1 text-sm font-medium text-primary touch-target"
+          >
+            <Plus className="h-4 w-4" />
+            Assign
+          </button>
+        </div>
       </div>
+
+      <AddResourceOrderSheet
+        incidentId={incidentId}
+        incidentName={incidentName}
+        organizationId={organizationId}
+        open={showAddRo}
+        onOpenChange={setShowAddRo}
+        onAttached={(itId) => setExpandedTruck(itId)}
+      />
+
 
       {/* Assign truck picker */}
       {showAssign && (
