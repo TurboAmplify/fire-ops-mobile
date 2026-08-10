@@ -26,12 +26,30 @@ export function TruckCrewSection({ incidentTruckId, autoOpen = false, organizati
   const releaseMutation = useReleaseCrew(incidentTruckId);
   const [showAssign, setShowAssign] = useState(autoOpen);
   const [releaseTarget, setReleaseTarget] = useState<{ id: string; name: string } | null>(null);
-  const activeCrew = crew?.filter((c) => c.is_active) ?? [];
+  const [showAllRoles, setShowAllRoles] = useState(false);
+  const isBoss = (role?: string | null) => !!role && /boss/i.test(role);
+
+  const activeCrewRaw = crew?.filter((c) => c.is_active) ?? [];
+  const activeCrew = [...activeCrewRaw].sort((a, b) => {
+    const aB = isBoss(a.role_on_assignment || a.crew_members?.role);
+    const bB = isBoss(b.role_on_assignment || b.crew_members?.role);
+    return aB === bB ? 0 : aB ? -1 : 1;
+  });
   const releasedCrew = crew?.filter((c) => !c.is_active) ?? [];
+
+  const hasBoss = activeCrew.some((c) => isBoss(c.role_on_assignment || c.crew_members?.role));
 
   // Filter out crew already assigned to this truck
   const activeAssignedIds = new Set(activeCrew.map((c) => c.crew_member_id));
-  const available = allCrew?.filter((m) => !activeAssignedIds.has(m.id)) ?? [];
+  const availableAll = (allCrew?.filter((m) => !activeAssignedIds.has(m.id)) ?? []).sort((a, b) => {
+    const aB = isBoss(a.role);
+    const bB = isBoss(b.role);
+    if (aB !== bB) return aB ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
+  const bossesOnly = availableAll.filter((m) => isBoss(m.role));
+  const needsBossFirst = !hasBoss && bossesOnly.length > 0 && !showAllRoles;
+  const available = needsBossFirst ? bossesOnly : availableAll;
 
   const handleAssign = async (crewMemberId: string) => {
     try {
@@ -75,6 +93,11 @@ export function TruckCrewSection({ incidentTruckId, autoOpen = false, organizati
       {/* Assign picker */}
       {showAssign && (
         <div className="rounded-lg bg-secondary p-2 space-y-1 max-h-48 overflow-y-auto">
+          {needsBossFirst && (
+            <p className="px-2 pt-1 pb-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Select engine / crew boss first
+            </p>
+          )}
           {available.length === 0 ? (
             <p className="text-xs text-muted-foreground p-2">No crew available.</p>
           ) : (
@@ -89,6 +112,14 @@ export function TruckCrewSection({ incidentTruckId, autoOpen = false, organizati
                 <span className="text-xs text-muted-foreground">{m.role}</span>
               </button>
             ))
+          )}
+          {needsBossFirst && (
+            <button
+              onClick={() => setShowAllRoles(true)}
+              className="w-full rounded-md p-2 text-xs font-medium text-primary touch-target"
+            >
+              Skip — show all crew
+            </button>
           )}
         </div>
       )}
