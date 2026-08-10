@@ -149,15 +149,17 @@ html.capacitor-native {
     min-height: 100%;
   }
 
+  /* Use `clip` (not `hidden`) so the element does NOT become a scroll
+     container. `overflow-x: hidden` forces overflow-y to `auto`, which made
+     both html AND body scrollers — the classic iOS Safari bug where the page
+     refuses to scroll. Keeping a single viewport scroller fixes it app-wide. */
   html {
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow-x: clip;
   }
 
   body {
-    min-height: 100vh;
-    overflow-x: hidden;
-    overflow-y: auto;
+    min-height: 100dvh;
+    overflow-x: clip;
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     -webkit-tap-highlight-color: transparent;
@@ -166,10 +168,9 @@ html.capacitor-native {
   }
 
   /* Native-feel: prevent rubber-band overscroll only on touch devices.
-     On desktop (fine pointer), leaving this off ensures the mouse wheel
-     scrolls the page normally without scroll-chaining quirks. */
+     Applied to the viewport scroller (html) so body stays a normal block. */
   @media (pointer: coarse) {
-    body {
+    html {
       overscroll-behavior-y: none;
     }
   }
