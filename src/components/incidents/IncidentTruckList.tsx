@@ -92,18 +92,37 @@ export function IncidentTruckList({ incidentId, incidentName, organizationId }: 
 
   return (
     <section className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
           Assigned Trucks
         </h3>
-        <button
-          onClick={() => setShowAssign(!showAssign)}
-          className="flex items-center gap-1 text-sm font-medium text-primary touch-target"
-        >
-          <Plus className="h-4 w-4" />
-          Assign
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowAddRo(true)}
+            className="flex items-center gap-1 text-sm font-medium text-primary touch-target"
+          >
+            <FileText className="h-4 w-4" />
+            Add RO
+          </button>
+          <button
+            onClick={() => setShowAssign(!showAssign)}
+            className="flex items-center gap-1 text-sm font-medium text-primary touch-target"
+          >
+            <Plus className="h-4 w-4" />
+            Assign
+          </button>
+        </div>
       </div>
+
+      <AddResourceOrderSheet
+        incidentId={incidentId}
+        incidentName={incidentName}
+        organizationId={organizationId}
+        open={showAddRo}
+        onOpenChange={setShowAddRo}
+        onAttached={(itId) => setExpandedTruck(itId)}
+      />
+
 
       {/* Assign truck picker */}
       {showAssign && (
