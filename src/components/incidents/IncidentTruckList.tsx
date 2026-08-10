@@ -33,6 +33,8 @@ export function IncidentTruckList({ incidentId, incidentName, organizationId }: 
   const newPartMutation = useStartNewTruckPart(incidentId);
 
   const [showAssign, setShowAssign] = useState(false);
+  const [showAddRo, setShowAddRo] = useState(false);
+
   const [expandedTruck, setExpandedTruck] = useState<string | null>(null);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
   // Track incident_truck.id of a truck just added, so we can prompt for its RO.
