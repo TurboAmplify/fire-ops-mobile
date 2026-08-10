@@ -93,6 +93,11 @@ export function TruckCrewSection({ incidentTruckId, autoOpen = false, organizati
       {/* Assign picker */}
       {showAssign && (
         <div className="rounded-lg bg-secondary p-2 space-y-1 max-h-48 overflow-y-auto">
+          {needsBossFirst && (
+            <p className="px-2 pt-1 pb-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Select engine / crew boss first
+            </p>
+          )}
           {available.length === 0 ? (
             <p className="text-xs text-muted-foreground p-2">No crew available.</p>
           ) : (
@@ -107,6 +112,14 @@ export function TruckCrewSection({ incidentTruckId, autoOpen = false, organizati
                 <span className="text-xs text-muted-foreground">{m.role}</span>
               </button>
             ))
+          )}
+          {needsBossFirst && (
+            <button
+              onClick={() => setShowAllRoles(true)}
+              className="w-full rounded-md p-2 text-xs font-medium text-primary touch-target"
+            >
+              Skip — show all crew
+            </button>
           )}
         </div>
       )}
