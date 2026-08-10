@@ -9,6 +9,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { TruckCrewSection } from "./TruckCrewSection";
 import { ResourceOrderSection } from "./ResourceOrderSection";
+import { AddResourceOrderSheet } from "./AddResourceOrderSheet";
+
 
 import { ShiftTicketSection } from "@/components/shift-tickets/ShiftTicketSection";
 import { SignedImage } from "@/components/ui/SignedImage";
