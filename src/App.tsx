@@ -81,6 +81,8 @@ const SuperAdminErrors = lazyWithRetry(() => import("./pages/SuperAdminErrors"))
 const MessagesInbox = lazyWithRetry(() => import("./pages/MessagesInbox"));
 const ThreadView = lazyWithRetry(() => import("./pages/ThreadView"));
 const MyRedCard = lazyWithRetry(() => import("./pages/MyRedCard"));
+const TrainingForm = lazyWithRetry(() => import("./pages/TrainingForm"));
+const AdminIbpaTraining = lazyWithRetry(() => import("./pages/AdminIbpaTraining"));
 
 const App = () => (
   <ErrorBoundary scope="root">
@@ -142,6 +144,7 @@ const App = () => (
 
                     <Route path="/privacy" element={<Privacy />} />
                     <Route path="/terms" element={<Terms />} />
+                    <Route path="/training-form" element={<TrainingForm />} />
                     <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
                     <Route path="/payroll" element={<ProtectedRoute><AdminGate><ModuleGate module="payroll"><Payroll /></ModuleGate></AdminGate></ProtectedRoute>} />
                     <Route path="/factoring" element={<ProtectedRoute><AdminGate><FactoringDashboard /></AdminGate></ProtectedRoute>} />
@@ -153,6 +156,7 @@ const App = () => (
                     <Route path="/training" element={<ProtectedRoute><ModuleGate module="training"><Training /></ModuleGate></ProtectedRoute>} />
                     <Route path="/admin/logs" element={<ProtectedRoute><AdminGate><AdminLogs /></AdminGate></ProtectedRoute>} />
                     <Route path="/admin/reports" element={<ProtectedRoute><AdminGate><AdminReports /></AdminGate></ProtectedRoute>} />
+                    <Route path="/admin/ibpa-training" element={<ProtectedRoute><AdminGate><AdminIbpaTraining /></AdminGate></ProtectedRoute>} />
                     <Route path="/admin/accounts-payable" element={<ProtectedRoute><AdminGate><AccountsPayable /></AdminGate></ProtectedRoute>} />
                     <Route path="/super-admin" element={<PlatformAdminGate><SuperAdmin /></PlatformAdminGate>} />
                     <Route path="/super-admin/organizations" element={<PlatformAdminGate><SuperAdminOrgs /></PlatformAdminGate>} />
