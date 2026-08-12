@@ -117,7 +117,7 @@ type SelectedTicket = {
   dateLabel: string;
 };
 
-type SortKey = "date" | "truck" | "crew" | "lunch" | "perDiem" | "contractor" | "supervisor" | "status";
+type SortKey = "date" | "truck" | "ro" | "crew" | "lunch" | "perDiem" | "contractor" | "supervisor" | "status";
 type SortDir = "asc" | "desc";
 
 export default function ShiftTicketLog() {
@@ -295,6 +295,8 @@ export default function ShiftTicketLog() {
           return ticketDate(t);
         case "truck":
           return (t.incident_trucks?.trucks?.name ?? "").toLowerCase();
+        case "ro":
+          return (t.resource_order_number ?? "").toLowerCase();
         case "crew":
           return crewSummary(t.personnel_entries).toLowerCase();
         case "lunch":
@@ -424,8 +426,14 @@ export default function ShiftTicketLog() {
                           <span className="font-semibold text-sm">{dateLabel}</span>
                           <span className="text-muted-foreground">·</span>
                           <span className="text-sm font-medium truncate">{truckName}</span>
+                          {t.resource_order_number && (
+                            <Badge variant="secondary" className="font-normal h-5 px-1.5 text-[11px]">
+                              RO {t.resource_order_number}
+                            </Badge>
+                          )}
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5 truncate">{crew}</p>
+
                       </div>
                       <Badge
                         variant={t.status === "final" ? "default" : "outline"}
@@ -479,7 +487,9 @@ export default function ShiftTicketLog() {
                     <tr>
                       <SortHeader label="Date" k="date" />
                       <SortHeader label="Truck" k="truck" />
+                      <SortHeader label="Resource Order #" k="ro" />
                       <SortHeader label="Crew" k="crew" />
+
                       <SortHeader label="Lunch" k="lunch" />
                       <SortHeader label="Per Diem" k="perDiem" />
                       <SortHeader label="Contractor Sig" k="contractor" />
@@ -511,7 +521,9 @@ export default function ShiftTicketLog() {
                         >
                           <td className="px-3 py-3 whitespace-nowrap font-medium">{dateLabel}</td>
                           <td className="px-3 py-3 whitespace-nowrap">{truckName}</td>
+                          <td className="px-3 py-3 whitespace-nowrap">{t.resource_order_number || "—"}</td>
                           <td className="px-3 py-3 min-w-[160px]">{crew}</td>
+
                           <td className="px-3 py-3 whitespace-nowrap">
                             {lunch.tone === "ok" ? (
                               <Badge variant="secondary" className="font-normal">

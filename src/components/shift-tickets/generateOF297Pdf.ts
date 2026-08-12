@@ -104,7 +104,8 @@ export function buildOF297FileName(ticket: ShiftTicket): string {
   const ticketDate = fnEqEntries[0]?.date || fnPeEntries[0]?.date || new Date(ticket.updated_at).toISOString().split("T")[0];
   const truckLabel = ticket.equipment_type || ticket.equipment_make_model || "Truck";
   const sanitize = (s: string) => s.replace(/[^a-zA-Z0-9\s\-]/g, "").trim();
-  return `${sanitize(ticket.incident_name || "ShiftTicket")} - ${sanitize(truckLabel)} - ${ticketDate}.pdf`;
+  const ro = sanitize(ticket.resource_order_number || "");
+  return `${sanitize(ticket.incident_name || "ShiftTicket")} - ${sanitize(truckLabel)}${ro ? ` - RO ${ro}` : ""} - ${ticketDate}.pdf`;
 }
 
 export async function generateOF297PdfBlob(ticket: ShiftTicket): Promise<{ blob: Blob; fileName: string }> {
@@ -132,7 +133,21 @@ export async function generateOF297PdfBlob(ticket: ShiftTicket): Promise<{ blob:
   doc.setFont("helvetica", "bold");
   doc.text("Emergency Equipment Shift Ticket", W / 2, y + 12, { align: "center" });
   y += 24;
+  // Prominent RO / unit banner so finance officers can match the ticket to the
+  // right resource order at a glance.
+  const bannerUnit = ticket.equipment_type || ticket.equipment_make_model || "";
+  const bannerParts = [
+    ticket.resource_order_number ? `RESOURCE ORDER #: ${ticket.resource_order_number}` : "",
+    bannerUnit ? `UNIT: ${bannerUnit}` : "",
+  ].filter(Boolean);
+  if (bannerParts.length) {
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text(bannerParts.join("    |    "), W / 2, y + 2, { align: "center" });
+    y += 12;
+  }
   drawLine(margin, y, W - margin, y);
+
 
   // Header fields - 3 columns per row
   const col3 = cw / 3;
