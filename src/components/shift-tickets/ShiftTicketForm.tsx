@@ -415,7 +415,11 @@ export function ShiftTicketForm({
     const isFinal = !!persistedSupervisorSigUrl;
     // Save-time guard: ensure any "30-min lunch" rows have the 0.5h actually
     // deducted from total. Catches legacy rows and direct edits.
-    const normalizedPersonnel = enforceLunchDeduction(personnelEntries);
+    // Crew rows left blank inherit the equipment line's date/window first, so a
+    // skipped "Apply to All Crew" can never save a 0-hour crew member.
+    const normalizedPersonnel = enforceLunchDeduction(
+      autoFillCrewFromEquipment(personnelEntries, equipmentEntries)
+    );
     return {
       incident_truck_id: incidentTruckId,
       organization_id: organizationId,
