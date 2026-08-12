@@ -728,7 +728,14 @@ export default function Payroll() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold truncate">{line.name}</p>
+                      <p className="text-sm font-semibold truncate flex items-center gap-1.5">
+                        {line.name}
+                        {paidMap.has(line.crewMemberId) && (
+                          <span className="inline-flex items-center gap-0.5 rounded-full bg-success/15 text-success px-1.5 py-0.5 text-[10px] font-bold shrink-0">
+                            <CheckCircle2 className="h-2.5 w-2.5" /> Paid
+                          </span>
+                        )}
+                      </p>
                       <p className="text-xs text-muted-foreground">{line.role}</p>
                       {line.hourlyRate === 0 && (line.dailyRate ?? 0) === 0 && line.totalHours > 0 && (
                         <span className="inline-flex items-center gap-1 mt-1 rounded-full bg-warning/15 text-warning px-2 py-0.5 text-[10px] font-medium">
