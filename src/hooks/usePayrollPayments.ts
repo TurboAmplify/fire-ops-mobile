@@ -80,3 +80,49 @@ export function useTogglePayrollPaid() {
     },
   });
 }
+
+/**
+ * Bulk mark/unmark an entire payroll period complete. One tap for the whole
+ * crew list currently on screen (field use: fewer taps, forgiving).
+ */
+export function useBulkMarkPayrollPaid() {
+  const qc = useQueryClient();
+  const { membership } = useOrganization();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (vars: {
+      periodStart: string;
+      periodEnd: string;
+      /** Everyone that should be marked paid (already-paid ones are skipped). */
+      entries: { crewMemberId: string; amount?: number | null; paystubSentVia?: string | null }[];
+      /** Payment row ids to remove when un-marking. */
+      removeIds?: string[];
+      mode: "pay" | "unpay";
+    }) => {
+      assertOnlineForWrite();
+      if (vars.mode === "unpay") {
+        if (!vars.removeIds?.length) return;
+        const { error } = await supabase.from("payroll_payments").delete().in("id", vars.removeIds);
+        if (error) throw error;
+        return;
+      }
+      if (vars.entries.length === 0) return;
+      const { error } = await supabase.from("payroll_payments").insert(
+        vars.entries.map((e) => ({
+          organization_id: membership!.organizationId,
+          crew_member_id: e.crewMemberId,
+          period_start: vars.periodStart,
+          period_end: vars.periodEnd,
+          amount: e.amount ?? null,
+          paystub_sent_via: e.paystubSentVia ?? null,
+          marked_by_user_id: user?.id ?? null,
+        }))
+      );
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["payroll-payments"] });
+    },
+  });
+}
