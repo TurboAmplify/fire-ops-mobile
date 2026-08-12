@@ -30,7 +30,7 @@ import { fuzzyMatchName } from "@/lib/fuzzy-name";
 import { evaluateCrewCount } from "@/lib/crew-minimums";
 import { SuccessOverlay } from "@/components/ui/SuccessOverlay";
 import { SignedImage } from "@/components/ui/SignedImage";
-import { uploadSignature, computeHours, buildRemarksString, insertSignatureAuditLog, enforceLunchDeduction } from "@/services/shift-tickets";
+import { uploadSignature, computeHours, buildRemarksString, insertSignatureAuditLog, enforceLunchDeduction, autoFillCrewFromEquipment, crewRowsWithoutHours } from "@/services/shift-tickets";
 import { handleMutationError, isOnline } from "@/lib/offline-guard";
 import { saveLocalSignature } from "@/lib/offline-signatures";
 import {
@@ -415,7 +415,11 @@ export function ShiftTicketForm({
     const isFinal = !!persistedSupervisorSigUrl;
     // Save-time guard: ensure any "30-min lunch" rows have the 0.5h actually
     // deducted from total. Catches legacy rows and direct edits.
-    const normalizedPersonnel = enforceLunchDeduction(personnelEntries);
+    // Crew rows left blank inherit the equipment line's date/window first, so a
+    // skipped "Apply to All Crew" can never save a 0-hour crew member.
+    const normalizedPersonnel = enforceLunchDeduction(
+      autoFillCrewFromEquipment(personnelEntries, equipmentEntries)
+    );
     return {
       incident_truck_id: incidentTruckId,
       organization_id: organizationId,
@@ -493,6 +497,18 @@ export function ShiftTicketForm({
     if (!silent) {
       const headerOk = validateOrToast(shiftTicketHeaderSchema, payload);
       if (!headerOk) return;
+
+      // Never lock a ticket that would pay somebody zero for a worked shift.
+      if (payload.status === "final") {
+        const zeroCrew = crewRowsWithoutHours((payload.personnel_entries as PersonnelEntry[]) ?? []);
+        if (zeroCrew.length > 0) {
+          const ok = window.confirm(
+            `${zeroCrew.length} crew member${zeroCrew.length > 1 ? "s have" : " has"} no hours on this ticket (${zeroCrew.join(", ")}).\n\nThey will be paid $0 for this shift. Finalize anyway?`
+          );
+          if (!ok) return;
+        }
+      }
+
 
       const eqEntries = (payload.equipment_entries as unknown[]) ?? [];
       for (let i = 0; i < eqEntries.length; i++) {
