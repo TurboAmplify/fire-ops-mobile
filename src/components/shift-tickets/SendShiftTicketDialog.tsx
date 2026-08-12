@@ -192,7 +192,7 @@ export function SendShiftTicketDialog({
       // already exists — otherwise create one. Keeps the inbox clean and
       // prevents apparent "duplicate" threads when sending to different FOs
       // at different times for the same ticket.
-      const subject = `Shift Ticket — ${ticket.incident_name ?? "Incident"}${ticketDate ? ` ${ticketDate}` : ""} — ${fileName.replace(/\.pdf$/i, "")}`;
+      const subject = `Shift Ticket — ${ticket.incident_name ?? "Incident"}${ticketDate ? ` ${ticketDate}` : ""}${ticket.resource_order_number ? ` — RO ${ticket.resource_order_number}` : ""} — ${fileName.replace(/\.pdf$/i, "")}`;
       let threadId: string;
       const existing = priorSends[0]?.threadId
         ? priorSends.slice().sort((a, b) => {
