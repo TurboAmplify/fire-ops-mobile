@@ -27,7 +27,7 @@ import { RoleDefaultRatesCard } from "@/components/payroll/RoleDefaultRatesCard"
 import { PayrollAcknowledgmentDialog } from "@/components/payroll/PayrollAcknowledgmentDialog";
 import { AdjustmentSheet } from "@/components/payroll/AdjustmentSheet";
 import { usePayrollAdjustments, useDeletePayrollAdjustment } from "@/hooks/usePayrollAdjustments";
-import { usePayrollPayments, useTogglePayrollPaid } from "@/hooks/usePayrollPayments";
+import { usePayrollPayments, useTogglePayrollPaid, useBulkMarkPayrollPaid } from "@/hooks/usePayrollPayments";
 
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
