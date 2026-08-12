@@ -485,7 +485,9 @@ export default function ShiftTicketLog() {
                     <tr>
                       <SortHeader label="Date" k="date" />
                       <SortHeader label="Truck" k="truck" />
+                      <SortHeader label="Resource Order #" k="ro" />
                       <SortHeader label="Crew" k="crew" />
+
                       <SortHeader label="Lunch" k="lunch" />
                       <SortHeader label="Per Diem" k="perDiem" />
                       <SortHeader label="Contractor Sig" k="contractor" />
