@@ -236,7 +236,10 @@ export function ShiftTicketQuickAccess({ open, onOpenChange }: Props) {
                       >
                         <FileText className="h-4 w-4 text-primary shrink-0" />
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold truncate pr-16">{truckName}</p>
+                          <p className="text-sm font-semibold truncate pr-16">
+                            {truckName}
+                            {t.resource_order_number ? ` · RO ${t.resource_order_number}` : ""}
+                          </p>
                           <p className="text-[11px] text-muted-foreground truncate mt-0.5">
                             {t.incident_name || ""}
                           </p>
