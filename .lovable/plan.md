@@ -1,50 +1,57 @@
 # Fix: crew hours missing from shift tickets (payroll underpay)
 
-You were right — the shift tickets themselves are correct. The crew rows on those tickets are not.
+Deep dive done. The tickets are right; the crew rows on them are not.
 
-## What's actually wrong
+## What the data actually shows
 
-Every one of the 16 Hihanni Sica / War Bonnet tickets has a correct equipment line (mostly 07:00–19:00 = 12.0 hrs). But on **9 of the 16 tickets**, the crew rows were saved with blank start/stop and 0 hours:
+Hihanni Sica isn't two trucks — it's **DL62 with two parts**:
 
-| Ticket date | Equipment line | Crew rows |
-|---|---|---|
-| 7/19, 7/20, 7/21 | 16.0 / 12.5 / 12.0 | filled |
-| 7/22, 7/23, 7/24, 7/25, 7/26 | 12.0 each | blank, 0 hrs |
-| 7/27 | 15.5 | filled |
-| 7/28 | 10.0 | blank, 0 hrs |
-| 7/29 | 12.0 | filled |
-| 7/30, 7/31, 8/1 | 12.0 each | blank, 0 hrs |
-| 8/2, 8/3 | 12.0 each | filled |
+- **Part 1** (RO E-1 / E-1.1), 7/19–7/20 — crew: Les Madsen, Arnie Phipps, Bryce Dougherty
+- **Part 2** (RO SD-RBA-000076), 7/21–7/26 — crew: Dustin, Kaylee, Stacey
 
-Payroll reads only the crew rows, so Kaylee got paid for 62 hrs instead of roughly 175. Dustin's total looked fine only because he's on a $1,000/day flat rate, which still pays on a blank day.
+War Bonnet is **DL62 Part 1** (RO E-1), 7/27–8/3, all three of them on every ticket. So the Dustin/Kaylee/Stacey window is 7/21–7/26 plus 7/27–8/3 = **14 shifts**, not the 12 the paystub showed.
 
-**Cause:** crew times are only written when someone taps "Apply to All Crew" in the ticket form. If that tap is skipped, the ticket saves and finalizes with empty crew rows and nothing warns anybody. The same gap also explains the bad dates — blank crew rows keep the form's default date (today) instead of the shift date, which is why the 7/24 ticket shows crew dated 7/25, the 7/28 ticket shows 7/29, and Stacey has a stray 8/31 row.
+Every ticket has a correct equipment line. On **9 of those 14**, the crew rows saved blank with 0 hours:
+
+| Date | Fire / part | Equipment line | Crew rows |
+|---|---|---|---|
+| 7/21 | Hihanni P2 | 06:00–18:00 (12.0) | 11.5 hrs — good |
+| 7/22, 7/23, 7/24, 7/25, 7/26 | Hihanni P2 | 07:00–19:00 (12.0) | blank, 0 |
+| 7/27 | War Bonnet | 07:00–22:30 (15.5) | 15.5 — good |
+| 7/28 | War Bonnet | 09:00–19:00 (10.0, tire change) | blank, 0 |
+| 7/29 | War Bonnet | 07:00–19:00 (12.0) | 12.0 — good |
+| 7/30, 7/31, 8/1 | War Bonnet | 07:00–19:00 (12.0) | blank, 0 |
+| 8/2, 8/3 | War Bonnet | 07:00–19:00 (12.0) | 11.5 — good |
+
+Two knock-on date errors, both on blank tickets: the **7/24** ticket's crew rows are dated 7/25 (so 7/24 and 7/25 collapse into one day and a shift disappears), and Stacey's row on the **7/31** ticket is dated **8/31**.
+
+**Cause:** crew times are only written when someone taps "Apply to All Crew" in the ticket form. Skip that tap and the ticket still saves and finalizes with empty crew rows — and the blank rows keep the form's default date instead of the shift date, which is exactly where 7/25 and 8/31 came from. Payroll reads only crew rows, so Kaylee was paid 62 hrs instead of about 163.5. Dustin's total looked plausible only because his $1,000/day flat rate still pays on a blank day — but he lost a whole shift to the 7/24 date collapse.
 
 ## The fix
 
-**1. Stop it from happening again**
-- Auto-apply the equipment times to crew rows on save: any crew row with a name but no start/stop inherits the equipment line's date, start, stop, and lunch split. No extra tap required.
-- Block/warn on finalize: if any crew row still has 0 hours, show a clear confirm ("3 crew members have no hours — finalize anyway?").
-- Always force crew row dates to match the equipment date, so a crew row can never carry today's date.
+**1. Close the hole in the form**
+- On save, any crew row with a name but no times inherits the equipment line's date, start, stop, and the standard 30-min lunch split. No extra tap needed.
+- Crew row dates are always forced to the equipment date, so a row can never carry today's date.
+- Finalizing with any 0-hour crew row prompts a clear confirm ("3 crew members have no hours — finalize anyway?").
 
-**2. Repair the existing data (Hihanni Sica + War Bonnet)**
-- Backfill the 9 tickets: apply each ticket's equipment start/stop to its crew rows, minus the standard 30-min lunch, matching how the filled tickets were entered.
-- Correct the crew dates on the 7/24 and 7/28 tickets and remove Stacey's stray 8/31 row.
+**2. Repair Hihanni Part 2 + War Bonnet**
+- Backfill crew times on the 9 blank tickets from each ticket's own equipment line, minus the 30-min lunch — same as the tickets that were filled in correctly.
+- Fix the 7/24 crew dates and Stacey's 8/31 row.
 
 **3. Audit the rest of the season**
-- List every other Dry Lightning ticket where the equipment line has hours but crew rows are 0, so we can see how far back the underpay goes before more payroll is marked paid.
+- Report every other Dry Lightning ticket where the equipment line has hours but the crew rows are 0, so we know how far back the underpay goes before more payroll gets marked paid.
 
 **4. Re-run the paystubs**
-- Regenerate the Dustin / Kaylee / Stacey document for both fires with corrected hours.
+- Regenerate the Dustin / Kaylee / Stacey document for both fires. Kaylee lands around 163.5 hrs across 14 shifts — roughly $6,200 gross instead of $2,087, with overtime kicking in on both full weeks.
 
 ## Confirm before I touch data
 
-- Standard shift = equipment window minus a 30-min lunch (so a 07:00–19:00 line becomes 11.5 paid hrs per person), matching your filled-in tickets. Say the word if any of those days were different.
-- The 7/28 ticket is 09:00–19:00 (10.0) with the remark "had to get tire changed on truck" — crew gets 9.5 hrs that day under the same rule.
+- Standard rule for the blank days: equipment window minus a 30-min lunch, so 07:00–19:00 pays 11.5 hrs per person, and the 7/28 tire-change day (09:00–19:00) pays 9.5. Tell me if any of those days ran differently.
+- 7/27 (15.5) and 7/29 (12.0) were entered with no lunch deduction. I'll leave those exactly as they are unless you want them made consistent.
 
 ## Technical notes
 
-- Auto-fill logic lives in `src/components/shift-tickets/ShiftTicketForm.tsx` on submit, reusing `splitForLunch` / `computeHours` from `src/services/shift-tickets.ts` — the exact same math `CrewSyncCard` already runs, so nothing about how hours are calculated changes.
+- Auto-fill runs on submit in `src/components/shift-tickets/ShiftTicketForm.tsx`, reusing `splitForLunch` / `computeHours` from `src/services/shift-tickets.ts` — identical math to what `CrewSyncCard` already does, so nothing about hour calculation changes.
 - Finalize guard added where status is set to `final`.
-- Data repair is a one-time update to `shift_tickets.personnel_entries` for the 9 affected ticket ids; equipment entries are not touched.
-- Payroll aggregation in `src/lib/payroll.ts` is unchanged — it will pick up the corrected hours automatically.
+- Data repair is a one-time update to `shift_tickets.personnel_entries` on the 9 affected tickets; equipment entries are untouched.
+- `src/lib/payroll.ts` is unchanged — it picks up corrected hours automatically.
