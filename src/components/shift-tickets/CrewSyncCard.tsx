@@ -181,21 +181,25 @@ export function CrewSyncCard({ equipmentEntries, personnelEntries, setPersonnelE
         })}
       </div>
 
-      {/* Apply button */}
+      {/* Crew times apply automatically; this button re-syncs manual edits */}
       <button
         type="button"
         onClick={applyToAll}
         disabled={!eqStart || !eqStop}
-        className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-bold text-primary-foreground touch-target active:scale-[0.98] disabled:opacity-40"
+        className="w-full flex items-center justify-center gap-2 rounded-xl bg-secondary py-2.5 text-sm font-bold text-secondary-foreground touch-target active:scale-[0.98] disabled:opacity-40"
       >
         <Clock className="h-4 w-4" />
-        Apply to All Crew ({personnelEntries.length})
+        Re-sync All Crew ({personnelEntries.length})
         {eqStart && eqStop && (
-          <span className="font-normal text-primary-foreground/70">
+          <span className="font-normal text-secondary-foreground/70">
             {crewTotal}h
           </span>
         )}
       </button>
+      <p className="text-[11px] leading-snug text-muted-foreground">
+        Crew times fill in automatically from the equipment hours. Tap re-sync only if you changed the shift and want to overwrite manual edits.
+      </p>
+
     </div>
   );
 }
