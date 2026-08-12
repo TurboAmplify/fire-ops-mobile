@@ -521,7 +521,9 @@ export default function ShiftTicketLog() {
                         >
                           <td className="px-3 py-3 whitespace-nowrap font-medium">{dateLabel}</td>
                           <td className="px-3 py-3 whitespace-nowrap">{truckName}</td>
+                          <td className="px-3 py-3 whitespace-nowrap">{t.resource_order_number || "—"}</td>
                           <td className="px-3 py-3 min-w-[160px]">{crew}</td>
+
                           <td className="px-3 py-3 whitespace-nowrap">
                             {lunch.tone === "ok" ? (
                               <Badge variant="secondary" className="font-normal">
