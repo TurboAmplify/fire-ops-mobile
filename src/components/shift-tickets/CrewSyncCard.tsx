@@ -75,54 +75,74 @@ export function CrewSyncCard({ equipmentEntries, personnelEntries, setPersonnelE
     return lMin > sMin && lMin + durationMin < eMin;
   };
 
+  /** Build a synced personnel entry from the equipment window + current chips. */
+  const buildSynced = (entry: PersonnelEntry, lunchAt: string): PersonnelEntry => {
+    const split = hasLunch
+      ? splitForLunch(eqStart, eqStop, lunchAt)
+      : { op_start: eqStart, op_stop: eqStop, sb_start: "", sb_stop: "" };
+    const opHours = computeHours(split.op_start, split.op_stop);
+    const sbHours = computeHours(split.sb_start, split.sb_stop);
+    const finalTotal = Math.round((opHours + sbHours) * 10) / 10;
+    const newEntry: PersonnelEntry = {
+      ...entry,
+      date: eqDate || entry.date,
+      op_start: split.op_start,
+      op_stop: split.op_stop,
+      sb_start: split.sb_start,
+      sb_stop: split.sb_stop,
+      total: finalTotal,
+      activity_type: "work",
+      work_context: "",
+      lodging,
+      per_diem_b: perDiemB,
+      per_diem_l: perDiemL,
+      per_diem_d: perDiemD,
+    };
+    newEntry.remarks = buildRemarksString(newEntry);
+    if (hasLunch) newEntry.remarks += `, 30-min lunch at ${lunchAt}`;
+    return newEntry;
+  };
+
+  /** Resolve a lunch time that actually fits inside the equipment window. */
+  const resolveLunch = (): string => {
+    const normalized = normalizeLunchTime(lunchTime) || "12:00";
+    if (hasLunch && !lunchInsideWindow(eqStart, eqStop, normalized)) {
+      return computeMidpoint(eqStart, eqStop);
+    }
+    return normalized;
+  };
+
+  // Auto-sync: any crew member with a name but no times gets the equipment
+  // window applied automatically — no button tap required. Rows the user has
+  // already edited by hand are left alone.
+  useEffect(() => {
+    if (!eqStart || !eqStop) return;
+    const lunchAt = resolveLunch();
+    let changed = false;
+    const updated = personnelEntries.map((entry) => {
+      if (!entry.operator_name?.trim()) return entry;
+      if (entry.op_start || (entry.total ?? 0) > 0) return entry;
+      changed = true;
+      return buildSynced(entry, lunchAt);
+    });
+    if (changed) setPersonnelEntries(updated);
+  }, [eqStart, eqStop, eqDate, hasLunch, lunchTime, lodging, perDiemB, perDiemL, perDiemD, personnelEntries]);
+
   const applyToAll = () => {
     if (!eqStart || !eqStop) {
       toast.error("Enter equipment start and stop times first");
       return;
     }
-    let normalizedLunch = normalizeLunchTime(lunchTime) || "12:00";
-
-    // Guard: if lunch chip is on but the chosen time falls outside the equipment
-    // window (common on overnight shifts where 12:00 is past the end), auto-replace
-    // with the shift midpoint so the 30-min deduction actually applies.
-    if (hasLunch && !lunchInsideWindow(eqStart, eqStop, normalizedLunch)) {
-      const mid = computeMidpoint(eqStart, eqStop);
-      normalizedLunch = mid;
-      setLunchTime(mid);
-      toast.info(`Lunch moved to ${mid} (mid-shift) so the 30-min break fits this window`);
+    const normalizedLunch = resolveLunch();
+    if (normalizedLunch !== (normalizeLunchTime(lunchTime) || "12:00")) {
+      setLunchTime(normalizedLunch);
+      toast.info(`Lunch moved to ${normalizedLunch} (mid-shift) so the 30-min break fits this window`);
     }
-
-    const updated = personnelEntries.map((entry) => {
-      const split = hasLunch
-        ? splitForLunch(eqStart, eqStop, normalizedLunch)
-        : { op_start: eqStart, op_stop: eqStop, sb_start: "", sb_stop: "" };
-      const opHours = computeHours(split.op_start, split.op_stop);
-      const sbHours = computeHours(split.sb_start, split.sb_stop);
-      const finalTotal = Math.round((opHours + sbHours) * 10) / 10;
-      const newEntry: PersonnelEntry = {
-        ...entry,
-        date: eqDate || entry.date,
-        op_start: split.op_start,
-        op_stop: split.op_stop,
-        sb_start: split.sb_start,
-        sb_stop: split.sb_stop,
-        total: finalTotal,
-        activity_type: "work",
-        work_context: "",
-        lodging,
-        per_diem_b: perDiemB,
-        per_diem_l: perDiemL,
-        per_diem_d: perDiemD,
-      };
-      newEntry.remarks = buildRemarksString(newEntry);
-      if (hasLunch) {
-        newEntry.remarks += `, 30-min lunch at ${normalizedLunch}`;
-      }
-      return newEntry;
-    });
+    const updated = personnelEntries.map((entry) => buildSynced(entry, normalizedLunch));
     setPersonnelEntries(updated);
     toast.success(`Synced times to ${updated.length} crew members`);
   };
+
 
   const chipClass = (active: boolean) =>
     `rounded-full px-3 py-1.5 text-xs font-medium touch-target whitespace-nowrap ${active ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`;
