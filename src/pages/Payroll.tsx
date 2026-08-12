@@ -5,6 +5,7 @@ import { useOrganization } from "@/hooks/useOrganization";
 import {
   Loader2, ChevronLeft, ChevronRight, Clock, DollarSign, Users, Lock, Flame, User,
   FileText, Download, X, Settings as SettingsIcon, AlertTriangle, Printer, CalendarRange, Plus, Trash2,
+  CheckCircle2,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, subDays, parseISO } from "date-fns";
@@ -26,7 +27,7 @@ import { RoleDefaultRatesCard } from "@/components/payroll/RoleDefaultRatesCard"
 import { PayrollAcknowledgmentDialog } from "@/components/payroll/PayrollAcknowledgmentDialog";
 import { AdjustmentSheet } from "@/components/payroll/AdjustmentSheet";
 import { usePayrollAdjustments, useDeletePayrollAdjustment } from "@/hooks/usePayrollAdjustments";
-import { usePayrollPayments, useTogglePayrollPaid } from "@/hooks/usePayrollPayments";
+import { usePayrollPayments, useTogglePayrollPaid, useBulkMarkPayrollPaid } from "@/hooks/usePayrollPayments";
 
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -302,6 +303,7 @@ export default function Payroll() {
   const paidPeriodEnd = rangeEnd ? format(rangeEnd, "yyyy-MM-dd") : null;
   const { data: payments } = usePayrollPayments(paidPeriodStart, paidPeriodEnd);
   const togglePaid = useTogglePayrollPaid();
+  const bulkPaid = useBulkMarkPayrollPaid();
   const paidMap = useMemo(() => {
     const m = new Map<string, { id: string; paid_at: string }>();
     (payments ?? []).forEach((p) => m.set(p.crew_member_id, { id: p.id, paid_at: p.paid_at }));
@@ -645,6 +647,76 @@ export default function Payroll() {
           </div>
         )}
 
+        {/* Payroll completion bar — one tap to close out the whole period */}
+        {!isLoading && !loadError && viewMode === "crew" && crewLines.length > 0 && (
+          paidPeriodStart && paidPeriodEnd ? (() => {
+            const paidLines = crewLines.filter((l) => paidMap.has(l.crewMemberId));
+            const allPaid = paidLines.length === crewLines.length;
+            return (
+              <div className={`rounded-xl border p-3 flex items-center justify-between gap-3 ${allPaid ? "border-success/40 bg-success/10" : "border-border/60 bg-card"}`}>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold flex items-center gap-1.5">
+                    {allPaid && <CheckCircle2 className="h-3.5 w-3.5 text-success" />}
+                    {allPaid ? "Payroll complete" : "Payroll in progress"}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    {paidLines.length} of {crewLines.length} paid · {activeIncidentName ?? rangeLabel}
+                  </p>
+                </div>
+                <button
+                  onClick={async () => {
+                    try {
+                      if (allPaid) {
+                        if (!confirm("Mark this entire payroll period as NOT paid?")) return;
+                        await bulkPaid.mutateAsync({
+                          mode: "unpay",
+                          periodStart: paidPeriodStart,
+                          periodEnd: paidPeriodEnd,
+                          entries: [],
+                          removeIds: paidLines.map((l) => paidMap.get(l.crewMemberId)!.id),
+                        });
+                        toast({ title: "Period reopened" });
+                      } else {
+                        const entries = crewLines
+                          .filter((l) => !paidMap.has(l.crewMemberId))
+                          .map((l) => ({
+                            crewMemberId: l.crewMemberId,
+                            amount: l.netPay ?? l.grossPay,
+                            paystubSentVia: crewPrefMap.get(l.crewMemberId) ?? "email",
+                          }));
+                        await bulkPaid.mutateAsync({
+                          mode: "pay",
+                          periodStart: paidPeriodStart,
+                          periodEnd: paidPeriodEnd,
+                          entries,
+                        });
+                        toast({ title: `Payroll marked complete (${entries.length} paid)` });
+                      }
+                    } catch (err) {
+                      toast({
+                        title: "Failed to update",
+                        description: err instanceof Error ? err.message : "Try again.",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  disabled={bulkPaid.isPending}
+                  className={`shrink-0 rounded-lg px-3 py-2.5 text-xs font-bold touch-target active:scale-[0.98] ${
+                    allPaid ? "bg-secondary text-secondary-foreground" : "bg-success text-success-foreground"
+                  }`}
+                >
+                  {bulkPaid.isPending ? "Saving…" : allPaid ? "Reopen" : "Mark All Paid"}
+                </button>
+              </div>
+            );
+          })() : (
+            <p className="text-[11px] text-muted-foreground text-center">
+              Switch to Week, Period, or By Fire to mark payroll complete.
+            </p>
+          )
+        )}
+
+
         {!isLoading && !loadError && viewMode === "crew" && (
           <div className="space-y-2">
             {crewLines.length === 0 && <EmptyState message="No hours logged in this range." />}
@@ -656,7 +728,14 @@ export default function Payroll() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold truncate">{line.name}</p>
+                      <p className="text-sm font-semibold truncate flex items-center gap-1.5">
+                        {line.name}
+                        {paidMap.has(line.crewMemberId) && (
+                          <span className="inline-flex items-center gap-0.5 rounded-full bg-success/15 text-success px-1.5 py-0.5 text-[10px] font-bold shrink-0">
+                            <CheckCircle2 className="h-2.5 w-2.5" /> Paid
+                          </span>
+                        )}
+                      </p>
                       <p className="text-xs text-muted-foreground">{line.role}</p>
                       {line.hourlyRate === 0 && (line.dailyRate ?? 0) === 0 && line.totalHours > 0 && (
                         <span className="inline-flex items-center gap-1 mt-1 rounded-full bg-warning/15 text-warning px-2 py-0.5 text-[10px] font-medium">
