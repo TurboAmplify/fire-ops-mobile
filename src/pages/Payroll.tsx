@@ -5,6 +5,7 @@ import { useOrganization } from "@/hooks/useOrganization";
 import {
   Loader2, ChevronLeft, ChevronRight, Clock, DollarSign, Users, Lock, Flame, User,
   FileText, Download, X, Settings as SettingsIcon, AlertTriangle, Printer, CalendarRange, Plus, Trash2,
+  CheckCircle2,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, subDays, parseISO } from "date-fns";
