@@ -352,3 +352,63 @@ export function enforceLunchDeduction(entries: PersonnelEntry[]): PersonnelEntry
     return e;
   });
 }
+
+/**
+ * Save-time guard: crew rows must never save blank.
+ *
+ * Crew times were only ever written when the operator tapped "Apply to All
+ * Crew". Skipping that tap saved a ticket whose equipment line had hours but
+ * whose crew rows were empty — invisible on the ticket, but payroll reads the
+ * crew rows, so those people got paid 0 for a full shift.
+ *
+ * Any named crew row with no start/stop now inherits the primary equipment
+ * line's date, window, and the standard 30-min lunch split. Rows that already
+ * have times are left completely alone. Dates always follow the equipment
+ * line so a crew row can't keep the form's default (today's) date.
+ */
+export function autoFillCrewFromEquipment(
+  personnel: PersonnelEntry[],
+  equipment: EquipmentEntry[],
+  lunchTime = "12:00"
+): PersonnelEntry[] {
+  const primary = equipment?.[0];
+  const eqStart = primary?.start || "";
+  const eqStop = primary?.stop || "";
+  const eqDate = primary?.date || "";
+  if (!eqStart || !eqStop) return personnel;
+
+  return personnel.map((entry) => {
+    const named = !!entry.operator_name?.trim();
+    const hasTimes = !!(entry.op_start || entry.op_stop || entry.sb_start || entry.sb_stop);
+    if (!named) return entry;
+    // Keep the equipment date on every row, even ones already filled in.
+    if (hasTimes) return eqDate && entry.date !== eqDate ? { ...entry, date: eqDate } : entry;
+
+    const split = splitForLunch(eqStart, eqStop, normalizeLunchTime(lunchTime) || "12:00");
+    const total =
+      Math.round((computeHours(split.op_start, split.op_stop) + computeHours(split.sb_start, split.sb_stop)) * 10) / 10;
+    const filled: PersonnelEntry = {
+      ...entry,
+      date: eqDate || entry.date,
+      op_start: split.op_start,
+      op_stop: split.op_stop,
+      sb_start: split.sb_start,
+      sb_stop: split.sb_stop,
+      total,
+      activity_type: entry.activity_type || "work",
+    };
+    const lunchNote = split.sb_start ? `30-min lunch at ${normalizeLunchTime(lunchTime) || "12:00"}` : "";
+    if (lunchNote && !/30-?min lunch/i.test(filled.remarks || "")) {
+      filled.remarks = filled.remarks ? `${filled.remarks}, ${lunchNote}` : lunchNote;
+    }
+    return filled;
+  });
+}
+
+/** Named crew rows that would save with no hours. Used to warn before finalizing. */
+export function crewRowsWithoutHours(personnel: PersonnelEntry[]): string[] {
+  return personnel
+    .filter((e) => !!e.operator_name?.trim() && !(Number(e.total) > 0))
+    .map((e) => e.operator_name!.trim());
+}
+
