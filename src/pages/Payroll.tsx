@@ -303,6 +303,7 @@ export default function Payroll() {
   const paidPeriodEnd = rangeEnd ? format(rangeEnd, "yyyy-MM-dd") : null;
   const { data: payments } = usePayrollPayments(paidPeriodStart, paidPeriodEnd);
   const togglePaid = useTogglePayrollPaid();
+  const bulkPaid = useBulkMarkPayrollPaid();
   const paidMap = useMemo(() => {
     const m = new Map<string, { id: string; paid_at: string }>();
     (payments ?? []).forEach((p) => m.set(p.crew_member_id, { id: p.id, paid_at: p.paid_at }));
