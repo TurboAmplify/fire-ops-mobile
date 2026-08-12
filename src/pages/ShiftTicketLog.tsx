@@ -295,6 +295,8 @@ export default function ShiftTicketLog() {
           return ticketDate(t);
         case "truck":
           return (t.incident_trucks?.trucks?.name ?? "").toLowerCase();
+        case "ro":
+          return (t.resource_order_number ?? "").toLowerCase();
         case "crew":
           return crewSummary(t.personnel_entries).toLowerCase();
         case "lunch":
