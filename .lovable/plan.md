@@ -27,6 +27,9 @@ Two knock-on date errors, both on blank tickets: the **7/24** ticket's crew rows
 
 **Cause:** crew times are only written when someone taps "Apply to All Crew" in the ticket form. Skip that tap and the ticket still saves and finalizes with empty crew rows — and the blank rows keep the form's default date instead of the shift date, which is exactly where 7/25 and 8/31 came from. Payroll reads only crew rows, so Kaylee was paid 62 hrs instead of about 163.5. Dustin's total looked plausible only because his $1,000/day flat rate still pays on a blank day — but he lost a whole shift to the 7/24 date collapse.
 
+**Roster is already complete.** Checked every ticket individually: Dustin, Kaylee, and Stacey are each listed on all 6 Hihanni Part 2 tickets (7/21–7/26) and all 8 War Bonnet tickets (7/27–8/3) — 14 for 14, nobody missing. The only thing wrong on those rows is the blank times (and the two bad dates). So no one needs to be added; they need their hours filled in.
+
+
 ## The fix
 
 **1. Close the hole in the form**
