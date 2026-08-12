@@ -117,7 +117,7 @@ type SelectedTicket = {
   dateLabel: string;
 };
 
-type SortKey = "date" | "truck" | "crew" | "lunch" | "perDiem" | "contractor" | "supervisor" | "status";
+type SortKey = "date" | "truck" | "ro" | "crew" | "lunch" | "perDiem" | "contractor" | "supervisor" | "status";
 type SortDir = "asc" | "desc";
 
 export default function ShiftTicketLog() {
