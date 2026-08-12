@@ -424,8 +424,14 @@ export default function ShiftTicketLog() {
                           <span className="font-semibold text-sm">{dateLabel}</span>
                           <span className="text-muted-foreground">·</span>
                           <span className="text-sm font-medium truncate">{truckName}</span>
+                          {t.resource_order_number && (
+                            <Badge variant="secondary" className="font-normal h-5 px-1.5 text-[11px]">
+                              RO {t.resource_order_number}
+                            </Badge>
+                          )}
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5 truncate">{crew}</p>
+
                       </div>
                       <Badge
                         variant={t.status === "final" ? "default" : "outline"}
