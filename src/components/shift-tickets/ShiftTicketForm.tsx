@@ -498,6 +498,18 @@ export function ShiftTicketForm({
       const headerOk = validateOrToast(shiftTicketHeaderSchema, payload);
       if (!headerOk) return;
 
+      // Never lock a ticket that would pay somebody zero for a worked shift.
+      if (payload.status === "final") {
+        const zeroCrew = crewRowsWithoutHours((payload.personnel_entries as PersonnelEntry[]) ?? []);
+        if (zeroCrew.length > 0) {
+          const ok = window.confirm(
+            `${zeroCrew.length} crew member${zeroCrew.length > 1 ? "s have" : " has"} no hours on this ticket (${zeroCrew.join(", ")}).\n\nThey will be paid $0 for this shift. Finalize anyway?`
+          );
+          if (!ok) return;
+        }
+      }
+
+
       const eqEntries = (payload.equipment_entries as unknown[]) ?? [];
       for (let i = 0; i < eqEntries.length; i++) {
         const result = equipmentEntrySchema.safeParse(eqEntries[i]);
