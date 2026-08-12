@@ -30,7 +30,7 @@ import { fuzzyMatchName } from "@/lib/fuzzy-name";
 import { evaluateCrewCount } from "@/lib/crew-minimums";
 import { SuccessOverlay } from "@/components/ui/SuccessOverlay";
 import { SignedImage } from "@/components/ui/SignedImage";
-import { uploadSignature, computeHours, buildRemarksString, insertSignatureAuditLog, enforceLunchDeduction } from "@/services/shift-tickets";
+import { uploadSignature, computeHours, buildRemarksString, insertSignatureAuditLog, enforceLunchDeduction, autoFillCrewFromEquipment, crewRowsWithoutHours } from "@/services/shift-tickets";
 import { handleMutationError, isOnline } from "@/lib/offline-guard";
 import { saveLocalSignature } from "@/lib/offline-signatures";
 import {
