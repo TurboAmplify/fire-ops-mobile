@@ -104,7 +104,8 @@ export function buildOF297FileName(ticket: ShiftTicket): string {
   const ticketDate = fnEqEntries[0]?.date || fnPeEntries[0]?.date || new Date(ticket.updated_at).toISOString().split("T")[0];
   const truckLabel = ticket.equipment_type || ticket.equipment_make_model || "Truck";
   const sanitize = (s: string) => s.replace(/[^a-zA-Z0-9\s\-]/g, "").trim();
-  return `${sanitize(ticket.incident_name || "ShiftTicket")} - ${sanitize(truckLabel)} - ${ticketDate}.pdf`;
+  const ro = sanitize(ticket.resource_order_number || "");
+  return `${sanitize(ticket.incident_name || "ShiftTicket")} - ${sanitize(truckLabel)}${ro ? ` - RO ${ro}` : ""} - ${ticketDate}.pdf`;
 }
 
 export async function generateOF297PdfBlob(ticket: ShiftTicket): Promise<{ blob: Blob; fileName: string }> {
