@@ -3787,6 +3787,10 @@ export type Database = {
         Args: { _org_id: string; _role: string; _user_id: string }
         Returns: boolean
       }
+      user_is_on_incident: {
+        Args: { _incident_id: string; _user_id: string }
+        Returns: boolean
+      }
       validate_inspection_photo_path: {
         Args: { _path: string; _user_id: string }
         Returns: boolean
