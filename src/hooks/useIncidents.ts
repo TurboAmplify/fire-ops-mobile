@@ -23,6 +23,10 @@ export function useIncidents() {
     enabled: !!orgId,
     staleTime: 1000 * 60 * 10,
     gcTime: 1000 * 60 * 60 * 24 * 7,
+    // Show cached list instantly, but always revalidate in the background so
+    // newly-created incidents appear without waiting out the stale window.
+    refetchOnMount: "always",
+    refetchOnReconnect: "always",
   });
 }
 
@@ -33,6 +37,8 @@ export function useIncident(id: string) {
     enabled: !!id,
     staleTime: 1000 * 60 * 10,
     gcTime: 1000 * 60 * 60 * 24 * 7,
+    refetchOnMount: "always",
+    refetchOnReconnect: "always",
   });
 }
 
