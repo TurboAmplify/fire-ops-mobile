@@ -11,6 +11,7 @@ import { isCrewMemberComplete } from "@/lib/profile-completion";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { CachedDataPill, OfflineNoCacheEmpty } from "@/components/OfflineIndicators";
 import { useOrganization } from "@/hooks/useOrganization";
+import { useCrewDaysWorked, CURRENT_YEAR } from "@/hooks/useYearDays";
 
 function getInitials(name: string) {
   return name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
@@ -20,6 +21,7 @@ export default function Crew() {
   const { data: members, isLoading, error } = useCrewMembers();
   const { isOffline } = useOnlineStatus();
   const { isEngineBoss } = useOrganization();
+  const { data: daysMap } = useCrewDaysWorked();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewingId, setViewingId] = useState<string | null>(null);
@@ -166,7 +168,13 @@ export default function Crew() {
                           <span className="truncate">{formatPhone(m.phone)}</span>
                         </div>
                       )}
+                      <div className="flex justify-end pt-0.5">
+                        <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                          {daysMap?.[m.id] ?? 0} {(daysMap?.[m.id] ?? 0) === 1 ? "day" : "days"} in {CURRENT_YEAR}
+                        </span>
+                      </div>
                     </div>
+
                   </div>
                 </button>
               );
