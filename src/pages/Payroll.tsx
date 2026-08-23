@@ -27,7 +27,7 @@ import { RoleDefaultRatesCard } from "@/components/payroll/RoleDefaultRatesCard"
 import { PayrollAcknowledgmentDialog } from "@/components/payroll/PayrollAcknowledgmentDialog";
 import { AdjustmentSheet } from "@/components/payroll/AdjustmentSheet";
 import { usePayrollAdjustments, useDeletePayrollAdjustment } from "@/hooks/usePayrollAdjustments";
-import { usePayrollPayments, useTogglePayrollPaid, useBulkMarkPayrollPaid } from "@/hooks/usePayrollPayments";
+import { usePayrollPayments, usePaidIncidentIds, useTogglePayrollPaid, useBulkMarkPayrollPaid } from "@/hooks/usePayrollPayments";
 
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -527,7 +527,10 @@ export default function Payroll() {
             >
               <option value="all">Pick a fire…</option>
               {incidentsWithActivity.map((inc) => (
-                <option key={inc.id} value={inc.id}>{inc.name}</option>
+                <option key={inc.id} value={inc.id}>
+                  {paidIncidentIds?.has(inc.id) ? "\u2713 " : "\u25CF "}{inc.name}
+                  {paidIncidentIds?.has(inc.id) ? " — payroll run" : " — payroll outstanding"}
+                </option>
               ))}
             </select>
             <p className="text-[11px] text-muted-foreground text-center">
@@ -676,6 +679,8 @@ export default function Payroll() {
                           periodStart: paidPeriodStart,
                           periodEnd: paidPeriodEnd,
                           entries: [],
+                          incidentId: paidIncidentId,
+                          incidentName: activeIncidentName,
                           removeIds: paidLines.map((l) => paidMap.get(l.crewMemberId)!.id),
                         });
                         toast({ title: "Period reopened" });
@@ -691,6 +696,8 @@ export default function Payroll() {
                           mode: "pay",
                           periodStart: paidPeriodStart,
                           periodEnd: paidPeriodEnd,
+                          incidentId: paidIncidentId,
+                          incidentName: activeIncidentName,
                           entries,
                         });
                         toast({ title: `Payroll marked complete (${entries.length} paid)` });
