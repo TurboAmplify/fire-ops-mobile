@@ -9,6 +9,8 @@ import { FileText, Upload, Loader2, ChevronDown, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useOrganization } from "@/hooks/useOrganization";
 import { SignedLink } from "@/components/ui/SignedLink";
+import { ResourceOrderFileButtons } from "@/components/incidents/ResourceOrderFileButtons";
+
 
 interface Props {
   incidentTruckId: string;
