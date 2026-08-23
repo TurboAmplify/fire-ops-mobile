@@ -10,6 +10,7 @@ import { useAppMode } from "@/lib/app-mode";
 import { isTruckComplete } from "@/lib/profile-completion";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { CachedDataPill, OfflineNoCacheEmpty } from "@/components/OfflineIndicators";
+import { useTruckDaysOut, CURRENT_YEAR } from "@/hooks/useYearDays";
 
 const filters: (TruckStatus | "all")[] = ["all", "available", "deployed", "maintenance"];
 
@@ -19,6 +20,7 @@ export default function Fleet() {
   const { isOffline } = useOnlineStatus();
   const { isAdmin, isEngineBoss } = useOrganization();
   const { modules } = useAppMode();
+  const { data: truckDays } = useTruckDaysOut();
   const showRatesLink = isAdmin && modules.payroll;
 
   const filtered =
@@ -151,6 +153,11 @@ export default function Fleet() {
                         {truck.year ? ` · ${truck.year}` : ""}
                       </p>
                     )}
+                    <div className="mt-1 flex justify-end">
+                      <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                        {truckDays?.[truck.id] ?? 0} {(truckDays?.[truck.id] ?? 0) === 1 ? "day" : "days"} out in {CURRENT_YEAR}
+                      </span>
+                    </div>
                   </div>
                 </Link>
               );

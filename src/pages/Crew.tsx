@@ -11,6 +11,7 @@ import { isCrewMemberComplete } from "@/lib/profile-completion";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { CachedDataPill, OfflineNoCacheEmpty } from "@/components/OfflineIndicators";
 import { useOrganization } from "@/hooks/useOrganization";
+import { useCrewDaysWorked, CURRENT_YEAR } from "@/hooks/useYearDays";
 
 function getInitials(name: string) {
   return name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
@@ -20,6 +21,7 @@ export default function Crew() {
   const { data: members, isLoading, error } = useCrewMembers();
   const { isOffline } = useOnlineStatus();
   const { isEngineBoss } = useOrganization();
+  const { data: daysMap } = useCrewDaysWorked();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewingId, setViewingId] = useState<string | null>(null);
