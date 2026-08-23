@@ -951,6 +951,8 @@ export default function Payroll() {
                                       periodEnd: paidPeriodEnd,
                                       amount: line.netPay ?? line.grossPay,
                                       paystubSentVia: pref,
+                                      incidentId: paidIncidentId,
+                                      incidentName: activeIncidentName,
                                     });
                                     toast({ title: paid ? "Marked unpaid" : `${line.name} marked paid` });
                                   } catch (err) {
