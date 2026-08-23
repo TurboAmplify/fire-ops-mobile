@@ -3761,7 +3761,21 @@ export type Database = {
         }[]
       }
       normalize_org_member_role: { Args: { _role: string }; Returns: string }
+      org_crew_days_worked: {
+        Args: { _org_id: string; _year: number }
+        Returns: {
+          crew_member_id: string
+          days: number
+        }[]
+      }
       org_effective_status: { Args: { _org_id: string }; Returns: string }
+      org_truck_days_out: {
+        Args: { _org_id: string; _year: number }
+        Returns: {
+          days: number
+          truck_id: string
+        }[]
+      }
       prepare_invite_signup:
         | { Args: { _code: string; _email: string }; Returns: string }
         | {
