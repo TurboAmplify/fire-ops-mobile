@@ -18,6 +18,7 @@ import { useAvailableTrucks } from "@/hooks/useIncidentTrucks";
 import { assignTruckToIncident } from "@/services/incident-trucks";
 import { fuzzyMatchName } from "@/lib/fuzzy-name";
 import { Loader2, Upload, FileText, PenLine, Truck as TruckIcon, Sparkles, AlertTriangle } from "lucide-react";
+import { TakePhotoButton } from "@/components/incidents/ResourceOrderFileButtons";
 import { toast } from "sonner";
 
 type Step = "choose" | "parsing" | "form";

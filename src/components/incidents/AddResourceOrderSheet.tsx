@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Upload, Sparkles, Truck as TruckIcon, AlertTriangle, Check } from "lucide-react";
+import { TakePhotoButton } from "@/components/incidents/ResourceOrderFileButtons";
 import { toast } from "sonner";
 import {
   Sheet,
