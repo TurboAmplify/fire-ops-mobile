@@ -166,7 +166,13 @@ export default function Crew() {
                           <span className="truncate">{formatPhone(m.phone)}</span>
                         </div>
                       )}
+                      <div className="flex justify-end pt-0.5">
+                        <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                          {daysMap?.[m.id] ?? 0} {(daysMap?.[m.id] ?? 0) === 1 ? "day" : "days"} in {CURRENT_YEAR}
+                        </span>
+                      </div>
                     </div>
+
                   </div>
                 </button>
               );
