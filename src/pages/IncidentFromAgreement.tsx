@@ -149,6 +149,8 @@ export default function IncidentFromAgreement() {
                   className="hidden"
                 />
               </label>
+              <TakePhotoButton onFile={handleUpload} label="Take Photo" />
+
             </div>
             {parseError && (
               <div className="flex items-start gap-2 rounded-xl bg-destructive/10 p-3">
