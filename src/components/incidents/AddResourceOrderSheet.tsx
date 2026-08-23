@@ -244,6 +244,11 @@ export function AddResourceOrderSheet({
             </label>
           )}
 
+          {!fileUrl && (
+            <TakePhotoButton onFile={handleFile} disabled={!!busy} label="Take Photo of Resource Order" />
+          )}
+
+
           {fileUrl && (
             <>
               <div className="rounded-xl bg-secondary/50 p-3 space-y-1">
