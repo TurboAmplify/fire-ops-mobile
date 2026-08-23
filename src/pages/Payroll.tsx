@@ -298,12 +298,15 @@ export default function Payroll() {
     ? incidentNamesMap.get(incidentFilter) ?? null
     : null;
 
-  // --- Paid tracking (per crew member, per pay period) ---
+  // --- Paid tracking (per crew member, per pay period, per fire) ---
   const paidPeriodStart = rangeStart ? format(rangeStart, "yyyy-MM-dd") : null;
   const paidPeriodEnd = rangeEnd ? format(rangeEnd, "yyyy-MM-dd") : null;
-  const { data: payments } = usePayrollPayments(paidPeriodStart, paidPeriodEnd);
+  const paidIncidentId = viewRange === "incident" && incidentFilter !== "all" ? incidentFilter : null;
+  const { data: payments } = usePayrollPayments(paidPeriodStart, paidPeriodEnd, paidIncidentId);
+  const { data: paidIncidentIds } = usePaidIncidentIds();
   const togglePaid = useTogglePayrollPaid();
   const bulkPaid = useBulkMarkPayrollPaid();
+
   const paidMap = useMemo(() => {
     const m = new Map<string, { id: string; paid_at: string }>();
     (payments ?? []).forEach((p) => m.set(p.crew_member_id, { id: p.id, paid_at: p.paid_at }));
