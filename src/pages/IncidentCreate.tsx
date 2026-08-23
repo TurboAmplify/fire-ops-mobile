@@ -264,6 +264,9 @@ export default function IncidentCreate() {
             />
           </label>
 
+          <TakePhotoButton onFile={handleUpload} label="Take Photo of Resource Order" />
+
+
           <button
             onClick={() => setStep("form")}
             className="flex items-center justify-center gap-2 rounded-xl border bg-card px-4 py-4 text-sm font-medium text-muted-foreground transition-colors active:bg-secondary touch-target"
