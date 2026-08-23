@@ -9,6 +9,8 @@ import { FileText, Upload, Loader2, ChevronDown, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useOrganization } from "@/hooks/useOrganization";
 import { SignedLink } from "@/components/ui/SignedLink";
+import { ResourceOrderFileButtons } from "@/components/incidents/ResourceOrderFileButtons";
+
 
 interface Props {
   incidentTruckId: string;
@@ -86,12 +88,9 @@ export function ResourceOrderSection({ incidentTruckId }: Props) {
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Resource Orders</p>
-        <label className="flex items-center gap-1 text-xs font-medium text-primary cursor-pointer touch-target">
-          {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-          <span>{uploading ? "Uploading..." : "Upload"}</span>
-          <input type="file" accept="image/*,.pdf" onChange={handleUpload} className="hidden" disabled={uploading} />
-        </label>
+        <ResourceOrderFileButtons onFile={handleUpload} busy={uploading} />
       </div>
+
 
       {isLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground mx-auto" />}
 

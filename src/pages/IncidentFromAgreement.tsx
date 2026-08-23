@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { getLocalDateString } from "@/lib/local-date";
 import { Upload, Loader2, FileText, Check, ChevronRight, AlertCircle } from "lucide-react";
+import { TakePhotoButton } from "@/components/incidents/ResourceOrderFileButtons";
 import { toast } from "sonner";
 import { uploadAgreementForParsing, parseAgreementAI } from "@/services/agreement-parsing";
 import type { ParsedAgreement } from "@/services/agreement-parsing";
@@ -149,6 +150,8 @@ export default function IncidentFromAgreement() {
                   className="hidden"
                 />
               </label>
+              <TakePhotoButton onFile={handleUpload} label="Take Photo" />
+
             </div>
             {parseError && (
               <div className="flex items-start gap-2 rounded-xl bg-destructive/10 p-3">
