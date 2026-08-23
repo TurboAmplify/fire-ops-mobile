@@ -2375,6 +2375,8 @@ export type Database = {
           created_at: string
           crew_member_id: string
           id: string
+          incident_id: string | null
+          incident_name: string | null
           marked_by_user_id: string | null
           notes: string | null
           organization_id: string
@@ -2390,6 +2392,8 @@ export type Database = {
           created_at?: string
           crew_member_id: string
           id?: string
+          incident_id?: string | null
+          incident_name?: string | null
           marked_by_user_id?: string | null
           notes?: string | null
           organization_id: string
@@ -2405,6 +2409,8 @@ export type Database = {
           created_at?: string
           crew_member_id?: string
           id?: string
+          incident_id?: string | null
+          incident_name?: string | null
           marked_by_user_id?: string | null
           notes?: string | null
           organization_id?: string
@@ -2421,6 +2427,13 @@ export type Database = {
             columns: ["crew_member_id"]
             isOneToOne: false
             referencedRelation: "crew_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_payments_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "incidents"
             referencedColumns: ["id"]
           },
         ]

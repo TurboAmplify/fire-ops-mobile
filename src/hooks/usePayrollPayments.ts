@@ -12,26 +12,65 @@ export interface PayrollPayment {
   amount: number | null;
   paystub_sent_via: string | null;
   paid_at: string;
+  incident_id: string | null;
+  incident_name: string | null;
 }
 
-/** Paid records for a given pay period (yyyy-MM-dd strings). */
-export function usePayrollPayments(periodStart: string | null, periodEnd: string | null) {
+const SELECT_COLS =
+  "id, crew_member_id, period_start, period_end, amount, paystub_sent_via, paid_at, incident_id, incident_name";
+
+/**
+ * Paid records for a given pay period (yyyy-MM-dd strings).
+ * When `incidentId` is given, only payroll runs for that fire count as paid —
+ * that's how we track outstanding payroll per incident.
+ */
+export function usePayrollPayments(
+  periodStart: string | null,
+  periodEnd: string | null,
+  incidentId?: string | null
+) {
   const { membership } = useOrganization();
   const orgId = membership?.organizationId ?? null;
 
   return useQuery({
-    queryKey: ["payroll-payments", orgId, periodStart, periodEnd],
+    queryKey: ["payroll-payments", orgId, periodStart, periodEnd, incidentId ?? null],
     queryFn: async () => {
       let q = supabase
         .from("payroll_payments")
-        .select("id, crew_member_id, period_start, period_end, amount, paystub_sent_via, paid_at")
+        .select(SELECT_COLS)
         .eq("organization_id", orgId!);
       if (periodStart && periodEnd) {
         q = q.eq("period_start", periodStart).eq("period_end", periodEnd);
       }
+      if (incidentId) q = q.eq("incident_id", incidentId);
       const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as PayrollPayment[];
+    },
+    enabled: !!orgId,
+    staleTime: 1000 * 30,
+    refetchOnMount: "always",
+  });
+}
+
+/**
+ * Every incident this org has already run payroll for — used to flag
+ * outstanding fires in the "By Fire" picker.
+ */
+export function usePaidIncidentIds() {
+  const { membership } = useOrganization();
+  const orgId = membership?.organizationId ?? null;
+
+  return useQuery({
+    queryKey: ["payroll-payments", "incidents", orgId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("payroll_payments")
+        .select("incident_id")
+        .eq("organization_id", orgId!)
+        .not("incident_id", "is", null);
+      if (error) throw error;
+      return new Set((data ?? []).map((r: { incident_id: string | null }) => r.incident_id as string));
     },
     enabled: !!orgId,
     staleTime: 1000 * 30,
@@ -52,6 +91,8 @@ export function useTogglePayrollPaid() {
       periodEnd: string;
       amount?: number | null;
       paystubSentVia?: string | null;
+      incidentId?: string | null;
+      incidentName?: string | null;
     }) => {
       assertOnlineForWrite();
       if (vars.existingId) {
@@ -68,6 +109,8 @@ export function useTogglePayrollPaid() {
           period_end: vars.periodEnd,
           amount: vars.amount ?? null,
           paystub_sent_via: vars.paystubSentVia ?? null,
+          incident_id: vars.incidentId ?? null,
+          incident_name: vars.incidentName ?? null,
           marked_by_user_id: user?.id ?? null,
         })
         .select()
@@ -99,6 +142,9 @@ export function useBulkMarkPayrollPaid() {
       /** Payment row ids to remove when un-marking. */
       removeIds?: string[];
       mode: "pay" | "unpay";
+      /** When the run is for a specific fire, stamp it so we can track it. */
+      incidentId?: string | null;
+      incidentName?: string | null;
     }) => {
       assertOnlineForWrite();
       if (vars.mode === "unpay") {
@@ -116,6 +162,8 @@ export function useBulkMarkPayrollPaid() {
           period_end: vars.periodEnd,
           amount: e.amount ?? null,
           paystub_sent_via: e.paystubSentVia ?? null,
+          incident_id: vars.incidentId ?? null,
+          incident_name: vars.incidentName ?? null,
           marked_by_user_id: user?.id ?? null,
         }))
       );
