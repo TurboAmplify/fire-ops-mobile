@@ -46,6 +46,8 @@ export default function EvalEdit() {
   const [exporting, setExporting] = useState(false);
   // Review-before-send: hold the pending share mode until the user confirms.
   const [reviewMode, setReviewMode] = useState<"request" | "acknowledge" | "view" | null>(null);
+  // Completed evals open read-only; this re-opens them for corrections.
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     if (row && !hydrated) {
