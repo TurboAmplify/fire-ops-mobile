@@ -52,6 +52,14 @@ const FACTORS = [
   "welfare", "equipment", "physical", "safety", "other",
 ];
 
+function cleanCategories(v: unknown, fallback: unknown): string[] {
+  const list = Array.isArray(v) ? v.map(String).filter((c) => COLUMNS.includes(c)) : [];
+  const ordered = COLUMNS.filter((c) => list.includes(c));
+  if (ordered.length > 0) return ordered;
+  const fb = String(fallback);
+  return [COLUMNS.includes(fb) ? fb : "hot_line"];
+}
+
 function cleanRatings(v: unknown): Record<string, Record<string, number>> {
   const out: Record<string, Record<string, number>> = {};
   if (!v || typeof v !== "object") return out;
@@ -70,7 +78,7 @@ function cleanRatings(v: unknown): Record<string, Record<string, number>> {
 
 const PUBLIC_COLS =
   "id, direction, status, subject_name, subject_home_unit, fire_name, fire_number, fire_location, " +
-  "fire_position, assignment_from, assignment_to, acres_burned, fuel_types, work_category, " +
+  "fire_position, assignment_from, assignment_to, acres_burned, fuel_types, work_category, work_categories, " +
   "work_category_other, ratings, other_factor_label, remarks, rater_name, rater_home_unit, " +
   "rater_position, rater_signature_url, rater_signed_date, employee_signature_url, employee_signed_date, token_expires_at";
 
@@ -177,6 +185,7 @@ Deno.serve(async (req) => {
       acres_burned: clean(v.acres_burned, 40),
       fuel_types: clean(v.fuel_types, 120),
       work_category: COLUMNS.includes(String(v.work_category)) ? String(v.work_category) : "hot_line",
+      work_categories: cleanCategories(v.work_categories, v.work_category),
       work_category_other: clean(v.work_category_other, 80),
       ratings: cleanRatings(v.ratings),
       other_factor_label: clean(v.other_factor_label, 120),
