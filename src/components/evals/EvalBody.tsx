@@ -49,8 +49,38 @@ export function EvalBody({
           <EvalRatingsEasy value={value} onChange={onChange} disabled={disabled} />
         </>
       ) : (
-        <EvalTraditional value={value} onChange={onChange} disabled={disabled} />
+        <>
+          {/* When the traditional form is the only view (public link) the rater
+              still needs editable header + remarks fields. */}
+          {lockView && !disabled && (
+            <EvalHeaderFields
+              value={value}
+              onChange={onChange}
+              lockSubject={lockSubject}
+              showRaterFields={showRaterFields}
+              disabled={disabled}
+            />
+          )}
+          <EvalTraditional value={value} onChange={onChange} disabled={disabled} />
+          {lockView && !disabled && (
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                10. Remarks {remarksRequired(value.ratings) && (
+                  <span className="text-destructive">(required — a 0 or 1 was given)</span>
+                )}
+              </Label>
+              <Textarea
+                value={value.remarks}
+                placeholder="What went well, what needs to improve, any deficiencies."
+                onChange={(e) => onChange({ remarks: e.target.value })}
+                rows={5}
+                className="text-base"
+              />
+            </div>
+          )}
+        </>
       )}
+
 
       {children}
     </div>
