@@ -39,7 +39,8 @@ export default function PublicEvalForm() {
   const [fatal, setFatal] = useState<string | null>(null);
   const [row, setRow] = useState<Loaded | null>(null);
   const [value, setValue] = useState<EvalFormValue>(EMPTY_EVAL_VALUE);
-  const [view, setView] = useState<EvalView>("easy");
+  // The recipient always sees the official ICS-225 layout.
+  const [view, setView] = useState<EvalView>("traditional");
   const [signing, setSigning] = useState(false);
   const [sigPreview, setSigPreview] = useState<string | null>(null);
   const [sigBase64, setSigBase64] = useState<string | null>(null);
@@ -216,6 +217,7 @@ export default function PublicEvalForm() {
             lockSubject
             showRaterFields
             disabled
+            lockView
           />
         </div>
       </div>
@@ -238,8 +240,8 @@ export default function PublicEvalForm() {
       <div className="mx-auto max-w-2xl space-y-5 p-4">
         <div className="rounded-xl bg-secondary/60 p-3 text-[12px] leading-relaxed text-muted-foreground">
           {isRaterFlow
-            ? "Rate this person on the factors below, add remarks, then sign at the bottom. Switch to Traditional view any time to see the official form."
-            : "Review the rating below, then sign to confirm it was discussed with you. Switch to Traditional view to see the official form."}
+            ? "This is the official ICS-225 form. Tap a cell to set a rating for each factor, add remarks, then sign at the bottom. Columns marked N/A were not selected for this rating."
+            : "Review the rating below, then sign to confirm it was discussed with you."}
         </div>
 
         <EvalBody
@@ -250,6 +252,7 @@ export default function PublicEvalForm() {
           lockSubject
           showRaterFields={isRaterFlow}
           disabled={!isRaterFlow}
+          lockView
         />
 
         <div className="rounded-2xl bg-card p-4 card-shadow">

@@ -12,6 +12,8 @@ interface Props {
   lockSubject?: boolean;
   showRaterFields?: boolean;
   disabled?: boolean;
+  /** Hide the easy/traditional toggle (public link shows the official form only). */
+  lockView?: boolean;
   /** Rendered under the form (signatures, actions). */
   children?: React.ReactNode;
 }
@@ -28,11 +30,12 @@ export function EvalBody({
   lockSubject,
   showRaterFields,
   disabled,
+  lockView,
   children,
 }: Props) {
   return (
     <div className="space-y-6">
-      <EvalViewToggle view={view} onChange={onViewChange} />
+      {!lockView && <EvalViewToggle view={view} onChange={onViewChange} />}
 
       {view === "easy" ? (
         <>
