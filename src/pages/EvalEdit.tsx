@@ -98,35 +98,29 @@ export default function EvalEdit() {
     }
   };
 
-  const captureSignature = async (type: "rater" | "employee", blob: Blob) => {
+  const captureSignature = async (_type: "rater", blob: Blob) => {
     if (!evalId) return;
     setBusy(true);
     try {
-      const url = await uploadEvalSignature(blob, evalId, type);
+      const url = await uploadEvalSignature(blob, evalId, "rater");
       const now = new Date().toISOString();
       const today = getLocalDateString();
-      const extra: Record<string, unknown> =
-        type === "rater"
-          ? { rater_signature_url: url, rater_signed_at: now, rater_signed_date: today }
-          : { employee_signature_url: url, employee_signed_at: now, employee_signed_date: today };
-      const bothSigned =
-        type === "employee"
-          ? !!(row?.rater_signature_url || value.rater_name)
-          : !!row?.employee_signature_url;
-      if (type === "employee" && bothSigned) {
-        extra.status = "complete";
-        extra.submitted_at = now;
-      } else if (type === "rater" && !row?.employee_signature_url) {
-        extra.status = "awaiting_employee";
-      }
+      const extra: Record<string, unknown> = {
+        rater_signature_url: url,
+        rater_signed_at: now,
+        rater_signed_date: today,
+        status: "complete",
+        submitted_at: now,
+      };
       await update.mutateAsync({ id: evalId, patch: { ...dbPatch, ...extra } as never });
-      toast.success(type === "rater" ? "Rater signature saved" : "Employee signature saved");
+      toast.success("Signature saved");
     } catch (err) {
       handleMutationError(err, "Could not save the signature");
     } finally {
       setBusy(false);
     }
   };
+
 
   const openSend = async () => {
     if (!row) return;
@@ -267,14 +261,12 @@ export default function EvalEdit() {
               {!locked && (
                 <EvalSignatureBlock
                   raterUrl={row.rater_signature_url}
-                  employeeUrl={row.employee_signature_url}
                   raterName={value.rater_name}
-                  subjectName={value.subject_name}
                   onRaterNameChange={(v) => patchValue({ rater_name: v })}
                   onCapture={captureSignature}
-                  allowEmployee={!!row.rater_signature_url}
                   busy={busy}
                 />
+
               )}
             </EvalBody>
 

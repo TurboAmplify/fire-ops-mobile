@@ -3,7 +3,7 @@ import { Loader2, Check, AlertTriangle, Save } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { EvalBody } from "@/components/evals/EvalBody";
-import { SignatureCanvas } from "@/components/shift-tickets/SignatureCanvas";
+import { SignaturePicker } from "@/components/shift-tickets/SignaturePicker";
 import type { EvalView } from "@/components/evals/EvalViewToggle";
 import { EMPTY_EVAL_VALUE, toFormValue, type EvalFormValue } from "@/components/evals/types";
 import { remarksRequired } from "@/lib/eval-225";
@@ -195,7 +195,8 @@ export default function PublicEvalForm() {
             <img
               src={sigPreview}
               alt="Signature"
-              className="mt-3 h-16 w-full rounded-lg border border-border bg-background object-contain p-1"
+              className="mt-3 h-16 w-full rounded-lg border border-border object-contain p-1"
+              style={{ backgroundColor: "#ffffff" }}
             />
           )}
           <button
@@ -226,9 +227,10 @@ export default function PublicEvalForm() {
         </button>
       </div>
 
-      <SignatureCanvas
+      <SignaturePicker
         open={signing}
         title="Signature"
+        defaultName={isRaterFlow ? (value.rater_name ?? "") : (row?.subject_name ?? "")}
         onClose={() => setSigning(false)}
         onSave={async (blob) => {
           setSigning(false);

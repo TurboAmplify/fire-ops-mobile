@@ -108,8 +108,8 @@ export function SignatureCanvas({ open, onClose, onSave, title }: SignatureCanva
         <p className="text-xs text-muted-foreground mb-2">Sign below</p>
         <canvas
           ref={canvasRef}
-          className="w-full max-w-lg border border-border rounded-xl bg-card"
-          style={{ height: 200, touchAction: "none" }}
+          className="w-full max-w-lg border border-border rounded-xl"
+          style={{ height: 200, touchAction: "none", backgroundColor: "#ffffff" }}
           onTouchStart={startDraw}
           onTouchMove={draw}
           onTouchEnd={endDraw}
