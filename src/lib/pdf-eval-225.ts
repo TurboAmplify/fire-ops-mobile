@@ -218,13 +218,22 @@ export async function generateEvalPdf(input: EvalPdfInput): Promise<Uint8Array> 
     }
   };
 
+  // A signature with no stored date means it was just drawn (review/preview) —
+  // show today so the form never prints a blank date next to a signature.
+  const todayLocal = (() => {
+    const n = new Date();
+    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
+  })();
+  const empDate = input.employee_signed_date || (empImg ? todayLocal : null);
+  const raterDate = input.rater_signed_date || (raterImg ? todayLocal : null);
+
   drawSig(L, W * 0.72, y, "11. EMPLOYEE (SIGNATURE) — THIS RATING HAS BEEN DISCUSSED WITH ME", empImg, input.subject_name ?? "");
-  drawBlock(L + W * 0.72, W * 0.28, y, sigH, "12. DATE", fmtDate(input.employee_signed_date));
+  drawBlock(L + W * 0.72, W * 0.28, y, sigH, "12. DATE", fmtDate(empDate));
   y -= sigH;
   drawSig(L, W * 0.4, y, "13. RATED BY (SIGNATURE)", raterImg, input.rater_name ?? "");
   drawBlock(L + W * 0.4, W * 0.24, y, sigH, "14. HOME UNIT (ADDRESS)", input.rater_home_unit ?? "");
   drawBlock(L + W * 0.64, W * 0.18, y, sigH, "15. POSITION ON FIRE", input.rater_position ?? "");
-  drawBlock(L + W * 0.82, W * 0.18, y, sigH, "16. DATE", fmtDate(input.rater_signed_date));
+  drawBlock(L + W * 0.82, W * 0.18, y, sigH, "16. DATE", fmtDate(raterDate));
 
   return await pdf.save();
 }
