@@ -119,6 +119,43 @@ export default function PublicEvalForm() {
     }
   };
 
+  const downloadPdf = async () => {
+    setPdfBusy(true);
+    try {
+      const [{ generateEvalPdf }, { shareOrDownload, safeFilename, primeMobileDelivery }] = await Promise.all([
+        import("@/lib/pdf-eval-225"),
+        import("@/services/reports/exporters/share"),
+      ]);
+      primeMobileDelivery();
+      const sigs = (await call("signatures")) as { rater?: string | null; employee?: string | null };
+      const decode = (b64?: string | null) => {
+        if (!b64) return null;
+        const bin = atob(b64);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        return bytes;
+      };
+      const bytes = await generateEvalPdf({
+        ...value,
+        ratings: value.ratings,
+        raterSignaturePng: decode(sigs.rater),
+        employeeSignaturePng: decode(sigs.employee),
+        rater_signed_date: (row?.rater_signed_date as string | null) ?? null,
+        employee_signed_date: (row?.employee_signed_date as string | null) ?? null,
+      });
+      await shareOrDownload(
+        safeFilename(`ICS225_${value.subject_name || "eval"}`, "pdf"),
+        bytes,
+        "application/pdf",
+      );
+    } catch (err) {
+      console.error(err);
+      toast.error("Could not build the PDF");
+    } finally {
+      setPdfBusy(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
