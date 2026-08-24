@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Check, AlertTriangle, Save } from "lucide-react";
+import { Loader2, Check, AlertTriangle, Save, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { EvalBody } from "@/components/evals/EvalBody";
@@ -45,6 +45,7 @@ export default function PublicEvalForm() {
   const [sigBase64, setSigBase64] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
 
   const isRaterFlow = row?.direction === "inbound_request";
 
