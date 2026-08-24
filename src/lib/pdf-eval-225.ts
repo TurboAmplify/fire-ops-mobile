@@ -116,7 +116,7 @@ export async function generateEvalPdf(input: EvalPdfInput): Promise<Uint8Array> 
   drawBlock(L + q, q, y, rowH, "6. DATE OF ASSIGNMENT", `${fmtDate(input.assignment_from)} to ${fmtDate(input.assignment_to)}`);
   drawBlock(L + q * 2, q, y, rowH, "7. ACRES BURNED", input.acres_burned ?? "");
   drawBlock(L + q * 3, q, y, rowH, "8. FUEL TYPE(S)", input.fuel_types ?? "");
-  y -= rowH + 6;
+  y -= rowH + 14;
 
   // Evaluation instructions
   text("9. EVALUATION", L, y, 7.5, bold);
