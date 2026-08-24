@@ -473,6 +473,31 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
 
   const buckets = new Map<string, Map<string, WeekBucket>>();
 
+  // ---------------------------------------------------------------------
+  // Pass 1: collect every personnel row keyed by crew member + date, so we can
+  // drop overlapping duplicates BEFORE they turn into pay. Two tickets that
+  // cover the same person on the same clock window (e.g. a demob ticket on one
+  // fire and a mob ticket on the next, both 07:00–12:00) must never both pay.
+  // Non-overlapping segments on the same day (a shift plus an evening travel
+  // leg) are legitimate and are both kept.
+  // ---------------------------------------------------------------------
+  type Candidate = {
+    hours: number;
+    incidentId: string;
+    incidentName: string;
+    date: string;
+    start: number | null;
+    end: number | null;
+  };
+  const byCrewDate = new Map<string, Candidate[]>();
+
+  const toMinutes = (v?: string | null): number | null => {
+    if (!v) return null;
+    const m = /^(\d{1,2}):(\d{2})$/.exec(v.trim());
+    if (!m) return null;
+    return Number(m[1]) * 60 + Number(m[2]);
+  };
+
   shiftTickets.forEach((st) => {
     if (!matchesIncident(st.incident_id)) return;
     const entries = Array.isArray(st.personnel_entries) ? st.personnel_entries : [];
@@ -490,29 +515,64 @@ export function aggregateCrewPayroll(opts: AggregateOptions): CrewPayrollLine[] 
       // ticket that lists the person on a working day with hours not yet filled
       // in still counts as one shift. For hourly crew, 0 hours contributes $0,
       // so allowing the row through is harmless.
+      const start = toMinutes(pe.op_start) ?? toMinutes(pe.sb_start);
+      const endRaw = Math.max(
+        toMinutes(pe.op_stop) ?? -1,
+        toMinutes(pe.sb_stop) ?? -1,
+      );
+      const end = endRaw >= 0 ? endRaw : null;
+      const key = `${cm.id}|${pe.date}`;
+      const list = byCrewDate.get(key) ?? [];
+      list.push({ hours, incidentId, incidentName, date: pe.date, start, end });
+      byCrewDate.set(key, list);
+    });
+  });
 
-      let wkMap = buckets.get(cm.id);
+  // Pass 2: resolve overlaps per crew member per day (longest wins), then bucket.
+  byCrewDate.forEach((candidates, key) => {
+    const crewId = key.split("|")[0];
+    const sorted = [...candidates].sort((a, b) => b.hours - a.hours);
+    const accepted: Candidate[] = [];
+    sorted.forEach((c) => {
+      const hasWindow = c.start !== null && c.end !== null && c.end > c.start;
+      const clashes = accepted.some((a) => {
+        const aWindow = a.start !== null && a.end !== null && a.end > a.start;
+        // Missing times = treat as a whole-day claim: it conflicts with anything
+        // already accepted for that date.
+        if (!hasWindow || !aWindow) return true;
+        return c.start! < a.end! && a.start! < c.end!;
+      });
+      if (!clashes) accepted.push(c);
+    });
+
+    accepted.forEach((c) => {
+      let wkMap = buckets.get(crewId);
       if (!wkMap) {
         wkMap = new Map();
-        buckets.set(cm.id, wkMap);
+        buckets.set(crewId, wkMap);
       }
-      const wk = weekKey(pe.date);
+      const wk = weekKey(c.date);
       let bucket = wkMap.get(wk);
       if (!bucket) {
         bucket = { hours: 0, byIncident: new Map(), dates: new Set() };
         wkMap.set(wk, bucket);
       }
-      bucket.hours += hours;
-      bucket.dates.add(pe.date);
-      const inc = bucket.byIncident.get(incidentId);
+      bucket.hours += c.hours;
+      bucket.dates.add(c.date);
+      const inc = bucket.byIncident.get(c.incidentId);
       if (inc) {
-        inc.hours += hours;
-        inc.dates.add(pe.date);
+        inc.hours += c.hours;
+        inc.dates.add(c.date);
       } else {
-        bucket.byIncident.set(incidentId, { hours, incidentName, dates: new Set([pe.date]) });
+        bucket.byIncident.set(c.incidentId, {
+          hours: c.hours,
+          incidentName: c.incidentName,
+          dates: new Set([c.date]),
+        });
       }
     });
   });
+
 
   const lines: CrewPayrollLine[] = [];
 
