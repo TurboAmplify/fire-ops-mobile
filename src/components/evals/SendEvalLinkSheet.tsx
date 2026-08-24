@@ -12,8 +12,9 @@ interface Props {
   onClose: () => void;
   token: string;
   /** "request" = ask an outside supervisor to rate our crew member.
-   *  "acknowledge" = send a finished eval to the person rated to sign. */
-  mode: "request" | "acknowledge";
+   *  "acknowledge" = send a finished eval to the person rated to sign.
+   *  "view" = share a signed eval so anyone with the link can read and download it. */
+  mode: "request" | "acknowledge" | "view";
   subjectName: string;
   fireName: string;
   defaultPhone?: string | null;
