@@ -24,6 +24,7 @@ import {
   type EvalStatus,
 } from "@/lib/eval-225";
 import { generateEvalPdf, fetchPngBytes } from "@/lib/pdf-eval-225";
+import { getViewableUrl } from "@/lib/storage-url";
 import { shareOrDownload, safeFilename, primeMobileDelivery } from "@/services/reports/exporters/share";
 
 export default function EvalEdit() {
@@ -140,10 +141,12 @@ export default function EvalEdit() {
     primeMobileDelivery();
     setExporting(true);
     try {
-      const [raterPng, empPng] = await Promise.all([
-        fetchPngBytes(row.rater_signature_url),
-        fetchPngBytes(row.employee_signature_url),
+      // Signatures live in a private bucket — sign the URLs before fetching.
+      const [raterUrl, empUrl] = await Promise.all([
+        getViewableUrl(row.rater_signature_url),
+        getViewableUrl(row.employee_signature_url),
       ]);
+      const [raterPng, empPng] = await Promise.all([fetchPngBytes(raterUrl), fetchPngBytes(empUrl)]);
       const bytes = await generateEvalPdf({
         ...value,
         ratings: value.ratings,
