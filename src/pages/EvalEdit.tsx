@@ -39,6 +39,7 @@ export default function EvalEdit() {
   const [value, setValue] = useState<EvalFormValue>(EMPTY_EVAL_VALUE);
   const [hydrated, setHydrated] = useState(false);
   const [sending, setSending] = useState(false);
+  const [sendMode, setSendMode] = useState<"request" | "acknowledge" | "view">("acknowledge");
   const [busy, setBusy] = useState(false);
   const [exporting, setExporting] = useState(false);
 
@@ -122,12 +123,13 @@ export default function EvalEdit() {
   };
 
 
-  const openSend = async () => {
+  const openSend = async (mode: "request" | "acknowledge" | "view" = "acknowledge") => {
     if (!row) return;
+    setSendMode(mode);
     if (!row.public_token) {
       const ok = await save({ public_token: newEvalToken() }, true);
       if (!ok) return;
-    } else {
+    } else if (mode !== "view") {
       await save({}, true);
     }
     setSending(true);
