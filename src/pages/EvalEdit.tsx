@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Loader2, Save, Send, FileDown, Trash2 } from "lucide-react";
+import { Loader2, Save, Send, FileDown, Trash2, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { EvalBody } from "@/components/evals/EvalBody";
@@ -217,7 +217,7 @@ export default function EvalEdit() {
                 they've filled it out and signed.
               </p>
               <button
-                onClick={openSend}
+                onClick={() => openSend("request")}
                 disabled={busy}
                 className="mt-3 flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary text-base font-bold text-primary-foreground disabled:opacity-60"
               >
@@ -286,7 +286,7 @@ export default function EvalEdit() {
                 </button>
 
                 <button
-                  onClick={openSend}
+                  onClick={() => openSend("acknowledge")}
                   disabled={busy}
                   className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card text-sm font-semibold disabled:opacity-60"
                 >
@@ -298,6 +298,23 @@ export default function EvalEdit() {
           </>
         )}
 
+
+        {locked && (
+          <div className="rounded-2xl bg-card p-4 card-shadow">
+            <p className="text-sm font-bold">Share the signed eval</p>
+            <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
+              Send a link instead of a file. Whoever gets it can open the eval on their phone and download the PDF — no
+              app or login needed.
+            </p>
+            <button
+              onClick={() => openSend("view")}
+              disabled={busy}
+              className="mt-3 flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary text-base font-bold text-primary-foreground disabled:opacity-60"
+            >
+              {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <LinkIcon className="h-5 w-5" />} Share link
+            </button>
+          </div>
+        )}
 
         <button
           onClick={exportPdf}
@@ -330,7 +347,7 @@ export default function EvalEdit() {
           open={sending}
           onClose={() => setSending(false)}
           token={row.public_token}
-          mode={direction === "inbound_request" ? "request" : "acknowledge"}
+          mode={sendMode}
           subjectName={value.subject_name}
           fireName={value.fire_name}
         />
