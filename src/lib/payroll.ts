@@ -16,6 +16,10 @@ export interface PersonnelEntryLite {
   operator_name?: string | null;
   date?: string | null;
   total?: number | string | null;
+  op_start?: string | null;
+  op_stop?: string | null;
+  sb_start?: string | null;
+  sb_stop?: string | null;
 }
 
 export interface ShiftTicketLite {
