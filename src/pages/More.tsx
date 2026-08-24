@@ -1,6 +1,6 @@
 import { AppShell } from "@/components/AppShell";
 import { useNavigate } from "react-router-dom";
-import { Settings, ChevronRight, Shield, BarChart3, ClipboardList, ShieldCheck, FileBarChart, CircleDollarSign, Mail, IdCard, Receipt } from "lucide-react";
+import { Settings, ChevronRight, Shield, BarChart3, ClipboardList, ShieldCheck, FileBarChart, CircleDollarSign, Mail, IdCard, Receipt, ClipboardCheck } from "lucide-react";
 import { useUnreadTotal } from "@/hooks/useThreads";
 import { ALL_NAV_OPTIONS, getSelectedTabKeys, filterNavByMode } from "@/components/settings/NavBarCustomizer";
 import { useOrganization } from "@/hooks/useOrganization";
@@ -85,6 +85,29 @@ export default function More() {
           </div>
         </section>
 
+
+        {isEngineBoss && (
+          <section className="space-y-2">
+            <h2 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
+              Evaluations
+            </h2>
+            <div className="rounded-2xl bg-card overflow-hidden divide-y divide-border/60 card-shadow">
+              <button
+                onClick={() => navigate("/evals")}
+                className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors active:bg-secondary/50 touch-target"
+              >
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 shrink-0">
+                  <ClipboardCheck className="h-[18px] w-[18px] text-primary" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">Performance Evals (ICS-225)</p>
+                  <p className="text-[11px] text-muted-foreground">Rate crew, request outside ratings, text a link to sign</p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
+              </button>
+            </div>
+          </section>
+        )}
 
         {nonFavorites.length > 0 && (
           <section className="space-y-2">

@@ -7,8 +7,9 @@ import { StatusBar, Style } from "@capacitor/status-bar";
 
 // Public, no-login routes skip the full app shell (auth, org, query cache,
 // router, tutorial) so they paint fast on poor connections.
-const isPublicForm =
-  typeof window !== "undefined" && window.location.pathname.replace(/\/+$/, "") === "/training-form";
+const publicPath =
+  typeof window !== "undefined" ? window.location.pathname.replace(/\/+$/, "") : "";
+const isPublicForm = publicPath === "/training-form" || publicPath.startsWith("/eval/");
 
 const isNative = Capacitor.isNativePlatform();
 

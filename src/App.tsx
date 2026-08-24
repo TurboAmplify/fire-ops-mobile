@@ -68,6 +68,9 @@ const Payroll = lazyWithRetry(() => import("./pages/Payroll"));
 const FactoringDashboard = lazyWithRetry(() => import("./pages/FactoringDashboard"));
 const NeedsList = lazyWithRetry(() => import("./pages/NeedsList"));
 const Training = lazyWithRetry(() => import("./pages/Training"));
+const Evals = lazyWithRetry(() => import("./pages/Evals"));
+const EvalEdit = lazyWithRetry(() => import("./pages/EvalEdit"));
+const PublicEvalForm = lazyWithRetry(() => import("./pages/PublicEvalForm"));
 const AdminLogs = lazyWithRetry(() => import("./pages/AdminLogs"));
 const AdminReports = lazyWithRetry(() => import("./pages/AdminReports"));
 const AccountsPayable = lazyWithRetry(() => import("./pages/AccountsPayable"));
@@ -145,6 +148,9 @@ const App = () => (
                     <Route path="/privacy" element={<Privacy />} />
                     <Route path="/terms" element={<Terms />} />
                     <Route path="/training-form" element={<TrainingForm />} />
+                    <Route path="/eval/:token" element={<PublicEvalForm />} />
+                    <Route path="/evals" element={<ProtectedRoute><EngineBossGate><Evals /></EngineBossGate></ProtectedRoute>} />
+                    <Route path="/evals/:evalId" element={<ProtectedRoute><EngineBossGate><EvalEdit /></EngineBossGate></ProtectedRoute>} />
                     <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
                     <Route path="/payroll" element={<ProtectedRoute><AdminGate><ModuleGate module="payroll"><Payroll /></ModuleGate></AdminGate></ProtectedRoute>} />
                     <Route path="/factoring" element={<ProtectedRoute><AdminGate><FactoringDashboard /></AdminGate></ProtectedRoute>} />
