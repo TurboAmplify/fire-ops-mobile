@@ -17,7 +17,7 @@ export async function generatePaystubPdf({ line, organizationName, periodLabel, 
 
   const { default: jsPDF } = await import("jspdf");
 
-  const doc = new jsPDF({ unit: "pt", format: "letter" });
+  const doc = new jsPDF({ unit: "pt", format: "letter", orientation: "portrait" });
   const pageW = doc.internal.pageSize.getWidth();
   const margin = 48;
   let y = margin;
