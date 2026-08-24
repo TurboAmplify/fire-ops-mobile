@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Check, AlertTriangle, Save } from "lucide-react";
+import { Loader2, Check, AlertTriangle, Save, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { EvalBody } from "@/components/evals/EvalBody";
@@ -45,6 +45,7 @@ export default function PublicEvalForm() {
   const [sigBase64, setSigBase64] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
 
   const isRaterFlow = row?.direction === "inbound_request";
 
@@ -118,6 +119,43 @@ export default function PublicEvalForm() {
     }
   };
 
+  const downloadPdf = async () => {
+    setPdfBusy(true);
+    try {
+      const [{ generateEvalPdf }, { shareOrDownload, safeFilename, primeMobileDelivery }] = await Promise.all([
+        import("@/lib/pdf-eval-225"),
+        import("@/services/reports/exporters/share"),
+      ]);
+      primeMobileDelivery();
+      const sigs = (await call("signatures")) as { rater?: string | null; employee?: string | null };
+      const decode = (b64?: string | null) => {
+        if (!b64) return null;
+        const bin = atob(b64);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        return bytes;
+      };
+      const bytes = await generateEvalPdf({
+        ...value,
+        ratings: value.ratings,
+        raterSignaturePng: decode(sigs.rater),
+        employeeSignaturePng: decode(sigs.employee),
+        rater_signed_date: (row?.rater_signed_date as string | null) ?? null,
+        employee_signed_date: (row?.employee_signed_date as string | null) ?? null,
+      });
+      await shareOrDownload(
+        safeFilename(`ICS225_${value.subject_name || "eval"}`, "pdf"),
+        bytes,
+        "application/pdf",
+      );
+    } catch (err) {
+      console.error(err);
+      toast.error("Could not build the PDF");
+    } finally {
+      setPdfBusy(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -140,15 +178,45 @@ export default function PublicEvalForm() {
 
   if (done) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-6">
-        <div className="max-w-sm rounded-2xl bg-card p-6 text-center card-shadow">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-success/15">
-            <Check className="h-6 w-6 text-success" />
+      <div className="min-h-screen bg-background pb-[max(2rem,var(--app-safe-bottom))]">
+        <header className="flex items-center gap-3 border-b border-border px-4 py-3">
+          <img src={fireLogo} alt="" className="h-8 w-8 rounded-lg" />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold">Incident Personnel Performance Rating</p>
+            <p className="text-[11px] text-muted-foreground">
+              ICS-225 · {row?.subject_name || "Crew member"}
+              {row?.fire_name ? ` · ${row.fire_name}` : ""}
+            </p>
           </div>
-          <p className="mt-3 text-base font-bold">All set — thank you</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            The evaluation has been submitted. You can close this page.
-          </p>
+        </header>
+
+        <div className="mx-auto max-w-2xl space-y-5 p-4">
+          <div className="rounded-2xl bg-card p-4 text-center card-shadow">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-success/15">
+              <Check className="h-6 w-6 text-success" />
+            </div>
+            <p className="mt-3 text-base font-bold">Signed and complete</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Review it below or save a copy of the official ICS-225 form.
+            </p>
+            <button
+              onClick={downloadPdf}
+              disabled={pdfBusy}
+              className="mt-4 flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary text-base font-bold text-primary-foreground disabled:opacity-60"
+            >
+              {pdfBusy ? <Loader2 className="h-5 w-5 animate-spin" /> : <FileDown className="h-5 w-5" />} Download PDF
+            </button>
+          </div>
+
+          <EvalBody
+            view={view}
+            onViewChange={setView}
+            value={value}
+            onChange={() => {}}
+            lockSubject
+            showRaterFields
+            disabled
+          />
         </div>
       </div>
     );

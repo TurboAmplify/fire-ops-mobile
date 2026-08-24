@@ -85,6 +85,25 @@ async function loadByToken(token: string) {
   return data;
 }
 
+/** Pull the object path out of a stored signatures URL (public or signed form). */
+function storagePath(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const marker = "/signatures/";
+  const idx = url.indexOf(marker);
+  if (idx === -1) return null;
+  const raw = url.slice(idx + marker.length).split("?")[0];
+  return raw ? decodeURIComponent(raw) : null;
+}
+
+function toBase64(bytes: Uint8Array): string {
+  let binary = "";
+  const chunk = 8192;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
 async function uploadSig(evalId: string, type: "rater" | "employee", base64: string): Promise<string | null> {
   try {
     const raw = base64.includes(",") ? base64.split(",")[1] : base64;
@@ -124,6 +143,24 @@ Deno.serve(async (req) => {
 
   if (action === "get") {
     return json({ eval: row });
+  }
+
+  // Signature images live in a private bucket, so the public page can't fetch
+  // them directly. Hand back base64 PNGs so it can build the ICS-225 PDF.
+  if (action === "signatures") {
+    const out: Record<string, string | null> = { rater: null, employee: null };
+    const pairs: Array<[string, string | null]> = [
+      ["rater", (row as Record<string, string | null>).rater_signature_url ?? null],
+      ["employee", (row as Record<string, string | null>).employee_signature_url ?? null],
+    ];
+    for (const [key, url] of pairs) {
+      const path = storagePath(url);
+      if (!path) continue;
+      const { data } = await admin.storage.from("signatures").download(path);
+      if (!data) continue;
+      out[key] = toBase64(new Uint8Array(await data.arrayBuffer()));
+    }
+    return json(out);
   }
 
   if (action === "save" || action === "submit") {

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Loader2, Save, Send, FileDown, Trash2 } from "lucide-react";
+import { Loader2, Save, Send, FileDown, Trash2, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { EvalBody } from "@/components/evals/EvalBody";
@@ -24,6 +24,7 @@ import {
   type EvalStatus,
 } from "@/lib/eval-225";
 import { generateEvalPdf, fetchPngBytes } from "@/lib/pdf-eval-225";
+import { getViewableUrl } from "@/lib/storage-url";
 import { shareOrDownload, safeFilename, primeMobileDelivery } from "@/services/reports/exporters/share";
 
 export default function EvalEdit() {
@@ -39,6 +40,7 @@ export default function EvalEdit() {
   const [value, setValue] = useState<EvalFormValue>(EMPTY_EVAL_VALUE);
   const [hydrated, setHydrated] = useState(false);
   const [sending, setSending] = useState(false);
+  const [sendMode, setSendMode] = useState<"request" | "acknowledge" | "view">("acknowledge");
   const [busy, setBusy] = useState(false);
   const [exporting, setExporting] = useState(false);
 
@@ -122,12 +124,13 @@ export default function EvalEdit() {
   };
 
 
-  const openSend = async () => {
+  const openSend = async (mode: "request" | "acknowledge" | "view" = "acknowledge") => {
     if (!row) return;
+    setSendMode(mode);
     if (!row.public_token) {
       const ok = await save({ public_token: newEvalToken() }, true);
       if (!ok) return;
-    } else {
+    } else if (mode !== "view") {
       await save({}, true);
     }
     setSending(true);
@@ -138,10 +141,12 @@ export default function EvalEdit() {
     primeMobileDelivery();
     setExporting(true);
     try {
-      const [raterPng, empPng] = await Promise.all([
-        fetchPngBytes(row.rater_signature_url),
-        fetchPngBytes(row.employee_signature_url),
+      // Signatures live in a private bucket — sign the URLs before fetching.
+      const [raterUrl, empUrl] = await Promise.all([
+        getViewableUrl(row.rater_signature_url),
+        getViewableUrl(row.employee_signature_url),
       ]);
+      const [raterPng, empPng] = await Promise.all([fetchPngBytes(raterUrl), fetchPngBytes(empUrl)]);
       const bytes = await generateEvalPdf({
         ...value,
         ratings: value.ratings,
@@ -212,7 +217,7 @@ export default function EvalEdit() {
                 they've filled it out and signed.
               </p>
               <button
-                onClick={openSend}
+                onClick={() => openSend("request")}
                 disabled={busy}
                 className="mt-3 flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary text-base font-bold text-primary-foreground disabled:opacity-60"
               >
@@ -281,7 +286,7 @@ export default function EvalEdit() {
                 </button>
 
                 <button
-                  onClick={openSend}
+                  onClick={() => openSend("acknowledge")}
                   disabled={busy}
                   className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card text-sm font-semibold disabled:opacity-60"
                 >
@@ -293,6 +298,23 @@ export default function EvalEdit() {
           </>
         )}
 
+
+        {locked && (
+          <div className="rounded-2xl bg-card p-4 card-shadow">
+            <p className="text-sm font-bold">Share the signed eval</p>
+            <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
+              Send a link instead of a file. Whoever gets it can open the eval on their phone and download the PDF — no
+              app or login needed.
+            </p>
+            <button
+              onClick={() => openSend("view")}
+              disabled={busy}
+              className="mt-3 flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary text-base font-bold text-primary-foreground disabled:opacity-60"
+            >
+              {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <LinkIcon className="h-5 w-5" />} Share link
+            </button>
+          </div>
+        )}
 
         <button
           onClick={exportPdf}
@@ -325,7 +347,7 @@ export default function EvalEdit() {
           open={sending}
           onClose={() => setSending(false)}
           token={row.public_token}
-          mode={direction === "inbound_request" ? "request" : "acknowledge"}
+          mode={sendMode}
           subjectName={value.subject_name}
           fireName={value.fire_name}
         />

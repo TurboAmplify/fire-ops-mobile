@@ -12,8 +12,9 @@ interface Props {
   onClose: () => void;
   token: string;
   /** "request" = ask an outside supervisor to rate our crew member.
-   *  "acknowledge" = send a finished eval to the person rated to sign. */
-  mode: "request" | "acknowledge";
+   *  "acknowledge" = send a finished eval to the person rated to sign.
+   *  "view" = share a signed eval so anyone with the link can read and download it. */
+  mode: "request" | "acknowledge" | "view";
   subjectName: string;
   fireName: string;
   defaultPhone?: string | null;
@@ -28,7 +29,9 @@ export function SendEvalLinkSheet({ open, onClose, token, mode, subjectName, fir
   const message =
     mode === "request"
       ? `Performance eval (ICS-225) for ${subjectName || "our crew member"}${fireName ? ` on the ${fireName}` : ""}. Tap the link to fill it out and sign — no app or login needed.`
-      : `Your performance eval (ICS-225)${fireName ? ` for the ${fireName}` : ""} is ready to review and sign. Tap the link — no app or login needed.`;
+      : mode === "view"
+        ? `Signed performance eval (ICS-225) for ${subjectName || "our crew member"}${fireName ? ` on the ${fireName}` : ""}. Tap the link to view it and download the PDF — no app or login needed.`
+        : `Your performance eval (ICS-225)${fireName ? ` for the ${fireName}` : ""} is ready to review and sign. Tap the link — no app or login needed.`;
 
   const send = async () => {
     setBusy(true);
@@ -44,7 +47,9 @@ export function SendEvalLinkSheet({ open, onClose, token, mode, subjectName, fir
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
       <SheetContent side="bottom" className="rounded-t-2xl pb-[max(1rem,var(--app-safe-bottom))]">
         <SheetHeader>
-          <SheetTitle>{mode === "request" ? "Send eval request" : "Send for signature"}</SheetTitle>
+          <SheetTitle>
+            {mode === "request" ? "Send eval request" : mode === "view" ? "Share signed eval" : "Send for signature"}
+          </SheetTitle>
         </SheetHeader>
 
         <div className="mt-4 space-y-4">
