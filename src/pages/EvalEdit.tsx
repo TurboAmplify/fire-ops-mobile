@@ -341,6 +341,15 @@ export default function EvalEdit() {
           </div>
         )}
 
+        {status === "complete" && (
+          <button
+            onClick={() => setEditing((e) => !e)}
+            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card text-sm font-semibold"
+          >
+            <Pencil className="h-4 w-4" /> {editing ? "Done editing" : "Edit eval"}
+          </button>
+        )}
+
         <button
           onClick={exportPdf}
           disabled={exporting}
