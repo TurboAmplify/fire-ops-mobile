@@ -140,15 +140,45 @@ export default function PublicEvalForm() {
 
   if (done) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-6">
-        <div className="max-w-sm rounded-2xl bg-card p-6 text-center card-shadow">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-success/15">
-            <Check className="h-6 w-6 text-success" />
+      <div className="min-h-screen bg-background pb-[max(2rem,var(--app-safe-bottom))]">
+        <header className="flex items-center gap-3 border-b border-border px-4 py-3">
+          <img src={fireLogo} alt="" className="h-8 w-8 rounded-lg" />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold">Incident Personnel Performance Rating</p>
+            <p className="text-[11px] text-muted-foreground">
+              ICS-225 · {row?.subject_name || "Crew member"}
+              {row?.fire_name ? ` · ${row.fire_name}` : ""}
+            </p>
           </div>
-          <p className="mt-3 text-base font-bold">All set — thank you</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            The evaluation has been submitted. You can close this page.
-          </p>
+        </header>
+
+        <div className="mx-auto max-w-2xl space-y-5 p-4">
+          <div className="rounded-2xl bg-card p-4 text-center card-shadow">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-success/15">
+              <Check className="h-6 w-6 text-success" />
+            </div>
+            <p className="mt-3 text-base font-bold">Signed and complete</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Review it below or save a copy of the official ICS-225 form.
+            </p>
+            <button
+              onClick={downloadPdf}
+              disabled={pdfBusy}
+              className="mt-4 flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary text-base font-bold text-primary-foreground disabled:opacity-60"
+            >
+              {pdfBusy ? <Loader2 className="h-5 w-5 animate-spin" /> : <FileDown className="h-5 w-5" />} Download PDF
+            </button>
+          </div>
+
+          <EvalBody
+            view={view}
+            onViewChange={setView}
+            value={value}
+            onChange={() => {}}
+            lockSubject
+            showRaterFields
+            disabled
+          />
         </div>
       </div>
     );
