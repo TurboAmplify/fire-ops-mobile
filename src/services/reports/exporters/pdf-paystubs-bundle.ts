@@ -271,7 +271,7 @@ function renderPaystub(doc: any, line: CrewPayrollLine, organizationName: string
 export async function downloadPaystubsBundle({ lines, organizationName, periodLabel, filenameBase }: Args) {
   if (lines.length === 0) throw new Error("No crew members in range to export.");
   const { default: jsPDF } = await import("jspdf");
-  const doc = new jsPDF({ unit: "pt", format: "letter" });
+  const doc = new jsPDF({ unit: "pt", format: "letter", orientation: "portrait" });
   const pageW = doc.internal.pageSize.getWidth();
   const margin = 48;
 
