@@ -189,3 +189,9 @@ export function EvalTraditional({ value, onChange, disabled }: Props) {
     </div>
   );
 }
+
+/** Today's date (local) as M/D/YYYY — the rater date block always shows the day it's signed. */
+function todayDisplay(): string {
+  const n = new Date();
+  return `${n.getMonth() + 1}/${n.getDate()}/${n.getFullYear()}`;
+}
