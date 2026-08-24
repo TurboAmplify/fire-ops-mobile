@@ -2438,6 +2438,155 @@ export type Database = {
           },
         ]
       }
+      personnel_evals: {
+        Row: {
+          acres_burned: string | null
+          assignment_from: string | null
+          assignment_to: string | null
+          created_at: string
+          created_by_user_id: string | null
+          crew_member_id: string | null
+          deleted_at: string | null
+          direction: string
+          employee_signature_url: string | null
+          employee_signed_at: string | null
+          employee_signed_date: string | null
+          fire_location: string | null
+          fire_name: string | null
+          fire_number: string | null
+          fire_position: string | null
+          fuel_types: string | null
+          id: string
+          incident_id: string | null
+          organization_id: string
+          other_factor_label: string | null
+          public_token: string | null
+          rater_home_unit: string | null
+          rater_name: string | null
+          rater_position: string | null
+          rater_signature_url: string | null
+          rater_signed_at: string | null
+          rater_signed_date: string | null
+          ratings: Json
+          remarks: string | null
+          status: string
+          subject_home_unit: string | null
+          subject_name: string | null
+          submitted_at: string | null
+          token_expires_at: string | null
+          updated_at: string
+          work_category: string | null
+          work_category_other: string | null
+        }
+        Insert: {
+          acres_burned?: string | null
+          assignment_from?: string | null
+          assignment_to?: string | null
+          created_at?: string
+          created_by_user_id?: string | null
+          crew_member_id?: string | null
+          deleted_at?: string | null
+          direction?: string
+          employee_signature_url?: string | null
+          employee_signed_at?: string | null
+          employee_signed_date?: string | null
+          fire_location?: string | null
+          fire_name?: string | null
+          fire_number?: string | null
+          fire_position?: string | null
+          fuel_types?: string | null
+          id?: string
+          incident_id?: string | null
+          organization_id: string
+          other_factor_label?: string | null
+          public_token?: string | null
+          rater_home_unit?: string | null
+          rater_name?: string | null
+          rater_position?: string | null
+          rater_signature_url?: string | null
+          rater_signed_at?: string | null
+          rater_signed_date?: string | null
+          ratings?: Json
+          remarks?: string | null
+          status?: string
+          subject_home_unit?: string | null
+          subject_name?: string | null
+          submitted_at?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          work_category?: string | null
+          work_category_other?: string | null
+        }
+        Update: {
+          acres_burned?: string | null
+          assignment_from?: string | null
+          assignment_to?: string | null
+          created_at?: string
+          created_by_user_id?: string | null
+          crew_member_id?: string | null
+          deleted_at?: string | null
+          direction?: string
+          employee_signature_url?: string | null
+          employee_signed_at?: string | null
+          employee_signed_date?: string | null
+          fire_location?: string | null
+          fire_name?: string | null
+          fire_number?: string | null
+          fire_position?: string | null
+          fuel_types?: string | null
+          id?: string
+          incident_id?: string | null
+          organization_id?: string
+          other_factor_label?: string | null
+          public_token?: string | null
+          rater_home_unit?: string | null
+          rater_name?: string | null
+          rater_position?: string | null
+          rater_signature_url?: string | null
+          rater_signed_at?: string | null
+          rater_signed_date?: string | null
+          ratings?: Json
+          remarks?: string | null
+          status?: string
+          subject_home_unit?: string | null
+          subject_name?: string | null
+          submitted_at?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          work_category?: string | null
+          work_category_other?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "personnel_evals_crew_member_id_fkey"
+            columns: ["crew_member_id"]
+            isOneToOne: false
+            referencedRelation: "crew_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personnel_evals_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "incidents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personnel_evals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "personnel_evals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_admin_audit: {
         Row: {
           action: string

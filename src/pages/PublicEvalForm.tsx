@@ -1,0 +1,241 @@
+import { useEffect, useMemo, useState } from "react";
+import { Loader2, Check, AlertTriangle, Save } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { EvalBody } from "@/components/evals/EvalBody";
+import { SignatureCanvas } from "@/components/shift-tickets/SignatureCanvas";
+import type { EvalView } from "@/components/evals/EvalViewToggle";
+import { EMPTY_EVAL_VALUE, toFormValue, type EvalFormValue } from "@/components/evals/types";
+import { remarksRequired } from "@/lib/eval-225";
+import fireLogo from "@/assets/fire-logo.png";
+
+type Loaded = {
+  direction: string;
+  status: string;
+  subject_name: string | null;
+  fire_name: string | null;
+} & Record<string, unknown>;
+
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onloadend = () => resolve(String(r.result));
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(blob);
+  });
+}
+
+/**
+ * Public, no-login ICS-225 form reached from a texted link (/eval/:token).
+ * All reads and writes go through the eval-form edge function.
+ */
+export default function PublicEvalForm() {
+  const token = useMemo(() => {
+    const parts = window.location.pathname.replace(/\/+$/, "").split("/");
+    return parts[parts.length - 1] ?? "";
+  }, []);
+
+  const [loading, setLoading] = useState(true);
+  const [fatal, setFatal] = useState<string | null>(null);
+  const [row, setRow] = useState<Loaded | null>(null);
+  const [value, setValue] = useState<EvalFormValue>(EMPTY_EVAL_VALUE);
+  const [view, setView] = useState<EvalView>("easy");
+  const [signing, setSigning] = useState(false);
+  const [sigPreview, setSigPreview] = useState<string | null>(null);
+  const [sigBase64, setSigBase64] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const isRaterFlow = row?.direction === "inbound_request";
+
+  const call = async (action: string, payload: Record<string, unknown> = {}) => {
+    const { data, error } = await supabase.functions.invoke("eval-form", {
+      body: { action, token, ...payload },
+    });
+    if (error) {
+      let msg = "Something went wrong. Try again.";
+      try {
+        const ctx = (error as unknown as { context?: Response }).context;
+        if (ctx) msg = (await ctx.clone().json())?.error ?? msg;
+      } catch {
+        /* ignore */
+      }
+      throw new Error(msg);
+    }
+    if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
+    return data as Record<string, unknown>;
+  };
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await call("get");
+        const e = res.eval as Loaded;
+        setRow(e);
+        setValue(toFormValue(e as unknown as Record<string, unknown>));
+        if (e.status === "complete") setDone(true);
+      } catch (err) {
+        setFatal((err as Error).message);
+      } finally {
+        setLoading(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const saveDraft = async () => {
+    setBusy(true);
+    try {
+      await call("save", { value });
+      toast.success("Progress saved");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const submit = async () => {
+    if (!sigBase64) {
+      toast.error("Please sign before submitting");
+      return;
+    }
+    if (isRaterFlow && remarksRequired(value.ratings) && !value.remarks.trim()) {
+      toast.error("A rating of 0 or 1 needs written remarks");
+      return;
+    }
+    setBusy(true);
+    try {
+      await call("submit", {
+        value,
+        ...(isRaterFlow ? { rater_signature_png: sigBase64 } : { employee_signature_png: sigBase64 }),
+      });
+      setDone(true);
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-7 w-7 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (fatal) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-6">
+        <div className="max-w-sm rounded-2xl bg-card p-6 text-center card-shadow">
+          <AlertTriangle className="mx-auto h-8 w-8 text-amber-500" />
+          <p className="mt-3 text-sm font-bold">{fatal}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Ask whoever sent the link to send a new one.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (done) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-6">
+        <div className="max-w-sm rounded-2xl bg-card p-6 text-center card-shadow">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-success/15">
+            <Check className="h-6 w-6 text-success" />
+          </div>
+          <p className="mt-3 text-base font-bold">All set — thank you</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            The evaluation has been submitted. You can close this page.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background pb-[max(2rem,var(--app-safe-bottom))]">
+      <header className="flex items-center gap-3 border-b border-border px-4 py-3">
+        <img src={fireLogo} alt="" className="h-8 w-8 rounded-lg" />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-bold">Incident Personnel Performance Rating</p>
+          <p className="text-[11px] text-muted-foreground">
+            ICS-225 · {row?.subject_name || "Crew member"}
+            {row?.fire_name ? ` · ${row.fire_name}` : ""}
+          </p>
+        </div>
+      </header>
+
+      <div className="mx-auto max-w-2xl space-y-5 p-4">
+        <div className="rounded-xl bg-secondary/60 p-3 text-[12px] leading-relaxed text-muted-foreground">
+          {isRaterFlow
+            ? "Rate this person on the factors below, add remarks, then sign at the bottom. Switch to Traditional view any time to see the official form."
+            : "Review the rating below, then sign to confirm it was discussed with you. Switch to Traditional view to see the official form."}
+        </div>
+
+        <EvalBody
+          view={view}
+          onViewChange={setView}
+          value={value}
+          onChange={(p) => setValue((prev) => ({ ...prev, ...p }))}
+          lockSubject
+          showRaterFields={isRaterFlow}
+          disabled={!isRaterFlow}
+        />
+
+        <div className="rounded-2xl bg-card p-4 card-shadow">
+          <p className="text-sm font-bold">{isRaterFlow ? "Rater signature" : "Your signature"}</p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
+            {isRaterFlow
+              ? "Signing certifies this rating is yours."
+              : "Signing confirms this rating has been discussed with you."}
+          </p>
+          {sigPreview && (
+            <img
+              src={sigPreview}
+              alt="Signature"
+              className="mt-3 h-16 w-full rounded-lg border border-border bg-background object-contain p-1"
+            />
+          )}
+          <button
+            type="button"
+            onClick={() => setSigning(true)}
+            className="mt-3 min-h-12 w-full rounded-xl bg-primary text-sm font-bold text-primary-foreground"
+          >
+            {sigPreview ? "Re-sign" : "Sign here"}
+          </button>
+        </div>
+
+        {isRaterFlow && (
+          <button
+            onClick={saveDraft}
+            disabled={busy}
+            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card text-sm font-semibold disabled:opacity-60"
+          >
+            <Save className="h-4 w-4" /> Save and finish later
+          </button>
+        )}
+
+        <button
+          onClick={submit}
+          disabled={busy}
+          className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary text-base font-bold text-primary-foreground disabled:opacity-60"
+        >
+          {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : null} Submit evaluation
+        </button>
+      </div>
+
+      <SignatureCanvas
+        open={signing}
+        title="Signature"
+        onClose={() => setSigning(false)}
+        onSave={async (blob) => {
+          setSigning(false);
+          setSigPreview(URL.createObjectURL(blob));
+          setSigBase64(await blobToBase64(blob));
+        }}
+      />
+    </div>
+  );
+}
