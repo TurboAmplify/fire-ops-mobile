@@ -59,7 +59,20 @@ export default function EvalEdit() {
         rater_home_unit: v.rater_home_unit || membership?.organizationName || "",
       });
       setHydrated(true);
+      // Persist the auto-filled dates so the texted link and PDF carry them
+      // even if the user never taps Save.
+      if (row.status !== "complete" && (!v.assignment_from || !v.assignment_to)) {
+        update
+          .mutateAsync({
+            id: row.id,
+            patch: { assignment_from: v.assignment_from || today, assignment_to: v.assignment_to || today } as never,
+          })
+          .catch(() => {
+            /* non-blocking */
+          });
+      }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [row, hydrated, user, membership]);
 
   const direction = (row?.direction ?? "internal") as EvalDirection;
