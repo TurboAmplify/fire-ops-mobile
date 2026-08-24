@@ -149,7 +149,6 @@ export default function EvalEdit() {
         fetchPngBytes(row.employee_signature_url),
       ]);
       const bytes = await generateEvalPdf({
-        ...(row as never),
         ...value,
         ratings: value.ratings,
         raterSignaturePng: raterPng,
