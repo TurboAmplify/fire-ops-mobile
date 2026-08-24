@@ -180,7 +180,7 @@ export function EvalTraditional({ value, onChange, disabled }: Props) {
           <Block n="13" label="Rated by (signature)"><Val v={value.rater_name} /></Block>
           <Block n="14" label="Home unit (address)"><Val v={value.rater_home_unit} /></Block>
           <Block n="15" label="Position on fire"><Val v={value.rater_position} /></Block>
-          <Block n="16" label="Date">{"\u00A0"}</Block>
+          <Block n="16" label="Date"><Val v={todayDisplay()} /></Block>
         </div>
       </div>
       <p className="px-1 text-[11px] text-muted-foreground">
@@ -188,4 +188,10 @@ export function EvalTraditional({ value, onChange, disabled }: Props) {
       </p>
     </div>
   );
+}
+
+/** Today's date (local) as M/D/YYYY — the rater date block always shows the day it's signed. */
+function todayDisplay(): string {
+  const n = new Date();
+  return `${n.getMonth() + 1}/${n.getDate()}/${n.getFullYear()}`;
 }
