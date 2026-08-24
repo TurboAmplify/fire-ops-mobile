@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Loader2, Save, Send, FileDown, Trash2, Link as LinkIcon } from "lucide-react";
+import { Loader2, Save, Send, FileDown, Trash2, Link as LinkIcon, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { EvalBody } from "@/components/evals/EvalBody";
