@@ -184,8 +184,9 @@ Deno.serve(async (req) => {
         patch.employee_signed_at = new Date().toISOString();
         patch.employee_signed_date = today;
       }
-      const hasEmployee = !!(employeeSig || row.employee_signature_url);
-      patch.status = hasEmployee ? "complete" : "awaiting_employee";
+      // Only the evaluator signs an ICS-225 here — rater signature completes it.
+      patch.status = "complete";
+
     } else {
       // Outward eval: the person rated is acknowledging it.
       if (!employeeSig) return json({ error: "A signature is required." }, 400);
