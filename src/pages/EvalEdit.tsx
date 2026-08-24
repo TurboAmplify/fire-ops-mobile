@@ -43,12 +43,17 @@ export default function EvalEdit() {
   const [sendMode, setSendMode] = useState<"request" | "acknowledge" | "view">("acknowledge");
   const [busy, setBusy] = useState(false);
   const [exporting, setExporting] = useState(false);
+  // Review-before-send: hold the pending share mode until the user confirms.
+  const [reviewMode, setReviewMode] = useState<"request" | "acknowledge" | "view" | null>(null);
 
   useEffect(() => {
     if (row && !hydrated) {
       const v = toFormValue(row as unknown as Record<string, unknown>);
+      const today = getLocalDateString();
       setValue({
         ...v,
+        assignment_from: v.assignment_from || today,
+        assignment_to: v.assignment_to || today,
         rater_name: v.rater_name || (user?.user_metadata?.full_name as string) || "",
         rater_home_unit: v.rater_home_unit || membership?.organizationName || "",
       });
@@ -73,7 +78,8 @@ export default function EvalEdit() {
       assignment_to: value.assignment_to || null,
       acres_burned: value.acres_burned || null,
       fuel_types: value.fuel_types || null,
-      work_category: value.work_category,
+      work_category: value.work_categories[0] ?? value.work_category,
+      work_categories: value.work_categories,
       work_category_other: value.work_category_other || null,
       ratings: value.ratings as never,
       other_factor_label: value.other_factor_label || null,
@@ -126,6 +132,7 @@ export default function EvalEdit() {
 
   const openSend = async (mode: "request" | "acknowledge" | "view" = "acknowledge") => {
     if (!row) return;
+    setReviewMode(null);
     setSendMode(mode);
     if (!row.public_token) {
       const ok = await save({ public_token: newEvalToken() }, true);
