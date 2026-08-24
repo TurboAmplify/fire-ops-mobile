@@ -4,6 +4,7 @@ import {
   RATING_SCORES,
   getScore,
   setScore,
+  selectedColumns,
   type RatingColumnKey,
 } from "@/lib/eval-225";
 import type { EvalFormValue } from "./types";
@@ -45,6 +46,8 @@ function Val({ v }: { v: string }) {
  * its own.
  */
 export function EvalTraditional({ value, onChange, disabled }: Props) {
+  const active = selectedColumns(value.work_categories, value.work_category);
+  const isOn = (key: string) => active.includes(key as RatingColumnKey);
   return (
     <div className="space-y-3">
       <div className="rounded-lg border border-foreground/40 bg-card p-3">
@@ -86,8 +89,15 @@ export function EvalTraditional({ value, onChange, disabled }: Props) {
               <tr>
                 <th className="border border-foreground/40 px-1 py-1 text-left align-bottom">Rating Factors</th>
                 {RATING_COLUMNS.map((c) => (
-                  <th key={c.key} colSpan={4} className="border border-foreground/40 px-1 py-1 text-center">
+                  <th
+                    key={c.key}
+                    colSpan={4}
+                    className={`border border-foreground/40 px-1 py-1 text-center ${
+                      isOn(c.key) ? "" : "bg-muted/60 text-muted-foreground"
+                    }`}
+                  >
                     {c.key === "other" ? value.work_category_other?.trim() || "Other (specify)" : c.label}
+                    {!isOn(c.key) && <span className="ml-1 text-[9px] font-bold uppercase">N/A</span>}
                   </th>
                 ))}
               </tr>
@@ -95,7 +105,12 @@ export function EvalTraditional({ value, onChange, disabled }: Props) {
                 <th className="border border-foreground/40" />
                 {RATING_COLUMNS.map((c) =>
                   RATING_SCORES.map((s) => (
-                    <th key={`${c.key}-${s.value}`} className="w-6 border border-foreground/40 py-0.5 text-center font-semibold">
+                    <th
+                      key={`${c.key}-${s.value}`}
+                      className={`w-6 border border-foreground/40 py-0.5 text-center font-semibold ${
+                        isOn(c.key) ? "" : "bg-muted/60 text-muted-foreground"
+                      }`}
+                    >
                       {s.short}
                     </th>
                   )),
@@ -112,12 +127,18 @@ export function EvalTraditional({ value, onChange, disabled }: Props) {
                   </td>
                   {RATING_COLUMNS.map((c) =>
                     RATING_SCORES.map((s) => {
+                      const on = isOn(c.key);
                       const active = getScore(value.ratings, f.key, c.key as RatingColumnKey) === s.value;
                       return (
-                        <td key={`${f.key}-${c.key}-${s.value}`} className="border border-foreground/40 p-0 text-center">
+                        <td
+                          key={`${f.key}-${c.key}-${s.value}`}
+                          className={`relative border border-foreground/40 p-0 text-center ${
+                            on ? "" : "bg-muted/60"
+                          }`}
+                        >
                           <button
                             type="button"
-                            disabled={disabled}
+                            disabled={disabled || !on}
                             aria-label={`${f.label} — ${c.label} — ${s.label}`}
                             onClick={() =>
                               onChange({
@@ -130,9 +151,11 @@ export function EvalTraditional({ value, onChange, disabled }: Props) {
                                 work_category: c.key as RatingColumnKey,
                               })
                             }
-                            className="flex h-9 w-full items-center justify-center text-[12px] font-bold text-primary active:bg-secondary"
+                            className={`flex h-9 w-full items-center justify-center text-[12px] font-bold ${
+                              on ? "text-primary active:bg-secondary" : "text-muted-foreground/60"
+                            }`}
                           >
-                            {active ? "X" : "\u00A0"}
+                            {on ? (active ? "X" : "\u00A0") : (s.value === 0 ? "N/A" : "\u00A0")}
                           </button>
                         </td>
                       );

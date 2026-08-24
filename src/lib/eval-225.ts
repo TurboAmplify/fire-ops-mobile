@@ -131,6 +131,22 @@ export function columnLabel(key: string | null | undefined, otherLabel?: string 
   return RATING_COLUMNS.find((c) => c.key === key)?.label ?? "Hot Line";
 }
 
+/**
+ * The work categories the evaluator chose to rate. Falls back to the legacy
+ * single `work_category` so older evals keep working.
+ */
+export function selectedColumns(
+  categories: string[] | null | undefined,
+  fallback?: string | null,
+): RatingColumnKey[] {
+  const valid = RATING_COLUMNS.map((c) => c.key as RatingColumnKey);
+  const picked = (categories ?? []).filter((c): c is RatingColumnKey => valid.includes(c as RatingColumnKey));
+  if (picked.length > 0) return valid.filter((k) => picked.includes(k));
+  const fb = valid.find((k) => k === fallback);
+  return [fb ?? "hot_line"];
+}
+
+
 /** URL-safe random token for public eval links. */
 export function newEvalToken(): string {
   const bytes = new Uint8Array(16);

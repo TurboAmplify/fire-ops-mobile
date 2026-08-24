@@ -1,4 +1,4 @@
-import type { EvalRatings, RatingColumnKey } from "@/lib/eval-225";
+import { selectedColumns, type EvalRatings, type RatingColumnKey } from "@/lib/eval-225";
 
 /**
  * The editable payload of an ICS-225 eval. Shared by the in-app form and the
@@ -16,6 +16,8 @@ export interface EvalFormValue {
   acres_burned: string;
   fuel_types: string;
   work_category: RatingColumnKey;
+  /** Every kind of work the evaluator chose to rate. */
+  work_categories: RatingColumnKey[];
   work_category_other: string;
   ratings: EvalRatings;
   other_factor_label: string;
@@ -37,6 +39,7 @@ export const EMPTY_EVAL_VALUE: EvalFormValue = {
   acres_burned: "",
   fuel_types: "",
   work_category: "hot_line",
+  work_categories: ["hot_line"],
   work_category_other: "",
   ratings: {},
   other_factor_label: "",
@@ -62,6 +65,10 @@ export function toFormValue(row: Record<string, unknown> | null | undefined): Ev
     acres_burned: s("acres_burned"),
     fuel_types: s("fuel_types"),
     work_category: (s("work_category") || "hot_line") as EvalFormValue["work_category"],
+    work_categories: selectedColumns(
+      Array.isArray(row?.work_categories) ? (row.work_categories as string[]) : null,
+      s("work_category") || "hot_line",
+    ),
     work_category_other: s("work_category_other"),
     ratings: (row?.ratings as EvalRatings) ?? {},
     other_factor_label: s("other_factor_label"),
@@ -86,7 +93,8 @@ export function toPatch(v: EvalFormValue): Record<string, unknown> {
     assignment_to: n(v.assignment_to),
     acres_burned: n(v.acres_burned),
     fuel_types: n(v.fuel_types),
-    work_category: v.work_category,
+    work_category: v.work_categories[0] ?? v.work_category,
+    work_categories: v.work_categories,
     work_category_other: n(v.work_category_other),
     ratings: v.ratings,
     other_factor_label: n(v.other_factor_label),

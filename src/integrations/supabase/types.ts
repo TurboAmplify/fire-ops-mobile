@@ -2475,6 +2475,7 @@ export type Database = {
           submitted_at: string | null
           token_expires_at: string | null
           updated_at: string
+          work_categories: string[]
           work_category: string | null
           work_category_other: string | null
         }
@@ -2514,6 +2515,7 @@ export type Database = {
           submitted_at?: string | null
           token_expires_at?: string | null
           updated_at?: string
+          work_categories?: string[]
           work_category?: string | null
           work_category_other?: string | null
         }
@@ -2553,6 +2555,7 @@ export type Database = {
           submitted_at?: string | null
           token_expires_at?: string | null
           updated_at?: string
+          work_categories?: string[]
           work_category?: string | null
           work_category_other?: string | null
         }

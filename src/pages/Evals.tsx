@@ -73,6 +73,7 @@ export default function Evals() {
         assignment_from: getLocalDateString(),
         assignment_to: getLocalDateString(),
         work_category: "hot_line",
+        work_categories: ["hot_line"],
         ratings: {},
         public_token: newEvalToken(),
       });

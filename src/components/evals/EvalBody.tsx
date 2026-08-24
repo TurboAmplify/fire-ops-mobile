@@ -1,8 +1,12 @@
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { remarksRequired } from "@/lib/eval-225";
 import { EvalViewToggle, type EvalView } from "./EvalViewToggle";
 import { EvalHeaderFields } from "./EvalHeaderFields";
 import { EvalRatingsEasy } from "./EvalRatingsEasy";
 import { EvalTraditional } from "./EvalTraditional";
 import type { EvalFormValue } from "./types";
+
 
 interface Props {
   view: EvalView;
@@ -12,6 +16,8 @@ interface Props {
   lockSubject?: boolean;
   showRaterFields?: boolean;
   disabled?: boolean;
+  /** Hide the easy/traditional toggle (public link shows the official form only). */
+  lockView?: boolean;
   /** Rendered under the form (signatures, actions). */
   children?: React.ReactNode;
 }
@@ -28,11 +34,12 @@ export function EvalBody({
   lockSubject,
   showRaterFields,
   disabled,
+  lockView,
   children,
 }: Props) {
   return (
     <div className="space-y-6">
-      <EvalViewToggle view={view} onChange={onViewChange} />
+      {!lockView && <EvalViewToggle view={view} onChange={onViewChange} />}
 
       {view === "easy" ? (
         <>
@@ -46,8 +53,38 @@ export function EvalBody({
           <EvalRatingsEasy value={value} onChange={onChange} disabled={disabled} />
         </>
       ) : (
-        <EvalTraditional value={value} onChange={onChange} disabled={disabled} />
+        <>
+          {/* When the traditional form is the only view (public link) the rater
+              still needs editable header + remarks fields. */}
+          {lockView && !disabled && (
+            <EvalHeaderFields
+              value={value}
+              onChange={onChange}
+              lockSubject={lockSubject}
+              showRaterFields={showRaterFields}
+              disabled={disabled}
+            />
+          )}
+          <EvalTraditional value={value} onChange={onChange} disabled={disabled} />
+          {lockView && !disabled && (
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                10. Remarks {remarksRequired(value.ratings) && (
+                  <span className="text-destructive">(required — a 0 or 1 was given)</span>
+                )}
+              </Label>
+              <Textarea
+                value={value.remarks}
+                placeholder="What went well, what needs to improve, any deficiencies."
+                onChange={(e) => onChange({ remarks: e.target.value })}
+                rows={5}
+                className="text-base"
+              />
+            </div>
+          )}
+        </>
       )}
+
 
       {children}
     </div>

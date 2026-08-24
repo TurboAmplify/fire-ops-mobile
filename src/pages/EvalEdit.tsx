@@ -6,6 +6,7 @@ import { AppShell } from "@/components/AppShell";
 import { EvalBody } from "@/components/evals/EvalBody";
 import { EvalSignatureBlock } from "@/components/evals/EvalSignatureBlock";
 import { SendEvalLinkSheet } from "@/components/evals/SendEvalLinkSheet";
+import { EvalReviewDialog } from "@/components/evals/EvalReviewDialog";
 import type { EvalView } from "@/components/evals/EvalViewToggle";
 import { EMPTY_EVAL_VALUE, toFormValue, type EvalFormValue } from "@/components/evals/types";
 import { useEval, useUpdateEval, useDeleteEval } from "@/hooks/useEvals";
@@ -43,12 +44,17 @@ export default function EvalEdit() {
   const [sendMode, setSendMode] = useState<"request" | "acknowledge" | "view">("acknowledge");
   const [busy, setBusy] = useState(false);
   const [exporting, setExporting] = useState(false);
+  // Review-before-send: hold the pending share mode until the user confirms.
+  const [reviewMode, setReviewMode] = useState<"request" | "acknowledge" | "view" | null>(null);
 
   useEffect(() => {
     if (row && !hydrated) {
       const v = toFormValue(row as unknown as Record<string, unknown>);
+      const today = getLocalDateString();
       setValue({
         ...v,
+        assignment_from: v.assignment_from || today,
+        assignment_to: v.assignment_to || today,
         rater_name: v.rater_name || (user?.user_metadata?.full_name as string) || "",
         rater_home_unit: v.rater_home_unit || membership?.organizationName || "",
       });
@@ -73,7 +79,8 @@ export default function EvalEdit() {
       assignment_to: value.assignment_to || null,
       acres_burned: value.acres_burned || null,
       fuel_types: value.fuel_types || null,
-      work_category: value.work_category,
+      work_category: value.work_categories[0] ?? value.work_category,
+      work_categories: value.work_categories,
       work_category_other: value.work_category_other || null,
       ratings: value.ratings as never,
       other_factor_label: value.other_factor_label || null,
@@ -126,6 +133,7 @@ export default function EvalEdit() {
 
   const openSend = async (mode: "request" | "acknowledge" | "view" = "acknowledge") => {
     if (!row) return;
+    setReviewMode(null);
     setSendMode(mode);
     if (!row.public_token) {
       const ok = await save({ public_token: newEvalToken() }, true);
@@ -217,12 +225,12 @@ export default function EvalEdit() {
                 they've filled it out and signed.
               </p>
               <button
-                onClick={() => openSend("request")}
+                onClick={() => setReviewMode("request")}
                 disabled={busy}
                 className="mt-3 flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary text-base font-bold text-primary-foreground disabled:opacity-60"
               >
-                {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />} Text the rater a
-                link
+                {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />} Review and text
+                the rater a link
               </button>
             </div>
 
@@ -286,12 +294,12 @@ export default function EvalEdit() {
                 </button>
 
                 <button
-                  onClick={() => openSend("acknowledge")}
+                  onClick={() => setReviewMode("acknowledge")}
                   disabled={busy}
                   className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card text-sm font-semibold disabled:opacity-60"
                 >
                   <Send className="h-4 w-4" />
-                  Text for signature
+                  Review and text for signature
                 </button>
               </div>
             )}
@@ -307,11 +315,12 @@ export default function EvalEdit() {
               app or login needed.
             </p>
             <button
-              onClick={() => openSend("view")}
+              onClick={() => setReviewMode("view")}
               disabled={busy}
               className="mt-3 flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary text-base font-bold text-primary-foreground disabled:opacity-60"
             >
-              {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <LinkIcon className="h-5 w-5" />} Share link
+              {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <LinkIcon className="h-5 w-5" />} Review and share
+              link
             </button>
           </div>
         )}
@@ -341,6 +350,17 @@ export default function EvalEdit() {
           <Trash2 className="h-4 w-4" /> Delete eval
         </button>
       </div>
+
+      <EvalReviewDialog
+        open={reviewMode !== null}
+        onClose={() => setReviewMode(null)}
+        value={value}
+        confirmLabel={reviewMode === "view" ? "Looks good — share the link" : "Looks good — get the link"}
+        onConfirm={async () => {
+          const mode = reviewMode ?? "acknowledge";
+          await openSend(mode);
+        }}
+      />
 
       {row.public_token && (
         <SendEvalLinkSheet
