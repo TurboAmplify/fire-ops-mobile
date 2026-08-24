@@ -261,14 +261,12 @@ export default function EvalEdit() {
               {!locked && (
                 <EvalSignatureBlock
                   raterUrl={row.rater_signature_url}
-                  employeeUrl={row.employee_signature_url}
                   raterName={value.rater_name}
-                  subjectName={value.subject_name}
                   onRaterNameChange={(v) => patchValue({ rater_name: v })}
                   onCapture={captureSignature}
-                  allowEmployee={!!row.rater_signature_url}
                   busy={busy}
                 />
+
               )}
             </EvalBody>
 
