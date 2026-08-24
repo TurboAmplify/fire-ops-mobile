@@ -344,8 +344,8 @@ export function SignaturePicker({ open, onClose, onSave, title, defaultName = ""
             <p className="text-xs text-muted-foreground text-center">Sign below</p>
             <canvas
               ref={drawCanvasRef}
-              className="w-full border border-border rounded-xl bg-card"
-              style={{ height: 200, touchAction: "none" }}
+              className="w-full border border-border rounded-xl"
+              style={{ height: 200, touchAction: "none", backgroundColor: "#ffffff" }}
               onTouchStart={startDraw}
               onTouchMove={draw}
               onTouchEnd={endDraw}
