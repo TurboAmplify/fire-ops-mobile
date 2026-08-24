@@ -7,6 +7,7 @@ import { SignaturePicker } from "@/components/shift-tickets/SignaturePicker";
 import type { EvalView } from "@/components/evals/EvalViewToggle";
 import { EMPTY_EVAL_VALUE, toFormValue, type EvalFormValue } from "@/components/evals/types";
 import { remarksRequired } from "@/lib/eval-225";
+import { getLocalDateString } from "@/lib/local-date";
 import fireLogo from "@/assets/fire-logo.png";
 
 type Loaded = {
