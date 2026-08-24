@@ -77,7 +77,8 @@ export default function EvalEdit() {
 
   const direction = (row?.direction ?? "internal") as EvalDirection;
   const status = (row?.status ?? "draft") as EvalStatus;
-  const locked = status === "complete";
+  // A completed eval is read-only until the user taps "Edit eval".
+  const locked = status === "complete" && !editing;
   const patchValue = (p: Partial<EvalFormValue>) => setValue((prev) => ({ ...prev, ...p }));
 
   const dbPatch = useMemo(
