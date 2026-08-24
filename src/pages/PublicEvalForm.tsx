@@ -7,6 +7,7 @@ import { SignaturePicker } from "@/components/shift-tickets/SignaturePicker";
 import type { EvalView } from "@/components/evals/EvalViewToggle";
 import { EMPTY_EVAL_VALUE, toFormValue, type EvalFormValue } from "@/components/evals/types";
 import { remarksRequired } from "@/lib/eval-225";
+import { getLocalDateString } from "@/lib/local-date";
 import fireLogo from "@/assets/fire-logo.png";
 
 type Loaded = {
@@ -74,7 +75,15 @@ export default function PublicEvalForm() {
         const res = await call("get");
         const e = res.eval as Loaded;
         setRow(e);
-        setValue(toFormValue(e as unknown as Record<string, unknown>));
+        const v = toFormValue(e as unknown as Record<string, unknown>);
+        // Auto-populate the assignment dates for a rater who is still filling
+        // the eval out — one less thing to type in the field.
+        const today = getLocalDateString();
+        setValue(
+          e.status === "complete"
+            ? v
+            : { ...v, assignment_from: v.assignment_from || today, assignment_to: v.assignment_to || today },
+        );
         if (e.status === "complete") setDone(true);
       } catch (err) {
         setFatal((err as Error).message);
