@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Loader2, Save, Send, FileDown, Trash2, Link as LinkIcon } from "lucide-react";
+import { Loader2, Save, Send, FileDown, Trash2, Link as LinkIcon, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { EvalBody } from "@/components/evals/EvalBody";
@@ -46,6 +46,8 @@ export default function EvalEdit() {
   const [exporting, setExporting] = useState(false);
   // Review-before-send: hold the pending share mode until the user confirms.
   const [reviewMode, setReviewMode] = useState<"request" | "acknowledge" | "view" | null>(null);
+  // Completed evals open read-only; this re-opens them for corrections.
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     if (row && !hydrated) {
@@ -77,7 +79,8 @@ export default function EvalEdit() {
 
   const direction = (row?.direction ?? "internal") as EvalDirection;
   const status = (row?.status ?? "draft") as EvalStatus;
-  const locked = status === "complete";
+  // A completed eval is read-only until the user taps "Edit eval".
+  const locked = status === "complete" && !editing;
   const patchValue = (p: Partial<EvalFormValue>) => setValue((prev) => ({ ...prev, ...p }));
 
   const dbPatch = useMemo(
@@ -336,6 +339,15 @@ export default function EvalEdit() {
               link
             </button>
           </div>
+        )}
+
+        {status === "complete" && (
+          <button
+            onClick={() => setEditing((e) => !e)}
+            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card text-sm font-semibold"
+          >
+            <Pencil className="h-4 w-4" /> {editing ? "Done editing" : "Edit eval"}
+          </button>
         )}
 
         <button
