@@ -138,6 +138,7 @@ export default function EvalEdit() {
         submitted_at: now,
       };
       await update.mutateAsync({ id: evalId, patch: { ...dbPatch, ...extra } as never });
+      setValue((prev) => ({ ...prev, rater_signed_date: today }));
       toast.success("Signature saved");
     } catch (err) {
       handleMutationError(err, "Could not save the signature");
