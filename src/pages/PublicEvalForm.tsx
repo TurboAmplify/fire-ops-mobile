@@ -121,6 +121,11 @@ export default function PublicEvalForm() {
         value,
         ...(isRaterFlow ? { rater_signature_png: sigBase64 } : { employee_signature_png: sigBase64 }),
       });
+      if (isRaterFlow) {
+        const today = getLocalDateString();
+        setValue((prev) => ({ ...prev, rater_signed_date: today }));
+        setRow((prev) => (prev ? { ...prev, rater_signed_date: today, status: "complete" } : prev));
+      }
       setDone(true);
     } catch (err) {
       toast.error((err as Error).message);
