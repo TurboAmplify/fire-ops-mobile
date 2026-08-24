@@ -180,6 +180,9 @@ export default function EvalEdit() {
   }
 
   const needsRemarks = remarksRequired(value.ratings) && !value.remarks.trim();
+  // Evals sent out for an outside supervisor to fill out: the form itself only
+  // matters to them (they see it in the texted link), so lead with the send action.
+  const sendOnly = direction === "inbound_request" && !locked;
 
   return (
     <AppShell title="Performance Eval" showBack>
@@ -188,7 +191,11 @@ export default function EvalEdit() {
           <div className="min-w-0">
             <p className="truncate text-sm font-bold">{value.subject_name || "Unnamed"}</p>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
-              {ratedFactorCount(value.ratings)} of 10 factors rated
+              {sendOnly
+                ? value.fire_name
+                  ? `Rating request · ${value.fire_name}`
+                  : "Rating request"
+                : `${ratedFactorCount(value.ratings)} of 10 factors rated`}
             </p>
           </div>
           <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold ${STATUS_CLASSES[status]}`}>
@@ -196,55 +203,104 @@ export default function EvalEdit() {
           </span>
         </div>
 
-        {needsRemarks && (
+        {needsRemarks && !sendOnly && (
           <div className="rounded-xl bg-amber-500/10 p-3 text-[12px] font-medium text-amber-700">
             A rating of 0 or 1 requires written remarks before this eval is valid.
           </div>
         )}
 
-        <EvalBody
-          view={view}
-          onViewChange={setView}
-          value={value}
-          onChange={patchValue}
-          lockSubject={direction !== "outward"}
-          showRaterFields
-          disabled={locked}
-        >
-          {!locked && (
-            <EvalSignatureBlock
-              raterUrl={row.rater_signature_url}
-              employeeUrl={row.employee_signature_url}
-              raterName={value.rater_name}
-              subjectName={value.subject_name}
-              onRaterNameChange={(v) => patchValue({ rater_name: v })}
-              onCapture={captureSignature}
-              allowEmployee={!!row.rater_signature_url}
-              busy={busy}
-            />
-          )}
-        </EvalBody>
+        {sendOnly ? (
+          <>
+            <div className="rounded-2xl bg-card p-4 card-shadow">
+              <p className="text-sm font-bold">Send this to the rater</p>
+              <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
+                They'll get a link that opens the eval on their phone — no app or login. You'll see it here once
+                they've filled it out and signed.
+              </p>
+              <button
+                onClick={openSend}
+                disabled={busy}
+                className="mt-3 flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary text-base font-bold text-primary-foreground disabled:opacity-60"
+              >
+                {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />} Text the rater a
+                link
+              </button>
+            </div>
 
-        {!locked && (
-          <div className="space-y-2">
-            <button
-              onClick={() => save()}
-              disabled={busy}
-              className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary text-base font-bold text-primary-foreground disabled:opacity-60"
+            <details className="rounded-2xl bg-card p-4 card-shadow">
+              <summary className="cursor-pointer list-none text-sm font-semibold">
+                Assignment details (optional)
+                <span className="ml-1 text-[11px] font-normal text-muted-foreground">
+                  — prefill the fire info for them
+                </span>
+              </summary>
+              <div className="mt-4">
+                <EvalBody
+                  view={view}
+                  onViewChange={setView}
+                  value={value}
+                  onChange={patchValue}
+                  lockSubject
+                  showRaterFields={false}
+                />
+                <button
+                  onClick={() => save()}
+                  disabled={busy}
+                  className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card text-sm font-semibold disabled:opacity-60"
+                >
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save details
+                </button>
+              </div>
+            </details>
+          </>
+        ) : (
+          <>
+            <EvalBody
+              view={view}
+              onViewChange={setView}
+              value={value}
+              onChange={patchValue}
+              lockSubject={direction !== "outward"}
+              showRaterFields
+              disabled={locked}
             >
-              {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />} Save
-            </button>
+              {!locked && (
+                <EvalSignatureBlock
+                  raterUrl={row.rater_signature_url}
+                  employeeUrl={row.employee_signature_url}
+                  raterName={value.rater_name}
+                  subjectName={value.subject_name}
+                  onRaterNameChange={(v) => patchValue({ rater_name: v })}
+                  onCapture={captureSignature}
+                  allowEmployee={!!row.rater_signature_url}
+                  busy={busy}
+                />
+              )}
+            </EvalBody>
 
-            <button
-              onClick={openSend}
-              disabled={busy}
-              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card text-sm font-semibold disabled:opacity-60"
-            >
-              <Send className="h-4 w-4" />
-              {direction === "inbound_request" ? "Text the rater a link" : "Text for signature"}
-            </button>
-          </div>
+            {!locked && (
+              <div className="space-y-2">
+                <button
+                  onClick={() => save()}
+                  disabled={busy}
+                  className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary text-base font-bold text-primary-foreground disabled:opacity-60"
+                >
+                  {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />} Save
+                </button>
+
+                <button
+                  onClick={openSend}
+                  disabled={busy}
+                  className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card text-sm font-semibold disabled:opacity-60"
+                >
+                  <Send className="h-4 w-4" />
+                  Text for signature
+                </button>
+              </div>
+            )}
+          </>
         )}
+
 
         <button
           onClick={exportPdf}
