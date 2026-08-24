@@ -25,6 +25,7 @@ export interface EvalFormValue {
   rater_name: string;
   rater_home_unit: string;
   rater_position: string;
+  rater_signed_date: string;
 }
 
 export const EMPTY_EVAL_VALUE: EvalFormValue = {
@@ -47,6 +48,7 @@ export const EMPTY_EVAL_VALUE: EvalFormValue = {
   rater_name: "",
   rater_home_unit: "",
   rater_position: "",
+  rater_signed_date: "",
 };
 
 /** Build a form value from a DB row (or partial). */
@@ -76,6 +78,7 @@ export function toFormValue(row: Record<string, unknown> | null | undefined): Ev
     rater_name: s("rater_name"),
     rater_home_unit: s("rater_home_unit"),
     rater_position: s("rater_position"),
+    rater_signed_date: s("rater_signed_date"),
   };
 }
 

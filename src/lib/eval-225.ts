@@ -155,6 +155,12 @@ export function newEvalToken(): string {
 }
 
 export function evalShareUrl(token: string): string {
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  return `${origin}/eval/${token}`;
+  return `https://app.fireopshq.com/eval/${token}`;
+}
+
+/** Display a stored YYYY-MM-DD date without UTC timezone shifting. */
+export function formatEvalDate(value: string | null | undefined): string {
+  const match = value?.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return "";
+  return `${Number(match[2])}/${Number(match[3])}/${match[1]}`;
 }
