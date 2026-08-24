@@ -68,7 +68,7 @@ export default function Evals() {
         direction: dir,
         status: dir === "inbound_request" ? "awaiting_rater" : "draft",
         subject_name: name.trim() || "Unnamed",
-        subject_crew_member_id: crewMemberId ?? null,
+        crew_member_id: crewMemberId ?? null,
         subject_home_unit: dir === "outward" ? null : membership?.organizationName ?? null,
         assignment_from: getLocalDateString(),
         assignment_to: getLocalDateString(),
