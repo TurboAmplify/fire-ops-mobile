@@ -631,27 +631,63 @@ export default function TrainingForm() {
         </Section>
       )}
 
-      <div className="sticky bottom-0 -mx-4 flex gap-3 border-t border-border bg-background/95 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-        {step > 0 && (
-          <Button variant="outline" className="h-12 flex-1" onClick={() => setStep((s) => s - 1)}>
-            Back
-          </Button>
+      <div className="sticky bottom-0 -mx-4 space-y-2 border-t border-border bg-background/95 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+        {showMissing && missingFor(current).length > 0 && (
+          <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm">
+            <p className="font-semibold">Still needed before you can continue:</p>
+            <ul className="mt-1 list-disc pl-5 text-muted-foreground">
+              {missingFor(current).map((m) => (
+                <li key={m}>{m}</li>
+              ))}
+            </ul>
+          </div>
         )}
-        {current !== "review" ? (
-          <Button
-            className="h-12 flex-1"
-            disabled={!canAdvance(current)}
-            onClick={() => setStep((s) => s + 1)}
-          >
-            Continue
-          </Button>
-        ) : (
-          <Button className="h-12 flex-1" disabled={!certified || submitting} onClick={submit}>
-            {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Submit My Training Information
-          </Button>
-        )}
+        <div className="flex gap-3">
+          {step > 0 && (
+            <Button
+              variant="outline"
+              className="h-12 flex-1"
+              onClick={() => {
+                setShowMissing(false);
+                setStep((s) => s - 1);
+              }}
+            >
+              Back
+            </Button>
+          )}
+          {current !== "review" ? (
+            <Button
+              className="h-12 flex-1"
+              onClick={() => {
+                if (!canAdvance(current)) {
+                  setShowMissing(true);
+                  return;
+                }
+                setShowMissing(false);
+                setStep((s) => s + 1);
+              }}
+            >
+              Continue
+            </Button>
+          ) : (
+            <Button
+              className="h-12 flex-1"
+              disabled={submitting}
+              onClick={() => {
+                if (!certified) {
+                  setShowMissing(true);
+                  return;
+                }
+                submit();
+              }}
+            >
+              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Submit My Training Information
+            </Button>
+          )}
+        </div>
       </div>
+
     </Shell>
   );
 }
