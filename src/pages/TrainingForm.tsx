@@ -28,6 +28,9 @@ type Detail = RosterItem & {
 
 const emptyCourse: CourseAnswer = { date: null, unknown: false, online: null, provider: null, provider_other: "" };
 
+const DRAFT_KEY = "ibpa-training-draft-v1";
+
+
 function callFn(action: string, payload: Record<string, unknown> = {}) {
   return supabase.functions.invoke("ibpa-training", { body: { action, ...payload } });
 }
@@ -206,6 +209,8 @@ export default function TrainingForm() {
   const [courses, setCourses] = useState<Record<string, CourseAnswer>>({});
   const [wctArduous, setWctArduous] = useState<string | null>(null);
   const [certified, setCertified] = useState(false);
+  const [showMissing, setShowMissing] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
 
   const course = (k: string) => courses[k] ?? emptyCourse;
   const setCourse = (k: string, v: CourseAnswer) => setCourses((c) => ({ ...c, [k]: v }));
@@ -222,6 +227,41 @@ export default function TrainingForm() {
       setLoading(false);
     })();
   }, []);
+
+  // Restore an in-progress draft (survives refresh, backgrounding, low signal).
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      if (!d?.detail) return;
+      setDetail(d.detail);
+      if (d.identity) setIdentity(d.identity);
+      setRoleAnswer(d.roleAnswer ?? null);
+      setCorrected(d.corrected ?? []);
+      setAgreements(d.agreements ?? []);
+      setCourses(d.courses ?? {});
+      setWctArduous(d.wctArduous ?? null);
+      setStep(typeof d.step === "number" ? d.step : 0);
+      setDraftRestored(true);
+    } catch {
+      /* ignore malformed draft */
+    }
+  }, []);
+
+  // Autosave on every change.
+  useEffect(() => {
+    if (!detail || done) return;
+    try {
+      localStorage.setItem(
+        DRAFT_KEY,
+        JSON.stringify({ detail, identity, roleAnswer, corrected, agreements, courses, wctArduous, step }),
+      );
+    } catch {
+      /* storage full or blocked — form still works */
+    }
+  }, [detail, identity, roleAnswer, corrected, agreements, courses, wctArduous, step, done]);
+
 
   const quals = useMemo(
     () => deriveQuals(detail?.recorded_role ?? null, roleAnswer === "yes" ? [] : corrected),
@@ -275,24 +315,38 @@ export default function TrainingForm() {
     return out;
   }, [courses, identity, wctArduous]);
 
-  function canAdvance(name: string) {
+  /** Human-readable list of what's still missing on the current step. */
+  function missingFor(name: string): string[] {
+    const m: string[] = [];
     if (name === "identity") {
-      return (
-        identity.first_name.trim() &&
-        identity.last_name.trim() &&
-        (identity.no_middle_name || identity.middle_name.trim()) &&
-        /^\S+@\S+\.\S+$/.test(identity.email) &&
-        /^\d{3}-\d{3}-\d{4}$/.test(identity.phone) &&
-        identity.prior_ibpa &&
-        (identity.prior_ibpa !== "yes" || identity.verification_id.trim() || identity.verification_id_unknown) &&
-        identity.legal_name_confirmed
-      );
+      if (!identity.first_name.trim()) m.push("Legal first name");
+      if (!identity.no_middle_name && !identity.middle_name.trim())
+        m.push('Legal middle name (or check "No middle name")');
+      if (!identity.last_name.trim()) m.push("Legal last name");
+      if (!/^\S+@\S+\.\S+$/.test(identity.email)) m.push("A valid email address");
+      if (!/^\d{3}-\d{3}-\d{4}$/.test(identity.phone)) m.push("A 10-digit phone number");
+      if (!identity.prior_ibpa) m.push("Whether you previously completed an IBPA form");
+      if (
+        identity.prior_ibpa === "yes" &&
+        !identity.verification_id.trim() &&
+        !identity.verification_id_unknown
+      )
+        m.push('Verification ID (or check "I don\'t know my Verification ID")');
+      if (!identity.legal_name_confirmed) m.push("The legal-name confirmation checkbox");
     }
-    if (name === "role") return !!roleAnswer && (roleAnswer === "yes" || corrected.length > 0);
-    if (name === "agreements") return agreements.length > 0;
-    if (name === "review") return certified;
-    return true;
+    if (name === "role") {
+      if (!roleAnswer) m.push("Whether our records are correct");
+      else if (roleAnswer !== "yes" && corrected.length === 0) m.push("At least one qualification");
+    }
+    if (name === "agreements" && agreements.length === 0) m.push("At least one agreement category");
+    if (name === "review" && !certified) m.push("The certification checkbox");
+    return m;
   }
+
+  function canAdvance(name: string) {
+    return missingFor(name).length === 0;
+  }
+
 
   async function submit() {
     if (!detail) return;
@@ -314,7 +368,13 @@ export default function TrainingForm() {
       toast.error((data as { message?: string })?.message ?? "Could not submit. Please try again.");
       return;
     }
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      /* ignore */
+    }
     setDone(true);
+
   }
 
   /* ---------------- render ---------------- */
@@ -395,6 +455,27 @@ export default function TrainingForm() {
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {detail.name} · Step {step + 1} of {steps.length}
       </p>
+
+      {draftRestored && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted p-3 text-sm">
+          <span>We saved your place — your earlier answers are still here.</span>
+          <Button
+            variant="ghost"
+            className="h-9 shrink-0 px-3"
+            onClick={() => {
+              try {
+                localStorage.removeItem(DRAFT_KEY);
+              } catch {
+                /* ignore */
+              }
+              window.location.reload();
+            }}
+          >
+            Start over
+          </Button>
+        </div>
+      )}
+
 
       {current === "identity" && (
         <Section title="Your information" hint="Use your legal name exactly as it appears on your ID.">
@@ -617,27 +698,63 @@ export default function TrainingForm() {
         </Section>
       )}
 
-      <div className="sticky bottom-0 -mx-4 flex gap-3 border-t border-border bg-background/95 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-        {step > 0 && (
-          <Button variant="outline" className="h-12 flex-1" onClick={() => setStep((s) => s - 1)}>
-            Back
-          </Button>
+      <div className="sticky bottom-0 -mx-4 space-y-2 border-t border-border bg-background/95 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+        {showMissing && missingFor(current).length > 0 && (
+          <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm">
+            <p className="font-semibold">Still needed before you can continue:</p>
+            <ul className="mt-1 list-disc pl-5 text-muted-foreground">
+              {missingFor(current).map((m) => (
+                <li key={m}>{m}</li>
+              ))}
+            </ul>
+          </div>
         )}
-        {current !== "review" ? (
-          <Button
-            className="h-12 flex-1"
-            disabled={!canAdvance(current)}
-            onClick={() => setStep((s) => s + 1)}
-          >
-            Continue
-          </Button>
-        ) : (
-          <Button className="h-12 flex-1" disabled={!certified || submitting} onClick={submit}>
-            {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Submit My Training Information
-          </Button>
-        )}
+        <div className="flex gap-3">
+          {step > 0 && (
+            <Button
+              variant="outline"
+              className="h-12 flex-1"
+              onClick={() => {
+                setShowMissing(false);
+                setStep((s) => s - 1);
+              }}
+            >
+              Back
+            </Button>
+          )}
+          {current !== "review" ? (
+            <Button
+              className="h-12 flex-1"
+              onClick={() => {
+                if (!canAdvance(current)) {
+                  setShowMissing(true);
+                  return;
+                }
+                setShowMissing(false);
+                setStep((s) => s + 1);
+              }}
+            >
+              Continue
+            </Button>
+          ) : (
+            <Button
+              className="h-12 flex-1"
+              disabled={submitting}
+              onClick={() => {
+                if (!certified) {
+                  setShowMissing(true);
+                  return;
+                }
+                submit();
+              }}
+            >
+              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Submit My Training Information
+            </Button>
+          )}
+        </div>
       </div>
+
     </Shell>
   );
 }
