@@ -28,6 +28,9 @@ type Detail = RosterItem & {
 
 const emptyCourse: CourseAnswer = { date: null, unknown: false, online: null, provider: null, provider_other: "" };
 
+const DRAFT_KEY = "ibpa-training-draft-v1";
+
+
 function callFn(action: string, payload: Record<string, unknown> = {}) {
   return supabase.functions.invoke("ibpa-training", { body: { action, ...payload } });
 }
