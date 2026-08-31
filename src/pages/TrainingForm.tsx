@@ -275,24 +275,38 @@ export default function TrainingForm() {
     return out;
   }, [courses, identity, wctArduous]);
 
-  function canAdvance(name: string) {
+  /** Human-readable list of what's still missing on the current step. */
+  function missingFor(name: string): string[] {
+    const m: string[] = [];
     if (name === "identity") {
-      return (
-        identity.first_name.trim() &&
-        identity.last_name.trim() &&
-        (identity.no_middle_name || identity.middle_name.trim()) &&
-        /^\S+@\S+\.\S+$/.test(identity.email) &&
-        /^\d{3}-\d{3}-\d{4}$/.test(identity.phone) &&
-        identity.prior_ibpa &&
-        (identity.prior_ibpa !== "yes" || identity.verification_id.trim() || identity.verification_id_unknown) &&
-        identity.legal_name_confirmed
-      );
+      if (!identity.first_name.trim()) m.push("Legal first name");
+      if (!identity.no_middle_name && !identity.middle_name.trim())
+        m.push('Legal middle name (or check "No middle name")');
+      if (!identity.last_name.trim()) m.push("Legal last name");
+      if (!/^\S+@\S+\.\S+$/.test(identity.email)) m.push("A valid email address");
+      if (!/^\d{3}-\d{3}-\d{4}$/.test(identity.phone)) m.push("A 10-digit phone number");
+      if (!identity.prior_ibpa) m.push("Whether you previously completed an IBPA form");
+      if (
+        identity.prior_ibpa === "yes" &&
+        !identity.verification_id.trim() &&
+        !identity.verification_id_unknown
+      )
+        m.push('Verification ID (or check "I don\'t know my Verification ID")');
+      if (!identity.legal_name_confirmed) m.push("The legal-name confirmation checkbox");
     }
-    if (name === "role") return !!roleAnswer && (roleAnswer === "yes" || corrected.length > 0);
-    if (name === "agreements") return agreements.length > 0;
-    if (name === "review") return certified;
-    return true;
+    if (name === "role") {
+      if (!roleAnswer) m.push("Whether our records are correct");
+      else if (roleAnswer !== "yes" && corrected.length === 0) m.push("At least one qualification");
+    }
+    if (name === "agreements" && agreements.length === 0) m.push("At least one agreement category");
+    if (name === "review" && !certified) m.push("The certification checkbox");
+    return m;
   }
+
+  function canAdvance(name: string) {
+    return missingFor(name).length === 0;
+  }
+
 
   async function submit() {
     if (!detail) return;
