@@ -456,6 +456,27 @@ export default function TrainingForm() {
         {detail.name} · Step {step + 1} of {steps.length}
       </p>
 
+      {draftRestored && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted p-3 text-sm">
+          <span>We saved your place — your earlier answers are still here.</span>
+          <Button
+            variant="ghost"
+            className="h-9 shrink-0 px-3"
+            onClick={() => {
+              try {
+                localStorage.removeItem(DRAFT_KEY);
+              } catch {
+                /* ignore */
+              }
+              window.location.reload();
+            }}
+          >
+            Start over
+          </Button>
+        </div>
+      )}
+
+
       {current === "identity" && (
         <Section title="Your information" hint="Use your legal name exactly as it appears on your ID.">
           <div className="space-y-3">
