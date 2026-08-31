@@ -368,7 +368,13 @@ export default function TrainingForm() {
       toast.error((data as { message?: string })?.message ?? "Could not submit. Please try again.");
       return;
     }
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      /* ignore */
+    }
     setDone(true);
+
   }
 
   /* ---------------- render ---------------- */
