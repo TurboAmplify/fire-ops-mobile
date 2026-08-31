@@ -206,6 +206,8 @@ export default function TrainingForm() {
   const [courses, setCourses] = useState<Record<string, CourseAnswer>>({});
   const [wctArduous, setWctArduous] = useState<string | null>(null);
   const [certified, setCertified] = useState(false);
+  const [showMissing, setShowMissing] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
 
   const course = (k: string) => courses[k] ?? emptyCourse;
   const setCourse = (k: string, v: CourseAnswer) => setCourses((c) => ({ ...c, [k]: v }));
@@ -222,6 +224,41 @@ export default function TrainingForm() {
       setLoading(false);
     })();
   }, []);
+
+  // Restore an in-progress draft (survives refresh, backgrounding, low signal).
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      if (!d?.detail) return;
+      setDetail(d.detail);
+      if (d.identity) setIdentity(d.identity);
+      setRoleAnswer(d.roleAnswer ?? null);
+      setCorrected(d.corrected ?? []);
+      setAgreements(d.agreements ?? []);
+      setCourses(d.courses ?? {});
+      setWctArduous(d.wctArduous ?? null);
+      setStep(typeof d.step === "number" ? d.step : 0);
+      setDraftRestored(true);
+    } catch {
+      /* ignore malformed draft */
+    }
+  }, []);
+
+  // Autosave on every change.
+  useEffect(() => {
+    if (!detail || done) return;
+    try {
+      localStorage.setItem(
+        DRAFT_KEY,
+        JSON.stringify({ detail, identity, roleAnswer, corrected, agreements, courses, wctArduous, step }),
+      );
+    } catch {
+      /* storage full or blocked — form still works */
+    }
+  }, [detail, identity, roleAnswer, corrected, agreements, courses, wctArduous, step, done]);
+
 
   const quals = useMemo(
     () => deriveQuals(detail?.recorded_role ?? null, roleAnswer === "yes" ? [] : corrected),
