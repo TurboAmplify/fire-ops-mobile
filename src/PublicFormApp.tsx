@@ -1,6 +1,7 @@
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import TrainingForm from "./pages/TrainingForm";
 import PublicEvalForm from "./pages/PublicEvalForm";
+import GearForm from "./pages/GearForm";
 
 /**
  * Minimal shell for public, no-login routes (/training-form, /eval/:token).
