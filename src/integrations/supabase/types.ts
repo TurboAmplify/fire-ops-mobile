@@ -1290,6 +1290,152 @@ export type Database = {
           },
         ]
       }
+      incident_financial_events: {
+        Row: {
+          actor_user_id: string | null
+          amount: number | null
+          created_at: string
+          factor_name: string | null
+          from_status: string | null
+          id: string
+          incident_id: string
+          notes: string | null
+          organization_id: string
+          schedule_number: number | null
+          source: string
+          submission_id: string | null
+          to_status: string
+        }
+        Insert: {
+          actor_user_id?: string | null
+          amount?: number | null
+          created_at?: string
+          factor_name?: string | null
+          from_status?: string | null
+          id?: string
+          incident_id: string
+          notes?: string | null
+          organization_id: string
+          schedule_number?: number | null
+          source?: string
+          submission_id?: string | null
+          to_status: string
+        }
+        Update: {
+          actor_user_id?: string | null
+          amount?: number | null
+          created_at?: string
+          factor_name?: string | null
+          from_status?: string | null
+          id?: string
+          incident_id?: string
+          notes?: string | null
+          organization_id?: string
+          schedule_number?: number | null
+          source?: string
+          submission_id?: string | null
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incident_financial_events_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "incidents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incident_financial_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "incident_financial_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      incident_financial_status: {
+        Row: {
+          amount_submitted: number | null
+          created_at: string
+          factor_name: string | null
+          factored_at: string | null
+          id: string
+          incident_id: string
+          invoice_numbers: string[]
+          last_schedule_number: number | null
+          last_source: string | null
+          notes: string | null
+          organization_id: string
+          paid_at: string | null
+          set_by_user_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount_submitted?: number | null
+          created_at?: string
+          factor_name?: string | null
+          factored_at?: string | null
+          id?: string
+          incident_id: string
+          invoice_numbers?: string[]
+          last_schedule_number?: number | null
+          last_source?: string | null
+          notes?: string | null
+          organization_id: string
+          paid_at?: string | null
+          set_by_user_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_submitted?: number | null
+          created_at?: string
+          factor_name?: string | null
+          factored_at?: string | null
+          id?: string
+          incident_id?: string
+          invoice_numbers?: string[]
+          last_schedule_number?: number | null
+          last_source?: string | null
+          notes?: string | null
+          organization_id?: string
+          paid_at?: string | null
+          set_by_user_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incident_financial_status_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: true
+            referencedRelation: "incidents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incident_financial_status_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "incident_financial_status_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       incident_truck_crew: {
         Row: {
           assigned_at: string
@@ -1990,6 +2136,45 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      org_finance_access: {
+        Row: {
+          created_at: string
+          granted_by_user_id: string | null
+          id: string
+          organization_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          granted_by_user_id?: string | null
+          id?: string
+          organization_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          granted_by_user_id?: string | null
+          id?: string
+          organization_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_finance_access_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "org_finance_access_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       org_payroll_settings: {
         Row: {
@@ -3901,6 +4086,10 @@ export type Database = {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
       }
+      is_org_finance: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
       is_real_org_member: {
         Args: { _org_id: string; _user_id: string }
@@ -3947,6 +4136,38 @@ export type Database = {
             Args: { _code: string; _email: string; _invitee_name: string }
             Returns: string
           }
+      set_incident_financial_status: {
+        Args: {
+          _force?: boolean
+          _incident_id: string
+          _notes?: string
+          _source?: string
+          _status: string
+        }
+        Returns: {
+          amount_submitted: number | null
+          created_at: string
+          factor_name: string | null
+          factored_at: string | null
+          id: string
+          incident_id: string
+          invoice_numbers: string[]
+          last_schedule_number: number | null
+          last_source: string | null
+          notes: string | null
+          organization_id: string
+          paid_at: string | null
+          set_by_user_id: string | null
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "incident_financial_status"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       suggest_org_email_handle: { Args: { _name: string }; Returns: string }
