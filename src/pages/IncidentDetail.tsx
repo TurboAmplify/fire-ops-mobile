@@ -255,6 +255,11 @@ export default function IncidentDetail() {
             {/* Factoring (hidden unless module enabled + user is admin) */}
             <FactoringSubmitCard incidentId={incident.id} />
 
+            {/* Owner-finance only: factoring / payment status */}
+            <IncidentFinancialCard incidentId={incident.id} />
+
+
+
 
             {isEngineBoss && (
               <div className="pt-2 flex justify-end">
