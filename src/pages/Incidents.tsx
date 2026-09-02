@@ -8,13 +8,20 @@ import { useState, useMemo } from "react";
 import type { IncidentStatus } from "@/services/incidents";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { CachedDataPill, OfflineNoCacheEmpty } from "@/components/OfflineIndicators";
+import { useFinanceAccess, useOrgFinancialStatuses } from "@/hooks/useIncidentFinancial";
+import { IncidentFinancialBadge } from "@/components/incidents/IncidentFinancialBadge";
+import { FINANCIAL_SHORT, type FinancialStatus } from "@/services/incident-financial";
 
 const filters: (IncidentStatus | "all")[] = ["all", "active", "demob", "closed"];
+const finFilters: (FinancialStatus | "all")[] = ["all", "not_factored", "factored", "paid"];
 
 export default function Incidents() {
   const [filter, setFilter] = useState<IncidentStatus | "all">("all");
+  const [finFilter, setFinFilter] = useState<FinancialStatus | "all">("all");
   const { data: incidents, isLoading, error } = useIncidents();
   const { isOffline } = useOnlineStatus();
+  const { hasFinanceAccess } = useFinanceAccess();
+  const { data: finStatuses } = useOrgFinancialStatuses();
 
   const incidentIds = useMemo(() => (incidents ?? []).map((i) => i.id), [incidents]);
   const { data: of286Ids } = useIncidentsWithOF286(incidentIds);
@@ -23,10 +30,21 @@ export default function Incidents() {
     [of286Ids],
   );
 
-  const filtered =
-    incidents && filter === "all"
-      ? incidents
-      : incidents?.filter((i) => i.status === filter) ?? [];
+  const finOf = (id: string): FinancialStatus => finStatuses?.get(id) ?? "not_factored";
+
+  const finCounts = useMemo(() => {
+    const c: Record<FinancialStatus, number> = { not_factored: 0, factored: 0, paid: 0 };
+    for (const i of incidents ?? []) c[finOf(i.id)] += 1;
+    return c;
+  }, [incidents, finStatuses]);
+
+  const filtered = useMemo(() => {
+    let list = incidents ?? [];
+    if (filter !== "all") list = list.filter((i) => i.status === filter);
+    if (hasFinanceAccess && finFilter !== "all") list = list.filter((i) => finOf(i.id) === finFilter);
+    return list;
+  }, [incidents, filter, finFilter, hasFinanceAccess, finStatuses]);
+
 
   return (
     <AppShell
