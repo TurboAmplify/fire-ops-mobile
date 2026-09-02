@@ -86,6 +86,29 @@ export default function Incidents() {
           ))}
         </div>
 
+        {/* Financial filter chips — owner-finance users only */}
+        {hasFinanceAccess && (
+          <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-4 px-4 no-scrollbar">
+            {finFilters.map((f) => (
+              <button
+                key={f}
+                onClick={() => setFinFilter(f)}
+                className={`whitespace-nowrap rounded-full px-3 py-1.5 text-[12px] font-medium transition-all duration-150 ${
+                  finFilter === f
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-secondary text-muted-foreground active:bg-secondary/70"
+                }`}
+              >
+                {f === "all"
+                  ? `All Financial (${incidents?.length ?? 0})`
+                  : `${FINANCIAL_SHORT[f]} (${finCounts[f]})`}
+              </button>
+            ))}
+          </div>
+        )}
+
+
+
         {/* Cached-data indicator */}
         {isOffline && incidents && incidents.length > 0 && <CachedDataPill />}
 
