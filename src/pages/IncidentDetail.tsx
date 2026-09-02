@@ -18,6 +18,7 @@ import { IncidentTicketsTab } from "@/components/incidents/IncidentTicketsTab";
 import { IncidentFinanceContactsCard } from "@/components/incidents/IncidentFinanceContactsCard";
 import { OF286UploadCard } from "@/components/incidents/OF286UploadCard";
 import { FactoringSubmitCard } from "@/components/incidents/FactoringSubmitCard";
+import { IncidentFinancialCard } from "@/components/incidents/IncidentFinancialCard";
 import { MessagesInbox } from "@/components/messages/MessagesInbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
@@ -254,6 +255,11 @@ export default function IncidentDetail() {
 
             {/* Factoring (hidden unless module enabled + user is admin) */}
             <FactoringSubmitCard incidentId={incident.id} />
+
+            {/* Owner-finance only: factoring / payment status */}
+            <IncidentFinancialCard incidentId={incident.id} />
+
+
 
 
             {isEngineBoss && (
