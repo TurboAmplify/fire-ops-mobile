@@ -20,7 +20,7 @@ export function FinanceAccessSection({ orgId }: { orgId: string | undefined }) {
   const qc = useQueryClient();
 
   const { data: members = [], isLoading } = useQuery({
-    queryKey: ["org-members", orgId],
+    queryKey: ["org-members-identity", orgId],
     enabled: !!orgId,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("list_org_members_with_identity", { _org_id: orgId! });
