@@ -526,6 +526,11 @@ export default function OrgSettings() {
           </div>
         </section>
 
+        {/* Finance access — org admins only */}
+        {isOwner && <FinanceAccessSection orgId={orgId} />}
+
+
+
         {/* Pending invites */}
         {isOwner && (
           <section className="space-y-2">
