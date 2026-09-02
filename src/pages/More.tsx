@@ -201,6 +201,19 @@ export default function More() {
                 <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
               </button>
               <button
+                onClick={() => navigate("/admin/gear-survey")}
+                className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors active:bg-secondary/50 touch-target"
+              >
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 shrink-0">
+                  <Shirt className="h-[18px] w-[18px] text-primary" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">Gear Survey</p>
+                  <p className="text-[11px] text-muted-foreground">Shirt/pants sizes, hardhat & backpack — text the crew a link</p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
+              </button>
+              <button
                 onClick={() => navigate("/admin/accounts-payable")}
                 className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors active:bg-secondary/50 touch-target"
               >
