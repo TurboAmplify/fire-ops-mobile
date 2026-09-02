@@ -143,18 +143,23 @@ export default function Incidents() {
                 to={`/incidents/${inc.id}`}
                 className="block rounded-2xl bg-card p-4 card-shadow transition-all duration-150 active:scale-[0.98] active:shadow-none"
               >
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between gap-3">
                   <div className="space-y-0.5 min-w-0 flex-1">
                     <p className="font-semibold text-[15px]">{inc.name}</p>
                     <p className="text-xs text-muted-foreground">{inc.location}</p>
                   </div>
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ml-3 shrink-0 ${
-                      STATUS_COLORS[inc.status as IncidentStatus] || "bg-secondary text-muted-foreground"
-                    }`}
-                  >
-                    {STATUS_LABELS[inc.status as IncidentStatus] || inc.status}
-                  </span>
+                  <div className="flex shrink-0 flex-col items-end gap-1.5">
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${
+                        STATUS_COLORS[inc.status as IncidentStatus] || "bg-secondary text-muted-foreground"
+                      }`}
+                    >
+                      {STATUS_LABELS[inc.status as IncidentStatus] || inc.status}
+                    </span>
+                    {hasFinanceAccess && (
+                      <IncidentFinancialBadge status={finOf(inc.id)} className="px-2.5 py-1" />
+                    )}
+                  </div>
                 </div>
                 <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
                   {inc.acres != null && <span>{Number(inc.acres).toLocaleString()} acres</span>}
@@ -170,7 +175,6 @@ export default function Incidents() {
                       Missing OF-286
                     </span>
                   )}
-                  {hasFinanceAccess && <IncidentFinancialBadge status={finOf(inc.id)} />}
                 </div>
 
               </Link>
