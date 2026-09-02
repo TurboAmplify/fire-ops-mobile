@@ -14,7 +14,7 @@ const path = typeof window !== "undefined" ? window.location.pathname.replace(/\
 const PublicFormApp = () => (
   <>
     <Sonner />
-    {path.startsWith("/eval/") ? <PublicEvalForm /> : <TrainingForm />}
+    {path.startsWith("/eval/") ? <PublicEvalForm /> : path === "/gear-form" ? <GearForm /> : <TrainingForm />}
   </>
 );
 
