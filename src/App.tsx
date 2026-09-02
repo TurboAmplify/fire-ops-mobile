@@ -86,6 +86,7 @@ const ThreadView = lazyWithRetry(() => import("./pages/ThreadView"));
 const MyRedCard = lazyWithRetry(() => import("./pages/MyRedCard"));
 const TrainingForm = lazyWithRetry(() => import("./pages/TrainingForm"));
 const AdminIbpaTraining = lazyWithRetry(() => import("./pages/AdminIbpaTraining"));
+const AdminGearSurvey = lazyWithRetry(() => import("./pages/AdminGearSurvey"));
 
 const App = () => (
   <ErrorBoundary scope="root">
