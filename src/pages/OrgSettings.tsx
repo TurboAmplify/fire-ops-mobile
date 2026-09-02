@@ -46,6 +46,7 @@ import { InspectionTemplateEditor } from "@/components/fleet/InspectionTemplateE
 import { CrewAccessManager } from "@/components/settings/CrewAccessManager";
 import { MasterAgreementCard } from "@/components/settings/MasterAgreementCard";
 import { FactoringSettingsCard } from "@/components/settings/FactoringSettingsCard";
+import { FinanceAccessSection } from "@/components/org/FinanceAccessSection";
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "Admin",
