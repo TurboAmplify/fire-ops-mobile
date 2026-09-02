@@ -144,7 +144,7 @@ export default function AdminGearSurvey() {
   };
 
   return (
-    <AppShell title="Gear Survey" backPath="/more">
+    <AppShell title="Gear Survey" showBack>
       <div className="space-y-4 p-4">
         <Card>
           <CardContent className="flex items-center justify-between gap-3 p-4">
