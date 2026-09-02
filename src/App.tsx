@@ -163,6 +163,7 @@ const App = () => (
                     <Route path="/admin/logs" element={<ProtectedRoute><AdminGate><AdminLogs /></AdminGate></ProtectedRoute>} />
                     <Route path="/admin/reports" element={<ProtectedRoute><AdminGate><AdminReports /></AdminGate></ProtectedRoute>} />
                     <Route path="/admin/ibpa-training" element={<ProtectedRoute><AdminGate><AdminIbpaTraining /></AdminGate></ProtectedRoute>} />
+                    <Route path="/admin/gear-survey" element={<ProtectedRoute><AdminGate><AdminGearSurvey /></AdminGate></ProtectedRoute>} />
                     <Route path="/admin/accounts-payable" element={<ProtectedRoute><AdminGate><AccountsPayable /></AdminGate></ProtectedRoute>} />
                     <Route path="/super-admin" element={<PlatformAdminGate><SuperAdmin /></PlatformAdminGate>} />
                     <Route path="/super-admin/organizations" element={<PlatformAdminGate><SuperAdminOrgs /></PlatformAdminGate>} />
