@@ -1018,6 +1018,88 @@ export type Database = {
         }
         Relationships: []
       }
+      gear_survey_responses: {
+        Row: {
+          created_at: string
+          crew_member_id: string
+          crew_member_name: string
+          id: string
+          organization_id: string
+          payload: Json
+        }
+        Insert: {
+          created_at?: string
+          crew_member_id: string
+          crew_member_name: string
+          id?: string
+          organization_id: string
+          payload?: Json
+        }
+        Update: {
+          created_at?: string
+          crew_member_id?: string
+          crew_member_name?: string
+          id?: string
+          organization_id?: string
+          payload?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gear_survey_responses_crew_member_id_fkey"
+            columns: ["crew_member_id"]
+            isOneToOne: false
+            referencedRelation: "crew_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gear_survey_responses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "gear_survey_responses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gear_survey_settings: {
+        Row: {
+          created_at: string
+          is_open: boolean
+          organization_id: string
+        }
+        Insert: {
+          created_at?: string
+          is_open?: boolean
+          organization_id: string
+        }
+        Update: {
+          created_at?: string
+          is_open?: boolean
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gear_survey_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "app_review_protected"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "gear_survey_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ibpa_collection_settings: {
         Row: {
           created_at: string
