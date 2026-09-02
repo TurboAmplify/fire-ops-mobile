@@ -170,7 +170,9 @@ export default function Incidents() {
                       Missing OF-286
                     </span>
                   )}
+                  {hasFinanceAccess && <IncidentFinancialBadge status={finOf(inc.id)} />}
                 </div>
+
               </Link>
             ))}
           </div>
