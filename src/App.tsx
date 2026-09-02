@@ -86,6 +86,7 @@ const ThreadView = lazyWithRetry(() => import("./pages/ThreadView"));
 const MyRedCard = lazyWithRetry(() => import("./pages/MyRedCard"));
 const TrainingForm = lazyWithRetry(() => import("./pages/TrainingForm"));
 const AdminIbpaTraining = lazyWithRetry(() => import("./pages/AdminIbpaTraining"));
+const AdminGearSurvey = lazyWithRetry(() => import("./pages/AdminGearSurvey"));
 
 const App = () => (
   <ErrorBoundary scope="root">
@@ -163,6 +164,7 @@ const App = () => (
                     <Route path="/admin/logs" element={<ProtectedRoute><AdminGate><AdminLogs /></AdminGate></ProtectedRoute>} />
                     <Route path="/admin/reports" element={<ProtectedRoute><AdminGate><AdminReports /></AdminGate></ProtectedRoute>} />
                     <Route path="/admin/ibpa-training" element={<ProtectedRoute><AdminGate><AdminIbpaTraining /></AdminGate></ProtectedRoute>} />
+                    <Route path="/admin/gear-survey" element={<ProtectedRoute><AdminGate><AdminGearSurvey /></AdminGate></ProtectedRoute>} />
                     <Route path="/admin/accounts-payable" element={<ProtectedRoute><AdminGate><AccountsPayable /></AdminGate></ProtectedRoute>} />
                     <Route path="/super-admin" element={<PlatformAdminGate><SuperAdmin /></PlatformAdminGate>} />
                     <Route path="/super-admin/organizations" element={<PlatformAdminGate><SuperAdminOrgs /></PlatformAdminGate>} />

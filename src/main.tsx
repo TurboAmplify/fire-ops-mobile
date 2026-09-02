@@ -9,7 +9,8 @@ import { StatusBar, Style } from "@capacitor/status-bar";
 // router, tutorial) so they paint fast on poor connections.
 const publicPath =
   typeof window !== "undefined" ? window.location.pathname.replace(/\/+$/, "") : "";
-const isPublicForm = publicPath === "/training-form" || publicPath.startsWith("/eval/");
+const isPublicForm =
+  publicPath === "/training-form" || publicPath === "/gear-form" || publicPath.startsWith("/eval/");
 
 const isNative = Capacitor.isNativePlatform();
 
