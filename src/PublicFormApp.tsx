@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import TrainingForm from "./pages/TrainingForm";
 import PublicEvalForm from "./pages/PublicEvalForm";
@@ -12,11 +13,16 @@ import GearForm from "./pages/GearForm";
  */
 const path = typeof window !== "undefined" ? window.location.pathname.replace(/\/+$/, "") : "";
 
+// Lightweight client for public forms — no persistence or auth-aware retries.
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
+});
+
 const PublicFormApp = () => (
-  <>
+  <QueryClientProvider client={queryClient}>
     <Sonner />
     {path.startsWith("/eval/") ? <PublicEvalForm /> : path === "/gear-form" ? <GearForm /> : <TrainingForm />}
-  </>
+  </QueryClientProvider>
 );
 
 export default PublicFormApp;
