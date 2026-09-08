@@ -167,6 +167,12 @@ export function PersonnelEntryRow({ entry, index, onChange, onRemove, collapsed,
           <span className="text-sm font-semibold truncate">{entry.operator_name || `Crew ${index + 1}`}</span>
           <span className="text-xs text-muted-foreground shrink-0">{entry.date}</span>
         </div>
+        {(entry.op_start || entry.op_stop) && (
+          <span className="text-[11px] text-muted-foreground">
+            {entry.op_start || "--:--"}–{entry.sb_stop || entry.op_stop || "--:--"}
+            {collapsed ? " · tap to change this person's hours" : ""}
+          </span>
+        )}
         {badges.length > 0 && (
           <div className="flex gap-1.5 flex-wrap">
             {badges.map((b) => (
@@ -177,6 +183,7 @@ export function PersonnelEntryRow({ entry, index, onChange, onRemove, collapsed,
           </div>
         )}
       </div>
+
       <div className="flex items-center gap-3 shrink-0">
         <span className="text-sm font-bold text-primary">{entry.total || 0}h</span>
         {collapsed ? (
