@@ -202,9 +202,9 @@ export function CrewMemberForm({ memberId, onClose }: Props) {
           compRow.filing_status = withholding.filing_status;
           compRow.dependents_count = parseInt(withholding.dependents_count) || 0;
           compRow.use_default_withholding = withholding.use_default_withholding;
-          compRow.federal_pct_override = withholding.federal_pct_override ? parseFloat(withholding.federal_pct_override) : null;
+          compRow.federal_pct_override = withholding.federal_pct_override.trim() !== "" ? parseFloat(withholding.federal_pct_override) : null;
           compRow.extra_withholding = withholding.extra_withholding ? parseFloat(withholding.extra_withholding) : 0;
-          compRow.state_pct_override = withholding.state_pct_override ? parseFloat(withholding.state_pct_override) : null;
+          compRow.state_pct_override = withholding.state_pct_override.trim() !== "" ? parseFloat(withholding.state_pct_override) : null;
           compRow.social_security_exempt = withholding.social_security_exempt;
           compRow.medicare_exempt = withholding.medicare_exempt;
           compRow.other_deductions = withholding.other_deductions ? parseFloat(withholding.other_deductions) : 0;
