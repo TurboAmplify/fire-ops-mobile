@@ -1,33 +1,48 @@
-# Read-only 2026 payroll control audit — Dry Lightning
+# Read-only 2026 workers' comp payroll control report — Dry Lightning
 
-Strictly read-only: no code, schema, data, file, PDF or payment changes. Output is structured text in chat only.
+Strictly read-only. No changes to the app, records, files or paystubs. The report is delivered as text in chat.
 
-## What gets reported
+## Scope
+- Every 2026 shift ticket (draft and final) for Dry Lightning, through the latest completed payroll (Sep 22).
+- Every app payment record (marked-paid entry) for the same period.
+- No workers' comp exclusions applied. Every employee is listed in one population.
+- Extra detail for July through September, which the older workbook doesn't cover.
 
-1. **Expected payroll population (from shift tickets)**
-   - Every non-deleted 2026 shift ticket for the org, with personnel entries matched to crew members by name.
-   - Grouped per employee into "rolls": consecutive worked dates, split at any gap of 1+ days.
-   - For each roll: employee, incident(s), period start/end, shift dates, ticket count, hours, gross pay (using the same payroll formula as the app: hourly + H&W up to 40 hrs/week, overtime at 1.5x, daily rates for Engine Bosses, adjustments applied).
-   - Flags: blank/unmatched operator names, zero-hour entries, the same person on two tickets on the same date, draft vs. signed tickets, duplicate incidents (Route 7, Snake Berry, Ash Pole).
+## Report sections
 
-2. **Recorded payroll (payroll_payments)**
-   - Every paid record: employee, period, incident, amount, how the stub was sent, date marked paid, notes (corrections such as Chad 0% federal and Orban's Zintkala half-day).
+1. **One line per employee per payroll period and incident**
+   - Columns: employee, incident, first and last shift date, number of shifts, hours, gross pay, matching payment record IDs with amount and status, and "supported by shift tickets" (yes, partial or no).
+   - Rolls are split by incident so each fire's payroll can be traced separately.
 
-3. **Reconciliation per employee**
-   - Matched: the roll is fully covered by paid records.
-   - Superseded/overlapping: more than one record covers the same dates (for example a v1 and v2 stub, or per-incident legs plus a combined run). The record that is current is named.
-   - Corrected: the amount was changed after the record was created (per notes).
-   - **True missing**: worked dates with no paid record. Landon Aug 18–31 is expected here; Owen and Gabriel Sep 1–14 too, unless they were marked paid later.
-   - Amount variances: recorded vs. computed gross (Justin $21,000 vs $20,000, Les $56,200 vs $55,000, David's $2,000 advance).
+2. **Record status for each payment record**
+   - **Current:** the one record that counts.
+   - **Superseded:** an Aug 12 "all fires" $0 record replaced by the Aug 23 per-fire close-out record for the same dates.
+   - **Duplicate:** for example Chase's three identical $5,027.59 records for Aug 5–18.
+   - **Corrected:** the amount was edited after entry (Chad's 0% federal, Orban's 9/22 half day).
+   - **Typo period:** records dated Apr 22, 2024 to May 6, 2026.
+   - **Placeholder:** a $0 record.
+   - Each worked day is counted once, whatever the number of overlapping records.
 
-4. **Workers' comp split**
-   - Two sections: covered employees and excluded employees (Dustin, Kenna, Kaylee, Brandon Aldrich, Sheldon Sundstrom). Excluded payroll is still listed in full.
-   - Subtotals for gross pay and recorded pay in each section.
+3. **Work on shift tickets with no current paystub record**, especially July through September
+   - For example: Landon and David Aug 18–31; Orban Aug 18–Sep 7; Dustin Aug 24–Sep 11; Owen and Gabriel Sep 1–11; Kaylee and Stacey Aug 25–Sep 7; Chad Aug 26–27 and Sep 8–9; Arnie and Sheldon Sep 8–11; Arnie and Bryce Jul 19–20; Bobby and Nevaeh Aug 29.
+   - Stubs generated in chat but never recorded in the app are labeled separately.
 
-5. **Limitations stated explicitly**
-   - Paystub PDFs generated in chat are not stored as app records, so "paystub exists" can only be inferred from paid records.
-   - Name-based matching, and any days credited by hand outside shift tickets.
+4. **Payment records with no ticket support**
+   - For example, records whose period contains no worked days, or amounts above what the tickets compute.
+
+5. **Data problems that affect totals**
+   - Same-day duplicate tickets (8/27 hours double-counted for Kaylee and Stacey).
+   - Rows with no name, 0-hour days, draft-only tickets, and the "Les Muse" / "Les Madison" rows.
+
+6. **Totals**
+   - Gross pay per employee, split Jan–Jun and Jul–Sep.
+   - Season total gross pay, also split into:
+     - pay with a current paystub record
+     - pay on tickets but not recorded
+     - an adjusted total with the double-counted hours removed
 
 ## Technical details
-- SELECT-only queries on shift_tickets (personnel_entries jsonb), incident_trucks/incidents, crew_members, crew_compensation, org_role_default_rates, payroll_adjustments, payroll_payments, filtered to org 2ffa93de-506d-4aa7-a53e-a3a04d9626be and to 2026 dates.
-- Gross pay is recomputed in a temporary /tmp script that calls the app's existing `aggregateCrewPayroll` without changing it.
+- SELECT-only queries plus a temporary script in /tmp that reuses the app's existing payroll formula.
+- Gross pay is computed per employee, per incident and per date range.
+- Matching uses the payment record's period dates and incident.
+- Pay is computed for whole weeks, and overtime is assigned to incidents the same way the app does it.
